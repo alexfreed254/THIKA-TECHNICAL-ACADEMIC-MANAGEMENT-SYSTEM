@@ -162,7 +162,7 @@ def marks():
     
     # Build query
     query = (db.table("marks")
-             .select("*, units(name, code), user_profiles!marks_student_id_fkey(full_name, admission_no), user_profiles!marks_trainer_id_fkey(full_name), classes(name, departments(name))")
+             .select("*, units(name, code), user_profiles!marks_student_id_fkey(full_name, admission_no), classes(name, departments(name))")
              .eq("year", int(year)))
     
     if term:
@@ -201,7 +201,7 @@ def download_marks_pdf():
     
     # Build query
     query = (db.table("marks")
-             .select("*, units(name, code), user_profiles!marks_student_id_fkey(full_name, admission_no), user_profiles!marks_trainer_id_fkey(full_name), classes(name, departments(name))")
+             .select("*, units(name, code), user_profiles!marks_student_id_fkey(full_name, admission_no), classes(name, departments(name))")
              .eq("year", int(year)))
     
     if term:

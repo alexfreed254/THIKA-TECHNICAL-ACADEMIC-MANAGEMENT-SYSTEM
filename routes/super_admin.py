@@ -569,7 +569,7 @@ def marks():
     query = db.table("marks").select(
         "*, units(name, code, department_id), "
         "user_profiles!marks_student_id_fkey(full_name, admission_no), "
-        "user_profiles!marks_trainer_id_fkey(full_name), classes(name)"
+        "classes(name)"
     ).eq("year", int(year)).order("created_at", desc=True).limit(500)
 
     if term:
