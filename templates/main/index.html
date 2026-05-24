@@ -305,12 +305,12 @@
     <section class="login-panel">
       <div class="top">
         <div class="tabs">
-          <button type="button" class="tab {% if request.form.get('login_type', 'staff') == 'staff' and request.form.get('origin') != 'employer' %}active{% endif %}" data-type="staff">Staff / Trainer</button>
+          <button type="button" class="tab {% if request.form.get('login_type', 'staff') == 'staff' and request.form.get('origin') != 'employer' %}active{% endif %}" data-type="staff">Staff / Admin</button>
           <button type="button" class="tab {% if request.form.get('login_type') == 'student' %}active{% endif %}" data-type="student">Trainee</button>
           <button type="button" class="tab {% if request.form.get('origin') == 'employer' %}active{% endif %}" data-type="employer">Employer</button>
         </div>
         <h2>Welcome back</h2>
-        <p>Staff and trainers sign in with your personal or institute email address and password.</p>
+        <p>Sign in to your account to continue.</p>
       </div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -329,10 +329,10 @@
         <input type="hidden" name="origin" id="origin" value="{{ request.form.get('origin', 'main') }}">
 
         <div class="field" id="staffField" style="{% if request.form.get('login_type') == 'student' or request.form.get('origin') == 'employer' %}display:none;{% endif %}">
-          <label for="email">Personal / Institute Email</label>
+          <label for="email">Email Address</label>
           <div class="input-wrap">
             <i class="fas fa-envelope"></i>
-            <input id="email" type="email" name="email" placeholder="your.email@example.com" value="{{ request.form.get('email', '') }}" autocomplete="email">
+            <input id="email" type="email" name="email" placeholder="you@example.com" value="{{ request.form.get('email', '') }}" autocomplete="email">
           </div>
         </div>
 
@@ -370,7 +370,6 @@
 
       <div class="login-footer">
         <span>New employer? <a href="/employer/register">Create employer account</a></span>
-        <span><a href="/auth/forgot-password">Forgot Password?</a></span>
       </div>
     </section>
   </div>
