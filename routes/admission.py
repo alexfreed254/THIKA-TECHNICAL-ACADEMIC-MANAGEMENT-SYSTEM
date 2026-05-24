@@ -11,7 +11,7 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 
-admission_bp = Blueprint('admission', __name__, url_prefix='/admission')
+admission_bp = Blueprint('admission', __name__)
 
 # Required document types for admission
 REQUIRED_DOCUMENTS = [
@@ -248,11 +248,11 @@ def submit_admission(request_id):
         
         for hod in hod_users:
             create_notification(
-                recipient_id=hod["id"],
+                user_id=hod["id"],
                 title="New Admission Request",
-                message=f"A new admission request has been submitted for review.",
-                notification_type="admission",
-                metadata={"admission_request_id": request_id}
+                message="A new admission request has been submitted for review.",
+                notification_type="info",
+                action_url="/admission/hod"
             )
         
         write_audit_log("submit_admission", target=f"request:{request_id}")
@@ -412,11 +412,11 @@ def approve_request(request_id):
         # Send notification to student
         from notifications import create_notification
         create_notification(
-            recipient_id=admission_request["student_id"],
+            user_id=admission_request["student_id"],
             title="Admission Approved!",
             message="Your admission request has been approved. You can now download your departmental admission approval form.",
-            notification_type="admission",
-            metadata={"admission_request_id": request_id}
+            notification_type="success",
+            action_url="/admission"
         )
         
         write_audit_log("approve_admission", target=f"request:{request_id}")
@@ -466,11 +466,11 @@ def reject_request(request_id):
         # Send notification to student
         from notifications import create_notification
         create_notification(
-            recipient_id=admission_request["student_id"],
+            user_id=admission_request["student_id"],
             title="Admission Rejected",
             message=f"Your admission request has been rejected. Comments: {comments}",
-            notification_type="admission",
-            metadata={"admission_request_id": request_id}
+            notification_type="warning",
+            action_url="/admission"
         )
         
         write_audit_log("reject_admission", target=f"request:{request_id}")

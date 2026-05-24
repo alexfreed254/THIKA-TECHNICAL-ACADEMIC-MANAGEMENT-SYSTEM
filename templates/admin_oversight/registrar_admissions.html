@@ -1,0 +1,59 @@
+{% extends "admin_oversight/base.html" %}
+{% block title %}Admissions{% endblock %}
+{% block page_title %}All Admission Requests{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px}
+.filter-bar{background:#fff;border-radius:12px;padding:14px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.filter-bar label{font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px}
+.filter-bar select{padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px}
+.btn-sm{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700}
+.btn-primary{background:#1565c0;color:#fff}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-pending{background:#fff3e0;color:#e65100}
+.badge-approved{background:#e8f5e9;color:#2e7d32}
+.badge-rejected{background:#ffebee;color:#c62828}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <form method="get" class="filter-bar">
+    <div><label>Department</label>
+      <select name="department">
+        <option value="">All Departments</option>
+        {% for d in departments %}<option value="{{ d.id }}" {% if d.id == department_filter %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div><label>Status</label>
+      <select name="status">
+        <option value="">All Statuses</option>
+        {% for s in ['pending','approved','rejected'] %}<option value="{{ s }}" {% if s == status_filter %}selected{% endif %}>{{ s|title }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
+  </form>
+
+  <div class="card">
+    <div class="card-header"><i class="fas fa-file-upload"></i> Admission Requests ({{ admissions|length }})</div>
+    <table>
+      <thead><tr><th>Student</th><th>Course</th><th>Department</th><th>Status</th><th>Submitted</th></tr></thead>
+      <tbody>
+        {% for a in admissions %}
+        <tr>
+          <td>{{ a.get('user_profiles',{}).get('full_name','—') }}<br><small style="color:#aaa">{{ a.get('user_profiles',{}).get('admission_no','') }}</small></td>
+          <td>{{ a.get('courses',{}).get('name','—') }}</td>
+          <td>{{ a.get('departments',{}).get('name','—') }}</td>
+          <td><span class="badge badge-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
+          <td>{{ a.get('submitted_at','—')[:10] if a.get('submitted_at') else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:#aaa;padding:32px">No admission requests found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

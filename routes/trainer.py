@@ -14,6 +14,7 @@ from auth_utils import (trainer_required, write_audit_log, current_user)
 from db import get_service_client
 from datetime import datetime
 import re
+import os
 
 trainer_bp = Blueprint("trainer", __name__)
 
@@ -280,13 +281,14 @@ def review_assessment(assessment_id):
     db = get_service_client()
     user = current_user()
     
-    if not _check_unit_access(db, assessment_id):
-        abort(403)
-    
+    # Fetch assessment first so we can check unit access with the correct unit_id
     assessment = db.table("assessments").select("*, user_profiles(full_name, admission_no, mobile_number), units(name, code), classes(name)").eq("id", assessment_id).single().execute().data
     
     if not assessment:
         abort(404)
+    
+    if not _check_unit_access(db, assessment["unit_id"]):
+        abort(403)
     
     # Get evidence
     evidence = db.table("evidence").select("*").eq("assessment_id", assessment_id).execute().data or []
@@ -695,16 +697,14 @@ def upload_document():
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
         storage_path = f"trainer_documents/{user['id']}/{unique_filename}"
         
-        # Upload to storage bucket
-        from supabase import create_client, Client
-        storage: Client = create_client(
-            os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_KEY")
-        )
+        # Read file once — used for both upload and size calculation
+        file_data = file.read()
         
-        storage.storage.from_("documents").upload(
+        # Upload to storage bucket using the service client (already configured)
+        svc = get_service_client()
+        svc.storage.from_("documents").upload(
             path=storage_path,
-            file=file.read(),
+            file=file_data,
             file_options={"content-type": file.content_type}
         )
         
@@ -720,7 +720,7 @@ def upload_document():
             "document_name": document_name,
             "file_url": file_url,
             "file_name": file.filename,
-            "file_size": len(file.read()) if file else 0,
+            "file_size": len(file_data),
             "file_type": file.content_type,
             "description": description,
             "academic_year": int(academic_year),
@@ -751,12 +751,8 @@ def delete_document(document_id):
         
         # Delete from storage
         storage_path = document["file_url"].split("documents/")[-1]
-        from supabase import create_client
-        storage = create_client(
-            os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_KEY")
-        )
-        storage.storage.from_("documents").remove([storage_path])
+        svc = get_service_client()
+        svc.storage.from_("documents").remove([storage_path])
         
         # Delete record
         db.table("trainer_documents").delete().eq("id", document_id).execute()

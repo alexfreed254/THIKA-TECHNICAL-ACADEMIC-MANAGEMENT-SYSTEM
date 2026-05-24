@@ -9,7 +9,7 @@ from auth_utils import login_required, student_required, current_user, write_aud
 from db import get_service_client
 from notifications import create_notification
 
-clearance_bp = Blueprint('clearance', __name__, url_prefix='/clearance')
+clearance_bp = Blueprint('clearance', __name__)
 
 
 # ── Student Clearance Dashboard ─────────────────────────────────────────────
@@ -191,11 +191,11 @@ def approve_clearance(approval_id):
         if student_id:
             stage_name = approval.get("clearance_stages", {}).get("stage_name", "Clearance Stage")
             create_notification(
-                recipient_id=student_id,
+                user_id=student_id,
                 title=f"Clearance Approved: {stage_name}",
                 message=f"Your clearance stage '{stage_name}' has been approved. Continue to the next stage.",
-                notification_type="clearance",
-                metadata={"clearance_request_id": approval["clearance_requests"]["id"]}
+                notification_type="success",
+                action_url="/clearance"
             )
         
         write_audit_log("approve_clearance", target=f"approval:{approval_id}")
@@ -254,11 +254,11 @@ def reject_clearance(approval_id):
         if student_id:
             stage_name = approval.get("clearance_stages", {}).get("stage_name", "Clearance Stage")
             create_notification(
-                recipient_id=student_id,
+                user_id=student_id,
                 title=f"Clearance Rejected: {stage_name}",
                 message=f"Your clearance stage '{stage_name}' has been rejected. Comments: {comments}",
-                notification_type="clearance",
-                metadata={"clearance_request_id": approval["clearance_requests"]["id"]}
+                notification_type="warning",
+                action_url="/clearance"
             )
         
         write_audit_log("reject_clearance", target=f"approval:{approval_id}")
@@ -297,11 +297,11 @@ def check_clearance_completion(request_id):
         if approvals and approvals[0].get("clearance_requests", {}).get("student_id"):
             student_id = approvals[0]["clearance_requests"]["student_id"]
             create_notification(
-                recipient_id=student_id,
+                user_id=student_id,
                 title="Clearance Completed!",
                 message="Congratulations! Your course clearance is complete. You can now collect your certificate.",
-                notification_type="clearance",
-                metadata={"clearance_request_id": request_id}
+                notification_type="success",
+                action_url="/clearance"
             )
 
 
@@ -335,11 +335,11 @@ def issue_certificate(request_id):
         
         # Send notification to student that certificate is issued
         create_notification(
-            recipient_id=request_data["student_id"],
+            user_id=request_data["student_id"],
             title="Certificate Issued!",
             message="Your certificate has been issued and is ready for collection.",
-            notification_type="clearance",
-            metadata={"clearance_request_id": request_id}
+            notification_type="success",
+            action_url="/clearance"
         )
         
         write_audit_log("issue_certificate", target=f"request:{request_id}")

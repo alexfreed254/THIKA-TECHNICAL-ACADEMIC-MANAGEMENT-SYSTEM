@@ -1,0 +1,88 @@
+{% extends "student/base.html" %}
+{% block title %}Upload Assessment{% endblock %}
+{% block page_title %}Upload Assessment{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
+.card-body{padding:24px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em}
+.form-group select,.form-group input{padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#f8fafc}
+.form-group select:focus,.form-group input:focus{outline:none;border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
+.file-group{margin-top:16px}
+.file-group label{display:block;font-size:12px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:6px}
+.file-group input[type=file]{width:100%;padding:10px;border:2px dashed #ddd;border-radius:8px;font-size:13px;background:#f8fafc;cursor:pointer}
+.btn-row{margin-top:24px;display:flex;gap:12px}
+.btn{padding:11px 24px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:#1565c0;color:#fff}
+.btn-secondary{background:#f5f5f5;color:#333}
+.note{background:#e3f2fd;border:1px solid #90caf9;color:#1565c0;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:20px}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <div class="card">
+    <div class="card-header"><i class="fas fa-upload"></i> Upload New Assessment</div>
+    <div class="card-body">
+      <div class="note"><i class="fas fa-info-circle"></i> Only PDF files are accepted. Maximum file size: 10MB.</div>
+      <form method="post" enctype="multipart/form-data">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Unit</label>
+            <select name="unit_id" required>
+              <option value="">— Select Unit —</option>
+              {% for cu in class_units %}
+              <option value="{{ cu.get('units',{}).get('id','') }}">{{ cu.get('units',{}).get('code','') }} — {{ cu.get('units',{}).get('name','') }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Assessment Type</label>
+            <select name="assessment_type" required>
+              <option value="">— Select Type —</option>
+              <option value="PRACTICAL">Practical</option>
+              <option value="THEORY">Theory</option>
+              <option value="ORAL">Oral</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Assessment No.</label>
+            <input type="number" name="assessment_no" min="1" max="10" required placeholder="e.g. 1">
+          </div>
+          <div class="form-group">
+            <label>Term</label>
+            <select name="term" required>
+              <option value="">— Select Term —</option>
+              <option value="1">Term 1</option>
+              <option value="2">Term 2</option>
+              <option value="3">Term 3</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cycle</label>
+            <select name="cycle" required>
+              <option value="">— Select Cycle —</option>
+              <option value="1">Cycle 1</option>
+              <option value="2">Cycle 2</option>
+              <option value="3">Cycle 3</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <input type="number" name="year" min="2020" max="2099" required placeholder="e.g. 2025">
+          </div>
+        </div>
+        <div class="file-group">
+          <label>PDF Script File</label>
+          <input type="file" name="script" accept=".pdf" required>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload Assessment</button>
+          <a href="/student/assessments" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

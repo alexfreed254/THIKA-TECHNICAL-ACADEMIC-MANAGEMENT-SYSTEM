@@ -1,0 +1,49 @@
+{% extends "employer/base.html" %}
+{% block title %}Search Trainees{% endblock %}
+{% block page_title %}Search Trainees{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px}
+.search-bar{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px}
+.search-bar form{display:flex;gap:12px}
+.search-bar input{flex:1;padding:11px 16px;border:1px solid #ddd;border-radius:8px;font-size:14px}
+.btn{padding:11px 22px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700}
+.btn-primary{background:#2e7d32;color:#fff}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+.card-header{background:#2e7d32;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.btn-sm{padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;display:inline-block}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <div class="search-bar">
+    <form method="post">
+      <input type="text" name="query" value="{{ query }}" placeholder="Search by name, admission number or email..." autofocus>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+    </form>
+  </div>
+
+  {% if query %}
+  <div class="card">
+    <div class="card-header"><i class="fas fa-users"></i> Results for "{{ query }}" ({{ results|length }})</div>
+    <table>
+      <thead><tr><th>Name</th><th>Admission No</th><th>Email</th><th>Department</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for t in results %}
+        <tr>
+          <td><strong>{{ t.full_name }}</strong></td>
+          <td>{{ t.admission_no or '—' }}</td>
+          <td>{{ t.email or '—' }}</td>
+          <td>{{ t.get('departments',{}).get('name','—') if t.get('departments') else '—' }}</td>
+          <td><a href="/employer/recommend/{{ t.id }}" class="btn-sm btn-primary"><i class="fas fa-thumbs-up"></i> Recommend</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:#aaa;padding:32px">No trainees found matching "{{ query }}".</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

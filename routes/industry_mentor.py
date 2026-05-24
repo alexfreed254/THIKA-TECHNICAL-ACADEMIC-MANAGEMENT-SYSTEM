@@ -8,7 +8,7 @@ from datetime import datetime
 from auth_utils import login_required, industry_mentor_required, current_user, write_audit_log
 from db import get_service_client
 
-industry_mentor_bp = Blueprint('industry_mentor', __name__, url_prefix='/industry-mentor')
+industry_mentor_bp = Blueprint('industry_mentor', __name__)
 
 
 # ── Dashboard ───────────────────────────────────────────────────────────────

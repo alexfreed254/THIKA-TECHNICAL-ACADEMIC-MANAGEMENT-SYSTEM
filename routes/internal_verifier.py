@@ -8,7 +8,7 @@ from datetime import datetime
 from auth_utils import login_required, internal_verifier_required, current_user, write_audit_log
 from db import get_service_client
 
-internal_verifier_bp = Blueprint('internal_verifier', __name__, url_prefix='/internal-verifier')
+internal_verifier_bp = Blueprint('internal_verifier', __name__)
 
 
 # ── Dashboard ───────────────────────────────────────────────────────────────

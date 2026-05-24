@@ -397,4 +397,4 @@ def courses():
 def logs():
     db = _svc()
     logs_list = db.table("system_logs").select("*, user_profiles(full_name, role)").order("created_at", desc=True).limit(100).execute().data or []
-    return render_template("super_admin/logs.html", logs=logs_list)
+    return render_template("super_admin/system_logs.html", logs=logs_list)

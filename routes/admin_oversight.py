@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request
 from auth_utils import login_required, registrar_required, deputy_principal_required, quality_assurance_officer_required, current_user
 from db import get_service_client
 
-admin_oversight_bp = Blueprint('admin_oversight', __name__, url_prefix='/admin-oversight')
+admin_oversight_bp = Blueprint('admin_oversight', __name__)
 
 
 # ── Registrar Dashboard ─────────────────────────────────────────────────────

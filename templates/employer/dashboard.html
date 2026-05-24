@@ -1,0 +1,75 @@
+{% extends "employer/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Employer Dashboard{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.stat-icon{width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0}
+.stat-info h3{font-size:11px;color:#888;margin-bottom:3px;text-transform:uppercase}
+.stat-info p{font-size:22px;font-weight:700;color:#333}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;margin-bottom:20px}
+.card-header{background:#2e7d32;color:#fff;padding:14px 20px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-active{background:#e8f5e9;color:#2e7d32}
+.badge-inactive{background:#f5f5f5;color:#888}
+.company-info{background:#f1f8e9;border:1px solid #c5e1a5;border-radius:10px;padding:16px;margin-bottom:20px}
+.company-info h3{font-size:15px;font-weight:700;color:#2e7d32;margin-bottom:6px}
+.company-info p{font-size:13px;color:#555}
+.btn-sm{padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;display:inline-block}
+.btn-primary{background:#2e7d32;color:#fff}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <div class="company-info">
+    <h3><i class="fas fa-building"></i> {{ employer.company_name }}</h3>
+    <p>{{ employer.location or '' }} {% if employer.industry %}&bull; {{ employer.industry }}{% endif %} {% if employer.official_email %}&bull; {{ employer.official_email }}{% endif %}</p>
+    {% if not employer.is_verified %}<p style="color:#e65100;margin-top:6px"><i class="fas fa-exclamation-triangle"></i> Account pending verification by admin.</p>{% endif %}
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#2e7d32,#1b5e20)"><i class="fas fa-briefcase"></i></div>
+      <div class="stat-info"><h3>Total Jobs</h3><p>{{ jobs|length }}</p></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#1565c0,#0d47a1)"><i class="fas fa-users"></i></div>
+      <div class="stat-info"><h3>Total Verifications</h3><p>{{ stats.total }}</p></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#e65100,#bf360c)"><i class="fas fa-clock"></i></div>
+      <div class="stat-info"><h3>Pending</h3><p>{{ stats.pending }}</p></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#00838f,#006064)"><i class="fas fa-check-circle"></i></div>
+      <div class="stat-info"><h3>Approved</h3><p>{{ stats.approved }}</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span><i class="fas fa-briefcase"></i> Recent Job Postings</span>
+      <a href="/employer/jobs" class="btn-sm btn-primary"><i class="fas fa-plus"></i> Manage Jobs</a>
+    </div>
+    <table>
+      <thead><tr><th>Title</th><th>Type</th><th>Location</th><th>Deadline</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for j in jobs %}
+        <tr>
+          <td><strong>{{ j.title }}</strong></td>
+          <td>{{ j.type|title }}</td>
+          <td>{{ j.location or '—' }}</td>
+          <td>{{ j.deadline or '—' }}</td>
+          <td><span class="badge badge-{{ 'active' if j.is_active else 'inactive' }}">{{ 'Active' if j.is_active else 'Inactive' }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:#aaa;padding:24px">No job postings yet. <a href="/employer/jobs">Post a job</a>.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

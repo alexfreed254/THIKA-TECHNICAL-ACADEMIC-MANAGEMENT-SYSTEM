@@ -1,0 +1,97 @@
+{% extends "internal_verifier/base.html" %}
+{% block title %}View Attachment{% endblock %}
+{% block page_title %}Industrial Attachment Details{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;overflow:hidden}
+.card-header{background:#0288d1;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
+.card-body{padding:20px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.info-item label{display:block;font-size:11px;color:#888;text-transform:uppercase;margin-bottom:3px}
+.info-item p{font-size:14px;font-weight:600;color:#333}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-pending{background:#fff3e0;color:#e65100}
+.badge-active{background:#e3f2fd;color:#1565c0}
+.badge-completed{background:#e8f5e9;color:#2e7d32}
+.badge-approved{background:#e8f5e9;color:#2e7d32}
+.badge-rejected{background:#ffebee;color:#c62828}
+.badge-verified{background:#e8f5e9;color:#2e7d32}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-secondary{background:#f5f5f5;color:#333}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <a href="/internal-verifier/attachments" class="btn btn-secondary" style="margin-bottom:16px"><i class="fas fa-arrow-left"></i> Back to Attachments</a>
+
+  <div class="card">
+    <div class="card-header"><i class="fas fa-building"></i> Attachment Overview</div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item"><label>Student</label><p>{{ attachment.get('user_profiles',{}).get('full_name','—') }}</p></div>
+        <div class="info-item"><label>Admission No</label><p>{{ attachment.get('user_profiles',{}).get('admission_no','—') }}</p></div>
+        <div class="info-item"><label>Mobile</label><p>{{ attachment.get('user_profiles',{}).get('mobile_number','—') }}</p></div>
+        <div class="info-item"><label>Unit</label><p>{{ attachment.get('units',{}).get('name','—') }}</p></div>
+        <div class="info-item"><label>Company</label><p>{{ attachment.get('companies',{}).get('name','—') }}</p></div>
+        <div class="info-item"><label>Company Address</label><p>{{ attachment.get('companies',{}).get('address','—') }}</p></div>
+        <div class="info-item"><label>Contact Person</label><p>{{ attachment.get('companies',{}).get('contact_person','—') }}</p></div>
+        <div class="info-item"><label>Contact Phone</label><p>{{ attachment.get('companies',{}).get('contact_phone','—') }}</p></div>
+        <div class="info-item"><label>Start Date</label><p>{{ attachment.get('start_date','—') }}</p></div>
+        <div class="info-item"><label>End Date</label><p>{{ attachment.get('end_date','—') }}</p></div>
+        <div class="info-item"><label>Status</label><p><span class="badge badge-{{ attachment.get('status','pending') }}">{{ attachment.get('status','pending')|title }}</span></p></div>
+        <div class="info-item"><label>Final Grade</label><p>{{ attachment.get('final_grade','—') or '—' }}</p></div>
+      </div>
+      {% if attachment.get('attachment_goals') %}
+      <div style="margin-top:16px"><label style="font-size:11px;color:#888;text-transform:uppercase">Attachment Goals</label><p style="font-size:13px;color:#555;margin-top:4px">{{ attachment.attachment_goals }}</p></div>
+      {% endif %}
+      {% if attachment.get('supervisor_notes') %}
+      <div style="margin-top:12px"><label style="font-size:11px;color:#888;text-transform:uppercase">Supervisor Notes</label><p style="font-size:13px;color:#555;margin-top:4px">{{ attachment.supervisor_notes }}</p></div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if competencies %}
+  <div class="card">
+    <div class="card-header"><i class="fas fa-check-circle"></i> Competency Tracking ({{ competencies|length }})</div>
+    <table>
+      <thead><tr><th>Unit</th><th>Status</th><th>Verification</th><th>Assessment Date</th></tr></thead>
+      <tbody>
+        {% for c in competencies %}
+        <tr>
+          <td>{{ c.get('units',{}).get('name','—') }}</td>
+          <td><span class="badge badge-{{ c.get('competency_status','pending')|lower }}">{{ c.get('competency_status','—') }}</span></td>
+          <td><span class="badge badge-{{ c.get('verification_status','pending')|lower }}">{{ c.get('verification_status','pending')|title }}</span></td>
+          <td>{{ c.get('assessment_date','—') or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:#aaa;padding:20px">No competency records.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if logbooks %}
+  <div class="card">
+    <div class="card-header"><i class="fas fa-book-open"></i> Digital Logbook ({{ logbooks|length }} entries)</div>
+    <table>
+      <thead><tr><th>Date</th><th>Tasks Performed</th><th>Hours</th><th>Mentor Approval</th></tr></thead>
+      <tbody>
+        {% for l in logbooks %}
+        <tr>
+          <td>{{ l.get('log_date','—') }}</td>
+          <td style="max-width:300px">{{ l.get('tasks_performed','—')[:120] }}{% if l.get('tasks_performed','') | length > 120 %}…{% endif %}</td>
+          <td>{{ l.get('hours_worked','—') }}</td>
+          <td><span class="badge badge-{{ l.get('mentor_approval_status','pending') }}">{{ l.get('mentor_approval_status','pending')|title }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:#aaa;padding:20px">No logbook entries.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

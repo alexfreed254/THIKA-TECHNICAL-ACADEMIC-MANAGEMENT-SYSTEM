@@ -263,7 +263,7 @@ def assessments():
         return redirect(url_for("student.dashboard"))
     
     class_id = enrollment[0]["class_id"]
-    course_id = enrollment[0].get("class", {}).get("course_id")
+    course_id = enrollment[0].get("classes", {}).get("course_id")
     
     # Get units for this class
     class_units = db.table("class_units").select("*, units(name, code)").eq("class_id", class_id).execute().data or []
@@ -330,20 +330,18 @@ def upload_assessment():
             return redirect(url_for("student.upload_assessment"))
         
         try:
-            # Upload PDF to Supabase Storage
-            ext = 'pdf'
+            # Upload PDF to Supabase Storage — read once for both upload and size
             filename = f"scripts/{student_id}_{unit_id}_{assessment_type}_{assessment_no}_{uuid.uuid4().hex}.pdf"
+            file_data = file.read()
             
             storage_client = get_service_client().storage
             storage_client.from_("assessment-scripts").upload(
                 filename,
-                file.read(),
+                file_data,
                 {"content-type": "application/pdf"}
             )
             
-            # Get file size
-            file.seek(0, 2)
-            file_size = file.tell()
+            file_size = len(file_data)
             
             # Create assessment record
             assessment_data = {
@@ -415,19 +413,18 @@ def add_evidence(assessment_id):
         caption = request.form.get("caption", "")
         
         try:
-            # Upload to Supabase Storage
+            # Upload to Supabase Storage — read once for both upload and size
             filename = f"evidence/{student_id}_{assessment_id}_{uuid.uuid4().hex}.{ext}"
+            file_data = file.read()
             
             storage_client = get_service_client().storage
             storage_client.from_("assessment-evidence").upload(
                 filename,
-                file.read(),
+                file_data,
                 {"content-type": content_type}
             )
             
-            # Get file size
-            file.seek(0, 2)
-            file_size = file.tell()
+            file_size = len(file_data)
             
             # Create evidence record
             db.table("evidence").insert({
@@ -541,11 +538,22 @@ def new_exam_booking():
     user = current_user()
     student = _student_row()
     
-    # Get student's units
-    units = (db.table("trainer_units")
-             .select("*, units(name, code)")
-             .eq("class_id", student.get("class_id"))
-             .execute().data or [])
+    # Get student's class via enrollments table
+    enrollment = (db.table("enrollments")
+                  .select("class_id")
+                  .eq("student_id", student["id"])
+                  .limit(1)
+                  .execute().data or [])
+    class_id = enrollment[0]["class_id"] if enrollment else None
+    
+    # Get units for the student's class
+    units = []
+    if class_id:
+        cu_rows = (db.table("class_units")
+                   .select("*, units(name, code)")
+                   .eq("class_id", class_id)
+                   .execute().data or [])
+        units = cu_rows
     
     error = None
     

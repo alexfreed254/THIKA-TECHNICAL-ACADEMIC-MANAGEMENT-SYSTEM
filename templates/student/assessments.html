@@ -1,0 +1,50 @@
+{% extends "student/base.html" %}
+{% block title %}My Assessments{% endblock %}
+{% block page_title %}My Assessments{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;margin-bottom:20px}
+.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-pending{background:#fff3e0;color:#e65100}
+.badge-approved{background:#e8f5e9;color:#2e7d32}
+.badge-rejected{background:#ffebee;color:#c62828}
+.btn-sm{padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;display:inline-block}
+.btn-primary{background:#1565c0;color:#fff}
+.btn-success{background:#2e7d32;color:#fff}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <div class="card">
+    <div class="card-header">
+      <span><i class="fas fa-file-alt"></i> My Assessments ({{ assessments|length }})</span>
+      <a href="/student/assessments/upload" class="btn-sm btn-success"><i class="fas fa-upload"></i> Upload New</a>
+    </div>
+    <table>
+      <thead><tr><th>Unit</th><th>Class</th><th>Type</th><th>No.</th><th>Term</th><th>Cycle</th><th>Year</th><th>Status</th><th>Evidence</th><th>Uploaded</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for a in assessments %}
+        <tr>
+          <td>{{ a.get('units',{}).get('name','—') }}<br><small style="color:#aaa">{{ a.get('units',{}).get('code','') }}</small></td>
+          <td>{{ a.get('classes',{}).get('name','—') }}</td>
+          <td>{{ a.get('assessment_type','—') }}</td>
+          <td>{{ a.get('assessment_no','—') }}</td>
+          <td>{{ a.get('term','—') }}</td>
+          <td>{{ a.get('cycle','—') }}</td>
+          <td>{{ a.get('year','—') }}</td>
+          <td><span class="badge badge-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
+          <td>{{ a.get('evidence_count',0) }} file(s)</td>
+          <td>{{ a.get('uploaded_at','—')[:10] if a.get('uploaded_at') else '—' }}</td>
+          <td><a href="/student/assessments/{{ a.id }}/evidence" class="btn-sm btn-primary"><i class="fas fa-paperclip"></i> Evidence</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11" style="text-align:center;color:#aaa;padding:32px">No assessments uploaded yet. <a href="/student/assessments/upload">Upload your first assessment</a>.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

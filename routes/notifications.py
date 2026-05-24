@@ -4,7 +4,7 @@ routes/notifications.py — Notification display routes
 Endpoints for viewing and managing notifications.
 """
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from auth_utils import login_required
 from notifications import get_user_notifications, get_unread_count, mark_notification_as_read, mark_all_as_read
 

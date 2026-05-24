@@ -10,6 +10,7 @@ Examination officers can:
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from auth_utils import examination_officer_required, write_audit_log, current_user
 from db import get_service_client
+from datetime import datetime
 
 examination_officer_bp = Blueprint("examination_officer", __name__)
 

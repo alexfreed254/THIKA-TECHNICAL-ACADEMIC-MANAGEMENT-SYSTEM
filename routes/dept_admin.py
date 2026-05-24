@@ -15,6 +15,7 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import (dept_admin_required, write_audit_log,
                                 current_user, dept_isolation_check)
 from db import get_service_client
+from datetime import datetime
 import secrets
 import string
 
@@ -372,9 +373,9 @@ def download_unit_report(unit_id):
         
         for a in assessments:
             writer.writerow([
-                a.get("student", {}).get("admission_no", ""),
-                a.get("student", {}).get("full_name", ""),
-                a.get("class", {}).get("name", ""),
+                a.get("user_profiles", {}).get("admission_no", ""),
+                a.get("user_profiles", {}).get("full_name", ""),
+                a.get("classes", {}).get("name", ""),
                 a.get("assessment_type", ""),
                 a.get("assessment_no", ""),
                 a.get("term", ""),
