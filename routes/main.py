@@ -15,11 +15,11 @@ def index():
         user = current_user()
         role = user.get("role", "")
         if role == "super_admin":
-            return redirect(url_for("super_admin.welcome"))
+            return redirect(url_for("super_admin.dashboard"))
         elif role == "dept_admin":
-            return redirect(url_for("dept_admin.welcome"))
+            return redirect(url_for("dept_admin.dashboard"))
         elif role == "trainer":
-            return redirect(url_for("lecturer.dashboard"))
+            return redirect(url_for("trainer.dashboard"))
         elif role == "student":
             return redirect(url_for("student.dashboard"))
     return render_template("main/index.html")

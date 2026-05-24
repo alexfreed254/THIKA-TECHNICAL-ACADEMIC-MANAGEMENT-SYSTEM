@@ -63,15 +63,17 @@ def dashboard():
             .execute().data or []
         )
 
-        # Department stats
+        # Department stats — include trainer and student counts per dept
         depts = db.table("departments").select("id, name").order("name").execute().data or []
         for d in depts:
             did = d["id"]
             cc = db.table("classes").select("id", count="exact").eq("department_id", did).execute().count or 0
-            uc = db.table("user_profiles").select("id", count="exact").eq("department_id", did).execute().count or 0
+            sc = db.table("user_profiles").select("id", count="exact").eq("department_id", did).eq("role", "student").execute().count or 0
+            tc = db.table("user_profiles").select("id", count="exact").eq("department_id", did).eq("role", "trainer").execute().count or 0
             dept_stats.append({
                 "id": did, "name": d["name"],
-                "class_count": cc, "user_count": uc
+                "class_count": cc, "user_count": sc + tc,
+                "student_count": sc, "trainer_count": tc
             })
 
         # Recent logs
@@ -85,8 +87,13 @@ def dashboard():
     except Exception as e:
         flash(f'Error loading dashboard: {e}', 'danger')
 
-    return render_template("super_admin/dashboard.html",
+    return render_template("super_admin/welcome.html",
                            stats=stats,
+                           depts_count=stats.get('departments', 0),
+                           trainers_count=stats.get('trainers', 0),
+                           classes_count=stats.get('classes', 0),
+                           students_count=stats.get('students', 0),
+                           units_count=stats.get('units', 0),
                            recent_assessments=recent_assessments,
                            recent_logs=recent_logs,
                            dept_stats=dept_stats)

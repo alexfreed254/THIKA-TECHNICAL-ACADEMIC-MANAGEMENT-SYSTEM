@@ -14,7 +14,8 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import (
     SESSION_USER, SESSION_ACCESS, SESSION_REFRESH,
     authenticate_staff, authenticate_student,
-    write_audit_log, current_user, is_authenticated
+    write_audit_log, current_user, is_authenticated,
+    create_student_auth_user
 )
 from db import get_service_client
 
@@ -88,18 +89,13 @@ def login():
             profile = authenticate_staff(email, password)
             
             if profile:
-                # Get Supabase Auth session
-                from db import get_anon_client
-                client = get_anon_client()
-                result = client.auth.sign_in_with_password({
-                    'email': email,
-                    'password': password,
-                })
+                # Session tokens are already attached by authenticate_staff — no second call needed
+                sb_session = profile.pop("_session", None)
                 
-                if result and result.session:
+                if sb_session:
                     session[SESSION_USER] = profile
-                    session[SESSION_ACCESS] = result.session.access_token
-                    session[SESSION_REFRESH] = result.session.refresh_token
+                    session[SESSION_ACCESS] = sb_session.access_token
+                    session[SESSION_REFRESH] = sb_session.refresh_token
                     
                     write_audit_log("login", target=f"user:{profile['id']}")
                     
@@ -292,7 +288,7 @@ def student_register():
                 return render_template("auth/student_register.html")
             
             # Create student user
-            user_id = auth_utils_unified.create_student_auth_user(
+            user_id = create_student_auth_user(
                 admission_no=admission_no,
                 password=password,
                 email=email,

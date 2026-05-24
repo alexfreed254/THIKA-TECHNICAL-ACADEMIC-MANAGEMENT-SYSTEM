@@ -36,7 +36,8 @@ def current_user() -> Optional[dict]:
 
 def is_authenticated() -> bool:
     user = session.get(SESSION_USER)
-    return bool(user and user.get("active", False))
+    # Field in user_profiles is "is_active", not "active"
+    return bool(user and user.get("is_active", False))
 
 
 def load_user_profile(user_id: str) -> Optional[dict]:
@@ -93,7 +94,8 @@ def write_audit_log(action: str, target: str = None, detail: dict = None):
 def authenticate_staff(email: str, password: str) -> Optional[dict]:
     """
     Staff login: Supabase Auth only.
-    Returns User profile or None.
+    Returns User profile dict (with '_session' key holding the Supabase session)
+    or None on failure.
     """
     import logging
     log = logging.getLogger(__name__)
@@ -113,14 +115,16 @@ def authenticate_staff(email: str, password: str) -> Optional[dict]:
         if profile["role"] not in STAFF_ROLES:
             return None
 
-        # Try Supabase Auth
+        # Authenticate via Supabase Auth (single call — session returned here)
         client = get_anon_client()
         result = client.auth.sign_in_with_password({
             'email': email,
             'password': password,
         })
         
-        if result and result.user:
+        if result and result.user and result.session:
+            # Attach session tokens so the login route doesn't need a second call
+            profile["_session"] = result.session
             return profile
             
         return None
@@ -241,7 +245,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not is_authenticated():
-            return redirect(url_for("main.index"))
+            return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
     return decorated
 
@@ -256,7 +260,7 @@ def role_required(*roles):
         @wraps(f)
         def decorated(*args, **kwargs):
             if not is_authenticated():
-                return redirect(url_for("main.index"))
+                return redirect(url_for("auth.login"))
             user = current_user()
             if not user or user.get("role") not in roles:
                 abort(403)
