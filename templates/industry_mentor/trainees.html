@@ -1,0 +1,83 @@
+{% extends "industry_mentor/base.html" %}
+
+{% block title %}Trainees{% endblock %}
+{% block page_title %}Assigned Trainees{% endblock %}
+
+{% block extra_style %}
+<style>
+  .mentor-info { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 25px; }
+  .mentor-info h3 { margin-top: 0; }
+  .trainees-list { display: grid; gap: 15px; }
+  .trainee-card { background: white; padding: 20px; border-radius: 8px; }
+  .trainee-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+  .trainee-name { font-weight: 600; font-size: 16px; margin-bottom: 5px; }
+  .trainee-admission { color: #666; font-size: 14px; }
+  .trainee-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-active { background: #d4edda; color: #155724; }
+  .status-completed { background: #e2e3e5; color: #383d41; }
+  .trainee-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+  .detail-item { background: #f8f9fa; padding: 12px; border-radius: 6px; }
+  .detail-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .detail-value { font-weight: 600; font-size: 14px; }
+  .trainee-actions { display: flex; gap: 10px; }
+  .btn-view { background: #2196f3; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; }
+  .btn-view:hover { background: #1976d2; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mentor-info">
+  <h3>{{ mentor.companies.name }}</h3>
+  <p style="margin: 5px 0; color: #666;">{{ mentor.companies.address }}</p>
+  <p style="margin: 5px 0; color: #666;">Specialization: {{ mentor.specialization }}</p>
+</div>
+
+<h3>Assigned Trainees</h3>
+<div class="trainees-list">
+  {% for attachment in attachments %}
+  <div class="trainee-card">
+    <div class="trainee-header">
+      <div>
+        <div class="trainee-name">{{ attachment.user_profiles.full_name }}</div>
+        <div class="trainee-admission">{{ attachment.user_profiles.admission_no }}</div>
+      </div>
+      <span class="trainee-status status-{{ attachment.status }}">
+        {{ attachment.status|capitalize }}
+      </span>
+    </div>
+    <div class="trainee-details">
+      <div class="detail-item">
+        <div class="detail-label">Unit</div>
+        <div class="detail-value">{{ attachment.units.name }} ({{ attachment.units.code }})</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Start Date</div>
+        <div class="detail-value">{{ attachment.start_date }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">End Date</div>
+        <div class="detail-value">{{ attachment.end_date }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Phone</div>
+        <div class="detail-value">{{ attachment.user_profiles.mobile_number or 'N/A' }}</div>
+      </div>
+    </div>
+    {% if attachment.attachment_goals %}
+    <div style="margin-bottom: 15px;">
+      <div class="detail-label">Attachment Goals</div>
+      <div style="font-size: 14px;">{{ attachment.attachment_goals }}</div>
+    </div>
+    {% endif %}
+    <div class="trainee-actions">
+      <a href="/industry-mentor/logbook" class="btn-view">View Logbook</a>
+      <a href="/industry-mentor/competency" class="btn-view">View Competency</a>
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
+    No trainees assigned to your company yet.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

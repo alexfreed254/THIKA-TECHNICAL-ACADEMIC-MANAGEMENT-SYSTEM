@@ -1,0 +1,158 @@
+{% extends "student/base.html" %}
+
+{% block title %}Industrial Attachment{% endblock %}
+{% block page_title %}Industrial Attachment{% endblock %}
+
+{% block extra_style %}
+<style>
+  .attachment-status { padding: 20px; background: #f5f5f5; border-radius: 8px; margin-bottom: 25px; }
+  .status-badge { padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; }
+  .status-pending { background: #fff3cd; color: #856404; }
+  .status-approved { background: #d4edda; color: #155724; }
+  .status-active { background: #cce5ff; color: #004085; }
+  .status-completed { background: #e2e3e5; color: #383d41; }
+  .status-rejected { background: #f8d7da; color: #721c24; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+  .info-item { background: white; padding: 12px; border-radius: 6px; }
+  .info-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .info-value { font-weight: 600; font-size: 14px; }
+  .request-form { background: white; padding: 25px; border-radius: 8px; margin-top: 25px; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+  .form-group textarea { height: 80px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .btn-submit { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; }
+  .btn-submit:hover { background: #45a049; }
+  .gps-section { background: #e3f2fd; padding: 15px; border-radius: 6px; margin-top: 20px; }
+  .btn-checkin { background: #2196f3; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; margin-right: 10px; }
+  .btn-checkout { background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if current_attachment %}
+<div class="attachment-status">
+  <h3>Current Attachment</h3>
+  <span class="status-badge status-{{ current_attachment.status }}">{{ current_attachment.status|capitalize }}</span>
+  
+  <div class="info-grid">
+    <div class="info-item">
+      <div class="info-label">Company</div>
+      <div class="info-value">{{ current_attachment.companies.name }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Unit</div>
+      <div class="info-value">{{ current_attachment.units.name }} ({{ current_attachment.units.code }})</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Start Date</div>
+      <div class="info-value">{{ current_attachment.start_date }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">End Date</div>
+      <div class="info-value">{{ current_attachment.end_date }}</div>
+    </div>
+    {% if current_attachment.mentor_name %}
+    <div class="info-item">
+      <div class="info-label">Mentor</div>
+      <div class="info-value">{{ current_attachment.mentor_name }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if current_attachment.status == 'active' %}
+  <div class="gps-section">
+    <h4>GPS Check-in/Check-out</h4>
+    <p>Check-in at your company location to record your attendance.</p>
+    <form id="gpsForm">
+      <input type="hidden" name="attachment_id" value="{{ current_attachment.id }}">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Latitude</label>
+          <input type="number" step="any" name="latitude" id="latitude" placeholder="Auto-detect or enter manually">
+        </div>
+        <div class="form-group">
+          <label>Longitude</label>
+          <input type="number" step="any" name="longitude" id="longitude" placeholder="Auto-detect or enter manually">
+        </div>
+      </div>
+      <button type="button" class="btn-submit" onclick="getLocation()" style="margin-bottom: 10px; background: #2196f3;">Get Current Location</button>
+      <div style="margin-top: 15px;">
+        <button type="submit" formaction="/student/check-in" class="btn-checkin">Check In</button>
+        <button type="submit" formaction="/student/check-out" class="btn-checkout">Check Out</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="attachment-status">
+  <h3>No Active Attachment</h3>
+  <p>You don't have an active industrial attachment. Request one below.</p>
+</div>
+{% endif %}
+
+{% if not current_attachment or current_attachment.status in ['pending', 'rejected', 'completed'] %}
+<div class="request-form">
+  <h3>Request Industrial Attachment</h3>
+  <form method="POST" action="/student/industrial-attachment/request">
+    <div class="form-group">
+      <label>Select Company *</label>
+      <select name="company_id" required>
+        <option value="">Choose a company</option>
+        {% for company in companies %}
+        <option value="{{ company.id }}">{{ company.name }} - {{ company.industry_classification }} ({{ company.city }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Select Unit *</label>
+      <select name="unit_id" required>
+        <option value="">Choose a unit</option>
+        {% for unit in enrolled_units %}
+        <option value="{{ unit.unit_id }}">{{ unit.units.name }} ({{ unit.units.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Start Date *</label>
+        <input type="date" name="start_date" required>
+      </div>
+      <div class="form-group">
+        <label>End Date *</label>
+        <input type="date" name="end_date" required>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Attachment Goals</label>
+      <textarea name="attachment_goals" placeholder="What do you hope to achieve during this attachment?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Learning Objectives</label>
+      <textarea name="learning_objectives" placeholder="Specific skills or competencies you want to develop"></textarea>
+    </div>
+    <button type="submit" class="btn-submit">Submit Request</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      document.getElementById('latitude').value = position.coords.latitude;
+      document.getElementById('longitude').value = position.coords.longitude;
+    }, function(error) {
+      alert('Unable to get location. Please enter manually.');
+      console.error(error);
+    });
+  } else {
+    alert('Geolocation is not supported by your browser.');
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,225 @@
+{% extends "examination_officer/base.html" %}
+
+{% block page_title %}Approved Exam Bookings{% endblock %}
+
+{% block extra_style %}
+<style>
+  .filter-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  .filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+  }
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .filter-buttons {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-filter {
+    background: #6a1b9a;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-filter:hover { background: #4a148c; }
+  .btn-clear {
+    background: #fff;
+    color: #333;
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-clear:hover { background: #f5f5f5; }
+  .booking-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .booking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+  }
+  .booking-header h3 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+  }
+  .booking-header .meta {
+    color: #666;
+    font-size: 14px;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status-approved { background: #e8f5e9; color: #2e7d32; }
+  .status-completed { background: #e3f2fd; color: #1565c0; }
+  .booking-details {
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+  .booking-details p {
+    margin: 5px 0;
+    font-size: 14px;
+  }
+  .booking-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-confirm {
+    background: #2e7d32;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-confirm:hover { background: #1b5e20; }
+  .btn-view {
+    background: #6a1b9a;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .btn-view:hover { background: #4a148c; }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+  }
+  .empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-section">
+  <h3 style="margin: 0 0 15px 0;">Filter Bookings</h3>
+  <form method="GET">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label for="admission_no">Admission Number</label>
+        <input type="text" id="admission_no" name="admission_no" value="{{ filters.admission_no }}" placeholder="Enter admission no">
+      </div>
+      <div class="filter-group">
+        <label for="trainee_name">Trainee Name</label>
+        <input type="text" id="trainee_name" name="trainee_name" value="{{ filters.trainee_name }}" placeholder="Enter name">
+      </div>
+      <div class="filter-group">
+        <label for="class_id">Class</label>
+        <select id="class_id" name="class_id">
+          <option value="">All Classes</option>
+          {% for cls in classes %}
+          <option value="{{ cls.id }}" {% if cls.id == filters.class_id %}selected{% endif %}>{{ cls.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="year">Year</label>
+        <input type="number" id="year" name="year" value="{{ filters.year }}" placeholder="e.g., 2024" min="2020" max="2030">
+      </div>
+      <div class="filter-group">
+        <label for="exam_series">Exam Series</label>
+        <input type="text" id="exam_series" name="exam_series" value="{{ filters.exam_series }}" placeholder="e.g., Term 1, Cycle 1">
+      </div>
+    </div>
+    <div class="filter-buttons">
+      <button type="submit" class="btn-filter">
+        <i class="fas fa-filter"></i> Apply Filters
+      </button>
+      <a href="{{ url_for('examination_officer.exam_bookings') }}" class="btn-clear">
+        <i class="fas fa-times"></i> Clear
+      </a>
+    </div>
+  </form>
+</div>
+
+{% if not bookings %}
+<div class="empty-state">
+  <i class="fas fa-calendar-times"></i>
+  <p>No approved exam bookings found matching your filters.</p>
+</div>
+{% else %}
+<div class="bookings-list">
+  {% for booking in bookings %}
+  <div class="booking-card">
+    <div class="booking-header">
+      <div>
+        <h3>{{ booking.user_profiles.full_name }}</h3>
+        <div class="meta">
+          {{ booking.user_profiles.admission_no }} | {{ booking.user_profiles.classes.name }}
+        </div>
+      </div>
+      <span class="status-badge status-{{ booking.status }}">{{ booking.status|title }}</span>
+    </div>
+    
+    <div class="booking-details">
+      <p><strong>Unit:</strong> {{ booking.units.name }} ({{ booking.units.code }})</p>
+      <p><strong>Exam Date:</strong> {{ booking.exam_date | to_eat('%d %B %Y') }}</p>
+      <p><strong>Session:</strong> {{ booking.exam_session|title }}</p>
+      {% if booking.exam_venue %}
+      <p><strong>Venue:</strong> {{ booking.exam_venue }}</p>
+      {% endif %}
+      <p><strong>Purpose:</strong> {{ booking.purpose }}</p>
+      <p><strong>Approved By:</strong> {{ booking.user_profiles.full_name }}</p>
+      <p><strong>Approved At:</strong> {{ booking.approved_at | to_eat('%d %B %Y %H:%M') }}</p>
+    </div>
+    
+    <div class="booking-actions">
+      {% if booking.status == 'approved' %}
+      <form action="{{ url_for('examination_officer.confirm_booking', booking_id=booking.id) }}" method="POST" style="display: inline;">
+        <button type="submit" class="btn-confirm">
+          <i class="fas fa-check"></i> Confirm
+        </button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('examination_officer.view_booking', booking_id=booking.id) }}" class="btn-view">
+        <i class="fas fa-eye"></i> View Details
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

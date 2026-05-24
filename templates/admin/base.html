@@ -16,6 +16,33 @@
     #toast.success { background: #2e7d32; color: #fff; }
     #toast.info    { background: #1565c0; color: #fff; }
     #toast.error   { background: #c62828; color: #fff; }
+    .notification-bell {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      transition: background 0.3s ease;
+    }
+    .notification-bell:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #c62828;
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 50%;
+      min-width: 18px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -45,6 +72,12 @@
       <a href="/admin/assessment_sheet"><i class="fas fa-clipboard-check fa-fw"></i> Assessment Sheet</a>
     </div>
     <div class="sidebar-footer">
+      <a href="/notifications" class="notification-bell">
+        <i class="fas fa-bell"></i>
+        {% if unread_notification_count > 0 %}
+        <span class="notification-badge">{{ unread_notification_count }}</span>
+        {% endif %}
+      </a>
       <a href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
   </nav>

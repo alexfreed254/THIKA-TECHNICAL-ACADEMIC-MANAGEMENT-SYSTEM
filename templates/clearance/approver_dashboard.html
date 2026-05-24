@@ -1,0 +1,107 @@
+{% extends "clearance_approver/base.html" %}
+
+{% block title %}Clearance Approvals{% endblock %}
+{% block page_title %}Clearance Approvals{% endblock %}
+
+{% block extra_style %}
+<style>
+  .approvals-list { display: grid; gap: 15px; }
+  .approval-item { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; }
+  .approval-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+  .student-info h4 { margin: 0 0 5px 0; font-size: 16px; }
+  .student-info p { margin: 0; font-size: 13px; color: #666; }
+  .approval-stage { padding: 4px 12px; background: #e3f2fd; color: #0d47a1; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .approval-details { margin-bottom: 15px; }
+  .detail-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .detail-value { margin-bottom: 8px; }
+  .approval-actions { display: flex; gap: 10px; }
+  .btn-approve { background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .btn-reject { background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+  .modal.active { display: flex; align-items: center; justify-content: center; }
+  .modal-content { background: white; padding: 25px; border-radius: 8px; max-width: 500px; width: 90%; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+  .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; height: 80px; resize: vertical; }
+  .btn-submit { background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h3>Pending Clearance Approvals ({{ user_role|replace('_', ' ')|title }})</h3>
+<div class="approvals-list">
+  {% for approval in my_approvals %}
+  <div class="approval-item">
+    <div class="approval-header">
+      <div class="student-info">
+        <h4>{{ approval.user_profiles.full_name }} ({{ approval.user_profiles.admission_no }})</h4>
+        <p>{{ approval.clearance_departments.name }} - {{ approval.clearance_stages.stage_name }}</p>
+      </div>
+      <span class="approval-stage">{{ approval.clearance_stages.approver_role|replace('_', ' ')|title }}</span>
+    </div>
+    <div class="approval-details">
+      <div class="detail-label">Clearance Request ID</div>
+      <div class="detail-value">{{ approval.clearance_requests.student_id }}</div>
+    </div>
+    <div class="approval-actions">
+      <button class="btn-approve" onclick="approveClearance('{{ approval.id }}')">Approve</button>
+      <button class="btn-reject" onclick="openRejectModal('{{ approval.id }}')">Reject</button>
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
+    No pending approvals for your role.
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Reject Modal -->
+<div class="modal" id="rejectModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Reject Clearance</h2>
+      <button class="modal-close" onclick="closeRejectModal()">&times;</button>
+    </div>
+    <form id="rejectForm" method="POST">
+      <input type="hidden" id="rejectApprovalId" name="approval_id">
+      <div class="form-group">
+        <label>Comments (required)</label>
+        <textarea name="comments" required placeholder="Provide reason for rejection"></textarea>
+      </div>
+      <button type="submit" class="btn-submit">Reject with Comments</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function approveClearance(approvalId) {
+  if (confirm('Are you sure you want to approve this clearance stage?')) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/clearance/approve/${approvalId}`;
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function openRejectModal(approvalId) {
+  document.getElementById('rejectApprovalId').value = approvalId;
+  document.getElementById('rejectModal').classList.add('active');
+}
+
+function closeRejectModal() {
+  document.getElementById('rejectModal').classList.remove('active');
+}
+
+document.getElementById('rejectForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const approvalId = document.getElementById('rejectApprovalId').value;
+  this.action = `/clearance/reject/${approvalId}`;
+  this.submit();
+});
+</script>
+{% endblock %}

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: tttti-attendance
+    name: thika-technical-training-institute-ams
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app

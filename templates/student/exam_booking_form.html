@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exam Booking Form - THIKA TECHNICAL TRAINING INSTITUTE</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    .form-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 3px solid #1565c0;
+      padding-bottom: 20px;
+    }
+    .header h1 {
+      color: #1565c0;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .header h2 {
+      color: #333;
+      font-size: 18px;
+      font-weight: normal;
+    }
+    .section {
+      margin-bottom: 25px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1565c0;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+    .field {
+      display: flex;
+      margin-bottom: 12px;
+    }
+    .field-label {
+      width: 200px;
+      font-weight: 600;
+      color: #333;
+    }
+    .field-value {
+      flex: 1;
+      color: #555;
+    }
+    .status-box {
+      background: #e8f5e9;
+      border: 2px solid #2e7d32;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .status-box h3 {
+      color: #2e7d32;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    .status-box p {
+      color: #333;
+      font-size: 14px;
+    }
+    .approval-section {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+    .approval-section .section-title {
+      color: #2e7d32;
+    }
+    .signature-line {
+      margin-top: 40px;
+      border-top: 1px solid #333;
+      width: 200px;
+      padding-top: 10px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      color: #666;
+      font-size: 12px;
+    }
+    .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #1565c0;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .print-btn:hover {
+      background: #0d47a1;
+    }
+    @media print {
+      .print-btn {
+        display: none;
+      }
+      body {
+        background: white;
+        padding: 0;
+      }
+      .form-container {
+        box-shadow: none;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="print-btn" onclick="window.print()">
+    <i class="fas fa-print"></i> Print
+  </button>
+  
+  <div class="form-container">
+    <div class="header">
+      <img src="{{ LOGO_URL }}" alt="Logo" style="height: 80px; margin-bottom: 15px;">
+      <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
+      <h2>EXAM BOOKING FORM</h2>
+    </div>
+    
+    <div class="status-box">
+      <h3><i class="fas fa-check-circle"></i> APPROVED</h3>
+      <p>This exam booking has been reviewed and approved by the Department Administration.</p>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Student Information</div>
+      <div class="field">
+        <div class="field-label">Full Name:</div>
+        <div class="field-value">{{ booking.user_profiles.full_name }}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Admission Number:</div>
+        <div class="field-value">{{ booking.user_profiles.admission_no }}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Class:</div>
+        <div class="field-value">{{ booking.user_profiles.classes.name }}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Department:</div>
+        <div class="field-value">{{ booking.user_profiles.classes.departments.name }}</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Exam Details</div>
+      <div class="field">
+        <div class="field-label">Unit:</div>
+        <div class="field-value">{{ booking.units.name }} ({{ booking.units.code }})</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Exam Date:</div>
+        <div class="field-value">{{ booking.exam_date | to_eat('%d %B %Y') }}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Exam Session:</div>
+        <div class="field-value">{{ booking.exam_session|title }}</div>
+      </div>
+      {% if booking.exam_venue %}
+      <div class="field">
+        <div class="field-label">Exam Venue:</div>
+        <div class="field-value">{{ booking.exam_venue }}</div>
+      </div>
+      {% endif %}
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Booking Information</div>
+      <div class="field">
+        <div class="field-label">Purpose:</div>
+        <div class="field-value">{{ booking.purpose }}</div>
+      </div>
+      {% if booking.special_requirements %}
+      <div class="field">
+        <div class="field-label">Special Requirements:</div>
+        <div class="field-value">{{ booking.special_requirements }}</div>
+      </div>
+      {% endif %}
+      <div class="field">
+        <div class="field-label">Booking Submitted:</div>
+        <div class="field-value">{{ booking.created_at | to_eat('%d %B %Y at %H:%M') }}</div>
+      </div>
+    </div>
+    
+    <div class="approval-section">
+      <div class="section-title">Approval Details</div>
+      <div class="field">
+        <div class="field-label">Approved By:</div>
+        <div class="field-value">{{ booking.user_profiles.full_name }}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Approval Date:</div>
+        <div class="field-value">{{ booking.approved_at | to_eat('%d %B %Y at %H:%M') }}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Status:</div>
+        <div class="field-value" style="color: #2e7d32; font-weight: bold;">✓ APPROVED</div>
+      </div>
+    </div>
+    
+    <div class="approval-section">
+      <div class="section-title">Requirements Checklist</div>
+      <div style="margin-bottom: 15px;">
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
+          <span>Student information verified</span>
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
+          <span>Unit enrollment confirmed</span>
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
+          <span>Exam date and session approved</span>
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
+          <span>Booking purpose reviewed</span>
+        </div>
+        <div style="display: flex; align-items: center;">
+          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
+          <span>Department authorization granted</span>
+        </div>
+      </div>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; margin-top: 50px;">
+      <div>
+        <div class="signature-line">Student Signature</div>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">Date: _______________</div>
+      </div>
+      <div>
+        <div class="signature-line">Department Head Signature</div>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">Date: _______________</div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>THIKA TECHNICAL TRAINING INSTITUTE - Academic Management System</p>
+      <p>This document serves as official confirmation of exam booking approval.</p>
+      <p>Generated on: {{ 'now' | to_eat('%d %B %Y at %H:%M') }}</p>
+    </div>
+  </div>
+</body>
+</html>

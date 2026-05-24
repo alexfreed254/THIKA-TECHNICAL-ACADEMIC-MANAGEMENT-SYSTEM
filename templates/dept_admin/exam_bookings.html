@@ -1,0 +1,137 @@
+{% extends "dept_admin/base.html" %}
+
+{% block page_title %}Exam Booking Approvals{% endblock %}
+
+{% block extra_style %}
+<style>
+  .booking-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .student-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  .student-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #1565c0;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .btn-approve {
+    background: #2e7d32;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-approve:hover { background: #1b5e20; }
+  .btn-reject {
+    background: #c62828;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-reject:hover { background: #8b0000; }
+  .action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+  }
+  .empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <h2>Pending Exam Bookings</h2>
+</div>
+
+{% if not bookings %}
+<div class="empty-state">
+  <i class="fas fa-check-circle"></i>
+  <p>No pending exam bookings to review.</p>
+</div>
+{% else %}
+{% for booking in bookings %}
+<div class="booking-card">
+  <div class="student-info">
+    <div class="student-avatar">
+      {{ booking.user_profiles.full_name[0] if booking.user_profiles.full_name else 'S' }}
+    </div>
+    <div>
+      <h3 style="margin: 0 0 4px 0;">{{ booking.user_profiles.full_name }}</h3>
+      <div style="color: #666; font-size: 14px;">
+        Admission: {{ booking.user_profiles.admission_no }}
+        <span style="margin: 0 10px;">|</span>
+        Class: {{ booking.user_profiles.classes.name }}
+      </div>
+    </div>
+  </div>
+  
+  <div style="margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+    <h4 style="margin: 0 0 10px 0;">{{ booking.units.name }} ({{ booking.units.code }})</h4>
+    <div style="color: #666; font-size: 14px;">
+      <i class="fas fa-calendar"></i> {{ booking.exam_date | to_eat('%d %b %Y') }}
+      <span style="margin: 0 10px;">|</span>
+      <i class="fas fa-clock"></i> {{ booking.exam_session|title }}
+      {% if booking.exam_venue %}
+      <span style="margin: 0 10px;">|</span>
+      <i class="fas fa-map-marker-alt"></i> {{ booking.exam_venue }}
+      {% endif %}
+    </div>
+  </div>
+  
+  <div style="margin-bottom: 15px;">
+    <strong>Purpose:</strong> {{ booking.purpose }}
+    {% if booking.special_requirements %}
+    <br><strong>Special Requirements:</strong> {{ booking.special_requirements }}
+    {% endif %}
+  </div>
+  
+  <div style="font-size: 12px; color: #999; margin-bottom: 15px;">
+    Submitted: {{ booking.created_at | to_eat('%d %b %Y %H:%M') }}
+  </div>
+  
+  <form action="{{ url_for('dept_admin.approve_exam_booking', booking_id=booking.id) }}" method="POST" class="action-buttons">
+    <button type="submit" class="btn-approve">
+      <i class="fas fa-check"></i> Approve
+    </button>
+  </form>
+  
+  <form action="{{ url_for('dept_admin.reject_exam_booking', booking_id=booking.id) }}" method="POST" class="action-buttons">
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <input type="text" name="rejection_reason" placeholder="Reason for rejection (optional)" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex: 1;">
+      <button type="submit" class="btn-reject">
+        <i class="fas fa-times"></i> Reject
+      </button>
+    </div>
+  </form>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

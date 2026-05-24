@@ -1,0 +1,207 @@
+{% extends "trainer/base.html" %}
+
+{% block page_title %}Import Marks from Excel{% endblock %}
+
+{% block extra_style %}
+<style>
+  .import-container {
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 800px;
+  }
+  .form-group {
+    margin-bottom: 20px;
+  }
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+  }
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .file-upload {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .file-upload:hover {
+    border-color: #7b1fa2;
+    background: #f5f5f5;
+  }
+  .btn-upload {
+    background: #7b1fa2;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .btn-upload:hover { background: #4a148c; }
+  .btn-download-template {
+    background: #1565c0;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .btn-download-template:hover { background: #0d47a1; }
+  .instructions {
+    background: #e3f2fd;
+    border-left: 4px solid #1565c0;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+  }
+  .instructions h4 {
+    margin: 0 0 10px 0;
+    color: #1565c0;
+  }
+  .instructions ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .instructions li {
+    margin-bottom: 5px;
+    color: #333;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+  <h2 style="margin: 0 0 20px 0;">Import Marks from Excel</h2>
+  
+  <div class="instructions">
+    <h4><i class="fas fa-info-circle"></i> Instructions</h4>
+    <ul>
+      <li>Download the Excel template below</li>
+      <li>Fill in the Excel file with student admission numbers and marks</li>
+      <li>Required columns: <strong>admission_no</strong>, <strong>marks</strong></li>
+      <li>Optional column: <strong>remarks</strong></li>
+      <li>Upload the filled Excel file to import marks</li>
+    </ul>
+  </div>
+  
+  <div style="margin-bottom: 20px;">
+    <a href="#" class="btn-download-template" onclick="downloadTemplate()">
+      <i class="fas fa-download"></i> Download Excel Template
+    </a>
+  </div>
+  
+  <form method="POST" action="{{ url_for('trainer.upload_marks') }}" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="class_id">Class *</label>
+      <select id="class_id" name="class_id" required>
+        <option value="">Select Class</option>
+        {% for item in units_with_classes %}
+        <option value="{{ item.classes.id }}">{{ item.classes.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="unit_id">Unit *</label>
+      <select id="unit_id" name="unit_id" required>
+        <option value="">Select Unit</option>
+        {% for item in units_with_classes %}
+        <option value="{{ item.units.id }}">{{ item.units.name }} ({{ item.units.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="term">Term *</label>
+      <select id="term" name="term" required>
+        <option value="">Select Term</option>
+        <option value="1">Term 1</option>
+        <option value="2">Term 2</option>
+        <option value="3">Term 3</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="cycle">Cycle</label>
+      <input type="text" id="cycle" name="cycle" placeholder="e.g., Cycle 1">
+    </div>
+    
+    <div class="form-group">
+      <label for="year">Year *</label>
+      <input type="number" id="year" name="year" value="{{ 'now' | date('Y') }}" min="2020" max="2030" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="assessment_type">Assessment Type *</label>
+      <select id="assessment_type" name="assessment_type" required>
+        <option value="">Select Type</option>
+        <option value="oral">Oral</option>
+        <option value="practical">Practical</option>
+        <option value="theory">Theory</option>
+        <option value="written">Written</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="assessment_name">Assessment Name *</label>
+      <input type="text" id="assessment_name" name="assessment_name" required placeholder="e.g., CAT 1, Mid-term Exam">
+    </div>
+    
+    <div class="form-group">
+      <label for="marks_file">Excel File *</label>
+      <div class="file-upload">
+        <input type="file" id="marks_file" name="marks_file" accept=".xlsx,.xls" required style="display: none;" onchange="updateFileName(this)">
+        <label for="marks_file" style="cursor: pointer;">
+          <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #7b1fa2;"></i>
+          <p style="margin: 10px 0 0 0; color: #666;">Click to upload Excel file</p>
+          <p id="file-name" style="margin: 5px 0 0 0; color: #7b1fa2; font-weight: 600;"></p>
+        </label>
+      </div>
+    </div>
+    
+    <button type="submit" class="btn-upload">
+      <i class="fas fa-upload"></i> Import Marks
+    </button>
+  </form>
+</div>
+
+<script>
+function updateFileName(input) {
+  const fileName = input.files[0] ? input.files[0].name : '';
+  document.getElementById('file-name').textContent = fileName;
+}
+
+function downloadTemplate() {
+  // Create a simple Excel template
+  const data = [
+    ['admission_no', 'marks', 'remarks'],
+    ['STU001', '75', 'Good performance'],
+    ['STU002', '82', 'Excellent'],
+    ['STU003', '68', 'Needs improvement']
+  ];
+  
+  let csvContent = data.map(row => row.join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'marks_template.csv';
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

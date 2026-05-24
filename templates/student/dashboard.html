@@ -59,6 +59,22 @@
     </div>
   </div>
 
+  <!-- Clearance Section -->
+  {% if clearance_eligible %}
+  <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="card-header" style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+      <span><i class="fas fa-clipboard-check"></i> Course Completion & Clearance</span>
+    </div>
+    <div style="padding: 20px;">
+      <h3 style="margin: 0 0 10px 0;">Congratulations! You're Eligible for Clearance</h3>
+      <p style="margin: 0 0 15px 0; opacity: 0.9;">You have completed your course requirements. Initiate the clearance process to receive your certificate.</p>
+      <a href="/clearance/" class="topnav-btn" style="background: white; color: #667eea; display: inline-block;">
+        <i class="fas fa-clipboard-check"></i> Start Clearance Process
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Attendance table -->
   <div class="card">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">

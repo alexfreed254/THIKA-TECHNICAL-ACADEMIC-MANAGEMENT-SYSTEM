@@ -1,0 +1,106 @@
+{% extends "examination_officer/base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_style %}
+<style>
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .stat-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #666;
+    text-transform: uppercase;
+  }
+  .stat-card .value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #6a1b9a;
+  }
+  .stat-card.approved .value { color: #2e7d32; }
+  .stat-card.pending .value { color: #f57c00; }
+  .stat-card.completed .value { color: #1565c0; }
+  .recent-bookings {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .recent-bookings h2 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+  }
+  .booking-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .booking-item:last-child {
+    border-bottom: none;
+  }
+  .booking-info h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+  }
+  .booking-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+  }
+  .btn-view {
+    background: #6a1b9a;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 12px;
+  }
+  .btn-view:hover { background: #4a148c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+  <div class="stat-card approved">
+    <h3>Approved Bookings</h3>
+    <div class="value">{{ total_approved }}</div>
+  </div>
+  <div class="stat-card pending">
+    <h3>Pending Approval</h3>
+    <div class="value">{{ total_pending }}</div>
+  </div>
+  <div class="stat-card completed">
+    <h3>Completed Exams</h3>
+    <div class="value">{{ total_completed }}</div>
+  </div>
+</div>
+
+<div class="recent-bookings">
+  <h2>Recent Approved Bookings</h2>
+  {% if not recent_bookings %}
+  <p style="color: #999; text-align: center; padding: 20px;">No recent bookings found.</p>
+  {% else %}
+  {% for booking in recent_bookings %}
+  <div class="booking-item">
+    <div class="booking-info">
+      <h4>{{ booking.user_profiles.full_name }} - {{ booking.units.name }}</h4>
+      <p>{{ booking.exam_date | to_eat('%d %b %Y') }} | {{ booking.exam_session|title }} | {{ booking.user_profiles.classes.name }}</p>
+    </div>
+    <a href="{{ url_for('examination_officer.view_booking', booking_id=booking.id) }}" class="btn-view">View</a>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

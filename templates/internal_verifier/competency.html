@@ -1,0 +1,155 @@
+{% extends "internal_verifier/base.html" %}
+
+{% block title %}Competency Verification{% endblock %}
+{% block page_title %}Competency Verification{% endblock %}
+
+{% block extra_style %}
+<style>
+  .filters { display: flex; gap: 15px; margin-bottom: 20px; }
+  .filters select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
+  .competency-list { display: grid; gap: 15px; }
+  .competency-item { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ddd; }
+  .competency-item.verification-pending { border-left-color: #ffc107; }
+  .competency-item.verification-verified { border-left-color: #28a745; }
+  .competency-item.verification-rejected { border-left-color: #dc3545; }
+  .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .item-trainee { font-weight: 600; font-size: 16px; }
+  .item-unit { color: #666; font-size: 14px; }
+  .item-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .verification-pending { background: #fff3cd; color: #856404; }
+  .verification-verified { background: #d4edda; color: #155724; }
+  .verification-rejected { background: #f8d7da; color: #721c24; }
+  .item-content { margin-bottom: 15px; }
+  .content-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .content-value { margin-bottom: 10px; }
+  .item-actions { display: flex; gap: 10px; }
+  .btn-verify { background: #0288d1; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+  .modal.active { display: flex; align-items: center; justify-content: center; }
+  .modal-content { background: white; padding: 25px; border-radius: 8px; max-width: 500px; width: 90%; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+  .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+  .form-group textarea { height: 80px; resize: vertical; }
+  .btn-submit { background: #0288d1; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+  <select name="status" onchange="location.href='/internal-verifier/competency?status='+this.value">
+    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending Verification</option>
+    <option value="verified" {% if status == 'verified' %}selected{% endif %}>Verified</option>
+    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+  </select>
+  <select name="department_id" onchange="location.href='/internal-verifier/competency?status={{ status }}&department_id='+this.value">
+    <option value="">All Departments</option>
+    {% for dept in departments %}
+    <option value="{{ dept.id }}" {% if department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="competency-list">
+  {% for comp in competencies %}
+  <div class="competency-item verification-{{ comp.verification_status }}">
+    <div class="item-header">
+      <div>
+        <div class="item-trainee">{{ comp.user_profiles.full_name }} ({{ comp.user_profiles.admission_no }})</div>
+        <div class="item-unit">{{ comp.units.name }} ({{ comp.units.code }})</div>
+      </div>
+      <span class="item-status verification-{{ comp.verification_status }}">
+        {{ comp.verification_status|capitalize }}
+      </span>
+    </div>
+    <div class="item-content">
+      <div class="content-label">Competency Element</div>
+      <div class="content-value">{{ comp.competency_element }}</div>
+      
+      <div class="content-label">Assessment Method</div>
+      <div class="content-value">{{ comp.assessment_method }}</div>
+      
+      <div class="content-label">Competency Status</div>
+      <div class="content-value">{{ comp.competency_status }}</div>
+      
+      {% if comp.assessor_comments %}
+      <div class="content-label">Assessor Comments</div>
+      <div class="content-value">{{ comp.assessor_comments }}</div>
+      {% endif %}
+      
+      <div class="content-label">Assessed By</div>
+      <div class="content-value">{{ comp.assessor_name }}</div>
+      
+      {% if comp.assessment_date %}
+      <div class="content-label">Assessment Date</div>
+      <div class="content-value">{{ comp.assessment_date }}</div>
+      {% endif %}
+    </div>
+    
+    {% if comp.verification_status == 'pending' %}
+    <div class="item-actions">
+      <button class="btn-verify" onclick="openVerifyModal('{{ comp.id }}')">Verify</button>
+    </div>
+    {% endif %}
+    
+    {% if comp.verified_at %}
+    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-top: 15px;">
+      <div class="content-label">Verified At</div>
+      <div class="content-value">{{ comp.verified_at | to_eat }}</div>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
+    No competency entries found.
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Verify Modal -->
+<div class="modal" id="verifyModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Verify Competency</h2>
+      <button class="modal-close" onclick="closeVerifyModal()">&times;</button>
+    </div>
+    <form id="verifyForm" method="POST">
+      <input type="hidden" id="verifyCompId" name="comp_id">
+      <div class="form-group">
+        <label>Verification Status *</label>
+        <select name="verification_status" required>
+          <option value="verified">Verified</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Verifier Comments</label>
+        <textarea name="verifier_comments" placeholder="Provide additional comments if needed"></textarea>
+      </div>
+      <button type="submit" class="btn-submit">Submit Verification</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function openVerifyModal(compId) {
+  document.getElementById('verifyCompId').value = compId;
+  document.getElementById('verifyModal').classList.add('active');
+}
+
+function closeVerifyModal() {
+  document.getElementById('verifyModal').classList.remove('active');
+}
+
+document.getElementById('verifyForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const compId = document.getElementById('verifyCompId').value;
+  this.action = `/internal-verifier/competency/${compId}/verify`;
+  this.submit();
+});
+</script>
+{% endblock %}

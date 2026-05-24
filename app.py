@@ -1,5 +1,6 @@
 """
-app.py — Flask application entry point.
+app_unified.py — Unified Flask application entry point.
+Combines Attendance Management + E-Portfolio Management
 Hosted on Render. Database + Auth via Supabase.
 """
 
@@ -17,9 +18,9 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
 
 # ── Session / Cookie config ───────────────────────────────────────────────────
-app.config["SESSION_COOKIE_SAMESITE"]    = "Lax"   # "None" requires HTTPS everywhere
-app.config["SESSION_COOKIE_SECURE"]      = False    # Set True when behind HTTPS on Render
-app.config["SESSION_COOKIE_HTTPONLY"]    = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"   # "None" requires HTTPS everywhere
+app.config["SESSION_COOKIE_SECURE"] = False    # Set True when behind HTTPS on Render
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=1)
 
 # ── Reverse-proxy support (Render sits behind a load balancer) ────────────────
@@ -36,27 +37,49 @@ def before_request():
         pass  # never block a request due to token refresh failure
 
 # ── Blueprints ────────────────────────────────────────────────────────────────
-from routes.main        import main_bp
-from routes.auth        import auth_bp
+from routes.auth import auth_bp
 from routes.super_admin import super_admin_bp
-from routes.dept_admin  import dept_admin_bp
-from routes.lecturer    import lecturer_bp
-from routes.student     import student_bp
+from routes.dept_admin import dept_admin_bp
+from routes.trainer import trainer_bp
+from routes.student import student_bp
+from routes.employer import employer_bp
+from routes.examination_officer import examination_officer_bp
+from routes.industry_mentor import industry_mentor_bp
+from routes.internal_verifier import internal_verifier_bp
+from routes.clearance import clearance_bp
+from routes.admission import admission_bp
+from routes.admin_oversight import admin_oversight_bp
+from routes.notifications import notifications_bp
+from routes.main import main_bp
 
 app.register_blueprint(main_bp)
-app.register_blueprint(auth_bp,        url_prefix="/auth")
+app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(super_admin_bp, url_prefix="/super-admin")
-app.register_blueprint(dept_admin_bp,  url_prefix="/dept-admin")
-app.register_blueprint(lecturer_bp,    url_prefix="/lecturer")
-app.register_blueprint(student_bp,     url_prefix="/student")
+app.register_blueprint(dept_admin_bp, url_prefix="/dept-admin")
+app.register_blueprint(trainer_bp, url_prefix="/trainer")
+app.register_blueprint(student_bp, url_prefix="/student")
+app.register_blueprint(employer_bp, url_prefix="/employer")
+app.register_blueprint(examination_officer_bp, url_prefix="/examination-officer")
+app.register_blueprint(industry_mentor_bp, url_prefix="/industry-mentor")
+app.register_blueprint(internal_verifier_bp, url_prefix="/internal-verifier")
+app.register_blueprint(clearance_bp, url_prefix="/clearance")
+app.register_blueprint(admission_bp, url_prefix="/admission")
+app.register_blueprint(admin_oversight_bp, url_prefix="/admin-oversight")
+app.register_blueprint(notifications_bp, url_prefix="/notifications")
 
 # ── Template globals ──────────────────────────────────────────────────────────
 @app.context_processor
 def inject_globals():
     from auth_utils import current_user
+    from notifications import get_unread_count
+    user = current_user()
+    unread_count = 0
+    if user:
+        unread_count = get_unread_count(user["id"])
     return {
-        "LOGO_URL":     "/static/assets/THIKATTILOGO.jpg",
-        "current_user": current_user(),
+        "LOGO_URL": "/static/assets/THIKATTILOGO.jpg",
+        "current_user": user,
+        "unread_notification_count": unread_count,
     }
 
 # ── Jinja2 filter: convert UTC ISO string → EAT display string ───────────────

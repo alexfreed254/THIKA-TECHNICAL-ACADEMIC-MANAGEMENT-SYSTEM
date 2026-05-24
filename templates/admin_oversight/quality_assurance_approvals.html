@@ -1,0 +1,74 @@
+{% extends "admin_oversight/base.html" %}
+
+{% block title %}Quality Assurance Approvals{% endblock %}
+{% block page_title %}Quality Assurance Approvals{% endblock %}
+
+{% block extra_style %}
+<style>
+  .filter-bar { background: white; padding: 20px; border-radius: 8px; margin-bottom: 25px; }
+  .filter-bar select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 200px; }
+  .approvals-list { display: grid; gap: 15px; }
+  .approval-item { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #1a237e; }
+  .approval-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+  .student-info h4 { margin: 0 0 5px 0; font-size: 15px; }
+  .student-info p { margin: 0; font-size: 13px; color: #666; }
+  .approval-details { margin-bottom: 15px; }
+  .detail-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .detail-value { margin-bottom: 8px; }
+  .approval-actions { display: flex; gap: 10px; }
+  .btn-approve { background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .btn-approve:hover { background: #218838; }
+  .btn-reject { background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .btn-reject:hover { background: #c82333; }
+  .btn-view { background: #1a237e; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .btn-view:hover { background: #0d47a1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="GET" style="display: flex; gap: 15px; align-items: center;">
+    <label style="font-weight: 500;">Filter by Department:</label>
+    <select name="department">
+      <option value="">All Departments</option>
+      {% for dept in departments %}
+      <option value="{{ dept.id }}" {% if department_filter == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn-view">Apply Filter</button>
+    {% if department_filter %}
+    <a href="/admin-oversight/quality-assurance/approvals" style="color: #1a237e; text-decoration: none;">Clear Filter</a>
+    {% endif %}
+  </form>
+</div>
+
+<h3>Pending Assessment Approvals</h3>
+<div class="approvals-list">
+  {% for assessment in pending_assessments %}
+  <div class="approval-item">
+    <div class="approval-header">
+      <div class="student-info">
+        <h4>{{ assessment.user_profiles.full_name }} ({{ assessment.user_profiles.admission_no }})</h4>
+        <p>{{ assessment.units.name }} ({{ assessment.units.code }}) - {{ assessment.departments.name }}</p>
+      </div>
+      <span style="font-size: 12px; color: #666;">Uploaded: {{ assessment.uploaded_at | to_eat }}</span>
+    </div>
+    <div class="approval-details">
+      <div class="detail-label">Assessment ID</div>
+      <div class="detail-value">{{ assessment.id }}</div>
+      <div class="detail-label">File Name</div>
+      <div class="detail-value">{{ assessment.script_file_name or 'N/A' }}</div>
+      <div class="detail-label">Status</div>
+      <div class="detail-value">{{ assessment.status|title }}</div>
+    </div>
+    <div class="approval-actions">
+      <a href="/trainer/assessment-view/{{ assessment.id }}" class="btn-view">View Details</a>
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
+    No pending assessments for review.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

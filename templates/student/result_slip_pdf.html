@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Result Slip - THIKA TECHNICAL TRAINING INSTITUTE</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #f57c00;
+      padding-bottom: 15px;
+    }
+    .header img {
+      height: 60px;
+      margin-bottom: 10px;
+    }
+    .header h1 {
+      font-size: 20px;
+      margin: 0 0 5px 0;
+      color: #f57c00;
+    }
+    .header h2 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: normal;
+      color: #333;
+    }
+    .student-info {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #fff3e0;
+      border-radius: 4px;
+      border-left: 4px solid #f57c00;
+    }
+    .student-info table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .student-info td {
+      padding: 5px 10px;
+    }
+    .student-info td:first-child {
+      font-weight: bold;
+      width: 150px;
+    }
+    .summary-box {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #e3f2fd;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .summary-box .average {
+      font-size: 28px;
+      font-weight: bold;
+      color: #1565c0;
+    }
+    table.marks-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table.marks-table th {
+      background: #f57c00;
+      color: white;
+      padding: 10px;
+      text-align: left;
+      font-weight: bold;
+      border: 1px solid #f57c00;
+    }
+    table.marks-table td {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+    }
+    table.marks-table tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .grade-M { color: #2e7d32; font-weight: bold; }
+    .grade-P { color: #1565c0; font-weight: bold; }
+    .grade-C { color: #f57c00; font-weight: bold; }
+    .grade-NYC { color: #c62828; font-weight: bold; }
+    .grading-scale {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+    .grading-scale table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .grading-scale th {
+      background: #333;
+      color: white;
+      padding: 8px;
+      text-align: left;
+    }
+    .grading-scale td {
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #ddd;
+      color: #666;
+      font-size: 10px;
+    }
+    .signature-section {
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature-line {
+      width: 200px;
+      border-top: 1px solid #333;
+      padding-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="{{ LOGO_URL }}" alt="Logo">
+    <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
+    <h2>TERMLY ACADEMIC RESULT SLIP</h2>
+  </div>
+  
+  <div class="student-info">
+    <table>
+      <tr>
+        <td>Student Name:</td>
+        <td>{{ student.full_name }}</td>
+        <td>Admission No:</td>
+        <td>{{ student.admission_no }}</td>
+      </tr>
+      <tr>
+        <td>Class:</td>
+        <td>{{ marks[0].classes.name if marks else 'N/A' }}</td>
+        <td>Department:</td>
+        <td>{{ marks[0].classes.departments.name if marks else 'N/A' }}</td>
+      </tr>
+      <tr>
+        <td>Academic Year:</td>
+        <td>{{ year }}</td>
+        <td>Term:</td>
+        <td>{% if term %}Term {{ term }}{% else %}All Terms{% endif %}</td>
+      </tr>
+    </table>
+  </div>
+  
+  <div class="summary-box">
+    <div>Overall Performance</div>
+    <div class="average">{{ average }}%</div>
+    <div>Average Marks</div>
+  </div>
+  
+  {% if marks %}
+  <table class="marks-table">
+    <thead>
+      <tr>
+        <th>Unit Code</th>
+        <th>Unit Name</th>
+        <th>Assessment Name</th>
+        <th>Type</th>
+        <th>Marks</th>
+        <th>Grade</th>
+        <th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mark in marks %}
+      <tr>
+        <td>{{ mark.units.code }}</td>
+        <td>{{ mark.units.name }}</td>
+        <td>{{ mark.assessment_name }}</td>
+        <td>{{ mark.assessment_type|title }}</td>
+        <td>{{ mark.marks_obtained }} / {{ mark.max_marks }}</td>
+        <td class="grade-{{ mark.grade }}">{{ mark.grade }}</td>
+        <td>{{ mark.remarks or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="text-align: center; color: #999; padding: 20px;">No marks found for the selected period.</p>
+  {% endif %}
+  
+  <div class="grading-scale">
+    <h3 style="margin: 0 0 10px 0; color: #333;">Competency-Based Grading Scale</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Competency Level</th>
+          <th>Grade</th>
+          <th>Marks Range</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Mastery</td>
+          <td><strong>M</strong></td>
+          <td>85% – 100%</td>
+          <td>Demonstrates expert-level performance, innovates, and can train others</td>
+        </tr>
+        <tr>
+          <td>Proficient</td>
+          <td><strong>P</strong></td>
+          <td>70% – 84%</td>
+          <td>Performs tasks independently with high accuracy and efficiency</td>
+        </tr>
+        <tr>
+          <td>Competent</td>
+          <td><strong>C</strong></td>
+          <td>50% – 69%</td>
+          <td>Meets minimum occupational standard; can perform with limited supervision</td>
+        </tr>
+        <tr>
+          <td>Not Yet Competent</td>
+          <td><strong>NYC</strong></td>
+          <td>0% – 49%</td>
+          <td>Has not met required performance standard; needs further training</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="signature-section">
+    <div class="signature-line">Student Signature</div>
+    <div class="signature-line">Date</div>
+  </div>
+  
+  <div class="footer">
+    <p>THIKA TECHNICAL TRAINING INSTITUTE - Academic Management System</p>
+    <p>This result slip is an official record of academic performance.</p>
+    <p>Generated on: {{ 'now' | to_eat('%d %B %Y at %H:%M') }}</p>
+  </div>
+  
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>

@@ -1,5 +1,9 @@
 """
-auth_utils.py — Authentication helpers and RBAC decorators.
+auth_utils_unified.py — Unified Authentication helpers and RBAC decorators.
+
+Combines both systems:
+- Staff (super_admin, dept_admin, trainer): Supabase Auth (JWT)
+- Students: Password hash in user_profiles table
 
 All role checks are enforced here in Python (backend), in addition to
 Supabase RLS. Never rely on frontend-only checks.
@@ -9,6 +13,7 @@ import traceback
 from functools import wraps
 from typing import Optional
 from flask import session, redirect, url_for, abort, request
+from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_service_client, get_anon_client
 
 
@@ -16,6 +21,11 @@ from db import get_service_client, get_anon_client
 SESSION_USER    = "sb_user"
 SESSION_ACCESS  = "sb_access_token"
 SESSION_REFRESH = "sb_refresh_token"
+
+
+# ── Role definitions ────────────────────────────────────────────────────────────
+STAFF_ROLES = frozenset({'super_admin', 'dept_admin', 'trainer', 'employer', 'examination_officer', 'industry_mentor', 'internal_verifier', 'sports_hod', 'environment_hod', 'dean_students', 'library_hod', 'finance_officer', 'registrar', 'deputy_principal', 'quality_assurance_officer'})
+ALL_ROLES = frozenset({'super_admin', 'dept_admin', 'trainer', 'student', 'employer', 'examination_officer', 'industry_mentor', 'internal_verifier', 'sports_hod', 'environment_hod', 'dean_students', 'library_hod', 'finance_officer', 'registrar', 'deputy_principal', 'quality_assurance_officer'})
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -33,7 +43,6 @@ def load_user_profile(user_id: str) -> Optional[dict]:
     """Fetch user_profiles row using the service client (bypasses RLS)."""
     try:
         svc = get_service_client()
-        # Use limit(1) instead of .single() — .single() raises if row is missing
         res = svc.table("user_profiles").select("*").eq("id", user_id).limit(1).execute()
         if res.data and len(res.data) > 0:
             return res.data[0]
@@ -77,6 +86,153 @@ def write_audit_log(action: str, target: str = None, detail: dict = None):
         }).execute()
     except Exception:
         pass  # logging must never break the main flow
+
+
+# ── Authentication Functions ───────────────────────────────────────────────────
+
+def authenticate_staff(email: str, password: str) -> Optional[dict]:
+    """
+    Staff login: Supabase Auth only.
+    Returns User profile or None.
+    """
+    import logging
+    log = logging.getLogger(__name__)
+
+    email = email.strip().lower()
+    
+    try:
+        # First, get the user profile
+        svc = get_service_client()
+        profile_res = svc.table("user_profiles").select("*").eq("email", email).limit(1).execute()
+        
+        if not profile_res.data or len(profile_res.data) == 0:
+            return None
+            
+        profile = profile_res.data[0]
+        
+        if profile["role"] not in STAFF_ROLES:
+            return None
+
+        # Try Supabase Auth
+        client = get_anon_client()
+        result = client.auth.sign_in_with_password({
+            'email': email,
+            'password': password,
+        })
+        
+        if result and result.user:
+            return profile
+            
+        return None
+    except Exception as exc:
+        err = str(exc).lower()
+        if any(k in err for k in ('invalid', 'credentials', 'wrong', 'incorrect',
+                                   'email not confirmed', 'invalid login')):
+            log.warning('Supabase Auth rejected login for %s: %s', email, exc)
+            return None
+        log.warning('Supabase Auth error for %s (%s)', email, exc)
+        return None
+
+
+def authenticate_student(admission_no: str, password: str) -> Optional[dict]:
+    """
+    Student login: Admission number + password hash.
+    Returns User profile or None.
+    """
+    try:
+        svc = get_service_client()
+        res = svc.table("user_profiles").select("*").eq("admission_no", admission_no).eq("role", "student").limit(1).execute()
+        
+        if not res.data or len(res.data) == 0:
+            return None
+            
+        profile = res.data[0]
+        
+        if not profile.get("password_hash"):
+            return None
+            
+        if check_password_hash(profile["password_hash"], password):
+            return profile
+            
+        return None
+    except Exception as exc:
+        print(f"[auth_utils] authenticate_student error: {exc}")
+        return None
+
+
+def create_student_auth_user(admission_no: str, password: str, email: str, full_name: str, 
+                             department_id: str, class_id: str) -> str:
+    """
+    Create a student user with password hash.
+    Returns the user UUID.
+    """
+    import uuid
+    from supabase import create_client
+    
+    # Generate UUID for the user
+    user_id = str(uuid.uuid4())
+    
+    # Create in Supabase Auth (for consistency, but student won't use it)
+    try:
+        svc = get_service_client()
+        response = svc.auth.admin.create_user({
+            'email': email,
+            'password': password,
+            'email_confirm': True,
+            'user_metadata': {'admission_no': admission_no}
+        })
+        if response and response.user:
+            user_id = str(response.user.id)
+    except Exception as exc:
+        print(f"[auth_utils] Warning: Could not create Supabase Auth user for student: {exc}")
+        # Continue with local UUID
+    
+    # Create user profile
+    svc = get_service_client()
+    svc.table("user_profiles").insert({
+        "id": user_id,
+        "email": email,
+        "full_name": full_name,
+        "role": "student",
+        "admission_no": admission_no,
+        "department_id": department_id,
+        "password_hash": generate_password_hash(password),
+        "is_active": True
+    }).execute()
+    
+    return user_id
+
+
+def create_staff_auth_user(email: str, password: str, full_name: str, role: str, 
+                           department_id: str = None) -> str:
+    """
+    Create staff user in Supabase Auth.
+    Returns the auth user UUID.
+    """
+    svc = get_service_client()
+    response = svc.auth.admin.create_user({
+        'email': email,
+        'password': password,
+        'email_confirm': True,
+        'user_metadata': {'full_name': full_name, 'role': role}
+    })
+    
+    if not response or not response.user:
+        raise RuntimeError('Supabase Auth did not return a user.')
+    
+    user_id = str(response.user.id)
+    
+    # Create user profile
+    svc.table("user_profiles").insert({
+        "id": user_id,
+        "email": email,
+        "full_name": full_name,
+        "role": role,
+        "department_id": department_id,
+        "is_active": True
+    }).execute()
+    
+    return user_id
 
 
 # ── RBAC Decorators ───────────────────────────────────────────────────────────
@@ -126,7 +282,55 @@ def student_required(f):
     return role_required("student")(f)
 
 
-def dept_isolation_check(department_id: int) -> bool:
+def employer_required(f):
+    return role_required("employer")(f)
+
+
+def examination_officer_required(f):
+    return role_required("examination_officer")(f)
+
+
+def industry_mentor_required(f):
+    return role_required("industry_mentor")(f)
+
+
+def internal_verifier_required(f):
+    return role_required("internal_verifier")(f)
+
+
+def sports_hod_required(f):
+    return role_required("sports_hod")(f)
+
+
+def environment_hod_required(f):
+    return role_required("environment_hod")(f)
+
+
+def dean_students_required(f):
+    return role_required("dean_students")(f)
+
+
+def library_hod_required(f):
+    return role_required("library_hod")(f)
+
+
+def finance_officer_required(f):
+    return role_required("finance_officer")(f)
+
+
+def registrar_required(f):
+    return role_required("registrar")(f)
+
+
+def deputy_principal_required(f):
+    return role_required("deputy_principal")(f)
+
+
+def quality_assurance_officer_required(f):
+    return role_required("quality_assurance_officer")(f)
+
+
+def dept_isolation_check(department_id: str) -> bool:
     """
     Returns True if the current user may access the given department.
     super_admin can access any dept; others only their own.
@@ -136,4 +340,4 @@ def dept_isolation_check(department_id: int) -> bool:
         return False
     if user["role"] == "super_admin":
         return True
-    return user.get("dept_id") == department_id
+    return user.get("department_id") == department_id

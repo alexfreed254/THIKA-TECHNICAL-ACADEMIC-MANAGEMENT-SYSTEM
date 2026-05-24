@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marks Report - THIKA TECHNICAL TRAINING INSTITUTE</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 20mm;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #7b1fa2;
+      padding-bottom: 15px;
+    }
+    .header img {
+      height: 60px;
+      margin-bottom: 10px;
+    }
+    .header h1 {
+      font-size: 20px;
+      margin: 0 0 5px 0;
+      color: #7b1fa2;
+    }
+    .header h2 {
+      font-size: 14px;
+      margin: 0;
+      font-weight: normal;
+      color: #333;
+    }
+    .info-section {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+    .info-section table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .info-section td {
+      padding: 5px 10px;
+    }
+    .info-section td:first-child {
+      font-weight: bold;
+      width: 150px;
+    }
+    table.marks-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table.marks-table th {
+      background: #7b1fa2;
+      color: white;
+      padding: 10px;
+      text-align: left;
+      font-weight: bold;
+      border: 1px solid #7b1fa2;
+    }
+    table.marks-table td {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+    }
+    table.marks-table tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .grade-M { color: #2e7d32; font-weight: bold; }
+    .grade-P { color: #1565c0; font-weight: bold; }
+    .grade-C { color: #f57c00; font-weight: bold; }
+    .grade-NYC { color: #c62828; font-weight: bold; }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #ddd;
+      color: #666;
+      font-size: 10px;
+    }
+    .signature-section {
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature-line {
+      width: 200px;
+      border-top: 1px solid #333;
+      padding-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="{{ LOGO_URL }}" alt="Logo">
+    <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
+    <h2>MARKS REPORT</h2>
+  </div>
+  
+  <div class="info-section">
+    <table>
+      <tr>
+        <td>Unit:</td>
+        <td>{{ unit.name }} ({{ unit.code }})</td>
+        <td>Class:</td>
+        <td>{{ cls.name }}</td>
+      </tr>
+      <tr>
+        <td>Term:</td>
+        <td>{% if term %}Term {{ term }}{% else %}All Terms{% endif %}</td>
+        <td>Cycle:</td>
+        <td>{{ cycle or 'N/A' }}</td>
+      </tr>
+      <tr>
+        <td>Year:</td>
+        <td>{{ year }}</td>
+        <td>Trainer:</td>
+        <td>{{ trainer.full_name }}</td>
+      </tr>
+      <tr>
+        <td>Date:</td>
+        <td colspan="3">{{ 'now' | to_eat('%d %B %Y') }}</td>
+      </tr>
+    </table>
+  </div>
+  
+  {% if marks %}
+  <table class="marks-table">
+    <thead>
+      <tr>
+        <th>Admission No</th>
+        <th>Student Name</th>
+        <th>Assessment Name</th>
+        <th>Type</th>
+        <th>Marks</th>
+        <th>Grade</th>
+        <th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mark in marks %}
+      <tr>
+        <td>{{ mark.user_profiles.admission_no }}</td>
+        <td>{{ mark.user_profiles.full_name }}</td>
+        <td>{{ mark.assessment_name }}</td>
+        <td>{{ mark.assessment_type|title }}</td>
+        <td>{{ mark.marks_obtained }} / {{ mark.max_marks }}</td>
+        <td class="grade-{{ mark.grade }}">{{ mark.grade }}</td>
+        <td>{{ mark.remarks or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="text-align: center; color: #999;">No marks found for the selected criteria.</p>
+  {% endif %}
+  
+  <div class="signature-section">
+    <div class="signature-line">Trainer Signature</div>
+    <div class="signature-line">Date</div>
+  </div>
+  
+  <div class="footer">
+    <p>THIKA TECHNICAL TRAINING INSTITUTE - Academic Management System</p>
+    <p>This document is an official record of student assessment marks.</p>
+    <p>Generated on: {{ 'now' | to_eat('%d %B %Y at %H:%M') }}</p>
+  </div>
+  
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends "dept_admin/base.html" %}
+
+{% block title %}Admission Requests{% endblock %}
+{% block page_title %}Admission Requests{% endblock %}
+
+{% block extra_style %}
+<style>
+  .requests-list { display: grid; gap: 20px; }
+  .request-card { background: white; padding: 25px; border-radius: 8px; border-left: 4px solid #007bff; }
+  .request-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+  .student-info h4 { margin: 0 0 5px 0; font-size: 16px; }
+  .student-info p { margin: 0; font-size: 13px; color: #666; }
+  .request-details { margin-bottom: 15px; }
+  .detail-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .detail-value { margin-bottom: 8px; }
+  .document-status { display: flex; gap: 10px; margin-bottom: 15px; }
+  .doc-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .doc-badge.verified { background: #d4edda; color: #155724; }
+  .doc-badge.pending { background: #fff3cd; color: #856404; }
+  .request-actions { display: flex; gap: 10px; }
+  .btn-review { background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .btn-review:hover { background: #0056b3; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h3>Pending Admission Requests</h3>
+<div class="requests-list">
+  {% for req in pending_requests %}
+  <div class="request-card">
+    <div class="request-header">
+      <div class="student-info">
+        <h4>{{ req.user_profiles.full_name }} ({{ req.user_profiles.admission_no }})</h4>
+        <p>{{ req.courses.name }} - {{ req.departments.name }}</p>
+      </div>
+      <span style="font-size: 12px; color: #666;">Submitted: {{ req.submitted_at | to_eat }}</span>
+    </div>
+    <div class="request-details">
+      <div class="detail-label">Email</div>
+      <div class="detail-value">{{ req.user_profiles.email }}</div>
+      <div class="detail-label">Documents Status</div>
+      <div class="document-status">
+        {% set verified_count = req.documents | selectattr('verified', 'equalto', true) | list | length %}
+        {% set total_count = req.documents | length %}
+        <span class="doc-badge {% if verified_count == total_count %}verified{% else %}pending{% endif %}">
+          {{ verified_count }}/{{ total_count }} Verified
+        </span>
+      </div>
+    </div>
+    <div class="request-actions">
+      <a href="/admission/hod/review/{{ req.id }}" class="btn-review">Review Request</a>
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
+    No pending admission requests.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-# TTTTI Attendance Management System
+# THIKA TECHNICAL TRAINING INSTITUTE ACADEMIC MANAGEMENT SYSTEM
 
 **Stack:** Python (Flask) on Render · Supabase (PostgreSQL + Auth + RLS)
 
@@ -10,10 +10,21 @@
 Browser → Render (Flask/Gunicorn) → Supabase (Auth + DB)
 ```
 
-- **Authentication:** Supabase Auth (email/password, JWT)
+- **Authentication:** Supabase Auth (email/password, JWT) for staff/employer, Password hash for students
 - **Database:** Supabase PostgreSQL with Row Level Security
 - **Hosting:** Render (Python web service)
 - **No Render database** — all data lives in Supabase
+
+---
+
+## Features
+
+- **Attendance Management** - Track daily student attendance
+- **Assessment & E-Portfolio** - Upload and review student assessments
+- **Job Portal** - Employers post jobs, students apply
+- **Employer Verifications** - Work experience verification for trainees
+- **In-App Notifications** - Real-time notifications for all users
+- **Audit Logging** - Complete system activity tracking
 
 ---
 
@@ -23,8 +34,9 @@ Browser → Render (Flask/Gunicorn) → Supabase (Auth + DB)
 |------|--------|
 | `super_admin` | Full system — all departments, users, logs |
 | `dept_admin` | Own department only — classes, trainers, students, attendance |
-| `trainer` | Own assigned classes/units only — mark attendance |
-| `student` | Own attendance records only — read-only |
+| `trainer` | Own assigned classes/units only — mark attendance, review assessments |
+| `student` | Own attendance records, upload assessments, apply for jobs |
+| `employer` | Post jobs, review applications, verify trainee work |
 
 Access control is enforced at **two layers**:
 1. **Python backend** — role checks in decorators + department isolation checks
@@ -42,6 +54,9 @@ Access control is enforced at **two layers**:
    - Project URL
    - `anon` public key
    - `service_role` secret key
+4. Go to **Storage** and create public buckets:
+   - `assessment-scripts` (for PDF uploads)
+   - `assessment-evidence` (for photos/videos)
 
 ### 2. Create Super Admin
 
@@ -77,7 +92,7 @@ gunicorn app:app
 1. Push this repo to GitHub
 2. In Render Dashboard → **New Web Service** → connect your repo
 3. Render will detect `render.yaml` automatically
-4. Set the three environment variables in Render Dashboard:
+4. Set the environment variables in Render Dashboard:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
@@ -95,9 +110,12 @@ gunicorn app:app
 | `/auth/forgot-password` | Password reset |
 | `/super-admin/*` | Super Admin portal |
 | `/dept-admin/*` | Department Admin portal |
-| `/lecturer/*` | Trainer portal |
+| `/trainer/*` | Trainer portal |
 | `/student/*` | Student portal |
 | `/student/register` | Student self-registration |
+| `/employer/*` | Employer portal |
+| `/employer/register` | Employer registration |
+| `/employer/job-board` | Public job board |
 
 ---
 
@@ -110,3 +128,4 @@ gunicorn app:app
 - Audit logs are written to `system_logs` for every significant action
 - Session cookies are `HttpOnly`, `Secure`, `SameSite=None`
 - JWT tokens are refreshed automatically before expiry
+- File uploads are stored in Supabase Storage with public access policies

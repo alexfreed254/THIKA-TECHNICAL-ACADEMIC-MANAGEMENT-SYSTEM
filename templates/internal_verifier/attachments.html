@@ -1,0 +1,91 @@
+{% extends "internal_verifier/base.html" %}
+
+{% block title %}Attachment Review{% endblock %}
+{% block page_title %}Industrial Attachment Review{% endblock %}
+
+{% block extra_style %}
+<style>
+  .filters { display: flex; gap: 15px; margin-bottom: 20px; }
+  .filters select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
+  .attachments-list { display: grid; gap: 15px; }
+  .attachment-item { background: white; padding: 20px; border-radius: 8px; }
+  .item-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+  .item-trainee { font-weight: 600; font-size: 16px; margin-bottom: 5px; }
+  .item-company { color: #666; font-size: 14px; }
+  .item-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-active { background: #d4edda; color: #155724; }
+  .status-completed { background: #e2e3e5; color: #383d41; }
+  .item-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+  .detail-item { background: #f8f9fa; padding: 12px; border-radius: 6px; }
+  .detail-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .detail-value { font-weight: 600; font-size: 14px; }
+  .item-actions { display: flex; gap: 10px; }
+  .btn-view { background: #0288d1; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; }
+  .btn-view:hover { background: #01579b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+  <select name="status" onchange="location.href='/internal-verifier/attachments?status='+this.value">
+    <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+    <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+  </select>
+  <select name="department_id" onchange="location.href='/internal-verifier/attachments?status={{ status }}&department_id='+this.value">
+    <option value="">All Departments</option>
+    {% for dept in departments %}
+    <option value="{{ dept.id }}" {% if department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="attachments-list">
+  {% for attachment in attachments %}
+  <div class="attachment-item">
+    <div class="item-header">
+      <div>
+        <div class="item-trainee">{{ attachment.user_profiles.full_name }} ({{ attachment.user_profiles.admission_no }})</div>
+        <div class="item-company">{{ attachment.companies.name }} - {{ attachment.units.name }}</div>
+      </div>
+      <span class="item-status status-{{ attachment.status }}">
+        {{ attachment.status|capitalize }}
+      </span>
+    </div>
+    <div class="item-details">
+      <div class="detail-item">
+        <div class="detail-label">Start Date</div>
+        <div class="detail-value">{{ attachment.start_date }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">End Date</div>
+        <div class="detail-value">{{ attachment.end_date }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Mentor</div>
+        <div class="detail-value">{{ attachment.mentor_name or 'N/A' }}</div>
+      </div>
+      {% if attachment.final_grade %}
+      <div class="detail-item">
+        <div class="detail-label">Final Grade</div>
+        <div class="detail-value">{{ attachment.final_grade }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% if attachment.attachment_goals %}
+    <div style="margin-bottom: 15px;">
+      <div class="detail-label">Attachment Goals</div>
+      <div style="font-size: 14px;">{{ attachment.attachment_goals }}</div>
+    </div>
+    {% endif %}
+    <div class="item-actions">
+      <a href="/internal-verifier/attachment/{{ attachment.id }}/view" class="btn-view">View Details</a>
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
+    No attachments found.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

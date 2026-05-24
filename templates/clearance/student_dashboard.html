@@ -1,0 +1,150 @@
+{% extends "student/base.html" %}
+
+{% block title %}Clearance{% endblock %}
+{% block page_title %}Course Clearance{% endblock %}
+
+{% block extra_style %}
+<style>
+  .clearance-status { padding: 25px; background: #f5f5f5; border-radius: 8px; margin-bottom: 25px; }
+  .status-badge { padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+  .status-pending { background: #fff3cd; color: #856404; }
+  .status-in_progress { background: #cce5ff; color: #004085; }
+  .status-completed { background: #d4edda; color: #155724; }
+  .status-rejected { background: #f8d7da; color: #721c24; }
+  .clearance-section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 25px; }
+  .section-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; }
+  .approval-list { display: grid; gap: 15px; }
+  .approval-item { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #ddd; }
+  .approval-item.status-pending { border-left-color: #ffc107; }
+  .approval-item.status-approved { border-left-color: #28a745; }
+  .approval-item.status-rejected { border-left-color: #dc3545; }
+  .approval-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .approval-stage { font-weight: 600; font-size: 15px; }
+  .approval-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .approval-dept { font-size: 13px; color: #666; margin-bottom: 8px; }
+  .approval-comments { background: white; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 13px; }
+  .approval-date { font-size: 12px; color: #666; margin-top: 8px; }
+  .initiate-form { background: white; padding: 25px; border-radius: 8px; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+  .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+  .btn-initiate { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; }
+  .btn-initiate:hover { background: #45a049; }
+  .btn-certificate { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn-certificate:hover { background: #0056b3; }
+  .certificate-ready { background: #d4edda; padding: 20px; border-radius: 8px; text-align: center; margin-top: 20px; }
+  .timeline { position: relative; padding-left: 30px; }
+  .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #e0e0e0; }
+  .timeline-item { position: relative; margin-bottom: 20px; }
+  .timeline-item::before { content: ''; position: absolute; left: -24px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; border: 2px solid white; }
+  .timeline-item.completed::before { background: #28a745; }
+  .timeline-item.pending::before { background: #ffc107; }
+  .timeline-item.rejected::before { background: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if not has_request %}
+<div class="initiate-form">
+  <h3>Initiate Course Clearance</h3>
+  <p style="margin-bottom: 20px; color: #666;">Initiate the clearance process when you have completed your course requirements.</p>
+  <form method="POST" action="/clearance/initiate">
+    <div class="form-group">
+      <label>Select Course *</label>
+      <select name="course_id" required>
+        <option value="">Choose a course</option>
+        {% for enrollment in current_user.enrollments %}
+        <option value="{{ enrollment.course_id }}">{{ enrollment.courses.name }} ({{ enrollment.courses.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-initiate">Initiate Clearance Process</button>
+  </form>
+</div>
+{% else %}
+<div class="clearance-status">
+  <h3>Clearance Status</h3>
+  <div style="margin-bottom: 15px;">
+    <span class="status-badge status-{{ clearance_request.status }}">{{ clearance_request.status|replace('_', ' ')|title }}</span>
+  </div>
+  <div style="font-size: 14px; color: #666;">
+    <p><strong>Course:</strong> {{ clearance_request.courses.name }} ({{ clearance_request.courses.code }})</p>
+    <p><strong>Department:</strong> {{ clearance_request.departments.name }}</p>
+    <p><strong>Initiated:</strong> {{ clearance_request.initiated_at | to_eat }}</p>
+    {% if clearance_request.completed_at %}
+    <p><strong>Completed:</strong> {{ clearance_request.completed_at | to_eat }}</p>
+    {% endif %}
+  </div>
+  
+  {% if clearance_request.status == 'completed' and not clearance_request.certificate_issued %}
+  <div class="certificate-ready">
+    <h4>Certificate Ready for Collection</h4>
+    <p style="margin: 10px 0;">Your clearance is complete. Click below to issue your certificate.</p>
+    <form method="POST" action="/clearance/issue-certificate/{{ clearance_request.id }}">
+      <button type="submit" class="btn-certificate">Issue Certificate</button>
+    </form>
+  </div>
+  {% endif %}
+  
+  {% if clearance_request.certificate_issued %}
+  <div class="certificate-ready" style="background: #cce5ff;">
+    <h4>Certificate Issued</h4>
+    <p style="margin: 10px 0;">Your certificate was issued on {{ clearance_request.certificate_issued_at | to_eat }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="clearance-section">
+  <div class="section-title">Clearance Progress Timeline</div>
+  <div class="timeline">
+    {% for approval in department_approvals %}
+    <div class="timeline-item {{ approval.status }}">
+      <div class="approval-header">
+        <div class="approval-stage">{{ approval.clearance_stages.stage_name }}</div>
+        <span class="approval-status status-{{ approval.status }}">{{ approval.status|capitalize }}</span>
+      </div>
+      <div class="approval-dept">{{ approval.clearance_departments.name }} - Department Clearance</div>
+      {% if approval.comments %}
+      <div class="approval-comments"><strong>Comments:</strong> {{ approval.comments }}</div>
+      {% endif %}
+      {% if approval.approved_at %}
+      <div class="approval-date">Approved: {{ approval.approved_at | to_eat }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    
+    {% for approval in institutional_approvals %}
+    <div class="timeline-item {{ approval.status }}">
+      <div class="approval-header">
+        <div class="approval-stage">{{ approval.clearance_stages.stage_name }}</div>
+        <span class="approval-status status-{{ approval.status }}">{{ approval.status|capitalize }}</span>
+      </div>
+      <div class="approval-dept">{{ approval.clearance_departments.name }} - Institutional Clearance</div>
+      {% if approval.comments %}
+      <div class="approval-comments"><strong>Comments:</strong> {{ approval.comments }}</div>
+      {% endif %}
+      {% if approval.approved_at %}
+      <div class="approval-date">Approved: {{ approval.approved_at | to_eat }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    
+    {% for approval in central_approvals %}
+    <div class="timeline-item {{ approval.status }}">
+      <div class="approval-header">
+        <div class="approval-stage">{{ approval.clearance_stages.stage_name }}</div>
+        <span class="approval-status status-{{ approval.status }}">{{ approval.status|capitalize }}</span>
+      </div>
+      <div class="approval-dept">{{ approval.clearance_departments.name }} - Central Authority</div>
+      {% if approval.comments %}
+      <div class="approval-comments"><strong>Comments:</strong> {{ approval.comments }}</div>
+      {% endif %}
+      {% if approval.approved_at %}
+      <div class="approval-date">Approved: {{ approval.approved_at | to_eat }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

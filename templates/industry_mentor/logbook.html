@@ -1,0 +1,154 @@
+{% extends "industry_mentor/base.html" %}
+
+{% block title %}Logbook Review{% endblock %}
+{% block page_title %}Logbook Review{% endblock %}
+
+{% block extra_style %}
+<style>
+  .filters { display: flex; gap: 15px; margin-bottom: 20px; }
+  .filters select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
+  .logbook-list { display: grid; gap: 15px; }
+  .logbook-item { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ddd; }
+  .logbook-item.status-pending { border-left-color: #ffc107; }
+  .logbook-item.status-approved { border-left-color: #28a745; }
+  .logbook-item.status-rejected { border-left-color: #dc3545; }
+  .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .item-trainee { font-weight: 600; font-size: 16px; }
+  .item-date { color: #666; font-size: 14px; }
+  .item-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-pending { background: #fff3cd; color: #856404; }
+  .status-approved { background: #d4edda; color: #155724; }
+  .status-rejected { background: #f8d7da; color: #721c24; }
+  .item-content { margin-bottom: 15px; }
+  .content-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .content-value { margin-bottom: 10px; }
+  .item-actions { display: flex; gap: 10px; }
+  .btn-approve { background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .btn-reject { background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+  .modal.active { display: flex; align-items: center; justify-content: center; }
+  .modal-content { background: white; padding: 25px; border-radius: 8px; max-width: 500px; width: 90%; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+  .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; height: 80px; resize: vertical; }
+  .btn-submit { background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+  <select name="status" onchange="location.href='/industry-mentor/logbook?status='+this.value">
+    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+    <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+  </select>
+</div>
+
+<div class="logbook-list">
+  {% for log in logbooks %}
+  <div class="logbook-item status-{{ log.mentor_approval_status }}">
+    <div class="item-header">
+      <div>
+        <div class="item-trainee">{{ log.user_profiles.full_name }} ({{ log.user_profiles.admission_no }})</div>
+        <div class="item-date">{{ log.log_date }}</div>
+      </div>
+      <span class="item-status status-{{ log.mentor_approval_status }}">
+        {{ log.mentor_approval_status|capitalize }}
+      </span>
+    </div>
+    <div class="item-content">
+      <div class="content-label">Tasks Performed</div>
+      <div class="content-value">{{ log.tasks_performed }}</div>
+      
+      {% if log.skills_applied %}
+      <div class="content-label">Skills Applied</div>
+      <div class="content-value">{{ log.skills_applied }}</div>
+      {% endif %}
+      
+      {% if log.hours_worked %}
+      <div class="content-label">Hours Worked</div>
+      <div class="content-value">{{ log.hours_worked }} hours</div>
+      {% endif %}
+      
+      {% if log.challenges_encountered %}
+      <div class="content-label">Challenges Encountered</div>
+      <div class="content-value">{{ log.challenges_encountered }}</div>
+      {% endif %}
+      
+      {% if log.achievements %}
+      <div class="content-label">Achievements</div>
+      <div class="content-value">{{ log.achievements }}</div>
+      {% endif %}
+    </div>
+    
+    {% if log.mentor_approval_status == 'pending' %}
+    <div class="item-actions">
+      <button class="btn-approve" onclick="approveLogbook('{{ log.id }}')">Approve</button>
+      <button class="btn-reject" onclick="openRejectModal('{{ log.id }}')">Reject</button>
+    </div>
+    {% endif %}
+    
+    {% if log.mentor_comments %}
+    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-top: 15px;">
+      <div class="content-label">Mentor Comments</div>
+      <div class="content-value">{{ log.mentor_comments }}</div>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
+    No logbook entries found.
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Reject Modal -->
+<div class="modal" id="rejectModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Reject Logbook Entry</h2>
+      <button class="modal-close" onclick="closeRejectModal()">&times;</button>
+    </div>
+    <form id="rejectForm" method="POST">
+      <input type="hidden" id="rejectLogId" name="log_id">
+      <div class="form-group">
+        <label>Comments (required)</label>
+        <textarea name="comments" required placeholder="Provide feedback for the trainee"></textarea>
+      </div>
+      <button type="submit" class="btn-submit">Reject with Comments</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function approveLogbook(logId) {
+  if (confirm('Are you sure you want to approve this logbook entry?')) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/industry-mentor/logbook/${logId}/approve`;
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function openRejectModal(logId) {
+  document.getElementById('rejectLogId').value = logId;
+  document.getElementById('rejectModal').classList.add('active');
+}
+
+function closeRejectModal() {
+  document.getElementById('rejectModal').classList.remove('active');
+}
+
+document.getElementById('rejectForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const logId = document.getElementById('rejectLogId').value;
+  this.action = `/industry-mentor/logbook/${logId}/reject`;
+  this.submit();
+});
+</script>
+{% endblock %}

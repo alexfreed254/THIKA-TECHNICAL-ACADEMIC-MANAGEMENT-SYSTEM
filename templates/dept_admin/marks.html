@@ -1,0 +1,200 @@
+{% extends "dept_admin/base.html" %}
+
+{% block page_title %}Marks Report{% endblock %}
+
+{% block extra_style %}
+<style>
+  .filter-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  .filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+  }
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .btn-filter {
+    background: #1976d2;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-filter:hover { background: #0d47a1; }
+  .btn-download {
+    background: #1565c0;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .btn-download:hover { background: #0d47a1; }
+  .marks-table {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+  .marks-table table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+  }
+  .marks-table th,
+  .marks-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  .marks-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+    color: #333;
+  }
+  .grade-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .grade-M { background: #e8f5e9; color: #2e7d32; }
+  .grade-P { background: #e3f2fd; color: #1565c0; }
+  .grade-C { background: #fff3e0; color: #f57c00; }
+  .grade-NYC { background: #ffebee; color: #c62828; }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+  }
+  .empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-section">
+  <h3 style="margin: 0 0 15px 0;">Filter Marks</h3>
+  <form method="GET">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label for="year">Year</label>
+        <select id="year" name="year">
+          <option value="2024" {% if year == '2024' %}selected{% endif %}>2024</option>
+          <option value="2025" {% if year == '2025' %}selected{% endif %}>2025</option>
+          <option value="2026" {% if year == '2026' %}selected{% endif %}>2026</option>
+          <option value="2027" {% if year == '2027' %}selected{% endif %}>2027</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="term">Term</label>
+        <select id="term" name="term">
+          <option value="">All Terms</option>
+          <option value="1" {% if term == '1' %}selected{% endif %}>Term 1</option>
+          <option value="2" {% if term == '2' %}selected{% endif %}>Term 2</option>
+          <option value="3" {% if term == '3' %}selected{% endif %}>Term 3</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="class_id">Class</label>
+        <select id="class_id" name="class_id">
+          <option value="">All Classes</option>
+          {% for cls in classes %}
+          <option value="{{ cls.id }}" {% if cls.id == class_id %}selected{% endif %}>{{ cls.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="unit_id">Unit</label>
+        <select id="unit_id" name="unit_id">
+          <option value="">All Units</option>
+          {% for unit in units %}
+          <option value="{{ unit.id }}" {% if unit.id == unit_id %}selected{% endif %}>{{ unit.name }} ({{ unit.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group" style="display: flex; align-items: flex-end;">
+        <button type="submit" class="btn-filter">
+          <i class="fas fa-filter"></i> Apply
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="marks-table">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h3 style="margin: 0;">Student Marks (Department)</h3>
+    <a href="{{ url_for('dept_admin.download_marks_pdf', year=year, term=term, class_id=class_id, unit_id=unit_id) }}" class="btn-download" target="_blank">
+      <i class="fas fa-download"></i> Download PDF
+    </a>
+  </div>
+  
+  {% if not marks %}
+  <div class="empty-state">
+    <i class="fas fa-chart-line"></i>
+    <p>No marks found for the selected criteria.</p>
+  </div>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Admission No</th>
+        <th>Student Name</th>
+        <th>Class</th>
+        <th>Department</th>
+        <th>Unit</th>
+        <th>Assessment</th>
+        <th>Type</th>
+        <th>Marks</th>
+        <th>Grade</th>
+        <th>Trainer</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mark in marks %}
+      <tr>
+        <td>{{ mark.user_profiles.admission_no }}</td>
+        <td>{{ mark.user_profiles.full_name }}</td>
+        <td>{{ mark.classes.name }}</td>
+        <td>{{ mark.classes.departments.name }}</td>
+        <td>{{ mark.units.name }} ({{ mark.units.code }})</td>
+        <td>{{ mark.assessment_name }}</td>
+        <td>{{ mark.assessment_type|title }}</td>
+        <td>{{ mark.marks_obtained }} / {{ mark.max_marks }}</td>
+        <td><span class="grade-badge grade-{{ mark.grade }}">{{ mark.grade }}</span></td>
+        <td>{{ mark.user_profiles.full_name }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

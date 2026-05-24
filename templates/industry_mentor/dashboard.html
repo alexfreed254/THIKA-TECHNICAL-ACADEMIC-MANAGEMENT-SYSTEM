@@ -1,0 +1,82 @@
+{% extends "industry_mentor/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Industry Mentor Dashboard{% endblock %}
+
+{% block extra_style %}
+<style>
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+  .stat-card { background: white; padding: 25px; border-radius: 8px; text-align: center; }
+  .stat-number { font-size: 36px; font-weight: 700; color: #2e7d32; margin-bottom: 8px; }
+  .stat-label { font-size: 14px; color: #666; }
+  .pending-section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; }
+  .pending-section h3 { margin-top: 0; margin-bottom: 20px; }
+  .pending-list { display: grid; gap: 15px; }
+  .pending-item { background: #f5f5f5; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .pending-info h4 { margin: 0 0 5px 0; font-size: 15px; }
+  .pending-info p { margin: 0; font-size: 13px; color: #666; }
+  .btn-action { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  .btn-view { background: #2196f3; color: white; }
+  .btn-view:hover { background: #1976d2; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-number">{{ attachments|length }}</div>
+    <div class="stat-label">Active Trainees</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ pending_logbooks|length }}</div>
+    <div class="stat-label">Pending Logbook Reviews</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ pending_competencies|length }}</div>
+    <div class="stat-label">Pending Competency Assessments</div>
+  </div>
+</div>
+
+<div class="pending-section">
+  <h3>Pending Logbook Reviews</h3>
+  <div class="pending-list">
+    {% for log in pending_logbooks %}
+    <div class="pending-item">
+      <div class="pending-info">
+        <h4>{{ log.user_profiles.full_name }} ({{ log.user_profiles.admission_no }})</h4>
+        <p>{{ log.log_date }} - {{ log.tasks_performed[:80] }}...</p>
+      </div>
+      <a href="/industry-mentor/logbook" class="btn-action btn-view">Review</a>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: #666; padding: 20px;">No pending logbook reviews</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="pending-section">
+  <h3>Pending Competency Assessments</h3>
+  <div class="pending-list">
+    {% for comp in pending_competencies %}
+    <div class="pending-item">
+      <div class="pending-info">
+        <h4>{{ comp.user_profiles.full_name }} ({{ comp.user_profiles.admission_no }})</h4>
+        <p>{{ comp.units.name }} - {{ comp.competency_element }}</p>
+      </div>
+      <a href="/industry-mentor/competency" class="btn-action btn-view">Assess</a>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: #666; padding: 20px;">No pending competency assessments</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="pending-section">
+  <h3>My Company</h3>
+  <div style="background: #f5f5f5; padding: 15px; border-radius: 6px;">
+    <h4>{{ mentor.companies.name }}</h4>
+    <p style="margin: 5px 0; color: #666;">{{ mentor.companies.address }}</p>
+    <p style="margin: 5px 0; color: #666;">{{ mentor.specialization }}</p>
+  </div>
+</div>
+{% endblock %}
