@@ -1,70 +1,209 @@
 {% extends "super_admin/base.html" %}
-{% block title %}All Users{% endblock %}
-{% block page_title %}All Users{% endblock %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
 
 {% block extra_style %}
-.page-wrap { padding:24px; }
-.card { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); overflow:hidden; }
-.card-header { background:#4a148c; color:#fff; padding:14px 20px; font-size:14px; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
-.filter-bar { padding:14px 20px; background:#fafafa; border-bottom:1px solid #eee; display:flex; gap:10px; flex-wrap:wrap; }
-.filter-bar a { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; text-decoration:none; background:#eee; color:#555; }
-.filter-bar a.active { background:#7b1fa2; color:#fff; }
-table { width:100%; border-collapse:collapse; }
-th { background:#f5f5f5; padding:11px 14px; text-align:left; font-size:12px; color:#555; border-bottom:2px solid #eee; }
-td { padding:11px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
-.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
-.badge-super_admin { background:#ede7f6; color:#4a148c; }
-.badge-dept_admin  { background:#e3f2fd; color:#1565c0; }
-.badge-trainer     { background:#e8f5e9; color:#2e7d32; }
-.badge-student     { background:#fff3e0; color:#e65100; }
-.badge-active   { background:#e8f5e9; color:#2e7d32; }
-.badge-inactive { background:#ffebee; color:#c62828; }
-.btn { padding:5px 12px; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; }
-.btn-danger  { background:#c62828; color:#fff; }
-.btn-success { background:#2e7d32; color:#fff; }
+.page-wrap{padding:24px}
+/* ── Add user card ── */
+.add-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
+.add-card-header{background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;padding:16px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px}
+.add-card-body{padding:22px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em}
+.form-group input,.form-group select{padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#f8fafc}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
+.full-col{grid-column:1/-1}
+.btn-add{padding:11px 28px;border:none;border-radius:8px;background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px}
+.btn-add:hover{filter:brightness(1.08)}
+.error-box{background:#ffebee;color:#c62828;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+/* ── Credential flash ── */
+.cred-box{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px}
+.cred-box strong{color:#1b5e20;display:block;margin-bottom:6px;font-size:14px}
+.cred-box code{background:#fff;padding:3px 8px;border-radius:4px;font-size:13px;border:1px solid #c8e6c9}
+/* ── Users table card ── */
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden}
+.card-header{padding:14px 20px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0}
+.filter-bar{padding:12px 20px;background:#fafafa;border-bottom:1px solid #eee;display:flex;gap:8px;flex-wrap:wrap}
+.filter-bar a{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;background:#eee;color:#555;transition:all .2s}
+.filter-bar a.active,.filter-bar a:hover{background:#1565c0;color:#fff}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:11px;color:#666;border-bottom:2px solid #eee;text-transform:uppercase;letter-spacing:.04em}
+td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-super_admin{background:#ede7f6;color:#4a148c}
+.badge-dept_admin{background:#e3f2fd;color:#1565c0}
+.badge-trainer{background:#e8f5e9;color:#2e7d32}
+.badge-student{background:#fff3e0;color:#e65100}
+.badge-employer{background:#e0f2f1;color:#00695c}
+.badge-examination_officer,.badge-registrar,.badge-deputy_principal,.badge-quality_assurance_officer{background:#fce4ec;color:#880e4f}
+.badge-industry_mentor,.badge-internal_verifier{background:#f3e5f5;color:#6a1b9a}
+.badge-active{background:#e8f5e9;color:#2e7d32}
+.badge-inactive{background:#ffebee;color:#c62828}
+.btn-xs{padding:4px 10px;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;text-decoration:none;display:inline-block}
+.btn-edit{background:#e3f2fd;color:#1565c0}
+.btn-danger{background:#ffebee;color:#c62828}
+.btn-enable{background:#e8f5e9;color:#2e7d32}
 {% endblock %}
 
 {% block content %}
 <div class="page-wrap">
+
+  <!-- ── Credential display after creation ── -->
+  {% if new_user_creds %}
+  <div class="cred-box">
+    <strong><i class="fas fa-key"></i> New Account Created — Share these credentials securely</strong>
+    <table style="border-collapse:collapse;margin-top:6px">
+      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Name:</td><td>{{ new_user_creds.full_name }}</td></tr>
+      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Role:</td><td>{{ new_user_creds.role|replace('_',' ')|title }}</td></tr>
+      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Email:</td><td><code>{{ new_user_creds.email }}</code></td></tr>
+      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Password:</td><td><code>{{ new_user_creds.password }}</code></td></tr>
+      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Login URL:</td><td><code>/auth/login</code> → Staff/Admin tab</td></tr>
+    </table>
+    <p style="margin-top:8px;color:#2e7d32;font-size:12px"><i class="fas fa-exclamation-triangle"></i> This password is shown only once. Copy it now and share it with the user.</p>
+  </div>
+  {% endif %}
+
+  <!-- ── Add User Form ── -->
+  <div class="add-card">
+    <div class="add-card-header"><i class="fas fa-user-plus"></i> Create New User Account</div>
+    <div class="add-card-body">
+      {% if error %}<div class="error-box"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
+      <form method="post">
+        <input type="hidden" name="add_user" value="1">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" name="full_name" required placeholder="e.g. John Kamau" value="{{ request.form.get('full_name','') }}">
+          </div>
+          <div class="form-group">
+            <label>Email Address *</label>
+            <input type="email" name="email" required placeholder="user@tttti.ac.ke" value="{{ request.form.get('email','') }}">
+          </div>
+          <div class="form-group">
+            <label>Role *</label>
+            <select name="role" required id="roleSelect" onchange="toggleAdmission()">
+              <option value="">— Select Role —</option>
+              <optgroup label="Administration">
+                <option value="super_admin">Super Admin</option>
+                <option value="dept_admin">Department Admin</option>
+              </optgroup>
+              <optgroup label="Academic Staff">
+                <option value="trainer">Trainer</option>
+              </optgroup>
+              <optgroup label="Oversight &amp; Compliance">
+                <option value="registrar">Registrar</option>
+                <option value="deputy_principal">Deputy Principal</option>
+                <option value="quality_assurance_officer">Quality Assurance Officer</option>
+                <option value="examination_officer">Examination Officer</option>
+                <option value="internal_verifier">Internal Verifier</option>
+              </optgroup>
+              <optgroup label="Industry">
+                <option value="industry_mentor">Industry Mentor</option>
+                <option value="employer">Employer</option>
+              </optgroup>
+              <optgroup label="Clearance">
+                <option value="sports_hod">Sports HOD</option>
+                <option value="environment_hod">Environment HOD</option>
+                <option value="dean_students">Dean of Students</option>
+                <option value="library_hod">Library HOD</option>
+                <option value="finance_officer">Finance Officer</option>
+              </optgroup>
+              <optgroup label="Trainee">
+                <option value="student">Student / Trainee</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <select name="department_id">
+              <option value="">— No Department —</option>
+              {% for d in departments %}
+              <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" id="admissionGroup" style="display:none">
+            <label>Admission Number <small style="color:#888">(students only)</small></label>
+            <input type="text" name="admission_no" placeholder="e.g. TTTTI/2025/001" value="{{ request.form.get('admission_no','') }}">
+          </div>
+          <div class="form-group">
+            <label>Temporary Password *</label>
+            <input type="text" name="password" required placeholder="Min 8 characters" id="pwdField" value="{{ suggested_password or '' }}">
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button type="button" onclick="generatePassword()" style="padding:10px 14px;border:1px dashed #1565c0;border-radius:8px;background:#f0f7ff;color:#1565c0;cursor:pointer;font-size:12px;font-weight:600">
+              <i class="fas fa-dice"></i> Generate Password
+            </button>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <button type="submit" class="btn-add"><i class="fas fa-user-plus"></i> Create Account &amp; Show Credentials</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Users Table ── -->
   <div class="card">
     <div class="card-header">
-      <span><i class="fas fa-users"></i> Users ({{ users|length }})</span>
+      <span><i class="fas fa-users"></i> All Users ({{ users|length }})</span>
     </div>
     <div class="filter-bar">
       <a href="/super-admin/users" class="{% if not role_filter %}active{% endif %}">All</a>
-      <a href="?role=super_admin"  class="{% if role_filter=='super_admin' %}active{% endif %}">Super Admin</a>
-      <a href="?role=dept_admin"   class="{% if role_filter=='dept_admin' %}active{% endif %}">Dept Admin</a>
-      <a href="?role=trainer"      class="{% if role_filter=='trainer' %}active{% endif %}">Trainer</a>
-      <a href="?role=student"      class="{% if role_filter=='student' %}active{% endif %}">Student</a>
+      <a href="?role=super_admin"              class="{% if role_filter=='super_admin' %}active{% endif %}">Super Admin</a>
+      <a href="?role=dept_admin"               class="{% if role_filter=='dept_admin' %}active{% endif %}">Dept Admin</a>
+      <a href="?role=trainer"                  class="{% if role_filter=='trainer' %}active{% endif %}">Trainer</a>
+      <a href="?role=student"                  class="{% if role_filter=='student' %}active{% endif %}">Student</a>
+      <a href="?role=registrar"                class="{% if role_filter=='registrar' %}active{% endif %}">Registrar</a>
+      <a href="?role=deputy_principal"         class="{% if role_filter=='deputy_principal' %}active{% endif %}">Deputy Principal</a>
+      <a href="?role=examination_officer"      class="{% if role_filter=='examination_officer' %}active{% endif %}">Exam Officer</a>
+      <a href="?role=quality_assurance_officer" class="{% if role_filter=='quality_assurance_officer' %}active{% endif %}">QA Officer</a>
+      <a href="?role=employer"                 class="{% if role_filter=='employer' %}active{% endif %}">Employer</a>
     </div>
-    <div style="overflow-x:auto;">
+    <div style="overflow-x:auto">
       <table>
         <thead>
-          <tr><th>Name</th><th>Role</th><th>Department</th><th>Status</th><th>Action</th></tr>
+          <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Actions</th></tr>
         </thead>
         <tbody>
           {% for u in users %}
           <tr>
-            <td><strong>{{ u.full_name }}</strong></td>
-            <td><span class="badge badge-{{ u.role }}">{{ u.role.replace('_',' ').title() }}</span></td>
-            <td>{{ u.departments.name if u.departments else '—' }}</td>
-            <td><span class="badge {% if u.is_active %}badge-active{% else %}badge-inactive{% endif %}">{{ 'Active' if u.is_active else 'Disabled' }}</span></td>
-            <td>
-              <form method="post" action="/super-admin/users/toggle" style="display:inline;">
-                <input type="hidden" name="user_id" value="{{ u.id }}">
-                <input type="hidden" name="is_active" value="{{ 'false' if u.is_active else 'true' }}">
-                <button type="submit" class="btn {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}">
-                  {{ 'Disable' if u.is_active else 'Enable' }}
-                </button>
-              </form>
+            <td style="color:#aaa">{{ loop.index }}</td>
+            <td><strong>{{ u.full_name }}</strong>{% if u.admission_no %}<br><small style="color:#aaa">{{ u.admission_no }}</small>{% endif %}</td>
+            <td style="font-size:12px;color:#555">{{ u.email }}</td>
+            <td><span class="badge badge-{{ u.role }}">{{ u.role|replace('_',' ')|title }}</span></td>
+            <td>{{ u.get('departments',{}).get('name','—') if u.get('departments') else '—' }}</td>
+            <td><span class="badge badge-{{ 'active' if u.is_active else 'inactive' }}">{{ 'Active' if u.is_active else 'Disabled' }}</span></td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap">
+              <a href="/super-admin/users/{{ u.id }}/edit" class="btn-xs btn-edit"><i class="fas fa-edit"></i> Edit</a>
+              <a href="/super-admin/users/{{ u.id }}/delete" class="btn-xs btn-danger"
+                 onclick="return confirm('Delete {{ u.full_name }}? This cannot be undone.')"><i class="fas fa-trash"></i></a>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="5" style="text-align:center;color:#aaa;padding:32px;">No users found.</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px">No users found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<script>
+function toggleAdmission() {
+  const role = document.getElementById('roleSelect').value;
+  document.getElementById('admissionGroup').style.display = role === 'student' ? 'flex' : 'none';
+}
+
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+  let pwd = '';
+  for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('pwdField').value = pwd;
+  document.getElementById('pwdField').type = 'text';
+}
+</script>
 {% endblock %}

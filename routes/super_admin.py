@@ -21,6 +21,18 @@ def _svc():
     return get_service_client()
 
 
+def _generate_password(length: int = 10) -> str:
+    """Generate a readable temporary password."""
+    import secrets, string
+    chars = string.ascii_letters + string.digits + "@#!"
+    while True:
+        pwd = ''.join(secrets.choice(chars) for _ in range(length))
+        # Ensure at least one digit and one special char
+        if (any(c.isdigit() for c in pwd) and
+                any(c in "@#!" for c in pwd)):
+            return pwd
+
+
 # ── One-time setup: seed super_admin user_profiles row ───────────────────────
 # Visit /super-admin/setup-profile?email=YOUR_EMAIL once to create the row.
 # This route is only accessible when NOT already logged in as super_admin.
@@ -246,56 +258,64 @@ def users():
     error = None
     role_filter = request.args.get("role", "")
     dept_filter = request.args.get("department", "")
+    new_user_creds = None          # shown once after creation
+    suggested_password = _generate_password()
 
     if request.method == "POST" and request.form.get("add_user"):
-        email = request.form.get("email", "").strip().lower()
-        full_name = request.form.get("full_name", "").strip()
-        role = request.form.get("role", "")
-        department_id = request.form.get("department_id")
-        password = request.form.get("password", "")
+        email       = request.form.get("email", "").strip().lower()
+        full_name   = request.form.get("full_name", "").strip()
+        role        = request.form.get("role", "")
+        department_id = request.form.get("department_id") or None
+        password    = request.form.get("password", "").strip()
         admission_no = request.form.get("admission_no", "").strip()
 
         if not all([email, full_name, role, password]):
-            error = "All required fields must be filled."
+            error = "Full name, email, role and password are all required."
+        elif len(password) < 8:
+            error = "Password must be at least 8 characters."
         else:
             try:
-                # Check if email exists
+                # Duplicate email check
                 existing = db.table("user_profiles").select("id").eq("email", email).execute()
                 if existing.data:
-                    error = "Email already exists."
-                elif role == "student" and admission_no:
-                    # Check admission number
-                    existing = db.table("user_profiles").select("id").eq("admission_no", admission_no).execute()
-                    if existing.data:
-                        error = "Admission number already exists."
+                    error = "An account with this email already exists."
                 else:
-                    if role in ["super_admin", "dept_admin", "trainer"]:
-                        # Create staff user with Supabase Auth
+                    if role == "student":
+                        if not admission_no:
+                            error = "Admission number is required for students."
+                        else:
+                            dup_adm = db.table("user_profiles").select("id").eq("admission_no", admission_no).execute()
+                            if dup_adm.data:
+                                error = "Admission number already exists."
+                            else:
+                                from auth_utils import create_student_auth_user
+                                user_id = create_student_auth_user(
+                                    admission_no=admission_no,
+                                    password=password,
+                                    email=email,
+                                    full_name=full_name,
+                                    department_id=department_id,
+                                    class_id=None
+                                )
+                                new_user_creds = {"full_name": full_name, "role": role,
+                                                  "email": email, "password": password}
+                                write_audit_log("create_user", target=f"user:{user_id}")
+                                flash(f"Student account created for {full_name}.", "success")
+                    else:
                         from auth_utils import create_staff_auth_user
                         user_id = create_staff_auth_user(
                             email=email,
                             password=password,
                             full_name=full_name,
                             role=role,
-                            department_id=department_id if department_id else None
+                            department_id=department_id
                         )
-                    else:
-                        # Create student user
-                        from auth_utils import create_student_auth_user
-                        user_id = create_student_auth_user(
-                            admission_no=admission_no or email[:5],
-                            password=password,
-                            email=email,
-                            full_name=full_name,
-                            department_id=department_id if department_id else None,
-                            class_id=None
-                        )
-                    
-                    write_audit_log("create_user", target=f"user:{user_id}")
-                    flash("User created successfully.", "success")
-                    return redirect(url_for("super_admin.users"))
+                        new_user_creds = {"full_name": full_name, "role": role,
+                                          "email": email, "password": password}
+                        write_audit_log("create_user", target=f"user:{user_id}")
+                        flash(f"Account created for {full_name} ({role.replace('_',' ').title()}).", "success")
             except Exception as exc:
-                error = f"Error: {exc}"
+                error = f"Error creating account: {exc}"
 
     # Build query
     query = db.table("user_profiles").select("*, departments(name)")
@@ -303,16 +323,18 @@ def users():
         query = query.eq("role", role_filter)
     if dept_filter:
         query = query.eq("department_id", dept_filter)
-    
-    users_list = query.order("created_at", desc=True).execute().data or []
-    departments = db.table("departments").select("*").order("name").execute().data or []
 
-    return render_template("super_admin/users.html", 
-                          users=users_list, 
-                          departments=departments,
-                          error=error,
-                          role_filter=role_filter,
-                          dept_filter=dept_filter)
+    users_list   = query.order("created_at", desc=True).execute().data or []
+    departments  = db.table("departments").select("*").order("name").execute().data or []
+
+    return render_template("super_admin/users.html",
+                           users=users_list,
+                           departments=departments,
+                           error=error,
+                           role_filter=role_filter,
+                           dept_filter=dept_filter,
+                           new_user_creds=new_user_creds,
+                           suggested_password=suggested_password)
 
 
 @super_admin_bp.route("/users/<user_id>/edit", methods=["GET", "POST"])
