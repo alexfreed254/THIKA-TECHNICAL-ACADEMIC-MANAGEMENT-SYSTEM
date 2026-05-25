@@ -86,11 +86,24 @@ def inject_globals():
                 pending_employers = sum(1 for e in emp_rows if not e.get("is_verified"))
             except Exception:
                 pass
+
+    # Helper to map notification types to Tailwind alert classes
+    def get_alert_classes(ntype):
+        mapping = {
+            'success': 'bg-green-50 border-green-200 text-green-800',
+            'warning': 'bg-yellow-50 border-yellow-200 text-yellow-800',
+            'error':   'bg-red-50 border-red-200 text-red-800',
+            'info':    'bg-blue-50 border-blue-200 text-blue-800'
+        }
+        return mapping.get(ntype, mapping['info'])
+
     return {
         "LOGO_URL": "/static/assets/THIKATTILOGO.jpg",
         "current_user": user,
         "unread_notification_count": unread_count,
         "pending_employers_count": pending_employers,
+        "get_alert_classes": get_alert_classes,
+        "TAILWIND_CDN": "https://cdn.tailwindcss.com"
     }
 
 # ── Jinja2 filter: convert UTC ISO string → EAT display string ───────────────
