@@ -14,6 +14,7 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import (student_required, write_audit_log, current_user)
 from db import get_service_client
 from datetime import datetime
+from notifications import get_user_notifications
 import uuid
 
 student_bp = Blueprint("student", __name__)
@@ -78,17 +79,46 @@ def dashboard():
     user = current_user()
     student_id = user["id"]
     
-    stats = {'total': 0, 'pending': 0, 'approved': 0, 'rejected': 0}
+    student = _student_row()
+    stats = {}
+    unread_notifications = []
     recent_assessments = []
     recent_attendance = []
+    attendance_data = []
+    overall_pct = 0
+    total_attended = 0
+    current_month = datetime.now().strftime("%B %Y")
     
     try:
-        # Assessment stats
-        all_a = db.table("assessments").select("status").eq("student_id", student_id).execute().data or []
-        stats['total'] = len(all_a)
-        stats['pending'] = sum(1 for a in all_a if a['status'] == 'pending')
-        stats['approved'] = sum(1 for a in all_a if a['status'] == 'approved')
-        stats['rejected'] = sum(1 for a in all_a if a['status'] == 'rejected')
+        # Stats via count queries (Efficient DB level processing)
+        stats['total']    = db.table("assessments").select("id", count="exact").eq("student_id", student_id).execute().count or 0
+        stats['pending']  = db.table("assessments").select("id", count="exact").eq("student_id", student_id).eq("status", "pending").execute().count or 0
+        stats['approved'] = db.table("assessments").select("id", count="exact").eq("student_id", student_id).eq("status", "approved").execute().count or 0
+        stats['rejected'] = db.table("assessments").select("id", count="exact").eq("student_id", student_id).eq("status", "rejected").execute().count or 0
+        
+        # Fetch unread notifications for inline display
+        unread_notifications = get_user_notifications(student_id, unread_only=True, limit=3)
+
+        # Attendance data by unit (for dashboard table)
+        attendance_data = (db.table("attendance")
+                          .select("id, units(id, name, code), count(*)")
+                          .eq("student_id", student_id)
+                          .execute().data or [])
+        
+        # Calculate attendance stats
+        all_attendance = (db.table("attendance")
+                         .select("status")
+                         .eq("student_id", student_id)
+                         .execute().data or [])
+        total_attended = sum(1 for a in all_attendance if a.get('status') == 'present')
+        total_records = len(all_attendance)
+        overall_pct = round((total_attended / total_records * 100), 1) if total_records > 0 else 0
+        
+        stats['attendance_total'] = total_records
+        stats['attendance_percent'] = overall_pct
+
+        # Job Application count
+        stats['job_apps'] = db.table("job_applications").select("id", count="exact").eq("student_id", student_id).execute().count or 0
 
         # Recent assessments
         recent_assessments = (db.table("assessments")
@@ -97,17 +127,25 @@ def dashboard():
                   .order("uploaded_at", desc=True)
                   .limit(10)
                   .execute().data or [])
+        
+        # Batch fetch evidence counts to avoid N+1 queries
+        if recent_assessments:
+            a_ids = [r['id'] for r in recent_assessments]
+            evidence_rows = db.table("evidence").select("assessment_id").in_("assessment_id", a_ids).execute().data or []
+            evidence_map = {}
+            for ev in evidence_rows:
+                evidence_map[ev['assessment_id']] = evidence_map.get(ev['assessment_id'], 0) + 1
+
         for r in recent_assessments:
             r['script_file_size_fmt'] = _format_bytes(r.get('script_file_size', 0))
-            ev = db.table("evidence").select("id").eq("assessment_id", r['id']).execute().data or []
-            r['evidence_count'] = len(ev)
+            r['evidence_count'] = evidence_map.get(r['id'], 0)
 
         # Recent attendance
         recent_attendance = (db.table("attendance")
                   .select("*, units(name, code), classes(name)")
                   .eq("student_id", student_id)
                   .order("attendance_date", desc=True)
-                  .limit(20)
+                  .limit(10)
                   .execute().data or [])
 
     except Exception as e:
@@ -129,10 +167,16 @@ def dashboard():
         clearance_eligible = False
 
     return render_template("student/dashboard.html",
+                          student=student,
                           stats=stats,
                           recent_assessments=recent_assessments,
                           recent_attendance=recent_attendance,
-                          clearance_eligible=clearance_eligible)
+                          clearance_eligible=clearance_eligible,
+                          unread_notifications=unread_notifications,
+                          attendance_data=attendance_data,
+                          overall_pct=overall_pct,
+                          total_attended=total_attended,
+                          current_month=current_month)
 
 
 # ── Profile Management ───────────────────────────────────────────────────────
@@ -251,6 +295,7 @@ def assessments():
     db = get_service_client()
     user = current_user()
     student_id = user["id"]
+    student = _student_row()
     
     # Get student's class
     enrollment = db.table("enrollments").select("*, classes(name, course_id)").eq("student_id", student_id).execute().data or []
@@ -278,6 +323,7 @@ def assessments():
         a['evidence_count'] = len(ev)
     
     return render_template("student/assessments.html",
+                          student=student,
                           class_units=class_units,
                           assessments=assessments_list)
 
