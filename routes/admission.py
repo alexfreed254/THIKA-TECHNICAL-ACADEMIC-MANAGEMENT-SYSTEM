@@ -276,7 +276,7 @@ def hod_dashboard():
     
     # Get pending admission requests for HOD's department
     pending_requests = (db.table("admission_requests")
-                       .select("*, courses(name, code), departments(name), user_profiles(full_name, admission_no, email)")
+                       .select("*, courses(name, code), departments(name), user_profiles:user_profiles!admission_requests_student_id_fkey(full_name, admission_no, email)")
                        .eq("department_id", department_id)
                        .eq("status", "pending")
                        .order("submitted_at", desc=True)
@@ -303,16 +303,20 @@ def review_request(request_id):
     department_id = user.get("department_id")
     
     # Get admission request
-    admission_request = (db.table("admission_requests")
-                       .select("*, courses(name, code), departments(name), user_profiles(full_name, admission_no, email, phone)")
+    admission_request_res = (db.table("admission_requests")
+                       .select("*, courses(name, code), departments(name), user_profiles:user_profiles!admission_requests_student_id_fkey(full_name, admission_no, email, mobile_number)")
                        .eq("id", request_id)
                        .eq("department_id", department_id)
-                       .single()
+                       .limit(1)
                        .execute().data)
     
-    if not admission_request:
+    if not admission_request_res:
         flash("Admission request not found.", "error")
         return redirect(url_for("admission.hod_dashboard"))
+        
+    admission_request = admission_request_res[0]
+    user_prof = admission_request.get("user_profiles") or {}
+    user_prof["phone"] = user_prof.get("mobile_number") or "N/A"
     
     # Get documents for this request
     documents = (db.table("admission_documents")
@@ -489,15 +493,21 @@ def approval_form(request_id):
     user = current_user()
     
     # Get admission request
-    admission_request = (db.table("admission_requests")
-                       .select("*, courses(name, code), departments(name), user_profiles(full_name, admission_no, email, phone, gender, date_of_birth)")
+    admission_request_res = (db.table("admission_requests")
+                       .select("*, courses(name, code), departments(name), user_profiles:user_profiles!admission_requests_student_id_fkey(full_name, admission_no, email, mobile_number)")
                        .eq("id", request_id)
-                       .single()
+                       .limit(1)
                        .execute().data)
     
-    if not admission_request:
+    if not admission_request_res:
         flash("Admission request not found.", "error")
         return redirect(url_for("admission.dashboard"))
+        
+    admission_request = admission_request_res[0]
+    user_prof = admission_request.get("user_profiles") or {}
+    user_prof["phone"] = user_prof.get("mobile_number") or "N/A"
+    user_prof["gender"] = "N/A"
+    user_prof["date_of_birth"] = "N/A"
     
     # Check access permissions
     if user["role"] == "student" and admission_request["student_id"] != user["id"]:
