@@ -534,9 +534,16 @@ def attendance():
     class_filter = request.args.get("class_id", "")
 
     records = db.table("attendance").select(
-        "*, user_profiles!attendance_student_id_fkey(full_name, admission_no), "
-        "units(name, code), classes(name, department_id)"
+        "*, user_profiles:user_profiles!attendance_student_id_fkey(full_name, admission_no, enrollments(classes(name, department_id))), "
+        "units(name, code)"
     ).order("attendance_date", desc=True).limit(300).execute().data or []
+    
+    for r in records:
+        student = r.get("user_profiles") or {}
+        enrolls = student.get("enrollments") or []
+        first_enroll = enrolls[0] if enrolls else {}
+        cls = first_enroll.get("classes") or {}
+        r["classes"] = cls
 
     if dept_filter:
         records = [r for r in records if r.get("classes", {}).get("department_id") == dept_filter]

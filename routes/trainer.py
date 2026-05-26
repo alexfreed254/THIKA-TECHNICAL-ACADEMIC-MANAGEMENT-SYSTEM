@@ -332,8 +332,15 @@ def attendance_history():
     db = get_service_client()
     user = current_user()
     
-    attendance_list = db.table("attendance").select("*, user_profiles(full_name, admission_no), units(name, code), classes(name)").eq("trainer_id", user["id"]).order("attendance_date", desc=True).limit(200).execute().data or []
-
+    attendance_list = db.table("attendance").select("*, user_profiles:student_id(full_name, admission_no, enrollments(classes(name))), units(name, code)").eq("trainer_id", user["id"]).order("attendance_date", desc=True).limit(200).execute().data or []
+    
+    for att in attendance_list:
+        student = att.get("user_profiles") or {}
+        enrolls = student.get("enrollments") or []
+        first_enroll = enrolls[0] if enrolls else {}
+        cls = first_enroll.get("classes") or {}
+        att["classes"] = cls
+        
     return render_template("trainer/attendance_history.html",
                           attendance=attendance_list)
 

@@ -306,8 +306,16 @@ def attendance():
     class_filter = request.args.get("class_id", "")
     unit_filter  = request.args.get("unit_id", "")
     records = (db.table("attendance")
-        .select("*, user_profiles!attendance_student_id_fkey(full_name, admission_no), units(name, code, department_id), classes(name)")
+        .select("*, user_profiles:user_profiles!attendance_student_id_fkey(full_name, admission_no, enrollments(classes(name))), units(name, code, department_id)")
         .order("attendance_date", desc=True).limit(200).execute().data or [])
+        
+    for r in records:
+        student = r.get("user_profiles") or {}
+        enrolls = student.get("enrollments") or []
+        first_enroll = enrolls[0] if enrolls else {}
+        cls = first_enroll.get("classes") or {}
+        r["classes"] = cls
+        
     records = [r for r in records if r.get("units", {}).get("department_id") == dept_id]
 
     if class_filter:
@@ -579,8 +587,15 @@ def trainee_search():
         if rows:
             trainee = rows[0]
             attendance_records = (db.table("attendance")
-                .select("*, units(name, code), classes(name)")
+                .select("*, units(name, code), user_profiles:student_id(enrollments(classes(name)))")
                 .eq("student_id", trainee["id"]).order("attendance_date", desc=True).execute().data or [])
+                
+            for att in attendance_records:
+                student = att.get("user_profiles") or {}
+                enrolls = student.get("enrollments") or []
+                first_enroll = enrolls[0] if enrolls else {}
+                cls = first_enroll.get("classes") or {}
+                att["classes"] = cls
             total   = len(attendance_records)
             present = sum(1 for a in attendance_records if a["status"] == "present")
             summary = {"total": total, "present": present, "absent": total - present,
@@ -603,8 +618,15 @@ def trainee_report_pdf():
         trainee = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
         if trainee:
             attendance_records = (db.table("attendance")
-                .select("*, units(name, code), classes(name)")
+                .select("*, units(name, code), user_profiles:student_id(enrollments(classes(name)))")
                 .eq("student_id", student_id).order("attendance_date", desc=True).execute().data or [])
+                
+            for att in attendance_records:
+                student = att.get("user_profiles") or {}
+                enrolls = student.get("enrollments") or []
+                first_enroll = enrolls[0] if enrolls else {}
+                cls = first_enroll.get("classes") or {}
+                att["classes"] = cls
             total   = len(attendance_records)
             present = sum(1 for a in attendance_records if a["status"] == "present")
             summary = {"total": total, "present": present, "absent": total - present,

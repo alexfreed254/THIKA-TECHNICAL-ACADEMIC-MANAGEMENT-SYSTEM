@@ -142,11 +142,18 @@ def dashboard():
 
         # Recent attendance
         recent_attendance = (db.table("attendance")
-                  .select("*, units(name, code), classes(name)")
+                  .select("*, units(name, code), user_profiles:student_id(enrollments(classes(name)))")
                   .eq("student_id", student_id)
                   .order("attendance_date", desc=True)
                   .limit(10)
                   .execute().data or [])
+                  
+        for att in recent_attendance:
+            student = att.get("user_profiles") or {}
+            enrolls = student.get("enrollments") or []
+            first_enroll = enrolls[0] if enrolls else {}
+            cls = first_enroll.get("classes") or {}
+            att["classes"] = cls
 
     except Exception as e:
         flash(f'Error loading dashboard: {str(e)}', 'danger')
@@ -537,10 +544,17 @@ def attendance():
     student_id = user["id"]
     
     attendance_list = (db.table("attendance")
-                      .select("*, units(name, code), classes(name)")
+                      .select("*, units(name, code), user_profiles:student_id(enrollments(classes(name)))")
                       .eq("student_id", student_id)
                       .order("attendance_date", desc=True)
                       .execute().data or [])
+                      
+    for att in attendance_list:
+        student = att.get("user_profiles") or {}
+        enrolls = student.get("enrollments") or []
+        first_enroll = enrolls[0] if enrolls else {}
+        cls = first_enroll.get("classes") or {}
+        att["classes"] = cls
     
     # Calculate attendance percentage
     total = len(attendance_list)
