@@ -171,15 +171,23 @@ def view_attachment(attachment_id):
     """View detailed attachment information."""
     db = get_service_client()
     
-    attachment = (db.table("industrial_attachments")
-                 .select("*, user_profiles(full_name, admission_no, mobile_number), units(name, code), companies(name, address, contact_person, contact_phone), user_profiles!industrial_attachments_mentor_id_fkey(full_name) as mentor_name")
-                 .eq("id", attachment_id)
-                 .single()
-                 .execute().data)
+    attachment_list = (db.table("industrial_attachments")
+                      .select("*, student:user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no, mobile_number), units(name, code), companies(name, address, contact_person, contact_phone), mentors(user_profiles(full_name))")
+                      .eq("id", attachment_id)
+                      .limit(1)
+                      .execute().data)
     
-    if not attachment:
+    if not attachment_list:
         flash("Attachment not found.", "error")
         return redirect(url_for("internal_verifier.attachments"))
+        
+    attachment = attachment_list[0]
+    
+    # Flatten trainee details and mentor name
+    attachment["user_profiles"] = attachment.get("student") or {}
+    mentors_obj = attachment.get("mentors") or {}
+    user_profiles_obj = mentors_obj.get("user_profiles") or {}
+    attachment["mentor_name"] = user_profiles_obj.get("full_name")
     
     # Get competency tracking for this attachment
     competencies = (db.table("competency_tracking")

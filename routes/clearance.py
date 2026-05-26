@@ -40,10 +40,15 @@ def dashboard():
     
     # Get all approvals for this request
     approvals = (db.table("clearance_approvals")
-                .select("*, clearance_stages(stage_name, approver_role), clearance_departments(name, clearance_type), user_profiles(full_name)")
+                .select("*, clearance_stages(stage_name, approver_role, clearance_departments(name, clearance_type)), user_profiles(full_name)")
                 .eq("clearance_request_id", clearance_request["id"])
                 .order("created_at")
                 .execute().data or [])
+    
+    # Flatten the clearance_departments nested relationship in Python
+    for a in approvals:
+        stage = a.get("clearance_stages") or {}
+        a["clearance_departments"] = stage.get("clearance_departments") or {}
     
     # Group approvals by department type
     department_approvals = [a for a in approvals if a.get("clearance_departments", {}).get("clearance_type") == "department"]
@@ -137,9 +142,16 @@ def approver_dashboard():
     
     # Get pending approvals for this approver's role
     pending_approvals = (db.table("clearance_approvals")
-                        .select("*, clearance_requests(student_id), clearance_stages(stage_name, approver_role), clearance_departments(name), user_profiles(full_name, admission_no)")
+                        .select("*, clearance_requests(student_id, user_profiles:user_profiles!clearance_requests_student_id_fkey(full_name, admission_no)), clearance_stages(stage_name, approver_role, clearance_departments(name))")
                         .eq("status", "pending")
                         .execute().data or [])
+    
+    # Flatten the relations for template compatibility
+    for a in pending_approvals:
+        req = a.get("clearance_requests") or {}
+        a["user_profiles"] = req.get("user_profiles") or {}
+        stage = a.get("clearance_stages") or {}
+        a["clearance_departments"] = stage.get("clearance_departments") or {}
     
     # Filter by approver role
     my_approvals = [a for a in pending_approvals if a.get("clearance_stages", {}).get("approver_role") == user_role]

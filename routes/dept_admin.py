@@ -495,13 +495,13 @@ def trainer_documents():
     term       = request.args.get("term", "")
     trainer_id = request.args.get("trainer_id", "")
     query = (db.table("trainer_documents")
-        .select("*, units(name, code, department_id), classes(name), user_profiles(full_name, staff_no)")
+        .select("*, units(name, code, department_id), classes(name), user_profiles(full_name, staff_no, department_id)")
         .eq("academic_year", int(year)))
     if term:       query = query.eq("term", term)
     if doc_type:   query = query.eq("document_type", doc_type)
     if trainer_id: query = query.eq("trainer_id", trainer_id)
     docs = query.order("created_at", desc=True).execute().data or []
-    docs = [d for d in docs if d.get("units", {}).get("department_id") == dept_id]
+    docs = [d for d in docs if (d.get("units") and d.get("units", {}).get("department_id") == dept_id) or (d.get("user_profiles") and d.get("user_profiles", {}).get("department_id") == dept_id)]
     trainers = (db.table("user_profiles").select("id, full_name, staff_no")
         .eq("role", "trainer").eq("department_id", dept_id).order("full_name").execute().data or [])
     return render_template("dept_admin/trainer_documents.html",

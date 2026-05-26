@@ -202,7 +202,7 @@
       <p><strong>Venue:</strong> {{ booking.exam_venue }}</p>
       {% endif %}
       <p><strong>Purpose:</strong> {{ booking.purpose }}</p>
-      <p><strong>Approved By:</strong> {{ booking.user_profiles.full_name }}</p>
+      <p><strong>Approved By:</strong> {{ booking.approved_by_user.full_name }}</p>
       <p><strong>Approved At:</strong> {{ booking.approved_at | to_eat('%d %B %Y %H:%M') }}</p>
     </div>
     

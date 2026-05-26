@@ -28,11 +28,24 @@ def dashboard():
     
     # Get recent bookings
     recent_bookings = (db.table("exam_bookings")
-                      .select("*, units(name, code), user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, classes(name))")
+                      .select("*, units(name, code), student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, enrollments(classes(name, departments(name)))), approver:user_profiles!exam_bookings_approved_by_fkey(full_name)")
                       .eq("status", "approved")
                       .order("approved_at", desc=True)
                       .limit(10)
                       .execute().data or [])
+    
+    # Flatten recent bookings
+    for booking in recent_bookings:
+        student = booking.get("student") or {}
+        enrollments = student.get("enrollments") or []
+        first_enrollment = enrollments[0] if enrollments else {}
+        cls = first_enrollment.get("classes") or {}
+        student["classes"] = {
+            "name": cls.get("name"),
+            "departments": cls.get("departments") or {}
+        }
+        booking["user_profiles"] = student
+        booking["approved_by_user"] = booking.get("approver") or {}
     
     return render_template("examination_officer/dashboard.html",
                           total_approved=total_approved,
@@ -54,22 +67,36 @@ def exam_bookings():
     year = request.args.get("year", "").strip()
     exam_series = request.args.get("exam_series", "").strip()
     
-    # Build query
-    query = db.table("exam_bookings").select(
-        "*, units(name, code), user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, classes(name)), user_profiles!exam_bookings_approved_by_fkey(full_name)"
-    ).eq("status", "approved")
+    # Build query with inner join if class_id is filtered
+    select_str = "*, units(name, code), student:user_profiles!exam_bookings_student_id_fkey!inner(full_name, admission_no, enrollments!inner(class_id, classes(name, departments(name)))), approver:user_profiles!exam_bookings_approved_by_fkey(full_name)" if class_id else \
+                 "*, units(name, code), student:user_profiles!exam_bookings_student_id_fkey!inner(full_name, admission_no, enrollments(class_id, classes(name, departments(name)))), approver:user_profiles!exam_bookings_approved_by_fkey(full_name)"
+    
+    query = db.table("exam_bookings").select(select_str).eq("status", "approved")
     
     # Apply filters
     if admission_no:
-        query = query.ilike("user_profiles.admission_no", f"%{admission_no}%")
+        query = query.ilike("student.admission_no", f"%{admission_no}%")
     if trainee_name:
-        query = query.ilike("user_profiles.full_name", f"%{trainee_name}%")
+        query = query.ilike("student.full_name", f"%{trainee_name}%")
     if class_id:
-        query = query.eq("user_profiles.classes.id", class_id)
+        query = query.eq("student.enrollments.class_id", class_id)
     if year:
         query = query.gte("exam_date", f"{year}-01-01").lte("exam_date", f"{year}-12-31")
     
     bookings = query.order("exam_date", desc=True).execute().data or []
+    
+    # Flatten bookings
+    for booking in bookings:
+        student = booking.get("student") or {}
+        enrollments = student.get("enrollments") or []
+        first_enrollment = enrollments[0] if enrollments else {}
+        cls = first_enrollment.get("classes") or {}
+        student["classes"] = {
+            "name": cls.get("name"),
+            "departments": cls.get("departments") or {}
+        }
+        booking["user_profiles"] = student
+        booking["approved_by_user"] = booking.get("approver") or {}
     
     # Get all classes for filter dropdown
     classes = db.table("classes").select("*").execute().data or []
@@ -133,15 +160,29 @@ def view_booking(booking_id):
     """View details of an exam booking."""
     db = get_service_client()
     
-    booking = (db.table("exam_bookings")
-               .select("*, units(name, code), user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, classes(name, departments(name))), user_profiles!exam_bookings_approved_by_fkey(full_name)")
-               .eq("id", booking_id)
-               .single()
-               .execute().data)
+    booking_data = (db.table("exam_bookings")
+                   .select("*, units(name, code), student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, enrollments(classes(name, departments(name)))), approver:user_profiles!exam_bookings_approved_by_fkey(full_name)")
+                   .eq("id", booking_id)
+                   .limit(1)
+                   .execute().data)
     
-    if not booking:
+    if not booking_data:
         flash("Booking not found.", "danger")
         return redirect(url_for("examination_officer.exam_bookings"))
+        
+    booking = booking_data[0]
+    
+    # Flatten booking
+    student = booking.get("student") or {}
+    enrollments = student.get("enrollments") or []
+    first_enrollment = enrollments[0] if enrollments else {}
+    cls = first_enrollment.get("classes") or {}
+    student["classes"] = {
+        "name": cls.get("name"),
+        "departments": cls.get("departments") or {}
+    }
+    booking["user_profiles"] = student
+    booking["approved_by_user"] = booking.get("approver") or {}
     
     return render_template("examination_officer/view_booking.html", booking=booking)
 

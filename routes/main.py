@@ -22,4 +22,20 @@ def index():
             return redirect(url_for("trainer.dashboard"))
         elif role == "student":
             return redirect(url_for("student.dashboard"))
+        elif role == "employer":
+            return redirect(url_for("employer.dashboard"))
+        elif role == "examination_officer":
+            return redirect(url_for("examination_officer.dashboard"))
+        elif role == "industry_mentor":
+            return redirect(url_for("industry_mentor.dashboard"))
+        elif role == "internal_verifier":
+            return redirect(url_for("internal_verifier.dashboard"))
+        elif role == "registrar":
+            return redirect(url_for("admin_oversight.registrar_dashboard"))
+        elif role == "deputy_principal":
+            return redirect(url_for("admin_oversight.deputy_principal_dashboard"))
+        elif role == "quality_assurance_officer":
+            return redirect(url_for("admin_oversight.quality_assurance_dashboard"))
+        elif role in ("sports_hod", "environment_hod", "dean_students", "library_hod", "finance_officer"):
+            return redirect(url_for("clearance.approver_dashboard"))
     return render_template("main/index.html")

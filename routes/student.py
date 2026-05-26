@@ -916,13 +916,20 @@ def industrial_attachment():
         return redirect(url_for("student.dashboard"))
     
     # Get student's current attachment
-    current_attachment = (db.table("industrial_attachments")
-                        .select("*, companies(name, address), units(name, code), user_profiles!industrial_attachments_mentor_id_fkey(full_name) as mentor_name")
-                        .eq("student_id", student_id)
-                        .in_("status", ["pending", "approved", "active"])
-                        .order("created_at", desc=True)
-                        .limit(1)
-                        .execute().data)
+    attachments_res = (db.table("industrial_attachments")
+                      .select("*, companies(name, address), units(name, code), mentors(user_profiles(full_name))")
+                      .eq("student_id", student_id)
+                      .in_("status", ["pending", "approved", "active"])
+                      .order("created_at", desc=True)
+                      .limit(1)
+                      .execute().data)
+    
+    current_attachment = None
+    if attachments_res:
+        current_attachment = attachments_res[0]
+        mentors_obj = current_attachment.get("mentors") or {}
+        user_profiles_obj = mentors_obj.get("user_profiles") or {}
+        current_attachment["mentor_name"] = user_profiles_obj.get("full_name")
     
     # Get available companies
     companies = (db.table("companies")
@@ -932,7 +939,7 @@ def industrial_attachment():
                  .execute().data or [])
     
     return render_template("student/industrial_attachment.html",
-                          current_attachment=current_attachment[0] if current_attachment else None,
+                          current_attachment=current_attachment,
                           enrolled_units=enrolled_units,
                           companies=companies)
 

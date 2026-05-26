@@ -11,7 +11,7 @@ from notifications import get_user_notifications, get_unread_count, mark_notific
 notifications_bp = Blueprint("notifications", __name__)
 
 
-@notifications_bp.route("/notifications")
+@notifications_bp.route("/")
 @login_required
 def index():
     """View all notifications for the current user."""
@@ -27,7 +27,7 @@ def index():
                           unread_count=unread_count)
 
 
-@notifications_bp.route("/notifications/unread")
+@notifications_bp.route("/unread")
 @login_required
 def unread():
     """View only unread notifications."""
@@ -44,7 +44,7 @@ def unread():
                           unread_only=True)
 
 
-@notifications_bp.route("/notifications/<notification_id>/read", methods=["POST"])
+@notifications_bp.route("/<notification_id>/read", methods=["POST"])
 @login_required
 def mark_read(notification_id):
     """Mark a specific notification as read."""
@@ -59,7 +59,7 @@ def mark_read(notification_id):
     return redirect(request.referrer or "/notifications")
 
 
-@notifications_bp.route("/notifications/mark-all-read", methods=["POST"])
+@notifications_bp.route("/mark-all-read", methods=["POST"])
 @login_required
 def mark_all_read():
     """Mark all notifications as read for the current user."""
@@ -74,7 +74,7 @@ def mark_all_read():
     return redirect(request.referrer or "/notifications")
 
 
-@notifications_bp.route("/notifications/count")
+@notifications_bp.route("/count")
 @login_required
 def count():
     """API endpoint to get unread notification count."""
