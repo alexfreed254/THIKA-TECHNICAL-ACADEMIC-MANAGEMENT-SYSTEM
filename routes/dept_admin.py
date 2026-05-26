@@ -525,6 +525,48 @@ def trainer_documents():
                            document_type=doc_type, year=year, term=term, trainer_id=trainer_id)
 
 
+# ── Trainee POE ───────────────────────────────────────────────────────────────
+
+@dept_admin_bp.route("/trainee-poe")
+@dept_admin_required
+def trainee_poe():
+    db = get_service_client()
+    dept_id = _dept_id()
+    
+    status_filter = request.args.get("status", "")
+    class_filter  = request.args.get("class_id", "")
+    unit_filter   = request.args.get("unit_id", "")
+    
+    query = (db.table("assessments")
+        .select("*, student:user_profiles!assessments_student_id_fkey(full_name, admission_no), units!inner(name, code, department_id), classes(name), reviewer:user_profiles!assessments_reviewed_by_fkey(full_name)")
+        .eq("units.department_id", dept_id))
+    
+    if status_filter in ("approved", "rejected"):
+        query = query.eq("status", status_filter)
+    else:
+        query = query.in_("status", ["approved", "rejected"])
+        
+    if class_filter:
+        query = query.eq("class_id", class_filter)
+    if unit_filter:
+        query = query.eq("unit_id", unit_filter)
+        
+    assessments = query.order("reviewed_at", desc=True).execute().data or []
+    
+    classes = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
+    units   = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
+    
+    return render_template(
+        "dept_admin/trainee_poe.html",
+        assessments=assessments,
+        classes=classes,
+        units=units,
+        status_filter=status_filter,
+        class_filter=class_filter,
+        unit_filter=unit_filter
+    )
+
+
 # ── Class List ────────────────────────────────────────────────────────────────
 
 @dept_admin_bp.route("/class-list")

@@ -1,0 +1,298 @@
+{% extends "dept_admin/base.html" %}
+
+{% block title %}Trainee POE{% endblock %}
+{% block page_title %}Trainee Portfolio of Evidence (POE){% endblock %}
+
+{% block extra_style %}
+<style>
+  .filter-section {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid #f0f0f0;
+  }
+  .filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+  .filter-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #444;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .filter-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #fafafa;
+    transition: all 0.25s ease;
+  }
+  .filter-group select:focus {
+    outline: none;
+    border-color: #1565c0;
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(21,101,192,0.1);
+  }
+  .btn-filter {
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+    color: white;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 10px rgba(21,101,192,0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-filter:hover {
+    background: linear-gradient(135deg, #0d47a1, #0a3d8c);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(21,101,192,0.3);
+  }
+  .poe-table-container {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid #f0f0f0;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+  }
+  th, td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  th {
+    background: #f8fafc;
+    font-weight: 700;
+    color: #475569;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  tr:hover td {
+    background: #f8fafc;
+  }
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .status-approved {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+  }
+  .status-rejected {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+  }
+  .assessment-type-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #e0f2f1;
+    color: #004d40;
+  }
+  .btn-view {
+    background: #1565c0;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-view:hover {
+    background: #0d47a1;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+  }
+  .empty-state i {
+    font-size: 54px;
+    margin-bottom: 20px;
+    color: #cbd5e1;
+  }
+  .trainee-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .trainee-name {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 14px;
+  }
+  .trainee-adm {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+  .review-note-popover {
+    font-size: 12px;
+    color: #64748b;
+    max-width: 250px;
+    white-space: normal;
+    word-break: break-word;
+    font-style: italic;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-section">
+  <form method="GET">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label for="status">Review Status</label>
+        <select id="status" name="status">
+          <option value="">All (Approved & Rejected)</option>
+          <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved Only</option>
+          <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected Only</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="class_id">Class</label>
+        <select id="class_id" name="class_id">
+          <option value="">All Classes</option>
+          {% for c in classes %}
+          <option value="{{ c.id }}" {% if class_filter == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="unit_id">Unit</label>
+        <select id="unit_id" name="unit_id">
+          <option value="">All Units</option>
+          {% for u in units %}
+          <option value="{{ u.id }}" {% if unit_filter == u.id %}selected{% endif %}>{{ u.name }} ({{ u.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group" style="display: flex; align-items: flex-end;">
+        <button type="submit" class="btn-filter">
+          <i class="fas fa-filter"></i> Filter POE
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="poe-table-container">
+  {% if not assessments %}
+  <div class="empty-state">
+    <i class="fas fa-folder-open"></i>
+    <h3>No Trainee POE Files Found</h3>
+    <p>No assessment records have been approved or rejected in your department matching the selected filters.</p>
+  </div>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Trainee</th>
+        <th>Unit & Class</th>
+        <th>Assessment Details</th>
+        <th>Reviewer (Trainer)</th>
+        <th>Review Date</th>
+        <th>Review Remarks</th>
+        <th>Status</th>
+        <th>Evidence File</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ass in assessments %}
+      <tr>
+        <td>
+          <div class="trainee-info">
+            <span class="trainee-name">{{ ass.student.full_name }}</span>
+            <span class="trainee-adm"><i class="far fa-id-card"></i> {{ ass.student.admission_no }}</span>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 600; color: #1e293b; font-size: 13px;">{{ ass.units.name }}</div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 2px;"><i class="fas fa-door-open"></i> {{ ass.classes.name }}</div>
+        </td>
+        <td>
+          <span class="assessment-type-badge">{{ ass.assessment_type }}</span>
+          <div style="font-size: 12px; font-weight: 600; margin-top: 4px;">No. {{ ass.assessment_no }} (Term {{ ass.term }})</div>
+        </td>
+        <td>
+          <div style="font-size: 13px; font-weight: 600; color: #334155;"><i class="fas fa-user-tie"></i> {{ ass.reviewer.full_name if ass.reviewer else 'Unknown Trainer' }}</div>
+        </td>
+        <td>
+          <div style="font-size: 12px; color: #64748b;">
+            {% if ass.reviewed_at %}
+              {{ ass.reviewed_at | to_eat('%d %b %Y, %I:%M %p') }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          <div class="review-note-popover">
+            {% if ass.review_note %}
+              "{{ ass.review_note }}"
+            {% else %}
+              <span style="color: #94a3b8; font-style: italic;">No remarks left.</span>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          <span class="status-badge status-{{ ass.status }}">
+            {% if ass.status == 'approved' %}
+              <i class="fas fa-check-circle"></i> Approved
+            {% else %}
+              <i class="fas fa-times-circle"></i> Rejected
+            {% endif %}
+          </span>
+        </td>
+        <td>
+          {% if ass.script_file_path %}
+            <a href="{{ ass.script_file_path }}" target="_blank" class="btn-view">
+              <i class="fas fa-file-pdf"></i> View File
+            </a>
+          {% else %}
+            <span style="color: #94a3b8; font-style: italic;">No file uploaded</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

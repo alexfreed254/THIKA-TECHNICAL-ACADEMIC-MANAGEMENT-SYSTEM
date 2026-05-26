@@ -341,3 +341,135 @@ def student_register():
             flash("Registration failed. Please try again.", "error")
     
     return render_template("auth/student_register.html")
+
+
+# ─────────────────────────────────────────────────────────────
+# UNIFIED USER PROFILE AND PASSWORD MANAGEMENT
+# ─────────────────────────────────────────────────────────────
+import uuid
+from werkzeug.security import generate_password_hash
+from auth_utils import login_required
+
+def _get_base_template(role: str) -> str:
+    mapping = {
+        "super_admin": "super_admin/base.html",
+        "dept_admin": "dept_admin/base.html",
+        "trainer": "trainer/base.html",
+        "student": "student/base.html",
+        "employer": "employer/base.html",
+        "examination_officer": "examination_officer/base.html",
+        "industry_mentor": "industry_mentor/base.html",
+        "internal_verifier": "internal_verifier/base.html",
+        "registrar": "admin_oversight/base.html",
+        "deputy_principal": "admin_oversight/base.html",
+        "quality_assurance_officer": "admin_oversight/base.html"
+    }
+    if role in ("sports_hod", "environment_hod", "dean_students", "library_hod", "finance_officer"):
+        return "clearance_approver/base.html"
+    return mapping.get(role, "dept_admin/base.html")
+
+
+@auth_bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    db = get_service_client()
+    user = current_user()
+    user_id = user["id"]
+    
+    if request.method == "POST":
+        form_action = request.form.get("form_action")
+        
+        if form_action == "details":
+            mobile_number = request.form.get("mobile_number", "").strip()
+            full_name = request.form.get("full_name", "").strip()
+            try:
+                db.table("user_profiles").update({
+                    "mobile_number": mobile_number,
+                    "full_name": full_name
+                }).eq("id", user_id).execute()
+                
+                # Refresh session user
+                user["mobile_number"] = mobile_number
+                user["full_name"] = full_name
+                session[SESSION_USER] = user
+                
+                write_audit_log("update_profile_details", target=f"user:{user_id}")
+                flash("Profile details updated successfully.", "success")
+            except Exception as e:
+                flash(f"Error updating profile: {e}", "danger")
+                
+        elif form_action == "passport":
+            if 'passport' not in request.files:
+                flash('No file selected.', 'danger')
+                return redirect(url_for("auth.profile"))
+            
+            file = request.files['passport']
+            if file.filename == '':
+                flash('No file selected.', 'danger')
+                return redirect(url_for("auth.profile"))
+            
+            ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+            if ext not in ('jpg', 'jpeg', 'png', 'webp'):
+                flash('Invalid file type. Use JPG, JPEG, PNG, or WEBP.', 'danger')
+                return redirect(url_for("auth.profile"))
+            
+            try:
+                filename = f"passports/{user_id}_{uuid.uuid4().hex}.{ext}"
+                storage_client = db.storage
+                storage_client.from_("assessment-evidence").upload(
+                    filename,
+                    file.read(),
+                    {"content-type": f"image/{ext}" if ext != 'jpg' else 'image/jpeg'}
+                )
+                
+                public_url = storage_client.from_("assessment-evidence").get_public_url(filename)
+                
+                db.table("user_profiles").update({
+                    "passport_file_path": public_url,
+                    "passport_file_name": file.filename
+                }).eq("id", user_id).execute()
+                
+                # Refresh session user
+                user["passport_file_path"] = public_url
+                user["passport_file_name"] = file.filename
+                session[SESSION_USER] = user
+                
+                write_audit_log("upload_passport", target=f"user:{user_id}")
+                flash('Passport photo uploaded successfully.', 'success')
+            except Exception as e:
+                flash(f'Error uploading passport: {e}', 'danger')
+                
+        elif form_action == "password":
+            new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
+            
+            if len(new_password) < 8 or not any(c.isdigit() for c in new_password) or not any(c in "!@#$" for c in new_password):
+                flash("Password must be at least 8 characters with at least one number and one symbol (!@#$).", "danger")
+                return redirect(url_for("auth.profile"))
+                
+            if new_password != confirm_password:
+                flash("Passwords do not match.", "danger")
+                return redirect(url_for("auth.profile"))
+                
+            try:
+                if user.get("role") == "student":
+                    # Students: password hash
+                    db.table("user_profiles").update({
+                        "password_hash": generate_password_hash(new_password)
+                    }).eq("id", user_id).execute()
+                else:
+                    # Staff: Supabase Auth
+                    db.auth.admin.update_user_by_id(user_id, {"password": new_password})
+                    
+                write_audit_log("change_password", target=f"user:{user_id}")
+                flash("Password changed successfully.", "success")
+            except Exception as e:
+                flash(f"Error changing password: {e}", "danger")
+                
+            return redirect(url_for("auth.profile"))
+            
+    # Fetch updated user profile
+    student = db.table("user_profiles").select("*, departments(name)").eq("id", user_id).single().execute().data
+    base_template = _get_base_template(user.get("role"))
+    
+    return render_template("auth/profile.html", student=student, base_template=base_template)
