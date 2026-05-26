@@ -90,7 +90,7 @@
     <div class="topbar">
       <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
       <span class="topbar-user"><i class="fas fa-user-tie"></i>
-        {{ current_user().full_name if current_user() else '' }}
+        {{ current_user.full_name if current_user else '' }}
       </span>
     </div>
 
