@@ -69,9 +69,17 @@ def dashboard():
 
         # Recent attendance specifically for this department
         recent_attendance = (db.table("attendance")
-            .select("*, user_profiles!attendance_student_id_fkey(full_name, admission_no), units!inner(name, code, department_id), classes(name)")
+            .select("*, user_profiles!attendance_student_id_fkey(full_name, admission_no, enrollments(classes(name))), units!inner(name, code, department_id)")
             .eq("units.department_id", dept_id)
             .order("attendance_date", desc=True).limit(10).execute().data or [])
+            
+        # Flatten recent_attendance class names
+        for att in recent_attendance:
+            student = att.get("user_profiles") or {}
+            enrolls = student.get("enrollments") or []
+            first_enroll = enrolls[0] if enrolls else {}
+            cls = first_enroll.get("classes") or {}
+            att["classes"] = cls
             
         units_list = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
     except Exception as e:
