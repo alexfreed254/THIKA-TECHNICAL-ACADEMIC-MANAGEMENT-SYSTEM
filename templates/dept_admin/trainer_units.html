@@ -70,6 +70,31 @@ code{background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:5px;font-siz
               {% endfor %}
             </select>
           </div>
+          <div class="form-group">
+            <label>Class <span style="font-weight:400;text-transform:none">(links unit to class for attendance)</span></label>
+            <select name="class_id">
+              <option value="">— Optional —</option>
+              {% for c in classes %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <select name="year">
+              {% for y in range(2024, 2030) %}
+              <option value="{{ y }}" {% if y == active_year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Term</label>
+            <select name="term">
+              <option value="1">Term 1 (Jan–Apr)</option>
+              <option value="2">Term 2 (May–Aug)</option>
+              <option value="3">Term 3 (Sep–Dec)</option>
+            </select>
+          </div>
           <div class="form-group" style="display:flex;align-items:flex-end">
             <button type="submit" class="btn btn-primary" {% if not trainers or not units %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}>
               <i class="fas fa-link"></i> Assign Unit
@@ -80,9 +105,9 @@ code{background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:5px;font-siz
     </div>
   </div>
 
-  <!-- Current Assignments -->
+  <!-- Trainer–Unit Assignments -->
   <div class="card">
-    <div class="card-header"><i class="fas fa-users-cog"></i> Current Assignments ({{ assignments|length }})</div>
+    <div class="card-header"><i class="fas fa-users-cog"></i> Trainer ↔ Unit Assignments ({{ assignments|length }})</div>
     <table>
       <thead>
         <tr>
@@ -121,7 +146,43 @@ code{background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:5px;font-siz
         <tr>
           <td colspan="6" style="text-align:center;color:#bbb;padding:40px">
             <i class="fas fa-link" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
-            No assignments yet. Use the form above to assign units to trainers.
+            No assignments yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Class–Unit–Trainer Assignments (for attendance) -->
+  <div class="card">
+    <div class="card-header" style="background:linear-gradient(135deg,#2e7d32,#1b5e20)"><i class="fas fa-school"></i> Class ↔ Unit ↔ Trainer (Attendance Linking)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Class</th>
+          <th>Unit</th>
+          <th>Trainer</th>
+          <th>Year</th>
+          <th>Term</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ca in class_assignments %}
+        <tr>
+          <td style="color:#bbb;font-size:12px">{{ loop.index }}</td>
+          <td><span class="trainer-chip" style="background:#e8f5e9;color:#2e7d32"><i class="fas fa-door-open"></i> {{ (ca.classes or {}).get('name', '—') }}</span></td>
+          <td><strong>{{ (ca.units or {}).get('name', '—') }}</strong> <code>{{ (ca.units or {}).get('code', '—') }}</code></td>
+          <td>{{ (ca.user_profiles or {}).get('full_name', '—') }}</td>
+          <td>{{ ca.year }}</td>
+          <td>Term {{ ca.term }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align:center;color:#bbb;padding:40px">
+            <i class="fas fa-school" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
+            No class-linked assignments yet. Use the <strong>Class</strong> dropdown in the form above to link units to classes for attendance tracking.
           </td>
         </tr>
         {% endfor %}

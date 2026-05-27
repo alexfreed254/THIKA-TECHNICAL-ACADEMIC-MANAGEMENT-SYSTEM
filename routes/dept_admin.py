@@ -334,10 +334,16 @@ def trainer_units():
     db = get_service_client()
     dept_id = _dept_id()
     error = None
+    classes_list = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
+    active_year = datetime.now().year
+
     if request.method == "POST":
         action     = request.form.get("action", "assign")
         trainer_id = request.form.get("trainer_id", "").strip()
         unit_id    = request.form.get("unit_id", "").strip()
+        class_id   = request.form.get("class_id", "").strip()
+        year       = request.form.get("year", str(active_year)).strip()
+        term       = request.form.get("term", "1").strip()
         if action == "assign":
             if not all([trainer_id, unit_id]):
                 error = "Trainer and unit are required."
@@ -353,7 +359,25 @@ def trainer_units():
                 try:
                     db.table("trainer_units").insert({"trainer_id": trainer_id, "unit_id": unit_id}).execute()
                     write_audit_log("assign_unit", target=f"trainer:{trainer_id}")
-                    flash("Unit assigned successfully.", "success")
+                    # If class is also provided, link unit to that class via class_units
+                    if class_id:
+                        try:
+                            db.table("class_units").insert({
+                                "class_id": class_id,
+                                "unit_id": unit_id,
+                                "trainer_id": trainer_id,
+                                "year": int(year),
+                                "term": int(term)
+                            }).execute()
+                            flash("Unit assigned to trainer and linked to class successfully.", "success")
+                        except Exception as cx:
+                            err_str2 = str(cx)
+                            if "duplicate" in err_str2.lower() or "unique" in err_str2.lower():
+                                flash("Unit already linked to this class for the selected year/term.", "warning")
+                            else:
+                                flash(f"Unit assigned to trainer, but class linking failed: {cx}", "warning")
+                    else:
+                        flash("Unit assigned successfully.", "success")
                     return redirect(url_for("dept_admin.trainer_units"))
                 except Exception as exc:
                     err_str = str(exc)
@@ -398,10 +422,33 @@ def trainer_units():
             a["user_profiles"] = profiles.get(a["trainer_id"], {})
             a["units"] = dept_units.get(a["unit_id"], {})
 
+    # Fetch class-level assignments (class_units)
+    try:
+        class_assignments = (db.table("class_units")
+            .select("*, classes(name), units(name, code), user_profiles!class_units_trainer_id_fkey(full_name)")
+            .execute().data or [])
+        # Filter to only this department's classes
+        dept_class_ids = {c["id"] for c in classes_list}
+        class_assignments = [ca for ca in class_assignments if ca.get("class_id") in dept_class_ids]
+    except Exception:
+        class_assignments = (db.table("class_units")
+            .select("*")
+            .execute().data or [])
+        dept_class_ids = {c["id"] for c in classes_list}
+        class_assignments = [ca for ca in class_assignments if ca.get("class_id") in dept_class_ids]
+        class_map = {c["id"]: c for c in classes_list}
+        unit_map  = {u["id"]: u for u in (db.table("units").select("id, name, code").eq("department_id", dept_id).execute().data or [])}
+        for ca in class_assignments:
+            ca["classes"] = class_map.get(ca["class_id"], {})
+            ca["units"]   = unit_map.get(ca["unit_id"], {})
+            ca["user_profiles"] = {}
+
     trainers = db.table("user_profiles").select("id, full_name, staff_no").eq("role", "trainer").eq("department_id", dept_id).order("full_name").execute().data or []
     units    = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
     return render_template("dept_admin/trainer_units.html",
-                           assignments=assignments, trainers=trainers, units=units, error=error)
+                           assignments=assignments, class_assignments=class_assignments,
+                           trainers=trainers, units=units,
+                           classes=classes_list, active_year=active_year, error=error)
 
 
 # ── Attendance Overview ───────────────────────────────────────────────────────
