@@ -1,0 +1,119 @@
+{% extends "student/base.html" %}
+{% block title %}My Files{% endblock %}
+{% block page_title %}My Files{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px}
+.page-heading{font-size:18px;font-weight:700;color:#1e293b;margin:0 0 6px}
+.page-sub{font-size:13px;color:#94a3b8;margin:0 0 20px}
+.stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.stat-card{flex:1;min-width:120px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;text-align:center}
+.stat-card .num{font-size:22px;font-weight:800;line-height:1.2}
+.stat-card .lbl{font-size:11px;color:#94a3b8;margin-top:2px;font-weight:600}
+.sc-blue .num{color:#2563eb}.sc-green .num{color:#16a34a}.sc-orange .num{color:#ea580c}.sc-purple .num{color:#9333ea}
+.card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:14px;transition:box-shadow .2s}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.card-body{padding:16px 20px}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.card-top h3{margin:0 0 2px;font-size:15px;color:#1e293b}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#94a3b8;margin-bottom:8px}
+.meta i{width:14px;text-align:center}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-pending{background:#fef3c7;color:#b45309}
+.badge-approved{background:#dcfce7;color:#16a34a}
+.badge-rejected{background:#fee2e2;color:#dc2626}
+.ev-strip{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:10px;border-top:1px solid #f1f5f9;margin-top:10px}
+.ev-strip span{font-size:12px;color:#64748b;display:flex;align-items:center;gap:4px}
+.btn-ev{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:background .2s}
+.btn-ev-primary{background:#2563eb;color:#fff}
+.btn-ev-primary:hover{background:#1d4ed8}
+.btn-ev-outline{border:1px solid #e2e8f0;color:#64748b}
+.search-bar{margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap}
+.search-bar input{flex:1;min-width:180px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none}
+.search-bar input:focus{border-color:#2563eb}
+.filter-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.pill{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;transition:all .2s}
+.pill.active{background:#2563eb;color:#fff;border-color:#2563eb}
+.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}
+.empty-state i{font-size:48px;margin-bottom:12px;display:block}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <p class="page-heading"><i class="fas fa-folder-open" style="color:#2563eb"></i> My Files</p>
+  <p class="page-sub">Browse assessments and manage photos, videos &amp; audio evidence</p>
+
+  {% set total = assessments|length %}
+  {% set withev = assessments|selectattr('_ev_count')|list|length %}
+  {% set total_ev = assessments|sum(attribute='_ev_count') %}
+  <div class="stat-row">
+    <div class="stat-card sc-blue"><div class="num">{{ total }}</div><div class="lbl">Assessments</div></div>
+    <div class="stat-card sc-green"><div class="num">{{ withev }}</div><div class="lbl">With Evidence</div></div>
+    <div class="stat-card sc-purple"><div class="num">{{ total_ev }}</div><div class="lbl">Total Files</div></div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="search-input" placeholder="Search by unit name or code..." oninput="filterCards()">
+  </div>
+  <div class="filter-pills">
+    <span class="pill active" data-filter="all" onclick="setFilter(this,'all')">All</span>
+    <span class="pill" data-filter="pending" onclick="setFilter(this,'pending')">Pending</span>
+    <span class="pill" data-filter="approved" onclick="setFilter(this,'approved')">Approved</span>
+    <span class="pill" data-filter="rejected" onclick="setFilter(this,'rejected')">Rejected</span>
+  </div>
+
+  {% if assessments %}
+    {% for a in assessments %}
+    {% set u = a.get('units') or {} %}
+    {% set c = a.get('classes') or {} %}
+    <div class="card" data-status="{{ a.status }}">
+      <div class="card-body">
+        <div class="card-top">
+          <div>
+            <h3>{{ u.get('code','—') }} — {{ u.get('name','—') }}</h3>
+            <div class="meta">
+              <span><i class="fas fa-layer-group"></i> {{ a.assessment_type }} #{{ a.assessment_no }}</span>
+              <span><i class="fas fa-users"></i> {{ c.get('name','—') }}</span>
+              <span><i class="fas fa-calendar"></i> T{{ a.term }} / C{{ a.cycle }} / {{ a.year }}</span>
+            </div>
+          </div>
+          <span class="badge badge-{{ a.status }}">{{ a.status|title }}</span>
+        </div>
+        <div class="ev-strip">
+          <span><i class="fas fa-images"></i> {{ a._ev_count }} file{{ 's' if a._ev_count != 1 }}</span>
+          {% if a._ev_count > 0 %}
+          <span><i class="fas fa-database"></i> {{ a._ev_size }}</span>
+          {% endif %}
+          <a href="{{ url_for('student.add_evidence', assessment_id=a.id) }}" class="btn-ev btn-ev-primary" style="margin-left:auto">
+            <i class="fas fa-plus-circle"></i> Manage Evidence
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="fas fa-inbox"></i>
+      <p>No assessments uploaded yet.</p>
+      <a href="/student/dashboard" style="display:inline-block;margin-top:12px;padding:10px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function setFilter(el, status) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  filterCards();
+}
+function filterCards() {
+  var q = document.getElementById('search-input').value.toLowerCase();
+  var active = document.querySelector('.pill.active');
+  var status = active ? active.dataset.filter : 'all';
+  document.querySelectorAll('.card').forEach(function(c) {
+    var show = (status === 'all' || c.dataset.status === status);
+    if (show && q) show = c.textContent.toLowerCase().includes(q);
+    c.style.display = show ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

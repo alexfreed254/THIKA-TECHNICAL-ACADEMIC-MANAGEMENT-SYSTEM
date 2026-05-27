@@ -446,6 +446,53 @@ def upload_assessment():
     return render_template("student/upload_assessment.html", class_units=class_units)
 
 
+# ── My Files (Assessment & Evidence Browser) ──────────────────────────────────
+
+@student_bp.route("/my-files")
+@student_required
+def my_files():
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    assessments = (db.table("assessments")
+                  .select("*, classes(name), units(name, code)")
+                  .eq("student_id", student_id)
+                  .order("uploaded_at", desc=True)
+                  .execute().data or [])
+
+    if assessments:
+        a_ids = [a["id"] for a in assessments]
+        ev_rows = (db.table("evidence")
+                  .select("assessment_id, id, file_type, file_size")
+                  .in_("assessment_id", a_ids)
+                  .execute().data or [])
+        ev_count = {}
+        ev_size = {}
+        for ev in ev_rows:
+            aid = ev["assessment_id"]
+            ev_count[aid] = ev_count.get(aid, 0) + 1
+            ev_size[aid] = ev_size.get(aid, 0) + (ev.get("file_size") or 0)
+    else:
+        ev_count = {}
+        ev_size = {}
+
+    def fmt_size(b):
+        if not b: return "0 B"
+        for u in ["B","KB","MB"]:
+            if b < 1024: return f"{b:.1f} {u}"
+            b /= 1024
+        return f"{b:.1f} GB"
+
+    for a in assessments:
+        a["_ev_count"] = ev_count.get(a["id"], 0)
+        a["_ev_size"] = fmt_size(ev_size.get(a["id"], 0))
+
+    return render_template("student/my_files.html", assessments=assessments)
+
+
+# ── Upload / Manage Evidence for an Assessment ───────────────────────────────
+
 @student_bp.route("/assessments/<assessment_id>/evidence", methods=["GET", "POST"])
 @student_required
 def add_evidence(assessment_id):
@@ -453,77 +500,83 @@ def add_evidence(assessment_id):
     user = current_user()
     student_id = user["id"]
     
-    # Verify assessment belongs to student
-    assessment = db.table("assessments").select("*").eq("id", assessment_id).eq("student_id", student_id).single().execute().data
-    
+    assessment = (db.table("assessments")
+                 .select("*, classes(name), units(name, code)")
+                 .eq("id", assessment_id).eq("student_id", student_id)
+                 .single().execute().data)
     if not assessment:
         abort(403)
     
-    # Get existing evidence
-    evidence_list = db.table("evidence").select("*").eq("assessment_id", assessment_id).execute().data or []
-    
+    evidence_list = (db.table("evidence")
+                    .select("*")
+                    .eq("assessment_id", assessment_id)
+                    .order("uploaded_at", desc=True)
+                    .execute().data or [])
+
+    def fmt_size(b):
+        if not b: return "0 B"
+        b = int(b)
+        for u in ["B","KB","MB"]:
+            if b < 1024: return f"{b:.1f} {u}"
+            b /= 1024
+        return f"{b:.1f} GB"
+
+    for ev in evidence_list:
+        ev["file_size_fmt"] = fmt_size(ev.get("file_size"))
+
     if request.method == "POST":
-        if 'evidence' not in request.files:
+        if 'evidence_file' not in request.files:
             flash('No file selected.', 'danger')
             return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
         
-        file = request.files['evidence']
+        file = request.files['evidence_file']
         if file.filename == '':
             flash('No file selected.', 'danger')
             return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
         
-        # Determine file type
         ext = file.filename.rsplit('.', 1)[1].lower()
-        if ext in ['jpg', 'jpeg', 'png', 'webp']:
+        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
             file_type = 'photo'
             content_type = f"image/{ext if ext != 'jpg' else 'jpeg'}"
-        elif ext in ['mp4', 'mov', 'avi']:
+        elif ext in ['mp4', 'mov', 'avi', 'mkv', 'webm']:
             file_type = 'video'
             content_type = f"video/{ext}"
+        elif ext in ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac']:
+            file_type = 'audio'
+            content_type = f"audio/{ext}"
         else:
-            flash('Invalid file type. Use images or videos.', 'danger')
+            flash('Invalid file type. Use images, videos, or audio files.', 'danger')
             return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
         
         caption = request.form.get("caption", "")
         
         try:
-            # Upload to Supabase Storage — read once for both upload and size
             filename = f"evidence/{student_id}_{assessment_id}_{uuid.uuid4().hex}.{ext}"
             file_data = file.read()
-            
-            storage_client = get_service_client().storage
-            storage_client.from_("assessment-evidence").upload(
-                filename,
-                file_data,
-                {"content-type": content_type}
+            get_service_client().storage.from_("assessment-evidence").upload(
+                filename, file_data, {"content-type": content_type}
             )
-            
-            file_size = len(file_data)
-            
-            # Create evidence record
             db.table("evidence").insert({
                 "assessment_id": assessment_id,
                 "student_id": student_id,
                 "file_path": filename,
                 "file_name": file.filename,
                 "file_type": file_type,
-                "file_size": file_size,
+                "file_size": len(file_data),
                 "caption": caption
             }).execute()
-            
             write_audit_log("add_evidence", target=f"assessment:{assessment_id}")
             flash('Evidence added successfully.', 'success')
-            return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
-            
         except Exception as e:
             flash(f'Error adding evidence: {e}', 'danger')
+        return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
     
     return render_template("student/add_evidence.html",
                           assessment=assessment,
                           evidence=evidence_list)
 
 
-@student_bp.route("/assessments/<assessment_id>/evidence/<evidence_id>/delete")
+@student_bp.route("/assessments/<assessment_id>/evidence/<evidence_id>/delete", methods=["GET", "POST"])
 @student_required
 def delete_evidence(assessment_id, evidence_id):
     db = get_service_client()

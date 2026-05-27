@@ -110,6 +110,12 @@ def inject_globals():
         }
         return mapping.get(ntype, mapping['info'])
 
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+    def storage_url(bucket, path):
+        if not path:
+            return ""
+        return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
+
     return {
         "LOGO_URL": "/static/assets/THIKATTILOGO.jpg",
         "current_user": user,
@@ -118,7 +124,11 @@ def inject_globals():
         "pending_employers_count": pending_employers,
         "get_alert_classes": get_alert_classes,
         "TAILWIND_CDN": "https://cdn.tailwindcss.com",
-        "now": datetime.now
+        "now": datetime.now,
+        "storage_url": storage_url,
+        "SUPABASE_URL": supabase_url,
+        "BUCKET_SCRIPTS": "assessment-scripts",
+        "BUCKET_EVIDENCE": "assessment-evidence"
     }
 
 # ── Jinja2 filter: convert UTC ISO string → EAT display string ───────────────
