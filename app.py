@@ -81,7 +81,17 @@ def inject_globals():
             session.get("user", {}).get("id")
         ) if session.get("user") else 0
     }
+        return mapping.get(ntype, mapping['info'])
 
+    return {
+        "LOGO_URL": "/static/assets/THIKATTILOGO.jpg",
+        "current_user": user,
+        "department_name": dept_name,
+        "unread_notification_count": unread_count,
+        "pending_employers_count": pending_employers,
+        "get_alert_classes": get_alert_classes,
+        "TAILWIND_CDN": "https://cdn.tailwindcss.com"
+    }
 
 # ── Jinja2 filter: convert UTC ISO string → EAT display string ───────────────
 import pytz
