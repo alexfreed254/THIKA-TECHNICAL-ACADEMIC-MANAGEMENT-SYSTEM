@@ -356,35 +356,39 @@ def trainer_units():
                 u_row = db.table("units").select("department_id").eq("id", unit_id).single().execute().data
                 if not u_row or u_row.get("department_id") != dept_id:
                     abort(403)
+                # Train global assignment (trainer ↔ unit) — ignore if already exists
                 try:
                     db.table("trainer_units").insert({"trainer_id": trainer_id, "unit_id": unit_id}).execute()
                     write_audit_log("assign_unit", target=f"trainer:{trainer_id}")
-                    # If class is also provided, link unit to that class via class_units
-                    if class_id:
-                        try:
-                            db.table("class_units").insert({
-                                "class_id": class_id,
-                                "unit_id": unit_id,
-                                "trainer_id": trainer_id,
-                                "year": int(year),
-                                "term": int(term)
-                            }).execute()
-                            flash("Unit assigned to trainer and linked to class successfully.", "success")
-                        except Exception as cx:
-                            err_str2 = str(cx)
-                            if "duplicate" in err_str2.lower() or "unique" in err_str2.lower():
-                                flash("Unit already linked to this class for the selected year/term.", "warning")
-                            else:
-                                flash(f"Unit assigned to trainer, but class linking failed: {cx}", "warning")
-                    else:
-                        flash("Unit assigned successfully.", "success")
-                    return redirect(url_for("dept_admin.trainer_units"))
-                except Exception as exc:
-                    err_str = str(exc)
-                    if "duplicate" in err_str.lower() or "unique" in err_str.lower():
-                        error = "This unit is already assigned to that trainer."
-                    else:
-                        error = f"Error assigning unit: {exc}"
+                except Exception:
+                    pass  # global assignment may already exist
+                # Class-level linking (class ↔ unit ↔ trainer) for attendance
+                if class_id:
+                    try:
+                        db.table("class_units").insert({
+                            "class_id": class_id,
+                            "unit_id": unit_id,
+                            "trainer_id": trainer_id,
+                            "year": int(year),
+                            "term": int(term)
+                        }).execute()
+                        flash("Unit linked to class for attendance.", "success")
+                    except Exception as cx:
+                        err_str2 = str(cx)
+                        if "duplicate" in err_str2.lower() or "unique" in err_str2.lower():
+                            # Record exists — update trainer_id instead
+                            try:
+                                db.table("class_units").update({
+                                    "trainer_id": trainer_id
+                                }).eq("class_id", class_id).eq("unit_id", unit_id).eq("year", int(year)).eq("term", int(term)).execute()
+                                flash("Unit trainer updated for this class.", "success")
+                            except Exception:
+                                flash("Unit already linked to this class for that year/term.", "warning")
+                        else:
+                            flash(f"Class linking failed: {cx}", "warning")
+                else:
+                    flash("Unit assigned globally (class not selected, so it won't appear in attendance dropdown).", "info")
+                return redirect(url_for("dept_admin.trainer_units"))
         elif action == "unassign":
             assign_id = request.form.get("assign_id", "").strip()
             if assign_id:
