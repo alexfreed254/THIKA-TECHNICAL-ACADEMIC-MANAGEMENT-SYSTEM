@@ -427,7 +427,7 @@
 
         <div class="meta">
           <label><input type="checkbox" name="remember"> Remember me</label>
-          <a href="/auth/forgot-password">Forgot Password?</a>
+          <a href="/auth/forgot-password" id="forgotPwdLink">Forgot Password?</a>
         </div>
 
         <button type="submit" class="btn-login"><i class="fas fa-arrow-right"></i> Sign In</button>
@@ -473,7 +473,7 @@
       </form>
 
       <div class="login-footer">
-        <span>New employer? <a href="/employer/register">Create employer account</a></span>
+        <span id="employerRegisterSpan" style="display:none">New employer? <a href="/employer/register">Create employer account</a></span>
         <span>New student? <a href="#" onclick="document.querySelector('.tab.apply-tab').click();return false">Apply for a Course</a></span>
       </div>
     </section>
@@ -501,16 +501,23 @@
       applyForm.classList.add('visible');
     }
 
+    const forgotPwdLink = document.getElementById('forgotPwdLink');
+    const employerRegisterSpan = document.getElementById('employerRegisterSpan');
+
     function setStaffMode() {
       origin.value = 'auth';
       staffIcon.className = 'fas fa-envelope';
       document.getElementById('email').placeholder = 'you@example.com';
+      forgotPwdLink.style.display = '';
+      employerRegisterSpan.style.display = 'none';
     }
 
     function setEmployerMode() {
       origin.value = 'employer';
       staffIcon.className = 'fas fa-building';
       document.getElementById('email').placeholder = 'employer@company.com';
+      forgotPwdLink.style.display = 'none';
+      employerRegisterSpan.style.display = '';
     }
 
     tabs.forEach(tab => {
@@ -545,6 +552,16 @@
       document.querySelector('.tab.apply-tab').click();
       document.querySelector('.login-panel').scrollIntoView({ behavior: 'smooth' });
     });
+
+    // Init visibility on page load
+    (function initVisibility() {
+      const checked = document.querySelector('input[name="staff_type"]:checked');
+      if (checked && checked.value === 'employer') {
+        setEmployerMode();
+      } else {
+        setStaffMode();
+      }
+    })();
 
     // Check URL param to show apply tab on load
     if (window.location.search.includes('apply=1')) {
