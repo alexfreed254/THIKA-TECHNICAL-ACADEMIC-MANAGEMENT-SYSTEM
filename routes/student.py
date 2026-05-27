@@ -1199,7 +1199,23 @@ def add_logbook():
     
     if not all([attachment_id, log_date, tasks_performed]):
         flash("Attachment, date, and tasks performed are required.", "error")
-        return redirect(url_for("student.logbook"))
+    return redirect(url_for("student.logbook"))
+
+
+# ── My Job Applications ──────────────────────────────────────────────────────
+
+@student_bp.route("/jobs")
+@student_required
+def my_jobs():
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    apps = (db.table("job_applications")
+            .select("*, job_postings(title, company, type, location)")
+            .eq("student_id", student_id)
+            .order("created_at", desc=True)
+            .execute().data or [])
+    return render_template("student/jobs.html", applications=apps)
     
     try:
         db.table("digital_logbook").insert({

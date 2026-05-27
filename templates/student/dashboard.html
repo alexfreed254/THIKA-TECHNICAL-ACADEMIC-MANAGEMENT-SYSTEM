@@ -1,102 +1,73 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Student Dashboard | TTTTI</title>
-  <link rel="stylesheet" href="/static/css/responsive.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
+{% extends "student/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block extra_style %}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:16px}
+.stat-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.stat-info h3{font-size:13px;font-weight:600;color:#555;margin:0 0 2px}
+.stat-info p{font-size:22px;font-weight:800;margin:0;color:#1e293b}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;margin-bottom:24px}
+.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.pct-high{color:#2e7d32}
+.pct-med{color:#e65100}
+.pct-low{color:#c62828}
+.progress-bar{height:8px;background:#e0e0e0;border-radius:999px;overflow:hidden;flex:1;min-width:80px}
+.progress-fill{height:100%;border-radius:999px}
+.pf-high{background:linear-gradient(90deg,#2e7d32,#4caf50)}
+.pf-med{background:linear-gradient(90deg,#e65100,#ff9800)}
+.pf-low{background:linear-gradient(90deg,#c62828,#ef5350)}
+.unit-badge{display:inline-block;background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+.btn-sm{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;display:inline-block}
+.btn-primary{background:#1565c0;color:#fff}
+.clearance-card{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 4px 16px rgba(102,126,234,.35)}
+.clearance-card h3{margin:0 0 8px;font-size:18px}
+.clearance-card p{margin:0 0 16px;opacity:.9;font-size:14px}
+.clearance-card a{display:inline-block;padding:10px 24px;background:#fff;color:#667eea;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px}
+.empty-state{text-align:center;padding:48px 20px;color:#aaa}
+.empty-state i{font-size:42px;margin-bottom:14px;display:block;opacity:.35}
+@media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+{% endblock %}
+{% block content %}
+<div style="padding:24px">
 
-<!-- Top nav -->
-<nav class="topnav">
-  <div class="topnav-brand">
-    <img src="{{ LOGO_URL }}" alt="Logo">
-    <div class="topnav-brand-text">
-      <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
-      <p>Student Portal</p>
-    </div>
-  </div>
-  <div class="topnav-right">
-    <span><i class="fas fa-user-graduate"></i> {{ student.full_name }} &bull; {{ student.admission_number }}</span>
-    <a href="/auth/logout" class="topnav-btn danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
-  </div>
-</nav>
-
-<div class="dash-wrap">
-
-  <!-- Summary stats -->
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#3498db,#2980b9);">
-        <i class="fas fa-book"></i>
-      </div>
-      <div class="stat-info">
-        <h3>Total Units</h3>
-        <p>{{ attendance_data | length }}</p>
-      </div>
+      <div class="stat-icon" style="background:linear-gradient(135deg,#3498db,#2980b9);color:#fff"><i class="fas fa-book"></i></div>
+      <div class="stat-info"><h3>Total Units</h3><p>{{ attendance_data | length }}</p></div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#2ecc71,#27ae60);">
-        <i class="fas fa-check-circle"></i>
-      </div>
-      <div class="stat-info">
-        <h3>Classes Attended</h3>
-        <p>{{ total_attended }}</p>
-      </div>
+      <div class="stat-icon" style="background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff"><i class="fas fa-check-circle"></i></div>
+      <div class="stat-info"><h3>Classes Attended</h3><p>{{ total_attended }}</p></div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#9b59b6,#8e44ad);">
-        <i class="fas fa-chart-pie"></i>
-      </div>
-      <div class="stat-info">
-        <h3>Avg Attendance</h3>
-        <p class="{% if overall_pct >= 75 %}pct-high{% elif overall_pct >= 50 %}pct-med{% else %}pct-low{% endif %}">
-          {{ overall_pct }}%
-        </p>
-      </div>
+      <div class="stat-icon" style="background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff"><i class="fas fa-chart-pie"></i></div>
+      <div class="stat-info"><h3>Avg Attendance</h3><p class="{% if overall_pct >= 75 %}pct-high{% elif overall_pct >= 50 %}pct-med{% else %}pct-low{% endif %}">{{ overall_pct }}%</p></div>
     </div>
   </div>
 
-  <!-- Clearance Section -->
   {% if clearance_eligible %}
-  <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-    <div class="card-header" style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
-      <span><i class="fas fa-clipboard-check"></i> Course Completion & Clearance</span>
-    </div>
-    <div style="padding: 20px;">
-      <h3 style="margin: 0 0 10px 0;">Congratulations! You're Eligible for Clearance</h3>
-      <p style="margin: 0 0 15px 0; opacity: 0.9;">You have completed your course requirements. Initiate the clearance process to receive your certificate.</p>
-      <a href="/clearance/" class="topnav-btn" style="background: white; color: #667eea; display: inline-block;">
-        <i class="fas fa-clipboard-check"></i> Start Clearance Process
-      </a>
-    </div>
+  <div class="clearance-card">
+    <h3><i class="fas fa-clipboard-check"></i> Congratulations! You're Eligible for Clearance</h3>
+    <p>You have completed your course requirements. Initiate the clearance process to receive your certificate.</p>
+    <a href="/clearance/"><i class="fas fa-clipboard-check"></i> Start Clearance Process</a>
   </div>
   {% endif %}
 
-  <!-- Attendance table -->
   <div class="card">
-    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <div class="card-header">
       <span><i class="fas fa-clipboard-list"></i> Attendance Dashboard</span>
-      <span style="background:#e3f2fd;color:var(--primary);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">
-        {{ current_month }}
-      </span>
+      <span style="background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">{{ current_month }}</span>
     </div>
-
     {% if attendance_data %}
     <div class="table-wrap">
       <table>
         <thead>
-          <tr>
-            <th>Unit Code</th>
-            <th>Unit Name</th>
-            <th style="text-align:center;">Attended</th>
-            <th style="text-align:center;">Total</th>
-            <th>Attendance %</th>
-            <th>Last Update</th>
-            <th></th>
-          </tr>
+          <tr><th>Unit Code</th><th>Unit Name</th><th style="text-align:center">Attended</th><th style="text-align:center">Total</th><th>Attendance %</th><th>Last Update</th><th></th></tr>
         </thead>
         <tbody>
           {% for row in attendance_data %}
@@ -107,26 +78,19 @@
           <tr style="cursor:pointer;" onclick="window.location='/student/unit-detail?unit_id={{ row.id }}'">
             <td><span class="unit-badge">{{ row.unit_code }}</span></td>
             <td>{{ row.unit_name }}</td>
-            <td style="text-align:center;font-weight:700;">{{ attended }}</td>
-            <td style="text-align:center;color:#888;">{{ total }}</td>
-            <td style="min-width:130px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <div class="progress-bar">
-                  <div class="progress-fill pf-{{ sc }}" style="width:{{ pct }}%;"></div>
-                </div>
-                <span class="pct-{{ sc }}" style="min-width:38px;font-size:13px;">{{ pct }}%</span>
+            <td style="text-align:center;font-weight:700">{{ attended }}</td>
+            <td style="text-align:center;color:#888">{{ total }}</td>
+            <td style="min-width:130px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="progress-bar"><div class="progress-fill pf-{{ sc }}" style="width:{{ pct }}%"></div></div>
+                <span class="pct-{{ sc }}" style="min-width:38px;font-size:13px">{{ pct }}%</span>
               </div>
             </td>
-            <td style="font-size:12px;color:#888;white-space:nowrap;">
-              {% if row.last_update %}{{ row.last_update[:16] | replace('T', ' ') }}{% else %}—{% endif %}
-            </td>
+            <td style="font-size:12px;color:#888;white-space:nowrap">{% if row.last_update %}{{ row.last_update[:16] | replace('T', ' ') }}{% else %}—{% endif %}</td>
             <td>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <a href="/student/unit-detail?unit_id={{ row.id }}" class="btn btn-sm btn-primary"
-                   onclick="event.stopPropagation()"><i class="fas fa-eye"></i> View</a>
-                <a href="/student/unit-report-pdf?unit_id={{ row.id }}" class="btn btn-sm"
-                   style="background:#c62828;color:#fff;" target="_blank"
-                   onclick="event.stopPropagation()"><i class="fas fa-file-pdf"></i> PDF</a>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <a href="/student/unit-detail?unit_id={{ row.id }}" class="btn-sm btn-primary" onclick="event.stopPropagation()"><i class="fas fa-eye"></i> View</a>
+                <a href="/student/unit-report-pdf?unit_id={{ row.id }}" class="btn-sm" style="background:#c62828;color:#fff" target="_blank" onclick="event.stopPropagation()"><i class="fas fa-file-pdf"></i> PDF</a>
               </div>
             </td>
           </tr>
@@ -135,13 +99,12 @@
       </table>
     </div>
     {% else %}
-    <div style="text-align:center;padding:48px 20px;color:#aaa;">
-      <i class="fas fa-clipboard-list" style="font-size:42px;margin-bottom:14px;display:block;opacity:0.35;"></i>
+    <div class="empty-state">
+      <i class="fas fa-clipboard-list"></i>
       No attendance records found yet.
     </div>
     {% endif %}
   </div>
 
-</div><!-- /dash-wrap -->
-</body>
-</html>
+</div>
+{% endblock %}

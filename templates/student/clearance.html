@@ -1,0 +1,16 @@
+{% extends "student/base.html" %}
+{% block title %}Clearance{% endblock %}
+{% block page_title %}Course Clearance{% endblock %}
+{% block extra_style %}
+.page-wrap{padding:24px;text-align:center;padding-top:60px}
+.page-wrap i{font-size:48px;color:#94a3b8;margin-bottom:16px;display:block}
+.page-wrap p{color:#64748b;font-size:15px}
+{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <i class="fas fa-clipboard-check"></i>
+  <p>Redirecting to Clearance Dashboard...</p>
+  <a href="/clearance/" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#1565c0;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">Go to Clearance</a>
+</div>
+<script>window.location.href='/clearance/';</script>
+{% endblock %}

@@ -10,16 +10,37 @@
     .sidebar {
       background: linear-gradient(180deg, #f57c00 0%, #e65100 100%);
       color: #fff;
+      display: flex;
+      flex-direction: column;
     }
-    .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
     .sidebar-header img { height: 58px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); margin-bottom: 10px; }
     .sidebar-header h2 { font-size: 13px; font-weight: 700; opacity: .9; }
     .role-badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: 3px 12px; font-size: 11px; margin-top: 6px; }
-    .sidebar-menu { flex: 1; padding: 16px 0; overflow-y: auto; }
-    .sidebar-menu a { display: block; padding: 12px 22px; color: rgba(255,255,255,.82); text-decoration: none; transition: all .25s; border-left: 4px solid transparent; font-size: 13px; }
+    .sidebar-menu { flex: 1; padding: 12px 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.3) transparent; }
+    .sidebar-menu::-webkit-scrollbar { width: 5px; }
+    .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,.3); border-radius: 10px; }
+    .sidebar-menu::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.5); }
+    .sidebar-menu a { display: block; padding: 10px 22px 10px 36px; color: rgba(255,255,255,.78); text-decoration: none; transition: all .2s; font-size: 13px; border-left: 3px solid transparent; }
     .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,.1); color: #fff; border-left-color: #ffd700; }
-    .menu-section { padding: 10px 22px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,.4); }
-    .sidebar-footer { padding: 14px; border-top: 1px solid rgba(255,255,255,.1); display: flex; gap: 10px; }
+    .menu-group-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 18px 10px 22px; cursor: pointer;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: rgba(255,255,255,.5); transition: color .2s;
+      user-select: none;
+    }
+    .menu-group-header:hover { color: rgba(255,255,255,.8); }
+    .menu-group-header .arrow { transition: transform .3s ease; font-size: 10px; }
+    .menu-group-header .arrow.open { transform: rotate(90deg); }
+    .menu-group-content { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .25s ease; opacity: 0; }
+    .menu-group-content.open { max-height: 600px; opacity: 1; }
+    .menu-group-content a { padding-left: 44px; font-size: 12.5px; border-left-color: transparent; }
+    .menu-group-content a i { width: 18px; text-align: center; margin-right: 6px; font-size: 12px; }
+    .sidebar-menu .direct-link { padding: 10px 22px 10px 22px; }
+    .sidebar-menu .direct-link i { width: 20px; text-align: center; margin-right: 8px; }
+    .sidebar-footer { padding: 14px; border-top: 1px solid rgba(255,255,255,.1); display: flex; gap: 10px; flex-shrink: 0; }
     .sidebar-footer a { display: flex; align-items: center; justify-content: center; padding: 9px; background: rgba(220,38,38,.25); color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px; flex: 1; }
     .sidebar-footer a:hover { background: rgba(220,38,38,.45); }
     .notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: background 0.3s ease; }
@@ -43,35 +64,72 @@
       <div class="role-badge"><i class="fas fa-user-graduate"></i> Student Portal</div>
     </div>
     <div class="sidebar-menu">
-      <div class="menu-section">Overview</div>
-      <a href="/student/dashboard"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
 
-      <div class="menu-section">Academic</div>
-      <a href="/student/attendance"><i class="fas fa-clipboard-list fa-fw"></i> Attendance</a>
-      <a href="/student/assessments"><i class="fas fa-file-certificate fa-fw"></i> Assessments</a>
-      <a href="/student/units"><i class="fas fa-book fa-fw"></i> My Units</a>
-      <a href="/student/marks"><i class="fas fa-chart-line fa-fw"></i> My Marks</a>
-      <a href="/student/portfolio"><i class="fas fa-folder-open fa-fw"></i> Portfolio of Evidence</a>
+      <a href="/student/dashboard" class="direct-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
 
-      <div class="menu-section">Admission</div>
-      <a href="/admission/"><i class="fas fa-file-upload fa-fw"></i> Admission Documents</a>
+      <div class="menu-group" data-group="academic">
+        <div class="menu-group-header"><span><i class="fas fa-graduation-cap" style="width:20px;text-align:center;margin-right:6px"></i> Academic</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/student/attendance"><i class="fas fa-clipboard-list"></i> Attendance</a>
+          <a href="/student/assessments"><i class="fas fa-file-certificate"></i> Assessments</a>
+          <a href="/student/units"><i class="fas fa-book"></i> My Units</a>
+          <a href="/student/marks"><i class="fas fa-chart-line"></i> My Marks</a>
+          <a href="/student/portfolio"><i class="fas fa-folder-open"></i> Portfolio of Evidence</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Dual Training</div>
-      <a href="/student/industrial-attachment"><i class="fas fa-building fa-fw"></i> Industrial Attachment</a>
-      <a href="/student/logbook"><i class="fas fa-book-open fa-fw"></i> Digital Logbook</a>
+      <div class="menu-group" data-group="admission">
+        <div class="menu-group-header"><span><i class="fas fa-file-upload" style="width:20px;text-align:center;margin-right:6px"></i> Admission</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/admission/"><i class="fas fa-file-upload"></i> Admission Documents</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Clearance</div>
-      <a href="/clearance/"><i class="fas fa-clipboard-check fa-fw"></i> Course Clearance</a>
+      <div class="menu-group" data-group="dual">
+        <div class="menu-group-header"><span><i class="fas fa-building" style="width:20px;text-align:center;margin-right:6px"></i> Dual Training</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/student/industrial-attachment"><i class="fas fa-building"></i> Industrial Attachment</a>
+          <a href="/student/logbook"><i class="fas fa-book-open"></i> Digital Logbook</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Exams</div>
-      <a href="/student/exam-bookings"><i class="fas fa-calendar-plus fa-fw"></i> Exam Bookings</a>
+      <div class="menu-group" data-group="clearance">
+        <div class="menu-group-header"><span><i class="fas fa-clipboard-check" style="width:20px;text-align:center;margin-right:6px"></i> Clearance</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/clearance/"><i class="fas fa-clipboard-check"></i> Course Clearance</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Career</div>
-      <a href="/employer/job-board"><i class="fas fa-briefcase fa-fw"></i> Job Board</a>
-      <a href="/student/jobs"><i class="fas fa-history fa-fw"></i> My Applications</a>
+      <div class="menu-group" data-group="exams">
+        <div class="menu-group-header"><span><i class="fas fa-calendar-plus" style="width:20px;text-align:center;margin-right:6px"></i> Exams</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/student/exam-bookings"><i class="fas fa-calendar-plus"></i> Exam Bookings</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Profile</div>
-      <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
+      <div class="menu-group" data-group="career">
+        <div class="menu-group-header"><span><i class="fas fa-briefcase" style="width:20px;text-align:center;margin-right:6px"></i> Career</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/employer/job-board"><i class="fas fa-briefcase"></i> Job Board</a>
+          <a href="/student/jobs"><i class="fas fa-history"></i> My Applications</a>
+        </div>
+      </div>
+
+      <div class="menu-group" data-group="profile">
+        <div class="menu-group-header"><span><i class="fas fa-user-circle" style="width:20px;text-align:center;margin-right:6px"></i> Profile</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/auth/profile"><i class="fas fa-user-circle"></i> My Profile</a>
+          <div class="menu-group" data-group="prefs" style="margin-left:6px">
+            <div class="menu-group-header" style="font-size:12px;padding:8px 18px 8px 22px"><span><i class="fas fa-cog" style="width:18px;text-align:center;margin-right:6px"></i> Preferences</span><span class="arrow">&#9654;</span></div>
+            <div class="menu-group-content">
+              <a href="#" onclick="toggleTheme();return false" style="padding-left:56px;font-size:12px"><i class="fas fa-adjust"></i> <span id="themeLabel">Light / Dark Mode</span></a>
+              <a href="#" onclick="toggleZoom();return false" style="padding-left:56px;font-size:12px"><i class="fas fa-search-plus"></i> Screen Zoom</a>
+            </div>
+          </div>
+          <a href="/auth/logout" style="color:rgba(255,100,100,.9)"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+      </div>
+
     </div>
     <div class="sidebar-footer">
       <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -114,32 +172,66 @@
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
 
-  function openSidebar() {
-    sidebar.classList.add('open');
-    overlay.classList.add('open');
-    toggle.innerHTML = '<i class="fas fa-times"></i>';
-  }
-  function closeSidebar() {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('open');
-    toggle.innerHTML = '<i class="fas fa-bars"></i>';
-  }
+  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('open');    toggle.innerHTML = '<i class="fas fa-times"></i>'; }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); toggle.innerHTML = '<i class="fas fa-bars"></i>';  }
 
-  toggle.addEventListener('click', () => {
-    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-  });
+  toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
   overlay.addEventListener('click', closeSidebar);
 
-  document.querySelectorAll('.sidebar-menu a').forEach(a => {
-    a.addEventListener('click', () => {
-      if (window.innerWidth <= 768) closeSidebar();
+  // ── Accordion expand/collapse ─────────────────────────────
+  document.querySelectorAll('.menu-group-header').forEach(header => {
+    header.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const content = this.nextElementSibling;
+      const arrow = this.querySelector('.arrow');
+      const isOpen = content.classList.contains('open');
+      content.classList.toggle('open');
+      if (arrow) arrow.classList.toggle('open');
     });
   });
 
+  // ── Active link highlighting + auto-open parent groups ──
   const path = window.location.pathname;
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
-    if (a.getAttribute('href') === path) a.classList.add('active');
+    const href = a.getAttribute('href');
+    if (href && href !== '#' && path.startsWith(href)) {
+      a.classList.add('active');
+      let parent = a.closest('.menu-group-content');
+      while (parent) {
+        parent.classList.add('open');
+        const arrow = parent.previousElementSibling?.querySelector('.arrow');
+        if (arrow) arrow.classList.add('open');
+        parent = parent.parentElement?.closest('.menu-group-content');
+      }
+    }
   });
+
+  // Close sidebar on link click (mobile)
+  document.querySelectorAll('.sidebar-menu a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
+  });
+
+  // ── Theme toggle ───────────────────────────────────────────
+  function toggleTheme() {
+    const label = document.getElementById('themeLabel');
+    const isDark = document.body.classList.toggle('dark-mode');
+    label.textContent = isDark ? 'Dark Mode' : 'Light Mode';
+    localStorage.setItem('student_theme', isDark ? 'dark' : 'light');
+  }
+  if (localStorage.getItem('student_theme') === 'dark') {
+    document.body.classList.add('dark-mode');
+    const label = document.getElementById('themeLabel');
+    if (label) label.textContent = 'Dark Mode';
+  }
+
+  // ── Zoom toggle ────────────────────────────────────────────
+  let zoomLevel = parseFloat(localStorage.getItem('student_zoom') || '1');
+  document.body.style.zoom = zoomLevel;
+  function toggleZoom() {
+    zoomLevel = zoomLevel === 1 ? 1.15 : zoomLevel === 1.15 ? 1.3 : 1;
+    document.body.style.zoom = zoomLevel;
+    localStorage.setItem('student_zoom', zoomLevel);
+  }
 </script>
 </body>
 </html>
