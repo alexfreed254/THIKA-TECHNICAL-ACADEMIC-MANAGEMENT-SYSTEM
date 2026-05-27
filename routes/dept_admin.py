@@ -62,8 +62,12 @@ def dashboard():
         stats["rejected"]    = sum(1 for a in dept_assessments if a["status"] == "rejected")
 
         # Course applications
-        stats["applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).execute().count or 0
-        stats["pending_applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).eq("status", "pending").execute().count or 0
+        try:
+            stats["applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).execute().count or 0
+            stats["pending_applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).eq("status", "pending").execute().count or 0
+        except Exception:
+            stats["applications"] = 0
+            stats["pending_applications"] = 0
 
         # Recent assessments specifically for this department
         recent_assessments = (db.table("assessments")
@@ -1203,11 +1207,14 @@ def delete_company(company_id):
 def applications():
     db = get_service_client()
     dept_id = _dept_id()
-    applications = (db.table("course_applications")
-        .select("*")
-        .eq("department_id", dept_id)
-        .order("created_at", desc=True)
-        .execute().data or [])
+    try:
+        applications = (db.table("course_applications")
+            .select("*")
+            .eq("department_id", dept_id)
+            .order("created_at", desc=True)
+            .execute().data or [])
+    except Exception:
+        applications = []
     return render_template("dept_admin/applications.html", applications=applications)
 
 
