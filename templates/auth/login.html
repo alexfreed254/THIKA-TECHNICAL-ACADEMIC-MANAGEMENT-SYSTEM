@@ -156,7 +156,7 @@
 
     .tabs {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px;
     }
 
@@ -372,9 +372,8 @@
     <section class="login-panel">
       <div class="top">
         <div class="tabs">
-          <button type="button" class="tab {% if request.form.get('login_type', 'staff') == 'staff' and request.form.get('origin') != 'employer' and not request.args.get('apply') %}active{% endif %}" data-type="staff">Staff / Admin</button>
+          <button type="button" class="tab {% if (request.form.get('login_type', 'staff') == 'staff' or request.form.get('origin') == 'employer') and not request.args.get('apply') %}active{% endif %}" data-type="staff">Staff / Admin / Employer</button>
           <button type="button" class="tab {% if request.form.get('login_type') == 'student' %}active{% endif %}" data-type="student">Trainee</button>
-          <button type="button" class="tab {% if request.form.get('origin') == 'employer' %}active{% endif %}" data-type="employer">Employer</button>
           <button type="button" class="tab apply-tab {% if request.args.get('apply') %}active{% endif %}" data-type="apply"><i class="fas fa-file-signature"></i> Apply</button>
         </div>
         <h2>Welcome back</h2>
@@ -394,19 +393,19 @@
         <input type="hidden" name="login_type" id="loginType" value="{{ request.form.get('login_type', 'staff') }}">
         <input type="hidden" name="origin" id="origin" value="{{ request.form.get('origin', 'auth') }}">
 
-        <div class="field" id="staffField" style="{% if request.form.get('login_type') == 'student' or request.form.get('origin') == 'employer' %}display:none;{% endif %}">
+        <div class="field" id="staffField">
           <label for="email">Email Address</label>
           <div class="input-wrap">
-            <i class="fas fa-envelope"></i>
+            <i class="fas fa-envelope" id="staffIcon"></i>
             <input id="email" type="email" name="email" placeholder="you@example.com" value="{{ request.form.get('email', '') }}" autocomplete="email">
           </div>
-        </div>
-
-        <div class="field" id="employerField" style="{% if request.form.get('origin') == 'employer' %}display:grid;{% else %}display:none;{% endif %}">
-          <label for="employerEmail">Employer Email</label>
-          <div class="input-wrap">
-            <i class="fas fa-building"></i>
-            <input id="employerEmail" type="email" name="email" placeholder="employer@company.com" value="{{ request.form.get('email', '') }}" autocomplete="email">
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setStaffMode()">
+              <input type="radio" name="staff_type" value="staff" {% if request.form.get('origin') != 'employer' %}checked{% endif %} style="accent-color:#2563eb"> Staff / Admin
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setEmployerMode()">
+              <input type="radio" name="staff_type" value="employer" {% if request.form.get('origin') == 'employer' %}checked{% endif %} style="accent-color:#e65100"> Employer
+            </label>
           </div>
         </div>
 
@@ -475,7 +474,7 @@
 
       <div class="login-footer">
         <span>New employer? <a href="/employer/register">Create employer account</a></span>
-        <a href="/apply"><i class="fas fa-file-signature"></i> Apply for a Course</a>
+        <span>New student? <a href="#" onclick="document.querySelector('.tab.apply-tab').click();return false">Apply for a Course</a></span>
       </div>
     </section>
   </div>
@@ -483,12 +482,12 @@
   <script>
     const tabs = document.querySelectorAll('.tab');
     const staffField = document.getElementById('staffField');
-    const employerField = document.getElementById('employerField');
     const studentField = document.getElementById('studentField');
     const loginType = document.getElementById('loginType');
     const origin = document.getElementById('origin');
     const loginForm = document.getElementById('loginForm');
     const applyForm = document.getElementById('applyForm');
+    const staffIcon = document.getElementById('staffIcon');
 
     function showLoginForms() {
       loginForm.style.display = 'grid';
@@ -500,6 +499,18 @@
       loginForm.style.display = 'none';
       applyForm.style.display = 'grid';
       applyForm.classList.add('visible');
+    }
+
+    function setStaffMode() {
+      origin.value = 'auth';
+      staffIcon.className = 'fas fa-envelope';
+      document.getElementById('email').placeholder = 'you@example.com';
+    }
+
+    function setEmployerMode() {
+      origin.value = 'employer';
+      staffIcon.className = 'fas fa-building';
+      document.getElementById('email').placeholder = 'employer@company.com';
     }
 
     tabs.forEach(tab => {
@@ -515,20 +526,14 @@
           showLoginForms();
           if (type === 'student') {
             staffField.style.display = 'none';
-            employerField.style.display = 'none';
             studentField.style.display = 'grid';
             origin.value = 'auth';
-          } else if (type === 'employer') {
-            staffField.style.display = 'none';
-            employerField.style.display = 'grid';
-            studentField.style.display = 'none';
-            loginType.value = 'staff';
-            origin.value = 'employer';
           } else {
             staffField.style.display = 'grid';
-            employerField.style.display = 'none';
             studentField.style.display = 'none';
-            origin.value = 'auth';
+            // Preserve the currently selected staff/employer radio
+            const checked = document.querySelector('input[name="staff_type"]:checked');
+            if (checked) checked.click();
           }
         }
       });
