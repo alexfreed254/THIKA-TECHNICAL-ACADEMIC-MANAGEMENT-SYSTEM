@@ -2,69 +2,126 @@
 {% block title %}Assign Units{% endblock %}
 {% block page_title %}Assign Units to Trainers{% endblock %}
 {% block extra_style %}
+:root{--blue:#1565c0;--blue-dark:#0d47a1;--red:#c62828;--green:#2e7d32;--amber:#f57f17}
 .page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-.card-body{padding:20px}
-.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end}
-.form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px}
-.form-group select{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px}
-.btn{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
-.btn-primary{background:#1565c0;color:#fff}
-.btn-danger{background:#c62828;color:#fff;padding:5px 12px;font-size:12px}
-.error-box{background:#ffebee;color:#c62828;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+.dept-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:20px}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
+.card-header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:16px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-body{padding:22px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:end}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#555;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.form-group select{width:100%;padding:10px 13px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fafafa;transition:border .2s,box-shadow .2s;box-sizing:border-box}
+.form-group select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.1);background:#fff}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,101,192,.3)}
+.btn-danger{background:var(--red);color:#fff;padding:7px 14px;font-size:12px}
+.btn-danger:hover{opacity:.85}
+.error-box{background:#ffebee;color:var(--red);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--red)}
+.empty-warn{background:#fff8e1;color:#f57f17;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--amber)}
 table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:11px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:11px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+thead tr{background:#f5f7fa}
+th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#667;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e8ecf0}
+td{padding:12px 16px;border-bottom:1px solid #f0f4f8;font-size:13px;vertical-align:middle}
+tr:hover td{background:#f9fafb}
+.trainer-chip{display:inline-flex;align-items:center;gap:6px;background:#e3f2fd;color:#1565c0;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.trainer-chip i{font-size:11px}
+code{background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700}
 {% endblock %}
+
 {% block content %}
 <div class="page-wrap">
+
+  {% if department_name %}
+  <div class="dept-badge"><i class="fas fa-sitemap"></i> {{ department_name | upper }}</div>
+  {% endif %}
+
+  <!-- Assign Form -->
   <div class="card">
     <div class="card-header"><i class="fas fa-link"></i> Assign Unit to Trainer</div>
     <div class="card-body">
       {% if error %}<div class="error-box"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
+
+      {% if not trainers %}
+      <div class="empty-warn"><i class="fas fa-exclamation-triangle"></i> No trainers found in your department. Please add trainers first.</div>
+      {% endif %}
+      {% if not units %}
+      <div class="empty-warn"><i class="fas fa-exclamation-triangle"></i> No units found in your department. Please add units first.</div>
+      {% endif %}
+
       <form method="post">
-        <input type="hidden" name="assign" value="1">
-        <div class="form-row">
+        <input type="hidden" name="action" value="assign">
+        <div class="form-grid">
           <div class="form-group">
-            <label>Trainer</label>
-            <select name="trainer_id" required>
+            <label>Trainer *</label>
+            <select name="trainer_id" required {% if not trainers %}disabled{% endif %}>
               <option value="">— Select Trainer —</option>
               {% for t in trainers %}
-              <option value="{{ t.id }}">{{ t.full_name }}</option>
+              <option value="{{ t.id }}">{{ t.full_name }}{% if t.staff_no %} ({{ t.staff_no }}){% endif %}</option>
               {% endfor %}
             </select>
           </div>
           <div class="form-group">
-            <label>Unit</label>
-            <select name="unit_id" required>
+            <label>Unit *</label>
+            <select name="unit_id" required {% if not units %}disabled{% endif %}>
               <option value="">— Select Unit —</option>
               {% for u in units %}
               <option value="{{ u.id }}">{{ u.code }} — {{ u.name }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="form-group">
-            <button type="submit" class="btn btn-primary"><i class="fas fa-link"></i> Assign</button>
+          <div class="form-group" style="display:flex;align-items:flex-end">
+            <button type="submit" class="btn btn-primary" {% if not trainers or not units %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}>
+              <i class="fas fa-link"></i> Assign Unit
+            </button>
           </div>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Current Assignments -->
   <div class="card">
-    <div class="card-header"><i class="fas fa-list"></i> Current Assignments ({{ assignments|length }})</div>
+    <div class="card-header"><i class="fas fa-users-cog"></i> Current Assignments ({{ assignments|length }})</div>
     <table>
-      <thead><tr><th>Trainer</th><th>Unit</th><th>Code</th></tr></thead>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Trainer</th>
+          <th>Unit Name</th>
+          <th>Unit Code</th>
+          <th>Assigned</th>
+          <th>Action</th>
+        </tr>
+      </thead>
       <tbody>
         {% for a in assignments %}
         <tr>
-          <td>{{ a.get('user_profiles',{}).get('full_name','—') }}</td>
-          <td>{{ a.get('units',{}).get('name','—') }}</td>
-          <td><code>{{ a.get('units',{}).get('code','—') }}</code></td>
+          <td style="color:#bbb;font-size:12px">{{ loop.index }}</td>
+          <td>
+            <span class="trainer-chip">
+              <i class="fas fa-chalkboard-teacher"></i>
+              {{ (a.user_profiles or {}).get('full_name', '—') }}
+            </span>
+          </td>
+          <td><strong>{{ (a.units or {}).get('name', '—') }}</strong></td>
+          <td><code>{{ (a.units or {}).get('code', '—') }}</code></td>
+          <td style="font-size:12px;color:#888">{{ a.assigned_at | to_eat('%d %b %Y') if a.assigned_at else '—' }}</td>
+          <td>
+            <form method="post" style="display:inline" onsubmit="return confirm('Remove assignment: {{ (a.user_profiles or {}).get(\'full_name\',\'this trainer\') }} ↔ {{ (a.units or {}).get(\'code\',\'\') }}?')">
+              <input type="hidden" name="action" value="unassign">
+              <input type="hidden" name="assign_id" value="{{ a.id }}">
+              <button type="submit" class="btn btn-danger"><i class="fas fa-unlink"></i> Remove</button>
+            </form>
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="3" style="text-align:center;color:#aaa;padding:32px">No assignments yet.</td></tr>
+        <tr>
+          <td colspan="6" style="text-align:center;color:#bbb;padding:40px">
+            <i class="fas fa-link" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
+            No assignments yet. Use the form above to assign units to trainers.
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

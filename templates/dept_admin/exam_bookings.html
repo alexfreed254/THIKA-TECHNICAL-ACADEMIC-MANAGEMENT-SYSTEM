@@ -67,28 +67,47 @@
 {% endblock %}
 
 {% block content %}
-<div class="content-header">
-  <h2>Pending Exam Bookings</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+  <h2 style="margin:0;">Exam Booking Approvals</h2>
+  <div style="font-size: 13px; font-weight: 600; color: #555; background: #e3f2fd; padding: 6px 14px; border-radius: 20px;">
+    <i class="fas fa-sitemap"></i> Department: {{ department_name or 'General' }}
+  </div>
+</div>
+
+<!-- Review Status Tabs -->
+<div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 12px; overflow-x: auto;">
+  <a href="/dept-admin/exam-bookings?status=pending" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'pending' %}background: #007bff; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
+    <i class="fas fa-clock"></i> Pending
+  </a>
+  <a href="/dept-admin/exam-bookings?status=approved" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'approved' %}background: #2e7d32; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
+    <i class="fas fa-check-circle"></i> Approved
+  </a>
+  <a href="/dept-admin/exam-bookings?status=rejected" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'rejected' %}background: #c62828; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
+    <i class="fas fa-times-circle"></i> Rejected
+  </a>
+  <a href="/dept-admin/exam-bookings?status=all" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'all' %}background: #555; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
+    <i class="fas fa-list"></i> All Bookings
+  </a>
 </div>
 
 {% if not bookings %}
 <div class="empty-state">
-  <i class="fas fa-check-circle"></i>
-  <p>No pending exam bookings to review.</p>
+  <i class="fas fa-folder-open" style="font-size: 48px; color: #ccc; margin-bottom: 12px;"></i>
+  <p>No exam bookings found matching the selected status.</p>
 </div>
 {% else %}
 {% for booking in bookings %}
-<div class="booking-card">
+<div class="booking-card" style="border-left: 4px solid {% if booking.status == 'approved' %}#2e7d32{% elif booking.status == 'rejected' %}#c62828{% else %}#007bff{% endif %};">
   <div class="student-info">
     <div class="student-avatar">
-      {{ booking.user_profiles.full_name[0] if booking.user_profiles.full_name else 'S' }}
+      {{ booking.student_user.full_name[0] if booking.student_user.full_name else 'S' }}
     </div>
     <div>
-      <h3 style="margin: 0 0 4px 0;">{{ booking.user_profiles.full_name }}</h3>
+      <h3 style="margin: 0 0 4px 0;">{{ booking.student_user.full_name }}</h3>
       <div style="color: #666; font-size: 14px;">
-        Admission: {{ booking.user_profiles.admission_no }}
+        Admission: {{ booking.student_user.admission_no }}
         <span style="margin: 0 10px;">|</span>
-        Class: {{ booking.user_profiles.classes.name }}
+        Class: {{ booking.classes.name if booking.classes else '—' }}
       </div>
     </div>
   </div>
@@ -116,21 +135,44 @@
   <div style="font-size: 12px; color: #999; margin-bottom: 15px;">
     Submitted: {{ booking.created_at | to_eat('%d %b %Y %H:%M') }}
   </div>
-  
-  <form action="{{ url_for('dept_admin.approve_exam_booking', booking_id=booking.id) }}" method="POST" class="action-buttons">
-    <button type="submit" class="btn-approve">
-      <i class="fas fa-check"></i> Approve
-    </button>
-  </form>
-  
-  <form action="{{ url_for('dept_admin.reject_exam_booking', booking_id=booking.id) }}" method="POST" class="action-buttons">
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <input type="text" name="rejection_reason" placeholder="Reason for rejection (optional)" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex: 1;">
-      <button type="submit" class="btn-reject">
-        <i class="fas fa-times"></i> Reject
-      </button>
+
+  <!-- HOD Review Details Display -->
+  {% if booking.status != 'pending' %}
+  <div style="margin-top: 15px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; margin-bottom: 15px;">
+    <div style="font-weight: 700; color: #334155; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+      <i class="fas fa-user-check" style="color: {% if booking.status == 'approved' %}#2e7d32{% else %}#c62828{% endif %};"></i> 
+      Reviewed By: <span style="color: #0f172a; font-weight: 800;">{{ booking.approved_by_user.full_name if booking.approved_by_user.full_name else 'HOD' }}</span>
     </div>
-  </form>
+    <div style="color: #64748b; display: flex; align-items: center; gap: 6px;">
+      <i class="far fa-calendar-check"></i> 
+      Date Reviewed: <span style="font-weight: 600; color: #334155;">{{ booking.approved_at | to_eat('%d %b %Y, %I:%M %p') }}</span>
+    </div>
+    {% if booking.rejection_reason %}
+    <div style="color: #475569; margin-top: 6px; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 6px;">
+      <strong>Remarks:</strong> "{{ booking.rejection_reason }}"
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+  
+  {% if booking.status == 'pending' %}
+  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <form action="{{ url_for('dept_admin.approve_exam_booking', booking_id=booking.id) }}" method="POST" style="margin:0;">
+      <button type="submit" class="btn-approve">
+        <i class="fas fa-check"></i> Approve
+      </button>
+    </form>
+    
+    <form action="{{ url_for('dept_admin.reject_exam_booking', booking_id=booking.id) }}" method="POST" style="flex: 1; min-width: 280px; margin:0;">
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" name="rejection_reason" placeholder="Reason for rejection (optional)" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex: 1;">
+        <button type="submit" class="btn-reject">
+          <i class="fas fa-times"></i> Reject
+        </button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
 </div>
 {% endfor %}
 {% endif %}

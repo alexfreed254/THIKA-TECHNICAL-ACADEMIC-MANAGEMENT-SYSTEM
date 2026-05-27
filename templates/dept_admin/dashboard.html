@@ -20,6 +20,16 @@ td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
 {% endblock %}
 {% block content %}
 <div class="page-wrap">
+  <div style="background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 4px 15px rgba(21,101,192,0.15); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <h1 style="font-size: 22px; font-weight: 800; margin: 0 0 6px 0;">Welcome, {{ current_user.full_name }}!</h1>
+      <p style="font-size: 13px; margin: 0; opacity: 0.95; font-weight: 500;"><i class="fas fa-sitemap"></i> Department: <strong style="color: #ffd700;">{{ department_name | upper if department_name else 'ACADEMIC' }}</strong></p>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.2);">
+      <i class="far fa-calendar-alt"></i> Portal Dashboard
+    </div>
+  </div>
+
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-icon" style="background:linear-gradient(135deg,#1565c0,#0d47a1)"><i class="fas fa-door-open"></i></div>

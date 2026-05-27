@@ -111,32 +111,62 @@ def classes():
     if request.method == "POST":
         action = request.form.get("action", "create")
         if action == "create":
-            name      = request.form.get("name", "").strip().upper()
-            course_id = request.form.get("course_id", "").strip()
+            name         = request.form.get("name", "").strip().upper()
+            course_id    = request.form.get("course_id", "").strip()
             intake_year  = request.form.get("intake_year") or None
             intake_month = request.form.get("intake_month") or None
-            level = request.form.get("level") or None
-            cycle = request.form.get("cycle") or None
+            level        = request.form.get("level") or None
+            cycle        = request.form.get("cycle") or None
             if not name or not course_id:
                 error = "Class name and course are required."
             else:
                 try:
-                    db.table("classes").insert({"name": name, "course_id": course_id,
+                    db.table("classes").insert({
+                        "name": name, "course_id": course_id,
                         "department_id": dept_id, "intake_year": intake_year,
-                        "intake_month": intake_month, "level": level, "cycle": cycle}).execute()
+                        "intake_month": intake_month, "level": level, "cycle": cycle
+                    }).execute()
                     write_audit_log("create_class", target=name)
-                    flash("Class added.", "success")
+                    flash("Class added successfully.", "success")
                     return redirect(url_for("dept_admin.classes"))
                 except Exception as exc:
-                    error = f"Error: {exc}"
+                    error = f"Error creating class: {exc}"
+        elif action == "edit":
+            class_id     = request.form.get("class_id", "").strip()
+            name         = request.form.get("name", "").strip().upper()
+            course_id    = request.form.get("course_id", "").strip()
+            intake_year  = request.form.get("intake_year") or None
+            intake_month = request.form.get("intake_month") or None
+            level        = request.form.get("level") or None
+            cycle        = request.form.get("cycle") or None
+            if not class_id or not name or not course_id:
+                error = "Class name and course are required."
+            else:
+                row = db.table("classes").select("department_id").eq("id", class_id).single().execute().data
+                if not row or row.get("department_id") != dept_id:
+                    abort(403)
+                try:
+                    db.table("classes").update({
+                        "name": name, "course_id": course_id,
+                        "intake_year": intake_year, "intake_month": intake_month,
+                        "level": level, "cycle": cycle
+                    }).eq("id", class_id).execute()
+                    write_audit_log("edit_class", target=name)
+                    flash("Class updated successfully.", "success")
+                    return redirect(url_for("dept_admin.classes"))
+                except Exception as exc:
+                    error = f"Error updating class: {exc}"
         elif action == "delete":
             class_id = request.form.get("class_id")
             row = db.table("classes").select("department_id").eq("id", class_id).single().execute().data
-            if not row or row["department_id"] != dept_id:
+            if not row or row.get("department_id") != dept_id:
                 abort(403)
-            db.table("classes").delete().eq("id", class_id).execute()
-            write_audit_log("delete_class", target=str(class_id))
-            flash("Class deleted.", "success")
+            try:
+                db.table("classes").delete().eq("id", class_id).execute()
+                write_audit_log("delete_class", target=str(class_id))
+                flash("Class deleted.", "success")
+            except Exception as exc:
+                flash(f"Cannot delete class (it may have students enrolled): {exc}", "danger")
             return redirect(url_for("dept_admin.classes"))
     classes_list = db.table("classes").select("*, courses(name)").eq("department_id", dept_id).order("name").execute().data or []
     courses = db.table("courses").select("*").eq("department_id", dept_id).order("name").execute().data or []
@@ -152,20 +182,54 @@ def units():
     dept_id = _dept_id()
     error = None
     if request.method == "POST":
-        code      = request.form.get("code", "").strip().upper()
-        name      = request.form.get("name", "").strip()
-        course_id = request.form.get("course_id", "").strip()
-        if not all([code, name, course_id]):
-            error = "Code, name, and course are required."
-        else:
+        action    = request.form.get("action", "create")
+        if action == "create":
+            code      = request.form.get("code", "").strip().upper()
+            name      = request.form.get("name", "").strip()
+            course_id = request.form.get("course_id", "").strip()
+            if not all([code, name, course_id]):
+                error = "Code, name, and course are required."
+            else:
+                try:
+                    db.table("units").insert({"code": code, "name": name,
+                        "department_id": dept_id, "course_id": course_id}).execute()
+                    write_audit_log("create_unit", target=code)
+                    flash("Unit added successfully.", "success")
+                    return redirect(url_for("dept_admin.units"))
+                except Exception as exc:
+                    error = f"Error creating unit: {exc}"
+        elif action == "edit":
+            unit_id   = request.form.get("unit_id", "").strip()
+            code      = request.form.get("code", "").strip().upper()
+            name      = request.form.get("name", "").strip()
+            course_id = request.form.get("course_id", "").strip()
+            if not all([unit_id, code, name, course_id]):
+                error = "All fields are required."
+            else:
+                row = db.table("units").select("department_id").eq("id", unit_id).single().execute().data
+                if not row or row.get("department_id") != dept_id:
+                    abort(403)
+                try:
+                    db.table("units").update({
+                        "code": code, "name": name, "course_id": course_id
+                    }).eq("id", unit_id).execute()
+                    write_audit_log("edit_unit", target=code)
+                    flash("Unit updated successfully.", "success")
+                    return redirect(url_for("dept_admin.units"))
+                except Exception as exc:
+                    error = f"Error updating unit: {exc}"
+        elif action == "delete":
+            unit_id = request.form.get("unit_id", "").strip()
+            row = db.table("units").select("department_id").eq("id", unit_id).single().execute().data
+            if not row or row.get("department_id") != dept_id:
+                abort(403)
             try:
-                db.table("units").insert({"code": code, "name": name,
-                    "department_id": dept_id, "course_id": course_id}).execute()
-                write_audit_log("create_unit", target=code)
-                flash("Unit added.", "success")
-                return redirect(url_for("dept_admin.units"))
+                db.table("units").delete().eq("id", unit_id).execute()
+                write_audit_log("delete_unit", target=str(unit_id))
+                flash("Unit deleted.", "success")
             except Exception as exc:
-                error = f"Error: {exc}"
+                flash(f"Cannot delete unit (it may have assessments or assignments linked to it): {exc}", "danger")
+            return redirect(url_for("dept_admin.units"))
     units_list = db.table("units").select("*, courses(name)").eq("department_id", dept_id).order("code").execute().data or []
     courses    = db.table("courses").select("*").eq("department_id", dept_id).order("name").execute().data or []
     return render_template("dept_admin/units.html", units=units_list, courses=courses, error=error)
@@ -269,27 +333,62 @@ def trainer_units():
             if not all([trainer_id, unit_id]):
                 error = "Trainer and unit are required."
             else:
+                # Verify trainer belongs to this department
+                t_row = db.table("user_profiles").select("department_id").eq("id", trainer_id).single().execute().data
+                if not t_row or t_row.get("department_id") != dept_id:
+                    abort(403)
+                # Verify unit belongs to this department
+                u_row = db.table("units").select("department_id").eq("id", unit_id).single().execute().data
+                if not u_row or u_row.get("department_id") != dept_id:
+                    abort(403)
                 try:
                     db.table("trainer_units").insert({"trainer_id": trainer_id, "unit_id": unit_id}).execute()
                     write_audit_log("assign_unit", target=f"trainer:{trainer_id}")
-                    flash("Unit assigned.", "success")
+                    flash("Unit assigned successfully.", "success")
                     return redirect(url_for("dept_admin.trainer_units"))
                 except Exception as exc:
-                    error = f"Error: {exc}"
+                    err_str = str(exc)
+                    if "duplicate" in err_str.lower() or "unique" in err_str.lower():
+                        error = "This unit is already assigned to that trainer."
+                    else:
+                        error = f"Error assigning unit: {exc}"
         elif action == "unassign":
             assign_id = request.form.get("assign_id", "").strip()
             if assign_id:
-                db.table("trainer_units").delete().eq("id", assign_id).execute()
-                write_audit_log("unassign_unit", target=f"assignment:{assign_id}")
-                flash("Assignment removed.", "success")
+                try:
+                    db.table("trainer_units").delete().eq("id", assign_id).execute()
+                    write_audit_log("unassign_unit", target=f"assignment:{assign_id}")
+                    flash("Assignment removed successfully.", "success")
+                except Exception as exc:
+                    flash(f"Error removing assignment: {exc}", "danger")
                 return redirect(url_for("dept_admin.trainer_units"))
-    assignments = (db.table("trainer_units")
-        .select("id, trainer_id, unit_id, user_profiles(full_name, staff_no), units(name, code)")
-        .execute().data or [])
-    # Filter to this department's trainers only
-    dept_trainer_ids = {t["id"] for t in
-        db.table("user_profiles").select("id").eq("role", "trainer").eq("department_id", dept_id).execute().data or []}
-    assignments = [a for a in assignments if a.get("trainer_id") in dept_trainer_ids]
+
+    # Use explicit FK hint for the user_profiles join to avoid ambiguity
+    try:
+        assignments = (db.table("trainer_units")
+            .select("id, trainer_id, unit_id, assigned_at, user_profiles!trainer_units_trainer_id_fkey(full_name, staff_no), units(name, code)")
+            .execute().data or [])
+        # Filter to only this department's trainers
+        dept_trainer_ids = {t["id"] for t in
+            db.table("user_profiles").select("id").eq("role", "trainer").eq("department_id", dept_id).execute().data or []}
+        assignments = [a for a in assignments if a.get("trainer_id") in dept_trainer_ids]
+    except Exception:
+        # Fallback: fetch without join, manually attach profile data
+        assignments = (db.table("trainer_units")
+            .select("id, trainer_id, unit_id, assigned_at")
+            .execute().data or [])
+        dept_trainer_ids = {t["id"] for t in
+            db.table("user_profiles").select("id").eq("role", "trainer").eq("department_id", dept_id).execute().data or []}
+        assignments = [a for a in assignments if a.get("trainer_id") in dept_trainer_ids]
+        # Attach profile and unit info manually
+        profiles = {p["id"]: p for p in
+            db.table("user_profiles").select("id, full_name, staff_no").in_("id", list(dept_trainer_ids)).execute().data or []}
+        dept_units = {u["id"]: u for u in
+            db.table("units").select("id, name, code").eq("department_id", dept_id).execute().data or []}
+        for a in assignments:
+            a["user_profiles"] = profiles.get(a["trainer_id"], {})
+            a["units"] = dept_units.get(a["unit_id"], {})
+
     trainers = db.table("user_profiles").select("id, full_name, staff_no").eq("role", "trainer").eq("department_id", dept_id).order("full_name").execute().data or []
     units    = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
     return render_template("dept_admin/trainer_units.html",
@@ -390,12 +489,18 @@ def exam_bookings():
     dept_id = _dept_id()
     status_filter = request.args.get("status", "pending")
     query = (db.table("exam_bookings")
-        .select("*, units(name, code, department_id), user_profiles!exam_bookings_student_id_fkey(full_name, admission_no), user_profiles!exam_bookings_approved_by_fkey(full_name)")
+        .select("*, units(name, code, department_id), classes(name), student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no), reviewer:user_profiles!exam_bookings_approved_by_fkey(full_name)")
         .order("created_at", desc=True))
     if status_filter and status_filter != "all":
         query = query.eq("status", status_filter)
     bookings = query.execute().data or []
     bookings = [b for b in bookings if b.get("units", {}).get("department_id") == dept_id]
+    
+    # Post-process to map student_user and approved_by_user
+    for b in bookings:
+        b["student_user"] = b.get("student") or {}
+        b["approved_by_user"] = b.get("reviewer") or {}
+        
     return render_template("dept_admin/exam_bookings.html",
                            bookings=bookings, status_filter=status_filter)
 

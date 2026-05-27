@@ -1,65 +1,233 @@
 {% extends "dept_admin/base.html" %}
-{% block title %}Classes{% endblock %}
+{% block title %}Manage Classes{% endblock %}
 {% block page_title %}Manage Classes{% endblock %}
 {% block extra_style %}
+:root{--blue:#1565c0;--blue-dark:#0d47a1;--red:#c62828;--green:#2e7d32;--amber:#f57f17}
 .page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-.card-body{padding:20px}
-.inline-form{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-.form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px}
-.form-group input{padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;min-width:220px}
-.btn{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
-.btn-primary{background:#1565c0;color:#fff}
-.btn-danger{background:#c62828;color:#fff;padding:5px 12px;font-size:12px}
-.error-box{background:#ffebee;color:#c62828;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+.dept-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:20px}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
+.card-header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:16px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-body{padding:22px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#555;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select{width:100%;padding:10px 13px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fafafa;transition:border .2s,box-shadow .2s}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.1);background:#fff}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,101,192,.3)}
+.btn-danger{background:var(--red);color:#fff;padding:6px 13px;font-size:12px}
+.btn-danger:hover{opacity:.85}
+.btn-edit{background:var(--amber);color:#fff;padding:6px 13px;font-size:12px}
+.btn-edit:hover{opacity:.85}
+.error-box{background:#ffebee;color:var(--red);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--red)}
+.success-box{background:#e8f5e9;color:var(--green);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--green)}
 table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:11px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:11px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+thead tr{background:#f5f7fa}
+th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#667;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e8ecf0}
+td{padding:12px 16px;border-bottom:1px solid #f0f4f8;font-size:13px;vertical-align:middle}
+tr:hover td{background:#f9fafb}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-level{background:#e3f2fd;color:#1565c0}
+.badge-cycle{background:#f3e5f5;color:#7b1fa2}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:28px;width:90%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:800;color:#1a1a2e;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e8ecf0;display:flex;align-items:center;gap:8px}
 {% endblock %}
+
 {% block content %}
 <div class="page-wrap">
+
+  {% if department_name %}
+  <div class="dept-badge"><i class="fas fa-sitemap"></i> {{ department_name | upper }}</div>
+  {% endif %}
+
+  <!-- Add Class Card -->
   <div class="card">
-    <div class="card-header"><i class="fas fa-plus"></i> Add Class</div>
+    <div class="card-header"><i class="fas fa-plus-circle"></i> Add New Class</div>
     <div class="card-body">
       {% if error %}<div class="error-box"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
       <form method="post">
         <input type="hidden" name="action" value="create">
-        <div class="inline-form">
+        <div class="form-grid">
           <div class="form-group">
-            <label>Class Name</label>
+            <label>Class Name *</label>
             <input type="text" name="name" placeholder="e.g. ICT 1A" required>
           </div>
-          <button type="submit" class="btn btn-primary" style="margin-top:20px">
-            <i class="fas fa-save"></i> Add Class
-          </button>
+          <div class="form-group">
+            <label>Course *</label>
+            <select name="course_id" required>
+              <option value="">— Select Course —</option>
+              {% for crs in courses %}
+              <option value="{{ crs.id }}">{{ crs.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Level</label>
+            <select name="level">
+              <option value="">— Select Level —</option>
+              <option>Level 3</option><option>Level 4</option><option>Level 5</option><option>Level 6</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cycle</label>
+            <select name="cycle">
+              <option value="">— Select Cycle —</option>
+              <option>Cycle 1</option><option>Cycle 2</option><option>Cycle 3</option><option>Cycle 3 Moderated</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Intake Year</label>
+            <input type="number" name="intake_year" placeholder="e.g. 2024" min="2015" max="2035">
+          </div>
+          <div class="form-group">
+            <label>Intake Month</label>
+            <select name="intake_month">
+              <option value="">— Select Month —</option>
+              <option>January</option><option>February</option><option>March</option><option>April</option>
+              <option>May</option><option>June</option><option>July</option><option>August</option>
+              <option>September</option><option>October</option><option>November</option><option>December</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:18px">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Class</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Classes List -->
   <div class="card">
     <div class="card-header"><i class="fas fa-list"></i> Classes ({{ classes|length }})</div>
     <table>
-      <thead><tr><th>#</th><th>Class Name</th><th>Action</th></tr></thead>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Class Name</th>
+          <th>Course</th>
+          <th>Level</th>
+          <th>Cycle</th>
+          <th>Intake</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
       <tbody>
         {% for c in classes %}
         <tr>
-          <td style="color:#aaa">{{ loop.index }}</td>
+          <td style="color:#bbb;font-size:12px">{{ loop.index }}</td>
           <td><strong>{{ c.name }}</strong></td>
+          <td>{{ c.courses.name if c.courses else '—' }}</td>
+          <td>{% if c.level %}<span class="badge badge-level">{{ c.level }}</span>{% else %}—{% endif %}</td>
+          <td>{% if c.cycle %}<span class="badge badge-cycle">{{ c.cycle }}</span>{% else %}—{% endif %}</td>
+          <td style="font-size:12px;color:#888">{{ c.intake_month or '' }} {{ c.intake_year or '' }}</td>
           <td>
-            <form method="post" style="display:inline" onsubmit="return confirm('Delete {{ c.name }}?')">
-              <input type="hidden" name="action" value="delete">
-              <input type="hidden" name="class_id" value="{{ c.id }}">
-              <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
-            </form>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <!-- Edit button triggers modal -->
+              <button type="button" class="btn btn-edit"
+                onclick="openEditModal('{{ c.id }}','{{ c.name }}','{{ c.course_id }}','{{ c.level or '' }}','{{ c.cycle or '' }}','{{ c.intake_year or '' }}','{{ c.intake_month or '' }}')"
+              ><i class="fas fa-pen"></i> Edit</button>
+              <!-- Delete -->
+              <form method="post" style="display:inline" onsubmit="return confirm('Delete class {{ c.name }}? This cannot be undone.')">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="class_id" value="{{ c.id }}">
+                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+              </form>
+            </div>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="3" style="text-align:center;color:#aaa;padding:32px">No classes yet.</td></tr>
+        <tr><td colspan="7" style="text-align:center;color:#bbb;padding:40px"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px"></i>No classes yet. Add one above.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="fas fa-edit" style="color:#1565c0"></i> Edit Class</div>
+    <form method="post">
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="class_id" id="edit_class_id">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Class Name *</label>
+          <input type="text" name="name" id="edit_name" required>
+        </div>
+        <div class="form-group">
+          <label>Course *</label>
+          <select name="course_id" id="edit_course_id" required>
+            <option value="">— Select Course —</option>
+            {% for crs in courses %}
+            <option value="{{ crs.id }}">{{ crs.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Level</label>
+          <select name="level" id="edit_level">
+            <option value="">— Select Level —</option>
+            <option>Level 3</option><option>Level 4</option><option>Level 5</option><option>Level 6</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cycle</label>
+          <select name="cycle" id="edit_cycle">
+            <option value="">— Select Cycle —</option>
+            <option>Cycle 1</option><option>Cycle 2</option><option>Cycle 3</option><option>Cycle 3 Moderated</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Intake Year</label>
+          <input type="number" name="intake_year" id="edit_intake_year" placeholder="e.g. 2024" min="2015" max="2035">
+        </div>
+        <div class="form-group">
+          <label>Intake Month</label>
+          <select name="intake_month" id="edit_intake_month">
+            <option value="">— Select Month —</option>
+            <option>January</option><option>February</option><option>March</option><option>April</option>
+            <option>May</option><option>June</option><option>July</option><option>August</option>
+            <option>September</option><option>October</option><option>November</option><option>December</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:22px;display:flex;gap:10px">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+        <button type="button" class="btn" style="background:#e0e0e0;color:#555" onclick="closeEditModal()"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditModal(id, name, course_id, level, cycle, intake_year, intake_month) {
+  document.getElementById('edit_class_id').value = id;
+  document.getElementById('edit_name').value = name;
+  setSelectValue('edit_course_id', course_id);
+  setSelectValue('edit_level', level);
+  setSelectValue('edit_cycle', cycle);
+  document.getElementById('edit_intake_year').value = intake_year;
+  setSelectValue('edit_intake_month', intake_month);
+  document.getElementById('editModal').classList.add('open');
+}
+function setSelectValue(id, val) {
+  var sel = document.getElementById(id);
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === val) { sel.selectedIndex = i; break; }
+  }
+}
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+}
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
+</script>
 {% endblock %}

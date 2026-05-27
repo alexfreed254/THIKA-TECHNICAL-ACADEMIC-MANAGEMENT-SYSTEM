@@ -40,6 +40,9 @@
     <div class="sidebar-header">
       <img src="{{ LOGO_URL }}" alt="Logo">
       <h2>THIKA TECHNICAL</h2>
+      {% if department_name %}
+      <div style="font-size: 11px; font-weight: 700; color: #ffd700; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fas fa-sitemap"></i> {{ department_name }}</div>
+      {% endif %}
       <div class="role-badge"><i class="fas fa-user-tie"></i> Dept Admin</div>
     </div>
     <div class="sidebar-menu">

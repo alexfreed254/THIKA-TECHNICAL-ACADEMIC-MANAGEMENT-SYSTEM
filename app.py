@@ -75,8 +75,21 @@ def inject_globals():
     user = current_user()
     unread_count = 0
     pending_employers = 0
+    dept_name = None
     if user:
         unread_count = get_unread_count(user["id"])
+        
+        # Fetch department name if user is associated with a department
+        if user.get("department_id"):
+            try:
+                from db import get_service_client
+                svc = get_service_client()
+                dept_row = svc.table("departments").select("name").eq("id", user["department_id"]).single().execute().data
+                if dept_row:
+                    dept_name = dept_row.get("name")
+            except Exception:
+                pass
+
         # Expose pending employer count for super_admin sidebar badge
         if user.get("role") == "super_admin":
             try:
@@ -100,6 +113,7 @@ def inject_globals():
     return {
         "LOGO_URL": "/static/assets/THIKATTILOGO.jpg",
         "current_user": user,
+        "department_name": dept_name,
         "unread_notification_count": unread_count,
         "pending_employers_count": pending_employers,
         "get_alert_classes": get_alert_classes,

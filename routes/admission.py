@@ -269,28 +269,34 @@ def submit_admission(request_id):
 @login_required
 @dept_admin_required
 def hod_dashboard():
-    """HOD dashboard showing pending admission requests."""
+    """HOD dashboard showing pending, approved, and rejected admission requests."""
     db = get_service_client()
     user = current_user()
     department_id = user.get("department_id")
     
-    # Get pending admission requests for HOD's department
-    pending_requests = (db.table("admission_requests")
-                       .select("*, courses(name, code), departments(name), user_profiles:user_profiles!admission_requests_student_id_fkey(full_name, admission_no, email)")
-                       .eq("department_id", department_id)
-                       .eq("status", "pending")
-                       .order("submitted_at", desc=True)
-                       .execute().data or [])
+    status_filter = request.args.get("status", "pending")
+    if status_filter not in ("pending", "approved", "rejected", "all"):
+        status_filter = "pending"
+    
+    # Get admission requests for HOD's department
+    query = (db.table("admission_requests")
+                       .select("*, courses(name, code), departments(name), student:user_profiles!admission_requests_student_id_fkey(full_name, admission_no, email), reviewer:user_profiles!admission_requests_reviewed_by_fkey(full_name)")
+                       .eq("department_id", department_id))
+    
+    if status_filter != "all":
+        query = query.eq("status", status_filter)
+        
+    requests = query.order("submitted_at", desc=True).execute().data or []
     
     # Get documents for each request
-    for req in pending_requests:
+    for req in requests:
         req["documents"] = (db.table("admission_documents")
                           .select("*")
                           .eq("admission_request_id", req["id"])
                           .execute().data or [])
     
     return render_template("admission/hod_dashboard.html",
-                          pending_requests=pending_requests)
+                           requests=requests, status_filter=status_filter)
 
 
 @admission_bp.route("/hod/review/<request_id>")
