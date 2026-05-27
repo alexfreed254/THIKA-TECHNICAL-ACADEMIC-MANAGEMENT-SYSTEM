@@ -44,11 +44,18 @@ def dashboard():
                        .limit(1)
                        .execute().data or [])
     
+    # Get student's enrollments for the course selector
+    enrollments = (db.table("enrollments")
+                  .select("*, courses(name, code)")
+                  .eq("student_id", student_id)
+                  .execute().data or [])
+
     if not admission_request:
         return render_template("admission/student_dashboard.html",
                               admission_request=None,
                               has_request=False,
-                              required_documents=REQUIRED_DOCUMENTS)
+                              required_documents=REQUIRED_DOCUMENTS,
+                              enrollments=enrollments)
     
     admission_request = admission_request[0]
     
@@ -72,7 +79,8 @@ def dashboard():
                           required_documents=REQUIRED_DOCUMENTS,
                           uploaded_types=uploaded_types,
                           missing_documents=missing_documents,
-                          all_uploaded=all_uploaded)
+                          all_uploaded=all_uploaded,
+                          enrollments=enrollments)
 
 
 @admission_bp.route("/initiate", methods=["POST"])

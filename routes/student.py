@@ -679,6 +679,160 @@ def attendance():
                           percentage=percentage)
 
 
+# ── My Units ────────────────────────────────────────────────────────────────────
+
+@student_bp.route("/units")
+@student_required
+def my_units():
+    """Show units the student is enrolled in with attendance stats."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    enrollments = (db.table("enrollments")
+                  .select("*, units(name, code, id), classes(name)")
+                  .eq("student_id", student_id)
+                  .execute().data or [])
+
+    units_data = []
+    for enr in enrollments:
+        unit = enr.get("units") or {}
+        uid = unit.get("id")
+        if not uid:
+            continue
+        att = (db.table("attendance")
+              .select("status")
+              .eq("student_id", student_id)
+              .eq("unit_id", uid)
+              .execute().data or [])
+        total = len(att)
+        present = sum(1 for a in att if a.get("status") == "present")
+        pct = round(present / total * 100, 1) if total > 0 else 0
+        units_data.append({
+            "id": uid,
+            "code": unit.get("code", ""),
+            "name": unit.get("name", ""),
+            "class_name": (enr.get("classes") or {}).get("name", ""),
+            "attended": present,
+            "total": total,
+            "pct": pct
+        })
+
+    return render_template("student/units.html",
+                          units=units_data)
+
+
+# ── Unit Detail (Attendance Drill-Down) ────────────────────────────────────────
+
+@student_bp.route("/unit-detail")
+@student_required
+def unit_detail():
+    """View attendance records for a specific unit."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    unit_id = request.args.get("unit_id")
+
+    if not unit_id:
+        flash("Unit ID is required.", "error")
+        return redirect(url_for("student.dashboard"))
+
+    unit = db.table("units").select("*").eq("id", unit_id).single().execute().data or {}
+
+    records = (db.table("attendance")
+              .select("*")
+              .eq("student_id", student_id)
+              .eq("unit_id", unit_id)
+              .order("attendance_date", desc=True)
+              .execute().data or [])
+
+    total = len(records)
+    present = sum(1 for r in records if r.get("status") == "present")
+    pct = round(present / total * 100, 1) if total > 0 else 0
+
+    absent = total - present
+    info = {"class_name": "", "dept_name": ""}
+
+    return render_template("student/unit_detail.html",
+                          unit=unit,
+                          records=records,
+                          present=present,
+                          absent=absent,
+                          total=total,
+                          pct=pct,
+                          info=info)
+
+
+@student_bp.route("/unit-report-pdf")
+@student_required
+def unit_report_pdf():
+    """Generate a PDF attendance report for a unit."""
+    from flask import make_response
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    import io
+
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    unit_id = request.args.get("unit_id")
+
+    if not unit_id:
+        flash("Unit ID is required.", "error")
+        return redirect(url_for("student.dashboard"))
+
+    unit = db.table("units").select("*").eq("id", unit_id).single().execute().data or {}
+    student = db.table("user_profiles").select("full_name, admission_no").eq("id", student_id).single().execute().data or {}
+
+    records = (db.table("attendance")
+              .select("*")
+              .eq("student_id", student_id)
+              .eq("unit_id", unit_id)
+              .order("attendance_date", desc=True)
+              .execute().data or [])
+
+    total = len(records)
+    present = sum(1 for r in records if r.get("status") == "present")
+    pct = round(present / total * 100, 1) if total > 0 else 0
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elems = []
+
+    elems.append(Paragraph("Attendance Report", styles["Title"]))
+    elems.append(Spacer(1, 12))
+    elems.append(Paragraph(f"Student: {student.get('full_name', 'N/A')} ({student.get('admission_no', '')})", styles["Normal"]))
+    elems.append(Paragraph(f"Unit: {unit.get('name', 'N/A')} ({unit.get('code', '')})", styles["Normal"]))
+    elems.append(Paragraph(f"Attendance: {present}/{total} ({pct}%)", styles["Normal"]))
+    elems.append(Spacer(1, 20))
+
+    data = [["Date", "Status"]]
+    for r in records:
+        data.append([r.get("attendance_date", ""), r.get("status", "").capitalize()])
+
+    t = Table(data)
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1565c0")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, 0), 12),
+        ("GRID", (0, 0), (-1, -1), 1, colors.grey),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+    ]))
+    elems.append(t)
+
+    doc.build(elems)
+    buf.seek(0)
+
+    return make_response(buf.getvalue(),
+                         200,
+                         {"Content-Type": "application/pdf",
+                          "Content-Disposition": f"attachment; filename=attendance_{unit.get('code', 'unit')}.pdf"})
+
+
 # ── Exam Bookings ─────────────────────────────────────────────────────────────
 
 @student_bp.route("/exam-bookings")
@@ -768,7 +922,8 @@ def new_exam_booking():
     
     return render_template("student/new_exam_booking.html",
                           units=units,
-                          error=error)
+                          error=error,
+                          today_min=datetime.now().strftime("%Y-%m-%d"))
 
 
 @student_bp.route("/exam-bookings/<booking_id>/download")

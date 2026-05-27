@@ -45,7 +45,7 @@
       <label>Select Course *</label>
       <select name="course_id" required>
         <option value="">Choose a course</option>
-        {% for enrollment in current_user.enrollments %}
+        {% for enrollment in enrollments %}
         <option value="{{ enrollment.course_id }}">{{ enrollment.courses.name }} ({{ enrollment.courses.code }})</option>
         {% endfor %}
       </select>
@@ -83,10 +83,10 @@
   </div>
   
   <div class="progress-bar">
-    <div class="progress-fill" style="width: {{ ((len(required_documents) - len(missing_documents)) / len(required_documents) * 100) if required_documents else 0 }}%;"></div>
+    <div class="progress-fill" style="width: {{ ((required_documents|length - missing_documents|length) / required_documents|length * 100) if required_documents else 0 }}%;"></div>
   </div>
   <p style="font-size: 12px; color: #666; margin-top: 8px;">
-    {{ len(required_documents) - len(missing_documents) if required_documents else 0 }} of {{ len(required_documents) if required_documents else 0 }} documents uploaded
+    {{ required_documents|length - missing_documents|length if required_documents else 0 }} of {{ required_documents|length if required_documents else 0 }} documents uploaded
   </p>
 
   <div class="document-grid">

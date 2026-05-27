@@ -31,10 +31,17 @@ def dashboard():
                        .limit(1)
                        .execute().data)
     
+    # Get student's enrollments for the course selector
+    enrollments = (db.table("enrollments")
+                  .select("*, courses(name, code)")
+                  .eq("student_id", student_id)
+                  .execute().data or [])
+
     if not clearance_request:
         return render_template("clearance/student_dashboard.html", 
                               clearance_request=None,
-                              has_request=False)
+                              has_request=False,
+                              enrollments=enrollments)
     
     clearance_request = clearance_request[0]
     
@@ -60,7 +67,8 @@ def dashboard():
                           has_request=True,
                           department_approvals=department_approvals,
                           institutional_approvals=institutional_approvals,
-                          central_approvals=central_approvals)
+                          central_approvals=central_approvals,
+                          enrollments=enrollments)
 
 
 @clearance_bp.route("/initiate", methods=["POST"])

@@ -53,7 +53,7 @@
       <label>Select Course *</label>
       <select name="course_id" required>
         <option value="">Choose a course</option>
-        {% for enrollment in current_user.enrollments %}
+        {% for enrollment in enrollments %}
         <option value="{{ enrollment.course_id }}">{{ enrollment.courses.name }} ({{ enrollment.courses.code }})</option>
         {% endfor %}
       </select>
