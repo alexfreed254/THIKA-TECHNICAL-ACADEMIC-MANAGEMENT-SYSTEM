@@ -390,60 +390,94 @@ def upload_assessment():
             flash('All fields are required.', 'danger')
             return redirect(url_for("student.upload_assessment"))
         
-        if 'script' not in request.files:
-            flash('PDF script is required.', 'danger')
+        files = request.files.getlist("scripts")
+        files = [f for f in files if f and f.filename]
+        if not files:
+            flash('At least one PDF file is required.', 'danger')
             return redirect(url_for("student.upload_assessment"))
         
-        file = request.files['script']
-        if file.filename == '':
-            flash('No file selected.', 'danger')
-            return redirect(url_for("student.upload_assessment"))
-        
-        if not file.filename.lower().endswith('.pdf'):
-            flash('Only PDF files are allowed.', 'danger')
-            return redirect(url_for("student.upload_assessment"))
-        
-        try:
-            # Upload PDF to Supabase Storage — read once for both upload and size
-            filename = f"scripts/{student_id}_{unit_id}_{assessment_type}_{assessment_no}_{uuid.uuid4().hex}.pdf"
-            file_data = file.read()
-            
-            storage_client = get_service_client().storage
-            storage_client.from_("assessment-scripts").upload(
-                filename,
-                file_data,
-                {"content-type": "application/pdf"}
-            )
-            
-            file_size = len(file_data)
-            
-            # Create assessment record
-            assessment_data = {
-                "student_id": student_id,
-                "class_id": class_id,
-                "unit_id": unit_id,
-                "assessment_type": assessment_type,
-                "assessment_no": assessment_no,
-                "term": term,
-                "cycle": cycle,
-                "year": year,
-                "script_file_path": filename,
-                "script_file_name": file.filename,
-                "script_file_size": file_size,
-                "status": "pending"
-            }
-            
-            result = db.table("assessments").insert(assessment_data).execute()
-            assessment_id = result.data[0]["id"]
-            
-            write_audit_log("upload_assessment", target=f"assessment:{assessment_id}")
-            flash('Assessment uploaded successfully. You can now add evidence.', 'success')
-            return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
-            
-        except Exception as e:
-            flash(f'Error uploading assessment: {e}', 'danger')
+        uploaded = 0
+        errors = []
+        for file in files:
+            if not file.filename.lower().endswith('.pdf'):
+                errors.append(f"'{file.filename}' is not a PDF — skipped.")
+                continue
+            try:
+                filename = f"scripts/{student_id}_{unit_id}_{assessment_type}_{assessment_no}_{uuid.uuid4().hex}.pdf"
+                file_data = file.read()
+                get_service_client().storage.from_("assessment-scripts").upload(
+                    filename, file_data, {"content-type": "application/pdf"}
+                )
+                result = db.table("assessments").insert({
+                    "student_id": student_id,
+                    "class_id": class_id,
+                    "unit_id": unit_id,
+                    "assessment_type": assessment_type,
+                    "assessment_no": assessment_no,
+                    "term": term,
+                    "cycle": cycle,
+                    "year": year,
+                    "script_file_path": filename,
+                    "script_file_name": file.filename,
+                    "script_file_size": len(file_data),
+                    "status": "pending"
+                }).execute()
+                write_audit_log("upload_assessment", target=f"assessment:{result.data[0]['id']}")
+                uploaded += 1
+            except Exception as e:
+                errors.append(f"Error uploading '{file.filename}': {e}")
+
+        if uploaded:
+            flash(f"{uploaded} assessment(s) uploaded successfully. You can now add evidence.", 'success')
+        for err in errors:
+            flash(err, 'danger')
+        return redirect(url_for("student.portfolio"))
     
     return render_template("student/upload_assessment.html", class_units=class_units)
+
+
+# ── Delete Assessment (own) ───────────────────────────────────────────────────
+
+@student_bp.route("/assessments/<assessment_id>/delete", methods=["POST"])
+@student_required
+def delete_assessment(assessment_id):
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    assessment = (db.table("assessments")
+                 .select("*")
+                 .eq("id", assessment_id).eq("student_id", student_id)
+                 .single().execute().data)
+    if not assessment:
+        abort(403)
+
+    try:
+        # Delete evidence records + storage files
+        ev_list = db.table("evidence").select("*").eq("assessment_id", assessment_id).execute().data or []
+        for ev in ev_list:
+            if ev.get("file_path"):
+                try:
+                    get_service_client().storage.from_("assessment-evidence").remove([ev["file_path"]])
+                except Exception:
+                    pass
+            db.table("evidence").delete().eq("id", ev["id"]).execute()
+
+        # Delete script from storage
+        if assessment.get("script_file_path"):
+            try:
+                get_service_client().storage.from_("assessment-scripts").remove([assessment["script_file_path"]])
+            except Exception:
+                pass
+
+        # Delete assessment record
+        db.table("assessments").delete().eq("id", assessment_id).execute()
+        write_audit_log("delete_assessment", target=f"assessment:{assessment_id}")
+        flash("Assessment deleted successfully.", "success")
+    except Exception as e:
+        flash(f"Error deleting assessment: {e}", "danger")
+
+    return redirect(url_for("student.portfolio"))
 
 
 # ── My Files (Assessment & Evidence Browser) ──────────────────────────────────
@@ -848,43 +882,76 @@ def download_result_slip():
 @student_bp.route("/portfolio")
 @student_required
 def portfolio():
-    """Trainee portfolio of evidence document management."""
     db = get_service_client()
     user = current_user()
     student_id = user["id"]
-    
-    # Get all documents uploaded by student
-    documents = (db.table("trainee_documents")
-                .select("*, units(name, code)")
-                .eq("student_id", student_id)
-                .order("created_at", desc=True)
-                .execute().data or [])
-    
-    # Get filter parameters
-    document_type = request.args.get("document_type", "").strip()
-    year = request.args.get("year", str(datetime.now().year))
-    term = request.args.get("term", "").strip()
-    
-    # Apply filters
-    if document_type:
-        documents = [d for d in documents if d["document_type"] == document_type]
-    if year:
-        documents = [d for d in documents if d.get("academic_year") == int(year)]
-    if term:
-        documents = [d for d in documents if d.get("term") == term]
-    
-    # Get student's enrolled units
-    enrolled_units = (db.table("enrollments")
-                     .select("*, units(name, code)")
-                     .eq("student_id", student_id)
-                     .execute().data or [])
-    
+    status_filter = request.args.get("status", "").strip()
+
+    # Get all assessments with unit/class info
+    query = (db.table("assessments")
+            .select("*, units(name, code), classes(name)")
+            .eq("student_id", student_id))
+    if status_filter:
+        query = query.eq("status", status_filter)
+    assessments_list = query.order("uploaded_at", desc=True).execute().data or []
+
+    # Compute counts per status
+    all_rows = (db.table("assessments")
+               .select("status")
+               .eq("student_id", student_id)
+               .execute().data or [])
+    counts = {"total": len(all_rows), "pending": 0, "approved": 0, "rejected": 0}
+    for r in all_rows:
+        s = r.get("status")
+        if s in counts:
+            counts[s] += 1
+
+    # Evidence count + file size formatting per assessment
+    import math
+    def fmt_size(b):
+        if not b: return "0 B"
+        b = int(b)
+        for u in ["B","KB","MB"]:
+            if b < 1024: return f"{b:.1f} {u}"
+            b /= 1024
+        return f"{b:.1f} GB"
+
+    if assessments_list:
+        a_ids = [a["id"] for a in assessments_list]
+        ev_rows = (db.table("evidence")
+                  .select("assessment_id, id")
+                  .in_("assessment_id", a_ids)
+                  .execute().data or [])
+        ev_map = {}
+        for ev in ev_rows:
+            ev_map[ev["assessment_id"]] = ev_map.get(ev["assessment_id"], 0) + 1
+    else:
+        ev_map = {}
+
+    for a in assessments_list:
+        a["evidence_count"] = ev_map.get(a["id"], 0)
+        a["script_file_size_fmt"] = fmt_size(a.get("script_file_size"))
+
+    # Get enrolled units for upload form (fix: no broken join)
+    enrollment = (db.table("enrollments")
+                 .select("class_id")
+                 .eq("student_id", student_id)
+                 .limit(1)
+                 .execute().data or [])
+    enrolled_units = []
+    if enrollment:
+        class_id = enrollment[0]["class_id"]
+        enrolled_units = (db.table("class_units")
+                         .select("*, units(name, code)")
+                         .eq("class_id", class_id)
+                         .execute().data or [])
+
     return render_template("student/portfolio.html",
-                          documents=documents,
+                          assessments=assessments_list,
                           enrolled_units=enrolled_units,
-                          document_type=document_type,
-                          year=year,
-                          term=term)
+                          status_filter=status_filter,
+                          counts=counts,
+                          fmt_size=fmt_size)
 
 
 @student_bp.route("/portfolio/upload", methods=["POST"])

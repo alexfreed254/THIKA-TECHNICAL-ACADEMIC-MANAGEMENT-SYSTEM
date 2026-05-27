@@ -1,319 +1,271 @@
 {% extends "student/base.html" %}
-
+{% block title %}Portfolio of Evidence{% endblock %}
 {% block page_title %}Portfolio of Evidence{% endblock %}
-
 {% block extra_style %}
-<style>
-  .filter-section {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-  }
-  .filter-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    color: #333;
-    font-size: 14px;
-  }
-  .filter-group input,
-  .filter-group select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .btn-filter {
-    background: #f57c00;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .btn-filter:hover { background: #e65100; }
-  .upload-section {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .form-group {
-    margin-bottom: 15px;
-  }
-  .form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    color: #333;
-  }
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .file-upload {
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    padding: 30px;
-    text-align: center;
-    margin-bottom: 15px;
-  }
-  .file-upload:hover {
-    border-color: #f57c00;
-    background: #f5f5f5;
-  }
-  .btn-upload {
-    background: #f57c00;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .btn-upload:hover { background: #e65100; }
-  .documents-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-  }
-  .document-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .document-card h4 {
-    margin: 0 0 10px 0;
-    color: #333;
-  }
-  .document-card .type {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
-    background: #e3f2fd;
-    color: #1565c0;
-    margin-bottom: 10px;
-  }
-  .document-card .meta {
-    color: #666;
-    font-size: 12px;
-    margin-bottom: 10px;
-  }
-  .document-card .actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-  }
-  .btn-view {
-    background: #1565c0;
-    color: white;
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    text-decoration: none;
-  }
-  .btn-delete {
-    background: #c62828;
-    color: white;
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #999;
-  }
-  .empty-state i {
-    font-size: 48px;
-    margin-bottom: 16px;
-  }
-</style>
+.page-wrap{padding:24px;max-width:960px;margin:0 auto}
+/* Summary bar */
+.summary-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.summary-bar a{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s}
+.summary-bar a.active-s{background:#4f46e5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3)}
+.summary-bar a:not(.active-s){background:#fff;color:#475569;border:1px solid #e2e8f0}
+.summary-bar a:not(.active-s):hover{background:#f8fafc;border-color:#cbd5e1}
+.summary-bar .ml-auto{margin-left:auto}
+
+/* Cards */
+.card-file{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:16px;transition:box-shadow .2s}
+.card-file:hover{box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.card-file.approved{border-left:4px solid #10b981}
+.card-file.rejected{border-left:4px solid #ef4444}
+.card-file.pending{border-left:4px solid #f59e0b}
+.card-body{padding:20px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.file-icon{width:48px;height:48px;background:#fef2f2;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-icon i{font-size:20px;color:#dc2626}
+.file-info{flex:1;overflow:hidden}
+.file-info .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-approved{background:#d1fae5;color:#065f46}
+.badge-pending{background:#fef3c7;color:#92400e}
+.badge-rejected{background:#fee2e2;color:#991b1b}
+.tag{font-size:11px;background:#f1f5f9;color:#475569;font-weight:700;padding:2px 8px;border-radius:6px}
+.file-info h4{margin:0 0 2px;font-size:14px;color:#1e293b;word-break:break-word}
+.file-info .meta{font-size:12px;color:#64748b;margin-top:4px}
+.file-info .meta span{margin-right:14px}
+.card-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.btn-action{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
+.btn-view{background:#eef2ff;color:#4f46e5}
+.btn-view:hover{background:#e0e7ff}
+.btn-evidence{background:#f3e8ff;color:#7c3aed}
+.btn-evidence:hover{background:#ede9fe}
+
+/* Rejected notice */
+.rejected-box{margin-top:16px;padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px}
+.rejected-box p{font-size:12px;color:#991b1b;font-weight:700;margin:0 0 12px}
+.rejected-box p i{margin-right:4px}
+.rejected-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn-danger-action{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;transition:all .2s}
+.btn-del{background:#dc2626;color:#fff}
+.btn-del:hover{background:#b91c1c}
+.btn-reup{background:#4f46e5;color:#fff}
+.btn-reup:hover{background:#4338ca}
+
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}
+.empty-state i{font-size:48px;margin-bottom:12px;display:block}
+
+/* Upload form on portfolio */
+.upload-section{background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:24px;margin-bottom:24px}
+.upload-section h3{font-size:15px;margin:0 0 16px;color:#1e293b}
+.upload-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.upload-grid label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px}
+.upload-grid select,.upload-grid input{width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;box-sizing:border-box}
+.upload-grid select:focus,.upload-grid input:focus{border-color:#4f46e5}
+.file-drop-zone{border:2px dashed #cbd5e1;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:16px}
+.file-drop-zone:hover{border-color:#4f46e5;background:#f5f3ff}
+.file-drop-zone i{font-size:32px;color:#94a3b8;margin-bottom:8px}
+.file-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.file-list span{background:#f1f5f9;padding:4px 10px;border-radius:6px;font-size:11px;color:#475569}
 {% endblock %}
-
 {% block content %}
-<div class="filter-section">
-  <h3 style="margin: 0 0 15px 0;">Filter Documents</h3>
-  <form method="GET">
-    <div class="filter-row">
-      <div class="filter-group">
-        <label for="document_type">Document Type</label>
-        <select id="document_type" name="document_type">
-          <option value="">All Types</option>
-          <option value="marked_scripts" {% if document_type == 'marked_scripts' %}selected{% endif %}>Marked Scripts</option>
-          <option value="practical_products" {% if document_type == 'practical_products' %}selected{% endif %}>Practical Products</option>
-          <option value="oral_responses" {% if document_type == 'oral_responses' %}selected{% endif %}>Oral Responses</option>
-          <option value="video_clips" {% if document_type == 'video_clips' %}selected{% endif %}>Video Clips</option>
-          <option value="audio_recordings" {% if document_type == 'audio_recordings' %}selected{% endif %}>Audio Recordings</option>
-          <option value="photo_evidence" {% if document_type == 'photo_evidence' %}selected{% endif %}>Photo Evidence</option>
-          <option value="self_assessment_forms" {% if document_type == 'self_assessment_forms' %}selected{% endif %}>Self-Assessment Forms</option>
-          <option value="industrial_attachment_logbook" {% if document_type == 'industrial_attachment_logbook' %}selected{% endif %}>Industrial Attachment Logbook</option>
-          <option value="workplace_feedback_forms" {% if document_type == 'workplace_feedback_forms' %}selected{% endif %}>Workplace Feedback Forms</option>
-          <option value="mentoring_assessment" {% if document_type == 'mentoring_assessment' %}selected{% endif %}>Mentoring Assessment</option>
-          <option value="attachment_attendance_records" {% if document_type == 'attachment_attendance_records' %}selected{% endif %}>Attachment Attendance Records</option>
-          <option value="poe_compilation" {% if document_type == 'poe_compilation' %}selected{% endif %}>PoE Compilation</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="year">Year</label>
-        <select id="year" name="year">
-          <option value="2024" {% if year == '2024' %}selected{% endif %}>2024</option>
-          <option value="2025" {% if year == '2025' %}selected{% endif %}>2025</option>
-          <option value="2026" {% if year == '2026' %}selected{% endif %}>2026</option>
-          <option value="2027" {% if year == '2027' %}selected{% endif %}>2027</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="term">Term</label>
-        <select id="term" name="term">
-          <option value="">All Terms</option>
-          <option value="1" {% if term == '1' %}selected{% endif %}>Term 1</option>
-          <option value="2" {% if term == '2' %}selected{% endif %}>Term 2</option>
-          <option value="3" {% if term == '3' %}selected{% endif %}>Term 3</option>
-        </select>
-      </div>
-      <div class="filter-group" style="display: flex; align-items: flex-end;">
-        <button type="submit" class="btn-filter">
-          <i class="fas fa-filter"></i> Apply
-        </button>
-      </div>
-    </div>
-  </form>
-</div>
-
-<div class="upload-section">
-  <h3 style="margin: 0 0 20px 0;">Upload New Document</h3>
-  <form method="POST" action="{{ url_for('student.upload_document') }}" enctype="multipart/form-data">
-    <div class="filter-row">
-      <div class="form-group">
-        <label for="document_type">Document Type *</label>
-        <select id="document_type" name="document_type" required>
-          <option value="">Select Type</option>
-          <option value="marked_scripts">Marked Scripts</option>
-          <option value="practical_products">Practical Products</option>
-          <option value="oral_responses">Oral Responses</option>
-          <option value="video_clips">Video Clips</option>
-          <option value="audio_recordings">Audio Recordings</option>
-          <option value="photo_evidence">Photo Evidence</option>
-          <option value="self_assessment_forms">Self-Assessment Forms</option>
-          <option value="industrial_attachment_logbook">Industrial Attachment Logbook</option>
-          <option value="workplace_feedback_forms">Workplace Feedback Forms</option>
-          <option value="mentoring_assessment">Mentoring Assessment</option>
-          <option value="attachment_attendance_records">Attachment Attendance Records</option>
-          <option value="poe_compilation">PoE Compilation</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="document_name">Document Name *</label>
-        <input type="text" id="document_name" name="document_name" required placeholder="e.g., Term 1 Practical Project">
-      </div>
-      <div class="form-group">
-        <label for="unit_id">Unit</label>
-        <select id="unit_id" name="unit_id">
-          <option value="">Select Unit</option>
-          {% for unit in enrolled_units %}
-          <option value="{{ unit.units.id }}">{{ unit.units.name }} ({{ unit.units.code }})</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="academic_year">Academic Year *</label>
-        <select id="academic_year" name="academic_year" required>
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
-          <option value="2026">2026</option>
-          <option value="2027">2027</option>
-        </select>
-      </div>
-    </div>
-    <div class="filter-row">
-      <div class="form-group">
-        <label for="term">Term</label>
-        <select id="term" name="term">
-          <option value="">Select Term</option>
-          <option value="1">Term 1</option>
-          <option value="2">Term 2</option>
-          <option value="3">Term 3</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="description">Description</label>
-        <textarea id="description" name="description" rows="2" placeholder="Optional description"></textarea>
-      </div>
-    </div>
-    <div class="file-upload">
-      <input type="file" id="document_file" name="document_file" required style="display: none;" onchange="updateFileName(this)">
-      <label for="document_file" style="cursor: pointer;">
-        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #f57c00;"></i>
-        <p style="margin: 10px 0 0 0; color: #666;">Click to upload file (PDF, DOC, DOCX, Images, Videos, Audio)</p>
-        <p id="file-name" style="margin: 5px 0 0 0; color: #f57c00; font-weight: 600;"></p>
-      </label>
-    </div>
-    <button type="submit" class="btn-upload">
-      <i class="fas fa-upload"></i> Upload Document
-    </button>
-  </form>
-</div>
-
-<div class="documents-grid">
-  {% if not documents %}
-  <div class="empty-state" style="grid-column: 1 / -1;">
-    <i class="fas fa-folder-open"></i>
-    <p>No documents found. Upload your first document above.</p>
+<div class="page-wrap">
+  <!-- Summary Bar -->
+  <div class="summary-bar">
+    <a href="{{ url_for('student.portfolio') }}" class="{% if not status_filter %}active-s{% endif %}">
+      All ({{ counts.total }})
+    </a>
+    <a href="{{ url_for('student.portfolio', status='pending') }}" class="{% if status_filter == 'pending' %}active-s{% endif %}">
+      <i class="fas fa-clock"></i> Pending ({{ counts.pending }})
+    </a>
+    <a href="{{ url_for('student.portfolio', status='approved') }}" class="{% if status_filter == 'approved' %}active-s{% endif %}">
+      <i class="fas fa-check-circle"></i> Approved ({{ counts.approved }})
+    </a>
+    <a href="{{ url_for('student.portfolio', status='rejected') }}" class="{% if status_filter == 'rejected' %}active-s{% endif %}">
+      <i class="fas fa-times-circle"></i> Rejected ({{ counts.rejected }})
+    </a>
+    <a href="{{ url_for('student.upload_assessment') }}" class="ml-auto" style="background:#4f46e5;color:#fff">
+      <i class="fas fa-plus"></i> Upload New
+    </a>
   </div>
-  {% else %}
-  {% for doc in documents %}
-  <div class="document-card">
-    <span class="type">{{ doc.document_type|replace('_', ' ')|title }}</span>
-    <h4>{{ doc.document_name }}</h4>
-    <div class="meta">
-      <div><i class="fas fa-file"></i> {{ doc.file_name }}</div>
-      <div><i class="fas fa-calendar"></i> {{ doc.created_at | to_eat('%d %B %Y') }}</div>
-      {% if doc.units %}
-      <div><i class="fas fa-book"></i> {{ doc.units.name }}</div>
+
+  <!-- Upload Section (collapsed by default when there are assessments) -->
+  {% if not assessments %}
+  <div class="upload-section" id="upload-section">
+    <h3><i class="fas fa-cloud-upload-alt" style="color:#4f46e5"></i> Upload Assessments</h3>
+    <form method="POST" action="{{ url_for('student.upload_assessment') }}" enctype="multipart/form-data">
+      <div class="upload-grid">
+        <div>
+          <label>Unit</label>
+          <select name="unit_id" required>
+            <option value="">Select Unit</option>
+            {% for cu in enrolled_units %}
+            {% set u = cu.get('units') or {} %}
+            <option value="{{ cu.unit_id }}">{{ u.get('code','') }} — {{ u.get('name','') }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Assessment Type</label>
+          <select name="assessment_type" required>
+            <option value="">Select</option>
+            <option value="practical">Practical</option>
+            <option value="oral">Oral</option>
+            <option value="theory">Theory</option>
+          </select>
+        </div>
+        <div>
+          <label>Assessment No.</label>
+          <input type="number" name="assessment_no" min="1" required placeholder="e.g. 1">
+        </div>
+        <div>
+          <label>Term</label>
+          <select name="term" required>
+            <option value="">Select</option><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option>
+          </select>
+        </div>
+        <div>
+          <label>Cycle</label>
+          <select name="cycle" required>
+            <option value="">Select</option><option value="1">Cycle 1</option><option value="2">Cycle 2</option><option value="3">Cycle 3</option>
+          </select>
+        </div>
+        <div>
+          <label>Year</label>
+          <select name="year" required>
+            {% for y in range(2024, 2030) %}
+            <option value="{{ y }}" {% if y == now().year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="file-drop-zone" id="drop-zone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.classList.add('hover')"
+        ondragleave="this.classList.remove('hover')"
+        ondrop="handleDrop(event)">
+        <input type="file" name="scripts" id="file-input" class="hidden" multiple
+          accept=".pdf" onchange="updateFileList(this)">
+        <div id="drop-icon"><i class="fas fa-file-pdf"></i></div>
+        <p style="font-size:13px;font-weight:600;color:#64748b;margin:4px 0 0">Click or drag PDF files here</p>
+        <p style="font-size:11px;color:#94a3b8;margin:4px 0 0">You can select multiple PDFs at once</p>
+        <div class="file-list" id="file-list"></div>
+      </div>
+
+      <button type="submit" style="width:100%;padding:12px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        <i class="fas fa-upload"></i> Upload Assessments
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Assessment Cards -->
+  {% if assessments %}
+    {% for a in assessments %}
+    {% set u = a.get('units') or {} %}
+    {% set c = a.get('classes') or {} %}
+    <div class="card-file {{ a.status }}">
+      <div class="card-body">
+        <div class="card-top">
+          <div class="file-icon"><i class="fas fa-file-pdf"></i></div>
+          <div class="file-info">
+            <div class="row1">
+              <span class="badge badge-{{ a.status }}">
+                {% if a.status == 'approved' %}<i class="fas fa-check-circle"></i>
+                {% elif a.status == 'rejected' %}<i class="fas fa-times-circle"></i>
+                {% else %}<i class="fas fa-clock"></i>{% endif %}
+                {{ a.status|title }}
+              </span>
+              <span class="tag">{{ a.assessment_type }}</span>
+              {% if a.evidence_count > 0 %}
+              <span class="tag" style="background:#f3e8ff;color:#7c3aed">
+                <i class="fas fa-images"></i> {{ a.evidence_count }} evidence
+              </span>
+              {% endif %}
+            </div>
+            <h4>{{ a.get('script_file_name') or 'Assessment Script' }}</h4>
+            <div class="meta">
+              <span><i class="fas fa-users"></i> {{ c.get('name','—') }}</span>
+              <span><i class="fas fa-book"></i> {{ u.get('code','') }} — {{ u.get('name','') }}</span>
+              <span><i class="fas fa-hashtag"></i> #{{ a.assessment_no }}</span>
+              <span><i class="fas fa-calendar"></i> T{{ a.term }}/C{{ a.cycle }}/{{ a.year }}</span>
+              <span><i class="fas fa-file"></i> {{ a.get('script_file_size_fmt','') }}</span>
+              {% if a.uploaded_at %}<span><i class="fas fa-clock"></i> {{ a.uploaded_at[:10] }}</span>{% endif %}
+            </div>
+            {% if a.review_note and a.status == 'rejected' %}
+            <div style="margin-top:8px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">
+              <p style="margin:0;font-size:12px;color:#991b1b;font-weight:600"><i class="fas fa-comment-alt"></i> Trainer note: {{ a.review_note }}</p>
+            </div>
+            {% endif %}
+          </div>
+          <div class="card-actions">
+            {% if a.script_file_path %}
+            <a href="{{ storage_url(BUCKET_SCRIPTS, a.script_file_path) }}" target="_blank" class="btn-action btn-view">
+              <i class="fas fa-eye"></i> View PDF
+            </a>
+            {% endif %}
+            <a href="{{ url_for('student.add_evidence', assessment_id=a.id) }}" class="btn-action btn-evidence">
+              <i class="fas fa-images"></i> Evidence
+            </a>
+          </div>
+        </div>
+
+        {% if a.status == 'rejected' %}
+        <div class="rejected-box">
+          <p><i class="fas fa-exclamation-triangle"></i> This file was rejected. Delete it and re-upload the correct scanned assessment.</p>
+          <div class="rejected-actions">
+            <form method="POST" action="{{ url_for('student.delete_assessment', assessment_id=a.id) }}"
+              onsubmit="return confirm('Permanently delete this rejected assessment? This cannot be undone.')">
+              <button type="submit" class="btn-danger-action btn-del"><i class="fas fa-trash-alt"></i> Delete File</button>
+            </form>
+            <a href="{{ url_for('student.upload_assessment') }}" class="btn-danger-action btn-reup"><i class="fas fa-cloud-upload-alt"></i> Re-Upload</a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% elif not assessments %}
+    <div class="empty-state">
+      <i class="fas fa-folder-open"></i>
+      {% if status_filter %}
+      <p style="font-weight:700;font-size:15px">No {{ status_filter }} assessments found.</p>
+      <a href="{{ url_for('student.portfolio') }}" style="color:#4f46e5;font-weight:700;font-size:13px">View all files</a>
+      {% else %}
+      <p style="font-weight:700;font-size:15px">No assessments yet.</p>
+      <p style="font-size:13px;margin-top:4px">Upload your first assessment to get started.</p>
       {% endif %}
     </div>
-    <div class="actions">
-      <a href="{{ doc.file_url }}" target="_blank" class="btn-view">
-        <i class="fas fa-eye"></i> View
-      </a>
-      <form method="POST" action="{{ url_for('student.delete_document', document_id=doc.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this document?');">
-        <button type="submit" class="btn-delete">
-          <i class="fas fa-trash"></i> Delete
-        </button>
-      </form>
-    </div>
-  </div>
-  {% endfor %}
   {% endif %}
 </div>
-
+{% endblock %}
+{% block extra_scripts %}
 <script>
-function updateFileName(input) {
-  const fileName = input.files[0] ? input.files[0].name : '';
-  document.getElementById('file-name').textContent = fileName;
+function updateFileList(input) {
+  var list = document.getElementById('file-list');
+  var icon = document.getElementById('drop-icon');
+  list.innerHTML = '';
+  if (input.files.length) {
+    icon.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;font-size:32px"></i>';
+    for (var i = 0; i < input.files.length; i++) {
+      var span = document.createElement('span');
+      span.textContent = input.files[i].name;
+      list.appendChild(span);
+    }
+  }
 }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('hover');
+  var dt = e.dataTransfer;
+  var input = document.getElementById('file-input');
+  if (dt.files.length) {
+    input.files = dt.files;
+    updateFileList(input);
+  }
+}
+document.querySelectorAll('.file-drop-zone').forEach(function(z) {
+  z.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('hover'); });
+  z.addEventListener('dragleave', function(e) { this.classList.remove('hover'); });
+});
 </script>
 {% endblock %}

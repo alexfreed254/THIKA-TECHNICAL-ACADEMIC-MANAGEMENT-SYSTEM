@@ -2,30 +2,33 @@
 {% block title %}Upload Assessment{% endblock %}
 {% block page_title %}Upload Assessment{% endblock %}
 {% block extra_style %}
-.page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
+.page-wrap{padding:24px;max-width:720px;margin:0 auto}
+.card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden}
+.card-header{background:#4f46e5;color:#fff;padding:16px 24px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
 .card-body{padding:24px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-group label{font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em}
-.form-group select,.form-group input{padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#f8fafc}
-.form-group select:focus,.form-group input:focus{outline:none;border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
-.file-group{margin-top:16px}
-.file-group label{display:block;font-size:12px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:6px}
-.file-group input[type=file]{width:100%;padding:10px;border:2px dashed #ddd;border-radius:8px;font-size:13px;background:#f8fafc;cursor:pointer}
-.btn-row{margin-top:24px;display:flex;gap:12px}
-.btn{padding:11px 24px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-.btn-primary{background:#1565c0;color:#fff}
-.btn-secondary{background:#f5f5f5;color:#333}
-.note{background:#e3f2fd;border:1px solid #90caf9;color:#1565c0;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px}
+.form-group select,.form-group input{width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;background:#fff;outline:none;box-sizing:border-box;transition:border-color .2s}
+.form-group select:focus,.form-group input:focus{border-color:#4f46e5}
+.drop-zone{border:2px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:20px}
+.drop-zone:hover,.drop-zone.hover{border-color:#4f46e5;background:#f5f3ff}
+.drop-zone i{font-size:36px;color:#94a3b8;margin-bottom:8px}
+.file-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.file-tags span{background:#f1f5f9;padding:4px 10px;border-radius:6px;font-size:11px;color:#475569}
+.note{background:#eef2ff;border:1px solid #c7d2fe;color:#4f46e5;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.btn-row{display:flex;gap:12px;margin-top:20px}
+.btn{padding:12px 24px;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:background .2s}
+.btn-primary{background:#4f46e5;color:#fff}
+.btn-primary:hover{background:#4338ca}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
 {% endblock %}
 {% block content %}
 <div class="page-wrap">
   <div class="card">
-    <div class="card-header"><i class="fas fa-upload"></i> Upload New Assessment</div>
+    <div class="card-header"><i class="fas fa-cloud-upload-alt"></i> Upload New Assessment</div>
     <div class="card-body">
-      <div class="note"><i class="fas fa-info-circle"></i> Only PDF files are accepted. Maximum file size: 10MB.</div>
+      <div class="note"><i class="fas fa-info-circle"></i> Only PDF files are accepted. Select one or multiple PDFs to upload.</div>
       <form method="post" enctype="multipart/form-data">
         <div class="form-grid">
           <div class="form-group">
@@ -33,7 +36,8 @@
             <select name="unit_id" required>
               <option value="">— Select Unit —</option>
               {% for cu in class_units %}
-              <option value="{{ cu.get('units',{}).get('id','') }}">{{ cu.get('units',{}).get('code','') }} — {{ cu.get('units',{}).get('name','') }}</option>
+              {% set u = cu.get('units') or {} %}
+              <option value="{{ cu.unit_id }}">{{ u.get('code','') }} — {{ u.get('name','') }}</option>
               {% endfor %}
             </select>
           </div>
@@ -41,14 +45,14 @@
             <label>Assessment Type</label>
             <select name="assessment_type" required>
               <option value="">— Select Type —</option>
-              <option value="PRACTICAL">Practical</option>
-              <option value="THEORY">Theory</option>
-              <option value="ORAL">Oral</option>
+              <option value="practical">Practical</option>
+              <option value="theory">Theory</option>
+              <option value="oral">Oral</option>
             </select>
           </div>
           <div class="form-group">
             <label>Assessment No.</label>
-            <input type="number" name="assessment_no" min="1" max="10" required placeholder="e.g. 1">
+            <input type="number" name="assessment_no" min="1" max="20" required placeholder="e.g. 1">
           </div>
           <div class="form-group">
             <label>Term</label>
@@ -70,19 +74,58 @@
           </div>
           <div class="form-group">
             <label>Year</label>
-            <input type="number" name="year" min="2020" max="2099" required placeholder="e.g. 2025">
+            <select name="year" required>
+              {% for y in range(2024, 2030) %}
+              <option value="{{ y }}" {% if y == now().year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
-        <div class="file-group">
-          <label>PDF Script File</label>
-          <input type="file" name="script" accept=".pdf" required>
+
+        <div class="drop-zone" id="drop-zone"
+          onclick="document.getElementById('file-input').click()"
+          ondragover="event.preventDefault();this.classList.add('hover')"
+          ondragleave="this.classList.remove('hover')"
+          ondrop="handleDrop(event)">
+          <input type="file" name="scripts" id="file-input" class="hidden" multiple accept=".pdf" onchange="updateList(this)">
+          <div id="dz-icon"><i class="fas fa-file-pdf"></i></div>
+          <p style="font-size:13px;font-weight:600;color:#64748b;margin:4px 0 0">Click or drag PDF files here</p>
+          <p style="font-size:11px;color:#94a3b8;margin:4px 0 0">You can select multiple PDFs at once</p>
+          <div class="file-tags" id="file-tags"></div>
         </div>
+
         <div class="btn-row">
-          <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload Assessment</button>
-          <a href="/student/assessments" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload {% if True %}{% endif %}PDFs</button>
+          <a href="{{ url_for('student.portfolio') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
         </div>
       </form>
     </div>
   </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function updateList(input) {
+  var tags = document.getElementById('file-tags');
+  var icon = document.getElementById('dz-icon');
+  tags.innerHTML = '';
+  if (input.files.length) {
+    icon.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;font-size:36px"></i>';
+    for (var i = 0; i < input.files.length; i++) {
+      var s = document.createElement('span');
+      s.textContent = input.files[i].name;
+      tags.appendChild(s);
+    }
+  }
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('hover');
+  var input = document.getElementById('file-input');
+  if (e.dataTransfer.files.length) {
+    input.files = e.dataTransfer.files;
+    updateList(input);
+  }
+}
+</script>
 {% endblock %}
