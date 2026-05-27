@@ -223,6 +223,46 @@ def attendance():
                 except Exception as e:
                     flash(f"Error submitting attendance: {e}", "error")
         
+        elif action in ("mark_holiday", "mark_academic_trip"):
+            if not class_id or not unit_id:
+                flash("Class and unit are required.", "error")
+            else:
+                try:
+                    # Create class_event
+                    event_type = "holiday" if action == "mark_holiday" else "academic_trip"
+                    label = "Holiday" if action == "mark_holiday" else "Academic Trip"
+                    db.table("class_events").insert({
+                        "class_id": class_id,
+                        "unit_id": unit_id,
+                        "trainer_id": user["id"],
+                        "event_type": event_type,
+                        "week": week,
+                        "lesson": lesson,
+                        "year": year,
+                        "term": term,
+                        "note": request.form.get("note", f"Marked as {label}")
+                    }).execute()
+                    # Mark all students with absent status (event record explains why)
+                    for student in students_list:
+                        existing = db.table("attendance").select("id").eq("student_id", student["student_id"]).eq("unit_id", unit_id).eq("week", week).eq("lesson", lesson).eq("year", year).eq("term", term).execute().data
+                        if not existing:
+                            db.table("attendance").insert({
+                                "student_id": student["student_id"],
+                                "unit_id": unit_id,
+                                "unit_code": request.form.get("unit_code", ""),
+                                "trainer_id": user["id"],
+                                "lesson": lesson,
+                                "week": week,
+                                "year": year,
+                                "term": term,
+                                "status": "absent"
+                            }).execute()
+                    write_audit_log(action, target=f"class:{class_id},unit:{unit_id}")
+                    flash(f"Marked as {label} successfully.", "success")
+                    return redirect(url_for("trainer.attendance", class_id=class_id, unit_id=unit_id, week=week, lesson=lesson, year=year, term=term))
+                except Exception as e:
+                    flash(f"Error marking {label}: {e}", "error")
+
         elif action == "add_event":
             event_type = request.form.get("event_type")
             note = request.form.get("note", "")
