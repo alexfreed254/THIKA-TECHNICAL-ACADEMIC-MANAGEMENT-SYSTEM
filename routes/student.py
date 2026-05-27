@@ -100,10 +100,34 @@ def dashboard():
         unread_notifications = get_user_notifications(student_id, unread_only=True, limit=3)
 
         # Attendance data by unit (for dashboard table)
-        attendance_data = (db.table("attendance")
-                          .select("id, units(id, name, code), count(*)")
-                          .eq("student_id", student_id)
-                          .execute().data or [])
+        raw_attendance = (db.table("attendance")
+                         .select("status, attendance_date, units(id, name, code)")
+                         .eq("student_id", student_id)
+                         .execute().data or [])
+        # Group by unit in Python
+        unit_map = {}
+        for r in raw_attendance:
+            u = r.get("units") or {}
+            uid = u.get("id")
+            if not uid:
+                continue
+            if uid not in unit_map:
+                unit_map[uid] = {
+                    "id": uid,
+                    "unit_code": u.get("code", ""),
+                    "unit_name": u.get("name", ""),
+                    "attended": 0,
+                    "total_records": 0,
+                    "last_update": None
+                }
+            unit_map[uid]["total_records"] += 1
+            if r.get("status") == "present":
+                unit_map[uid]["attended"] += 1
+            # Track latest date
+            dt = r.get("attendance_date")
+            if dt and (not unit_map[uid]["last_update"] or dt > unit_map[uid]["last_update"]):
+                unit_map[uid]["last_update"] = dt
+        attendance_data = list(unit_map.values())
         
         # Calculate attendance stats
         all_attendance = (db.table("attendance")
