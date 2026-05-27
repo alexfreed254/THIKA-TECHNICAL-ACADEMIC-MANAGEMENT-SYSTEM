@@ -1096,10 +1096,22 @@ def industrial_attachment():
                  .gt("available_slots", 0)
                  .execute().data or [])
     
+    # Get today's check-in logs for active attachment
+    today_logs = []
+    if current_attachment and current_attachment.get("status") == "active":
+        today_logs = (db.table("location_logs")
+                     .select("*")
+                     .eq("student_id", student_id)
+                     .eq("attachment_id", current_attachment["id"])
+                     .gte("check_in_time", datetime.now().strftime("%Y-%m-%d"))
+                     .order("check_in_time", desc=True)
+                     .execute().data or [])
+    
     return render_template("student/industrial_attachment.html",
                           current_attachment=current_attachment,
                           enrolled_units=enrolled_units,
-                          companies=companies)
+                          companies=companies,
+                          today_logs=today_logs)
 
 
 @student_bp.route("/industrial-attachment/request", methods=["POST"])
@@ -1343,6 +1355,40 @@ def add_logbook():
     
     if not all([attachment_id, log_date, tasks_performed]):
         flash("Attachment, date, and tasks performed are required.", "error")
+        return redirect(url_for("student.logbook"))
+
+    evidence_paths = []
+    files = request.files.getlist("evidence")
+    for file in files:
+        if file and file.filename:
+            ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+            if ext in {"jpg", "jpeg", "png", "webp", "pdf", "mp4", "mov", "avi", "webm", "mp3", "wav", "ogg", "m4a"}:
+                filename = f"logbook/{student_id}_{uuid.uuid4().hex}.{ext}"
+                file_data = file.read()
+                get_service_client().storage.from_("assessment-evidence").upload(
+                    filename, file_data, {"content-type": f"image/{ext}" if ext in ("jpg","jpeg","png","webp") else "application/pdf" if ext == "pdf" else f"video/{ext}" if ext in ("mp4","mov","avi","webm") else f"audio/{ext}"}
+                )
+                evidence_paths.append(filename)
+
+    try:
+        db.table("digital_logbook").insert({
+            "student_id": student_id,
+            "attachment_id": attachment_id,
+            "log_date": log_date,
+            "tasks_performed": tasks_performed,
+            "skills_applied": skills_applied,
+            "hours_worked": float(hours_worked) if hours_worked else None,
+            "challenges_encountered": challenges_encountered,
+            "achievements": achievements,
+            "evidence_urls": evidence_paths if evidence_paths else None,
+            "mentor_approval_status": "pending"
+        }).execute()
+
+        write_audit_log("add_logbook", target=f"attachment:{attachment_id}")
+        flash("Logbook entry added successfully.", "success")
+    except Exception as e:
+        flash(f"Error adding logbook entry: {e}", "error")
+
     return redirect(url_for("student.logbook"))
 
 
@@ -1360,23 +1406,3 @@ def my_jobs():
             .order("created_at", desc=True)
             .execute().data or [])
     return render_template("student/jobs.html", applications=apps)
-    
-    try:
-        db.table("digital_logbook").insert({
-            "student_id": student_id,
-            "attachment_id": attachment_id,
-            "log_date": log_date,
-            "tasks_performed": tasks_performed,
-            "skills_applied": skills_applied,
-            "hours_worked": float(hours_worked) if hours_worked else None,
-            "challenges_encountered": challenges_encountered,
-            "achievements": achievements,
-            "mentor_approval_status": "pending"
-        }).execute()
-        
-        write_audit_log("add_logbook", target=f"attachment:{attachment_id}")
-        flash("Logbook entry added successfully.", "success")
-    except Exception as e:
-        flash(f"Error adding logbook entry: {e}", "error")
-    
-    return redirect(url_for("student.logbook"))

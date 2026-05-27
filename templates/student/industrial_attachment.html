@@ -1,46 +1,70 @@
 {% extends "student/base.html" %}
 
-{% block title %}Industrial Attachment{% endblock %}
-{% block page_title %}Industrial Attachment{% endblock %}
+{% block title %}Manage Attachment{% endblock %}
+{% block page_title %}Manage Attachment{% endblock %}
 
 {% block extra_style %}
 <style>
-  .attachment-status { padding: 20px; background: #f5f5f5; border-radius: 8px; margin-bottom: 25px; }
   .status-badge { padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; }
   .status-pending { background: #fff3cd; color: #856404; }
   .status-approved { background: #d4edda; color: #155724; }
   .status-active { background: #cce5ff; color: #004085; }
   .status-completed { background: #e2e3e5; color: #383d41; }
   .status-rejected { background: #f8d7da; color: #721c24; }
+
+  .overview-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
   .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-  .info-item { background: white; padding: 12px; border-radius: 6px; }
+  .info-item { background: #f8f9fa; padding: 12px; border-radius: 6px; }
   .info-label { font-size: 12px; color: #666; margin-bottom: 4px; }
   .info-value { font-weight: 600; font-size: 14px; }
-  .request-form { background: white; padding: 25px; border-radius: 8px; margin-top: 25px; }
+
+  .request-form { background: white; border-radius: 8px; padding: 25px; margin-bottom: 20px; }
   .form-group { margin-bottom: 15px; }
   .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
   .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
   .form-group textarea { height: 80px; resize: vertical; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-  .btn-submit { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; }
-  .btn-submit:hover { background: #45a049; }
-  .gps-section { background: #e3f2fd; padding: 15px; border-radius: 6px; margin-top: 20px; }
-  .btn-checkin { background: #2196f3; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; margin-right: 10px; }
-  .btn-checkout { background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+
+  .btn-primary { background: #e67e22; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .btn-primary:hover { background: #d35400; }
+
+  .gps-section { background: #e3f2fd; padding: 20px; border-radius: 8px; margin-top: 20px; }
+  .gps-coords { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+  .gps-coords input { flex: 1; min-width: 140px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+  .btn-gps { background: #2196f3; color: white; padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; }
+  .btn-gps:hover { background: #1976d2; }
+  .btn-checkin { background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+  .btn-checkin:hover { background: #1e8449; }
+  .btn-checkout { background: #e67e22; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+  .btn-checkout:hover { background: #d35400; }
+  .gps-status { margin-top: 10px; font-size: 13px; color: #555; }
+
+  .today-checkin { margin-top: 15px; }
+  .today-item { display: flex; justify-content: space-between; padding: 8px 12px; background: white; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+  .checkin-time { color: #555; }
+  .checkin-status { font-weight: 500; }
+  .checkin-within { color: #27ae60; }
+  .checkin-outside { color: #e67e22; }
+
+  .no-attachment { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px; }
+  .no-attachment i { font-size: 48px; color: #ccc; margin-bottom: 15px; }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .gps-coords { flex-direction: column; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 {% if current_attachment %}
-<div class="attachment-status">
-  <h3>Current Attachment</h3>
-  <span class="status-badge status-{{ current_attachment.status }}">{{ current_attachment.status|capitalize }}</span>
-  
+<div class="overview-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <h3 style="margin:0"><i class="fas fa-building"></i> {{ current_attachment.companies.name }}</h3>
+    <span class="status-badge status-{{ current_attachment.status }}">{{ current_attachment.status|capitalize }}</span>
+  </div>
+
   <div class="info-grid">
-    <div class="info-item">
-      <div class="info-label">Company</div>
-      <div class="info-value">{{ current_attachment.companies.name }}</div>
-    </div>
     <div class="info-item">
       <div class="info-label">Unit</div>
       <div class="info-value">{{ current_attachment.units.name }} ({{ current_attachment.units.code }})</div>
@@ -55,54 +79,75 @@
     </div>
     {% if current_attachment.mentor_name %}
     <div class="info-item">
-      <div class="info-label">Mentor</div>
+      <div class="info-label">Industry Mentor</div>
       <div class="info-value">{{ current_attachment.mentor_name }}</div>
     </div>
     {% endif %}
   </div>
 
+  {% if current_attachment.attachment_goals %}
+  <div style="margin-top:15px">
+    <div class="info-label">Attachment Goals</div>
+    <div class="info-value">{{ current_attachment.attachment_goals }}</div>
+  </div>
+  {% endif %}
+
   {% if current_attachment.status == 'active' %}
   <div class="gps-section">
-    <h4>GPS Check-in/Check-out</h4>
-    <p>Check-in at your company location to record your attendance.</p>
-    <form id="gpsForm">
+    <h4 style="margin:0 0 10px"><i class="fas fa-map-marker-alt"></i> GPS Attendance</h4>
+    <p style="margin:0 0 12px;font-size:13px;color:#555">Check in at your company location to record daily attendance.</p>
+    <form id="gpsForm" method="POST">
       <input type="hidden" name="attachment_id" value="{{ current_attachment.id }}">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Latitude</label>
-          <input type="number" step="any" name="latitude" id="latitude" placeholder="Auto-detect or enter manually">
-        </div>
-        <div class="form-group">
-          <label>Longitude</label>
-          <input type="number" step="any" name="longitude" id="longitude" placeholder="Auto-detect or enter manually">
-        </div>
+      <div class="gps-coords">
+        <input type="number" step="any" name="latitude" id="latitude" placeholder="Latitude" required>
+        <input type="number" step="any" name="longitude" id="longitude" placeholder="Longitude" required>
+        <button type="button" class="btn-gps" onclick="getLocation()"><i class="fas fa-crosshairs"></i> Auto-Detect</button>
       </div>
-      <button type="button" class="btn-submit" onclick="getLocation()" style="margin-bottom: 10px; background: #2196f3;">Get Current Location</button>
-      <div style="margin-top: 15px;">
-        <button type="submit" formaction="/student/check-in" class="btn-checkin">Check In</button>
-        <button type="submit" formaction="/student/check-out" class="btn-checkout">Check Out</button>
+      <div class="gps-status" id="gpsStatus"></div>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+        <button type="submit" formaction="/student/check-in" class="btn-checkin"><i class="fas fa-sign-in-alt"></i> Check In</button>
+        <button type="submit" formaction="/student/check-out" class="btn-checkout"><i class="fas fa-sign-out-alt"></i> Check Out</button>
       </div>
     </form>
+    {% if today_logs %}
+    <div class="today-checkin">
+      <h5 style="margin:0 0 8px">Today's Activity</h5>
+      {% for log in today_logs %}
+      <div class="today-item">
+        <span class="checkin-time"><i class="far fa-clock"></i> {{ log.check_in_time[:16] }}</span>
+        <span class="checkin-status {{ 'checkin-within' if log.is_within_geofence else 'checkin-outside' }}">
+          {% if log.check_out_time %}
+            <i class="fas fa-check-circle"></i> Checked out
+          {% else %}
+            <i class="fas fa-play-circle"></i> Active
+          {% endif %}
+          {% if log.is_within_geofence %}&middot; On site{% else %}&middot; Outside geofence{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 </div>
 {% else %}
-<div class="attachment-status">
+<div class="no-attachment">
+  <i class="fas fa-building"></i>
   <h3>No Active Attachment</h3>
-  <p>You don't have an active industrial attachment. Request one below.</p>
+  <p>You don't have an active industrial attachment placement. Complete the form below to submit a request.</p>
 </div>
 {% endif %}
 
 {% if not current_attachment or current_attachment.status in ['pending', 'rejected', 'completed'] %}
 <div class="request-form">
-  <h3>Request Industrial Attachment</h3>
+  <h3 style="margin-top:0">Request Industrial Attachment</h3>
   <form method="POST" action="/student/industrial-attachment/request">
     <div class="form-group">
       <label>Select Company *</label>
       <select name="company_id" required>
         <option value="">Choose a company</option>
         {% for company in companies %}
-        <option value="{{ company.id }}">{{ company.name }} - {{ company.industry_classification }} ({{ company.city }})</option>
+        <option value="{{ company.id }}">{{ company.name }} {{ '- ' + company.city if company.city else '' }}</option>
         {% endfor %}
       </select>
     </div>
@@ -133,7 +178,7 @@
       <label>Learning Objectives</label>
       <textarea name="learning_objectives" placeholder="Specific skills or competencies you want to develop"></textarea>
     </div>
-    <button type="submit" class="btn-submit">Submit Request</button>
+    <button type="submit" class="btn-primary"><i class="fas fa-paper-plane"></i> Submit Request</button>
   </form>
 </div>
 {% endif %}
@@ -142,17 +187,36 @@
 {% block extra_script %}
 <script>
 function getLocation() {
+  const status = document.getElementById('gpsStatus');
   if (navigator.geolocation) {
+    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting location...';
     navigator.geolocation.getCurrentPosition(function(position) {
       document.getElementById('latitude').value = position.coords.latitude;
       document.getElementById('longitude').value = position.coords.longitude;
+      status.innerHTML = '<span style="color:#27ae60"><i class="fas fa-check-circle"></i> Location detected</span>';
     }, function(error) {
-      alert('Unable to get location. Please enter manually.');
+      let msg = 'Unable to get location. Please enter manually.';
+      if (error.code === 1) msg = 'Location permission denied. Enable GPS or enter manually.';
+      else if (error.code === 2) msg = 'GPS unavailable. Enter coordinates manually.';
+      else if (error.code === 3) msg = 'GPS request timed out. Try again.';
+      status.innerHTML = '<span style="color:#e67e22"><i class="fas fa-exclamation-triangle"></i> ' + msg + '</span>';
       console.error(error);
-    });
+    }, { enableHighAccuracy: true, timeout: 10000 });
   } else {
-    alert('Geolocation is not supported by your browser.');
+    status.innerHTML = '<span style="color:#e67e22"><i class="fas fa-exclamation-triangle"></i> Geolocation not supported by your browser.</span>';
   }
 }
+
+// Auto-detect location when page loads for an active attachment
+document.addEventListener('DOMContentLoaded', function() {
+  const latField = document.getElementById('latitude');
+  const lonField = document.getElementById('longitude');
+  if (latField && !latField.value && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      latField.value = pos.coords.latitude;
+      lonField.value = pos.coords.longitude;
+    }, function() {}, { enableHighAccuracy: true, timeout: 5000 });
+  }
+});
 </script>
 {% endblock %}

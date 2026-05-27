@@ -1,48 +1,78 @@
 {% extends "student/base.html" %}
 
-{% block title %}Digital Logbook{% endblock %}
-{% block page_title %}Digital Logbook{% endblock %}
+{% block title %}Workplace Task Evidence{% endblock %}
+{% block page_title %}Workplace Task Evidence{% endblock %}
 
 {% block extra_style %}
 <style>
-  .logbook-header { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 25px; }
-  .logbook-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-  .info-item { background: white; padding: 12px; border-radius: 6px; }
+  .info-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+  .info-item { padding: 12px; background: #f8f9fa; border-radius: 6px; }
   .info-label { font-size: 12px; color: #666; margin-bottom: 4px; }
   .info-value { font-weight: 600; font-size: 14px; }
-  .logbook-form { background: white; padding: 25px; border-radius: 8px; margin-bottom: 25px; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
-  .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-  .form-group textarea { height: 80px; resize: vertical; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-  .btn-submit { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; }
-  .btn-submit:hover { background: #45a049; }
-  .logbook-entries { display: grid; gap: 15px; }
-  .logbook-entry { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ddd; }
-  .logbook-entry.status-pending { border-left-color: #ffc107; }
-  .logbook-entry.status-approved { border-left-color: #28a745; }
-  .logbook-entry.status-rejected { border-left-color: #dc3545; }
-  .entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .entry-date { font-weight: 600; font-size: 16px; }
-  .entry-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
   .status-pending { background: #fff3cd; color: #856404; }
   .status-approved { background: #d4edda; color: #155724; }
   .status-rejected { background: #f8d7da; color: #721c24; }
-  .entry-content { margin-bottom: 12px; }
-  .entry-label { font-size: 12px; color: #666; margin-bottom: 4px; }
-  .entry-value { margin-bottom: 10px; }
-  .entry-meta { display: flex; gap: 20px; font-size: 12px; color: #666; }
-  .mentor-comments { background: #f8f9fa; padding: 12px; border-radius: 6px; margin-top: 12px; }
-  .mentor-comments h5 { margin: 0 0 8px 0; font-size: 13px; color: #666; }
-  .mentor-comments p { margin: 0; font-size: 13px; }
+
+  .logbook-form { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
+  .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+  .form-group textarea { height: 80px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+  .drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 30px; text-align: center; cursor: pointer; transition: all .3s; }
+  .drop-zone:hover, .drop-zone.dragover { border-color: #e67e22; background: #fff8f0; }
+  .drop-zone.has-files { border-color: #27ae60; background: #f0faf4; }
+  .drop-zone-icon { font-size: 36px; color: #bbb; margin-bottom: 10px; }
+  .drop-zone-text { color: #666; font-size: 14px; }
+  .drop-zone-hint { font-size: 12px; color: #999; margin-top: 5px; }
+  .file-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .file-tag { display: inline-flex; align-items: center; gap: 6px; background: #e8f5e9; padding: 4px 10px; border-radius: 16px; font-size: 12px; color: #2e7d32; }
+  .file-tag .remove { cursor: pointer; color: #c62828; font-weight: bold; }
+
+  .btn-submit { background: #e67e22; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .btn-submit:hover { background: #d35400; }
+
+  .entries-filter { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-pill { padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: white; transition: all .2s; }
+  .filter-pill:hover, .filter-pill.active { background: #e67e22; color: white; border-color: #e67e22; }
+
+  .entry-card { background: white; border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+  .entry-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #eee; }
+  .entry-date { font-weight: 600; font-size: 15px; }
+  .entry-body { padding: 15px 20px; }
+  .entry-field { margin-bottom: 12px; }
+  .entry-field-label { font-size: 12px; color: #666; margin-bottom: 3px; font-weight: 500; }
+  .entry-field-value { font-size: 14px; }
+  .entry-meta { display: flex; gap: 20px; font-size: 12px; color: #666; padding: 10px 20px; background: #fafafa; border-top: 1px solid #eee; }
+
+  .evidence-gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .evidence-thumb { width: 80px; height: 80px; border-radius: 6px; object-fit: cover; border: 1px solid #eee; cursor: pointer; }
+  .evidence-file { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f0f0f0; border-radius: 6px; font-size: 12px; text-decoration: none; color: #333; }
+  .evidence-file:hover { background: #e0e0e0; }
+
+  .mentor-comments { background: #f0f4ff; padding: 12px 20px; border-top: 1px solid #d0d8f0; }
+  .mentor-comments-label { font-size: 12px; font-weight: 500; color: #444; margin-bottom: 4px; }
+  .mentor-comments-text { font-size: 13px; color: #555; }
+
+  .no-entries { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px; color: #888; }
+  .no-entries i { font-size: 40px; margin-bottom: 10px; }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="logbook-header">
-  <h3>Industrial Attachment: {{ attachment.companies.name }}</h3>
-  <div class="logbook-info">
+<div class="info-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <h3 style="margin:0"><i class="fas fa-building"></i> {{ attachment.companies.name }}</h3>
+    <span class="status-badge status-{{ attachment.status }}">{{ attachment.status|capitalize }}</span>
+  </div>
+  <div class="info-grid" style="margin-top:15px">
     <div class="info-item">
       <div class="info-label">Unit</div>
       <div class="info-value">{{ attachment.units.name }} ({{ attachment.units.code }})</div>
@@ -55,8 +85,8 @@
 </div>
 
 <div class="logbook-form">
-  <h3>Add New Logbook Entry</h3>
-  <form method="POST" action="/student/logbook/add">
+  <h3 style="margin-top:0">New Task Entry</h3>
+  <form method="POST" action="/student/logbook/add" enctype="multipart/form-data">
     <input type="hidden" name="attachment_id" value="{{ attachment.id }}">
     <div class="form-row">
       <div class="form-group">
@@ -72,75 +102,173 @@
       <label>Tasks Performed *</label>
       <textarea name="tasks_performed" required placeholder="Describe the tasks you completed today"></textarea>
     </div>
-    <div class="form-group">
-      <label>Skills Applied</label>
-      <textarea name="skills_applied" placeholder="What skills did you use or develop?"></textarea>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Skills / Competencies Applied</label>
+        <textarea name="skills_applied" placeholder="What skills did you use or develop?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Challenges Encountered</label>
+        <textarea name="challenges_encountered" placeholder="Any difficulties you faced"></textarea>
+      </div>
     </div>
     <div class="form-group">
-      <label>Challenges Encountered</label>
-      <textarea name="challenges_encountered" placeholder="Any difficulties you faced and how you overcame them"></textarea>
+      <label>Achievements / Outcomes</label>
+      <textarea name="achievements" placeholder="What did you accomplish?"></textarea>
     </div>
     <div class="form-group">
-      <label>Achievements</label>
-      <textarea name="achievements" placeholder="What did you accomplish today?"></textarea>
+      <label>Evidence Files (images, PDFs, videos, audio)</label>
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+        <div class="drop-zone-text">Drag & drop files here or click to browse</div>
+        <div class="drop-zone-hint">Supported: JPG, PNG, WebP, PDF, MP4, MP3, WAV</div>
+        <input type="file" name="evidence" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a" style="display:none" id="fileInput">
+      </div>
+      <div class="file-tags" id="fileTags"></div>
     </div>
-    <button type="submit" class="btn-submit">Add Entry</button>
+    <button type="submit" class="btn-submit"><i class="fas fa-plus-circle"></i> Submit Entry</button>
   </form>
 </div>
 
-<h3>Logbook Entries</h3>
-<div class="logbook-entries">
+<h3 style="display:flex;align-items:center;gap:10px">
+  <i class="fas fa-list"></i> Task Log
+  <span class="status-badge status-pending">{{ logbooks|length }} entries</span>
+</h3>
+
+<div class="entries-filter" id="filterPills">
+  <span class="filter-pill active" data-filter="all">All</span>
+  <span class="filter-pill" data-filter="pending">Pending</span>
+  <span class="filter-pill" data-filter="approved">Approved</span>
+  <span class="filter-pill" data-filter="rejected">Rejected</span>
+</div>
+
+<div class="logbook-entries" id="entriesContainer">
   {% for log in logbooks %}
-  <div class="logbook-entry status-{{ log.mentor_approval_status }}">
+  <div class="entry-card" data-status="{{ log.mentor_approval_status }}">
     <div class="entry-header">
-      <div class="entry-date">{{ log.log_date }}</div>
-      <span class="entry-status status-{{ log.mentor_approval_status }}">
+      <div class="entry-date"><i class="far fa-calendar-alt"></i> {{ log.log_date }}</div>
+      <span class="status-badge status-{{ log.mentor_approval_status }}">
         {{ log.mentor_approval_status|capitalize }}
       </span>
     </div>
-    <div class="entry-content">
-      <div class="entry-label">Tasks Performed</div>
-      <div class="entry-value">{{ log.tasks_performed }}</div>
-      
+    <div class="entry-body">
+      <div class="entry-field">
+        <div class="entry-field-label">Tasks Performed</div>
+        <div class="entry-field-value">{{ log.tasks_performed }}</div>
+      </div>
       {% if log.skills_applied %}
-      <div class="entry-label">Skills Applied</div>
-      <div class="entry-value">{{ log.skills_applied }}</div>
-      {% endif %}
-      
-      {% if log.hours_worked %}
-      <div class="entry-meta">
-        <span><i class="fas fa-clock"></i> {{ log.hours_worked }} hours</span>
+      <div class="entry-field">
+        <div class="entry-field-label">Skills / Competencies Applied</div>
+        <div class="entry-field-value">{{ log.skills_applied }}</div>
       </div>
       {% endif %}
-      
       {% if log.challenges_encountered %}
-      <div class="entry-label">Challenges</div>
-      <div class="entry-value">{{ log.challenges_encountered }}</div>
+      <div class="entry-field">
+        <div class="entry-field-label">Challenges Encountered</div>
+        <div class="entry-field-value">{{ log.challenges_encountered }}</div>
+      </div>
       {% endif %}
-      
       {% if log.achievements %}
-      <div class="entry-label">Achievements</div>
-      <div class="entry-value">{{ log.achievements }}</div>
+      <div class="entry-field">
+        <div class="entry-field-label">Achievements</div>
+        <div class="entry-field-value">{{ log.achievements }}</div>
+      </div>
+      {% endif %}
+      {% if log.evidence_urls %}
+      <div class="entry-field">
+        <div class="entry-field-label">Evidence Files</div>
+        <div class="evidence-gallery">
+          {% for url in log.evidence_urls %}
+            {% set ext = url.rsplit('.', 1)[1].lower() if '.' in url else '' %}
+            {% if ext in ('jpg', 'jpeg', 'png', 'webp') %}
+            <a href="{{ storage_url('assessment-evidence', url) }}" target="_blank">
+              <img src="{{ storage_url('assessment-evidence', url) }}" class="evidence-thumb" alt="evidence">
+            </a>
+            {% else %}
+            <a href="{{ storage_url('assessment-evidence', url) }}" target="_blank" class="evidence-file">
+              <i class="fas fa-{% if ext == 'pdf' %}file-pdf{% elif ext in ('mp4','mov','avi','webm') %}video{% elif ext in ('mp3','wav','ogg','m4a') %}music{% else %}file{% endif %}"></i>
+              {{ ext|upper }}
+            </a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
       {% endif %}
     </div>
-    
-    {% if log.mentor_comments %}
-    <div class="mentor-comments">
-      <h5>Mentor Comments</h5>
-      <p>{{ log.mentor_comments }}</p>
+    {% if log.hours_worked or log.mentor_approved_at %}
+    <div class="entry-meta">
+      {% if log.hours_worked %}<span><i class="fas fa-clock"></i> {{ log.hours_worked }} hours</span>{% endif %}
+      {% if log.mentor_approved_at %}<span><i class="fas fa-check-circle"></i> Reviewed {{ log.mentor_approved_at[:10] }}</span>{% endif %}
     </div>
     {% endif %}
-    
-    {% if log.mentor_approved_at %}
-    <div class="entry-meta">
-      <span>Approved: {{ log.mentor_approved_at | to_eat }}</span>
+    {% if log.mentor_comments %}
+    <div class="mentor-comments">
+      <div class="mentor-comments-label"><i class="fas fa-comment"></i> Mentor Feedback</div>
+      <div class="mentor-comments-text">{{ log.mentor_comments }}</div>
     </div>
     {% endif %}
   </div>
   {% else %}
-  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
-    No logbook entries yet. Add your first entry above.
+  <div class="no-entries">
+    <i class="fas fa-book-open"></i>
+    <p>No task entries yet. Submit your first workplace task above.</p>
   </div>
   {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  // Drag-and-drop file upload
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const fileTags = document.getElementById('fileTags');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      updateFileTags();
+    }
+  });
+
+  fileInput.addEventListener('change', updateFileTags);
+
+  function updateFileTags() {
+    fileTags.innerHTML = '';
+    const files = fileInput.files;
+    if (files.length === 0) { dropZone.classList.remove('has-files'); return; }
+    dropZone.classList.add('has-files');
+    Array.from(files).forEach((f, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'file-tag';
+      tag.innerHTML = `<i class="fas fa-paperclip"></i> ${f.name} <span class="remove" data-index="${i}">&times;</span>`;
+      tag.querySelector('.remove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dt = new DataTransfer();
+        Array.from(fileInput.files).forEach((ff, j) => { if (j !== i) dt.items.add(ff); });
+        fileInput.files = dt.files;
+        updateFileTags();
+      });
+      fileTags.appendChild(tag);
+    });
+  }
+
+  // Filter pills
+  document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const filter = pill.dataset.filter;
+      document.querySelectorAll('.entry-card').forEach(card => {
+        card.style.display = (filter === 'all' || card.dataset.status === filter) ? '' : 'none';
+      });
+    });
+  });
+</script>
 {% endblock %}

@@ -1,0 +1,158 @@
+{% extends "dept_admin/base.html" %}
+
+{% block title %}GIS Placement Tracking{% endblock %}
+{% block page_title %}GIS Placement Tracking{% endblock %}
+
+{% block extra_style %}
+<style>
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+  .stat-card { background: white; border-radius: 8px; padding: 18px; text-align: center; }
+  .stat-card .num { font-size: 28px; font-weight: 700; }
+  .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .stat-card.active .num { color: #2196f3; }
+  .stat-card.approved .num { color: #27ae60; }
+  .stat-card.pending .num { color: #e67e22; }
+
+  #map { height: 500px; border-radius: 8px; margin-bottom: 20px; }
+
+  .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .filters select, .filters input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+  .filter-pill { padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: white; transition: all .2s; }
+  .filter-pill:hover, .filter-pill.active { background: #1565c0; color: white; border-color: #1565c0; }
+
+  .placement-table { background: white; border-radius: 8px; overflow: hidden; }
+  .placement-table table { width: 100%; border-collapse: collapse; }
+  .placement-table th, .placement-table td { padding: 10px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid #eee; }
+  .placement-table th { background: #f5f5f5; font-weight: 600; }
+  .placement-table tr:hover { background: #f8f9fa; }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .status-dot.active { background: #2196f3; }
+  .status-dot.approved { background: #27ae60; }
+  .status-dot.pending { background: #e67e22; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<div class="stat-cards">
+  <div class="stat-card active">
+    <div class="num">{{ status_counts.active }}</div>
+    <div class="label">Active Placements</div>
+  </div>
+  <div class="stat-card approved">
+    <div class="num">{{ status_counts.approved }}</div>
+    <div class="label">Approved</div>
+  </div>
+  <div class="stat-card pending">
+    <div class="num">{{ status_counts.pending }}</div>
+    <div class="label">Pending</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">{{ placements|length }}</div>
+    <div class="label">Total on Map</div>
+  </div>
+</div>
+
+<div class="filters">
+  <input type="text" id="searchInput" placeholder="Search student or company..." style="flex:1;min-width:200px">
+  <select id="statusFilter">
+    <option value="all">All Statuses</option>
+    <option value="active">Active</option>
+    <option value="approved">Approved</option>
+    <option value="pending">Pending</option>
+  </select>
+</div>
+
+<div id="map"></div>
+
+<div class="placement-table">
+  <table>
+    <thead>
+      <tr>
+        <th>Student</th>
+        <th>Company</th>
+        <th>Location</th>
+        <th>Unit</th>
+        <th>Status</th>
+        <th>Period</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      {% for p in placements %}
+      {% set company = p.companies or {} %}
+      {% set student = p.user_profiles or {} %}
+      {% set unit = p.units or {} %}
+      <tr data-status="{{ p.status }}" data-search="{{ student.full_name|lower }} {{ company.name|lower }}">
+        <td>{{ student.full_name }}<br><small style="color:#999">{{ student.admission_no }}</small></td>
+        <td>{{ company.name }}</td>
+        <td>{{ company.city or '' }}</td>
+        <td>{{ unit.name }} ({{ unit.code }})</td>
+        <td><span class="status-dot {{ p.status }}"></span>{{ p.status|capitalize }}</td>
+        <td>{{ p.start_date }} &rarr; {{ p.end_date }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="text-align:center;padding:30px;color:#999">No placements with location data found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const placements = {{ placements | tojson | safe }};
+
+// Init map centered on Thika, Kenya
+const map = L.map('map').setView([-1.038, 37.083], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 18
+}).addTo(map);
+
+const bounds = [];
+placements.forEach(p => {
+  const company = p.companies || {};
+  const student = p.user_profiles || {};
+  const unit = p.units || {};
+  const lat = parseFloat(company.latitude);
+  const lng = parseFloat(company.longitude);
+  if (!lat || !lng) return;
+
+  const color = p.status === 'active' ? '#2196f3' : p.status === 'approved' ? '#27ae60' : '#e67e22';
+  const marker = L.circleMarker([lat, lng], {
+    radius: 10, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8
+  }).addTo(map);
+
+  marker.bindPopup(`
+    <b>${company.name}</b><br>
+    <b>Student:</b> ${student.full_name || 'N/A'} (${student.admission_no || ''})<br>
+    <b>Unit:</b> ${unit.name || ''} ${unit.code || ''}<br>
+    <b>Status:</b> ${p.status}<br>
+    <b>Period:</b> ${p.start_date} &rarr; ${p.end_date}
+  `);
+  bounds.push([lat, lng]);
+});
+
+if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
+
+// Filtering
+const searchInput = document.getElementById('searchInput');
+const statusFilter = document.getElementById('statusFilter');
+
+function filterTable() {
+  const q = searchInput.value.toLowerCase().trim();
+  const status = statusFilter.value;
+  document.querySelectorAll('#tableBody tr').forEach(row => {
+    const rowStatus = row.dataset.status;
+    const rowSearch = row.dataset.search || '';
+    const matchStatus = status === 'all' || rowStatus === status;
+    const matchSearch = !q || rowSearch.includes(q);
+    row.style.display = matchStatus && matchSearch ? '' : 'none';
+  });
+}
+
+searchInput.addEventListener('input', filterTable);
+statusFilter.addEventListener('change', filterTable);
+</script>
+{% endblock %}

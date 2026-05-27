@@ -1248,3 +1248,35 @@ def review_application(app_id):
     except Exception as e:
         flash(f"Error: {e}", "error")
     return redirect(url_for("dept_admin.applications"))
+
+
+# ── GIS Placement Tracking Dashboard ────────────────────────────────────────────
+
+@dept_admin_bp.route("/gis-tracking")
+@dept_admin_required
+def gis_tracking():
+    db = get_service_client()
+    dept_id = _dept_id()
+
+    placements = []
+    try:
+        placements = (db.table("industrial_attachments")
+            .select("*, companies(name, latitude, longitude, city, industry_classification), "
+                    "units(name, code), user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no)")
+            .in_("status", ["active", "approved", "pending"])
+            .not_.is_("companies.latitude", None)
+            .not_.is_("companies.longitude", None)
+            .order("created_at", desc=True)
+            .execute().data or [])
+    except Exception as e:
+        flash(f"Error loading GIS data: {e}", "error")
+
+    status_counts = {"active": 0, "approved": 0, "pending": 0}
+    for p in placements:
+        s = p.get("status", "")
+        if s in status_counts:
+            status_counts[s] += 1
+
+    return render_template("dept_admin/gis_tracking.html",
+                          placements=placements,
+                          status_counts=status_counts)
