@@ -94,8 +94,9 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
           <td>{{ u.courses.name if u.courses else '—' }}</td>
           <td>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button type="button" class="btn btn-edit"
-                onclick="openEditModal('{{ u.id }}','{{ u.code }}','{{ u.name|replace(&quot;'&quot;,&quot;&apos;&quot;)|replace('&quot;','&quot;') }}','{{ u.course_id or '' }}')"
+              <button type="button" class="btn btn-edit edit-unit-btn"
+                data-id="{{ u.id }}" data-code="{{ u.code }}"
+                data-name="{{ u.name }}" data-course="{{ u.course_id or '' }}"
               ><i class="fas fa-pen"></i> Edit</button>
               <form method="post" style="display:inline" onsubmit="return confirm('Delete unit {{ u.code }}? This cannot be undone.')">
                 <input type="hidden" name="action" value="delete">
@@ -151,16 +152,18 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
 
 {% block scripts %}
 <script>
-function openEditModal(id, code, name, course_id) {
-  document.getElementById('edit_unit_id').value = id;
-  document.getElementById('edit_code').value = code;
-  document.getElementById('edit_name').value = name;
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.edit-unit-btn');
+  if (!btn) return;
+  document.getElementById('edit_unit_id').value = btn.dataset.id;
+  document.getElementById('edit_code').value = btn.dataset.code;
+  document.getElementById('edit_name').value = btn.dataset.name;
   var sel = document.getElementById('edit_course_id');
   for (var i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].value === course_id) { sel.selectedIndex = i; break; }
+    if (sel.options[i].value === btn.dataset.course) { sel.selectedIndex = i; break; }
   }
   document.getElementById('editModal').classList.add('open');
-}
+});
 function closeEditModal() {
   document.getElementById('editModal').classList.remove('open');
 }
