@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Assessment Sheet — {{ selected_unit.code if selected_unit else '' }}</title>
+  <title>Assessment Attendance Sheet — {{ unit.code }}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Arial', sans-serif; line-height:1.5; color:#222; }
@@ -48,27 +48,27 @@
   <div class="header">
     <img src="{{ LOGO_URL }}" alt="Logo">
     <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
-    <h2>Department of {{ dept.name if dept else '' }}</h2>
+    <h2>Department of {{ dept_name }}</h2>
     <h3>Assessment / Examination Attendance Sheet</h3>
   </div>
 
   <div class="info-grid">
     <div>
-      <div><strong>Class:</strong> {{ selected_class.name if selected_class else '—' }}</div>
-      <div><strong>Unit Code:</strong> {{ selected_unit.code if selected_unit else '—' }}</div>
-      <div><strong>Unit Name:</strong> {{ selected_unit.name if selected_unit else '—' }}</div>
+      <div><strong>Class:</strong> {{ cls.name }}</div>
+      <div><strong>Unit Code:</strong> {{ unit.code }}</div>
+      <div><strong>Unit Name:</strong> {{ unit.name }}</div>
     </div>
     <div>
       <div><strong>Term:</strong> {{ term_label }}</div>
       <div><strong>Year:</strong> {{ year if year else '—' }}</div>
-      <div><strong>Date Generated:</strong> {{ now().strftime('%d %b %Y') }}</div>
+      <div><strong>Date Generated:</strong> {{ date_gen }}</div>
     </div>
   </div>
 
   <div class="notice">
     <strong>&#9888; Notice:</strong>
     Only trainees who have achieved a minimum of <strong>{{ min_pct }}%</strong> attendance
-    in <strong>{{ selected_unit.code if selected_unit else '' }} — {{ selected_unit.name if selected_unit else '' }}</strong> are listed below and are
+    in <strong>{{ unit.code }} — {{ unit.name }}</strong> are listed below and are
     <strong>eligible to sit for the assessment/examination</strong>.
   </div>
 
@@ -104,7 +104,7 @@
       {% for s in eligible %}
       <tr>
         <td style="color:#aaa;font-size:11px;">{{ loop.index }}</td>
-        <td style="font-weight:700;">{{ s.admission_no }}</td>
+        <td style="font-weight:700;">{{ s.admission_number }}</td>
         <td>{{ s.full_name }}</td>
         <td style="text-align:center;color:#2e7d32;font-weight:700;">{{ s.present }}</td>
         <td style="text-align:center;color:#888;">{{ s.total }}</td>

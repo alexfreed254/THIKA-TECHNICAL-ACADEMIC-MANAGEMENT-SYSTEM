@@ -147,7 +147,7 @@
         <select id="trainer_id" name="trainer_id">
           <option value="">All Trainers</option>
           {% for trainer in trainers %}
-          <option value="{{ trainer.id }}" {% if trainer.id == trainer_id %}selected{% endif %}>{{ trainer.full_name }} ({{ trainer.staff_no or 'N/A' }})</option>
+          <option value="{{ trainer.id }}" {% if trainer.id == trainer_id %}selected{% endif %}>{{ trainer.full_name }} ({{ trainer.admission_no or 'N/A' }})</option>
           {% endfor %}
         </select>
       </div>

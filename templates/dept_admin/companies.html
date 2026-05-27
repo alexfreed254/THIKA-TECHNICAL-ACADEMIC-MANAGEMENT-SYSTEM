@@ -176,7 +176,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_script %}
 <script>
 function openModal(mode, companyId = null) {
   const modal = document.getElementById('companyModal');
@@ -224,12 +224,18 @@ function closeModal() {
 }
 
 document.getElementById('companyForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
   const companyId = document.getElementById('companyId').value;
+  
   if (companyId) {
+    formData.append('_method', 'PUT');
     this.action = `/dept-admin/companies/${companyId}/edit`;
   } else {
     this.action = '/dept-admin/companies/add';
   }
+  
+  this.submit();
 });
 
 function deleteCompany(companyId) {

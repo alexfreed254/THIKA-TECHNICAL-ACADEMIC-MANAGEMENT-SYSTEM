@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Class List — {{ selected_class.name if selected_class else 'Class List' }}</title>
+  <title>Class List — {{ cls.name }}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Arial', sans-serif; line-height:1.5; }
@@ -37,15 +37,15 @@
   <div class="header">
     <img src="{{ LOGO_URL }}" alt="Logo">
     <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
-    <h2>Department of {{ dept.name if dept else '' }}</h2>
-    <h3>CLASS LIST — {{ selected_class.name if selected_class else '' }}</h3>
+    <h2>Department of {{ dept_name }}</h2>
+    <h3>CLASS LIST — {{ cls.name }}</h3>
   </div>
 
   <div class="meta">
-    <span><strong>Class:</strong> {{ selected_class.name if selected_class else '—' }}</span>
-    <span><strong>Department:</strong> {{ dept.name if dept else '' }}</span>
+    <span><strong>Class:</strong> {{ cls.name }}</span>
+    <span><strong>Department:</strong> {{ dept_name }}</span>
     <span><strong>Total Students:</strong> {{ students|length }}</span>
-    <span><strong>Date Generated:</strong> {{ now().strftime('%d %b %Y') }}</span>
+    <span><strong>Date Generated:</strong> {{ date_gen }}</span>
   </div>
 
   <table>
@@ -62,7 +62,7 @@
         {% for s in students %}
         <tr>
           <td class="num">{{ loop.index }}</td>
-          <td class="adm">{{ s.admission_no }}</td>
+          <td class="adm">{{ s.admission_number }}</td>
           <td>{{ s.full_name }}</td>
           <td></td>
         </tr>

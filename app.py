@@ -70,17 +70,44 @@ app.register_blueprint(notifications_bp, url_prefix="/notifications")
 # ── Template globals ──────────────────────────────────────────────────────────
 @app.context_processor
 def inject_globals():
-    return {
-        "current_user": session.get("user"),
-        "LOGO_URL": os.getenv("LOGO_URL", "/static/images/logo.png"),
-        "APP_NAME": os.getenv("APP_NAME", "TTTI Academic Management"),
-        "format_datetime": format_datetime,
-        "format_currency": format_currency,
-        "now": datetime.now,
-        "unread_count": get_user_unread_notifications(
-            session.get("user", {}).get("id")
-        ) if session.get("user") else 0
-    }
+    from auth_utils import current_user
+    from notifications import get_unread_count
+    user = current_user()
+    unread_count = 0
+    pending_employers = 0
+    dept_name = None
+    if user:
+        unread_count = get_unread_count(user["id"])
+        
+        # Fetch department name if user is associated with a department
+        if user.get("department_id"):
+            try:
+                from db import get_service_client
+                svc = get_service_client()
+                dept_row = svc.table("departments").select("name").eq("id", user["department_id"]).single().execute().data
+                if dept_row:
+                    dept_name = dept_row.get("name")
+            except Exception:
+                pass
+
+        # Expose pending employer count for super_admin sidebar badge
+        if user.get("role") == "super_admin":
+            try:
+                from db import get_service_client
+                svc = get_service_client()
+                emp_rows = svc.table("employers").select("is_verified").execute().data or []
+                pending_employers = sum(1 for e in emp_rows if not e.get("is_verified"))
+            except Exception:
+                pass
+
+    # Helper to map notification types to Tailwind alert classes
+    def get_alert_classes(ntype):
+        mapping = {
+            'success': 'bg-green-50 border-green-200 text-green-800',
+            'warning': 'bg-yellow-50 border-yellow-200 text-yellow-800',
+            'error':   'bg-red-50 border-red-200 text-red-800',
+            'info':    'bg-blue-50 border-blue-200 text-blue-800'
+        }
         return mapping.get(ntype, mapping['info'])
 
     return {

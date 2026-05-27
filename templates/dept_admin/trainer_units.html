@@ -108,7 +108,7 @@ code{background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:5px;font-siz
           <td><code>{{ (a.units or {}).get('code', '—') }}</code></td>
           <td style="font-size:12px;color:#888">{{ a.assigned_at | to_eat('%d %b %Y') if a.assigned_at else '—' }}</td>
           <td>
-            <form method="post" style="display:inline" onsubmit="return confirm('Remove assignment: {{ (a.user_profiles or {}).get("full_name","this trainer") }} ↔ {{ (a.units or {}).get("code","") }}?')">
+            <form method="post" style="display:inline" onsubmit="return confirm('Remove assignment: {{ (a.user_profiles or {}).get(\'full_name\',\'this trainer\') }} ↔ {{ (a.units or {}).get(\'code\',\'\') }}?')">
               <input type="hidden" name="action" value="unassign">
               <input type="hidden" name="assign_id" value="{{ a.id }}">
               <button type="submit" class="btn btn-danger"><i class="fas fa-unlink"></i> Remove</button>
