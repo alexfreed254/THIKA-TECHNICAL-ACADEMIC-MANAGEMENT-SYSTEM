@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings - {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header Summary -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+        <h1 class="text-2xl font-bold text-slate-800">System Settings</h1>
+        <p class="text-slate-500 text-sm">Configure primary system metadata and parameters.</p>
+    </div>
+
+    <!-- Configuration Panels -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Academic Parameters -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2 border-b border-slate-50 pb-3">
+                <i class="fas fa-university text-blue-500"></i> Academic Calendar
+            </h3>
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Current Academic Year</label>
+                        <select class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white font-medium">
+                            <option>2025/2026</option>
+                            <option selected>2026/2027</option>
+                            <option>2027/2028</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Term</label>
+                        <select class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white font-medium">
+                            <option selected>Term 1</option>
+                            <option>Term 2</option>
+                            <option>Term 3</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Assessment Grading Standard</label>
+                    <select class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white font-medium">
+                        <option selected>CDACC Competency Based Assessment (M, P, C, NYC)</option>
+                        <option>KNEC Standard Numerical Grading (A-E)</option>
+                    </select>
+                </div>
+                
+                <button type="button" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition shadow-sm" onclick="alert('Academic settings saved successfully.')">
+                    Update Academic Configuration
+                </button>
+            </div>
+        </div>
+
+        <!-- System Parameters -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2 border-b border-slate-50 pb-3">
+                <i class="fas fa-sliders-h text-slate-400"></i> General Configuration
+            </h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Institution Branding Name</label>
+                    <input type="text" value="{{ APP_NAME }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Max Upload Attachment Limit (Bytes)</label>
+                    <input type="number" value="52428800" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium">
+                </div>
+
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Row Level Security (RLS) Enforcement</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked class="sr-only peer" disabled>
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                
+                <button type="button" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm rounded-xl transition shadow-sm" onclick="alert('General configurations saved successfully.')">
+                    Save General Settings
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

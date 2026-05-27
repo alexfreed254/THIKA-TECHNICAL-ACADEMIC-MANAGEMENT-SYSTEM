@@ -53,12 +53,6 @@
       <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
     </div>
     <div class="sidebar-footer">
-      <a href="/notifications" class="notification-bell">
-        <i class="fas fa-bell"></i>
-        {% if unread_notification_count > 0 %}
-        <span class="notification-badge">{{ unread_notification_count }}</span>
-        {% endif %}
-      </a>
       <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
   </div>
@@ -68,6 +62,12 @@
         <h1>{% block page_title %}Dashboard{% endblock %}</h1>
       </div>
       <div class="top-bar-right">
+        <a href="/notifications" class="notification-bell" style="width:36px;height:36px;">
+          <i class="fas fa-bell"></i>
+          {% if unread_notification_count > 0 %}
+          <span class="notification-badge">{{ unread_notification_count }}</span>
+          {% endif %}
+        </a>
         <span class="user-info"><i class="fas fa-user"></i> {{ current_user.full_name }}</span>
       </div>
     </header>

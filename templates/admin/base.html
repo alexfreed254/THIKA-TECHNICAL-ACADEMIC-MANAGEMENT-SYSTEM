@@ -72,17 +72,23 @@
       <a href="/admin/assessment_sheet"><i class="fas fa-clipboard-check fa-fw"></i> Assessment Sheet</a>
     </div>
     <div class="sidebar-footer">
-      <a href="/notifications" class="notification-bell">
-        <i class="fas fa-bell"></i>
-        {% if unread_notification_count > 0 %}
-        <span class="notification-badge">{{ unread_notification_count }}</span>
-        {% endif %}
-      </a>
       <a href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
   </nav>
 
   <main class="admin-main">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#f8f9fa;border-bottom:1px solid #e0e0e0;">
+      <h2 style="margin:0;font-size:18px;">{% block page_title %}Dashboard{% endblock %}</h2>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <a href="/notifications" class="notification-bell" style="width:36px;height:36px;background:rgba(0,0,0,.05);">
+          <i class="fas fa-bell"></i>
+          {% if unread_notification_count > 0 %}
+          <span class="notification-badge">{{ unread_notification_count }}</span>
+          {% endif %}
+        </a>
+        <span style="font-size:14px;font-weight:600;color:#333;"><i class="fas fa-user"></i> {{ current_user.full_name if current_user else '' }}</span>
+      </div>
+    </div>
     <div class="page-content">
       {% block content %}{% endblock %}
     </div>
