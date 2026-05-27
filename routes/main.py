@@ -40,7 +40,7 @@ def index():
             return redirect(url_for("admin_oversight.quality_assurance_dashboard"))
         elif role in ("sports_hod", "environment_hod", "dean_students", "library_hod", "finance_officer"):
             return redirect(url_for("clearance.approver_dashboard"))
-    return render_template("main/index.html")
+    return redirect(url_for("auth.login"))
 
 
 @main_bp.route("/apply", methods=["GET", "POST"])
