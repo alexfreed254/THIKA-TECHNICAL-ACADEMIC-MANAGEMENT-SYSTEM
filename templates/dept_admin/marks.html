@@ -181,8 +181,8 @@
     <tbody>
       {% for mark in marks %}
       <tr>
-        <td>{{ mark.user_profiles.admission_no }}</td>
-        <td>{{ mark.user_profiles.full_name }}</td>
+        <td>{{ mark.student.admission_no }}</td>
+        <td>{{ mark.student.full_name }}</td>
         <td>{{ mark.classes.name }}</td>
         <td>{{ mark.classes.departments.name }}</td>
         <td>{{ mark.units.name }} ({{ mark.units.code }})</td>
@@ -190,7 +190,7 @@
         <td>{{ mark.assessment_type|title }}</td>
         <td>{{ mark.marks_obtained }} / {{ mark.max_marks }}</td>
         <td><span class="grade-badge grade-{{ mark.grade }}">{{ mark.grade }}</span></td>
-        <td>{{ mark.user_profiles.full_name }}</td>
+        <td>{{ mark.trainer.full_name if mark.trainer else '' }}</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -30,47 +30,42 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; vertica
     <div class="card-body">
       <form method="get" action="/dept-admin/assessment-sheet">
         <div class="filter-grid">
-
           <div class="fg">
             <label>Class <span style="color:#e53935;">*</span></label>
             <select name="class_id" required>
               <option value="">-- Select Class --</option>
               {% for c in classes %}
-                <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                <option value="{{ c.id }}" {% if class_id_filter == c.id %}selected{% endif %}>{{ c.name }}</option>
               {% endfor %}
             </select>
           </div>
-
           <div class="fg">
             <label>Unit <span style="color:#e53935;">*</span></label>
             <select name="unit_id" required>
               <option value="">-- Select Unit --</option>
               {% for u in units %}
-                <option value="{{ u.id }}" {% if unit_id == u.id %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>
+                <option value="{{ u.id }}" {% if unit_id_filter == u.id %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>
               {% endfor %}
             </select>
           </div>
-
           <div class="fg">
             <label>Year</label>
             <select name="year">
               <option value="">All Years</option>
               {% for y in range(2026, 2036) %}
-                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                <option value="{{ y }}" {% if year == y|string %}selected{% endif %}>{{ y }}</option>
               {% endfor %}
             </select>
           </div>
-
           <div class="fg">
             <label>Term</label>
             <select name="term">
               <option value="">All Terms</option>
-              <option value="1" {% if term == 1 %}selected{% endif %}>Term 1 (Jan–Apr)</option>
-              <option value="2" {% if term == 2 %}selected{% endif %}>Term 2 (May–Aug)</option>
-              <option value="3" {% if term == 3 %}selected{% endif %}>Term 3 (Sep–Dec)</option>
+              <option value="1" {% if term == '1' %}selected{% endif %}>Term 1 (Jan–Apr)</option>
+              <option value="2" {% if term == '2' %}selected{% endif %}>Term 2 (May–Aug)</option>
+              <option value="3" {% if term == '3' %}selected{% endif %}>Term 3 (Sep–Dec)</option>
             </select>
           </div>
-
           <div class="fg">
             <label>Min. Attendance %</label>
             <select name="min_pct">
@@ -79,27 +74,26 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; vertica
               {% endfor %}
             </select>
           </div>
-
         </div>
         <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Generate List</button>
       </form>
     </div>
   </div>
 
-  {% if class_id and unit_id %}
+  {% if class_id_filter and unit_id_filter %}
   <div class="card">
     <div class="card-header">
       <span>
         <i class="fas fa-clipboard-check"></i>
-        Eligible Trainees — {{ unit.code }} {{ unit.name }}
-        {% if cls %}&mdash; {{ cls.name }}{% endif %}
+        Eligible Trainees — {{ selected_unit.code if selected_unit else '' }} {{ selected_unit.name if selected_unit else '' }}
+        {% if selected_class %}&mdash; {{ selected_class.name }}{% endif %}
       </span>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <span style="background:rgba(255,255,255,.2);padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;">
           <i class="fas fa-check-circle"></i> {{ eligible|length }} eligible
         </span>
         {% if eligible %}
-        <a href="/dept-admin/assessment-sheet-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}&min_pct={{ min_pct }}"
+        <a href="/dept-admin/assessment-sheet/pdf?class_id={{ class_id_filter }}&unit_id={{ unit_id_filter }}&year={{ year }}&term={{ term }}&min_pct={{ min_pct }}"
            target="_blank" class="btn btn-pdf" style="padding:6px 14px;font-size:12px;">
           <i class="fas fa-file-pdf"></i> Download Assessment Sheet
         </a>
@@ -108,7 +102,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; vertica
     </div>
     <div class="card-body">
       <div class="info-bar">
-        {% if cls %}<span><strong>Class:</strong> {{ cls.name }}</span>{% endif %}
+        {% if selected_class %}<span><strong>Class:</strong> {{ selected_class.name }}</span>{% endif %}
         <span><strong>Term:</strong> {{ term_label }}</span>
         {% if year %}<span><strong>Year:</strong> {{ year }}</span>{% endif %}
         <span><strong>Min. Attendance:</strong> {{ min_pct }}%</span>
@@ -130,7 +124,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; vertica
             {% for s in eligible %}
             <tr>
               <td style="color:#aaa">{{ loop.index }}</td>
-              <td><strong>{{ s.admission_number }}</strong></td>
+              <td><strong>{{ s.admission_no }}</strong></td>
               <td>{{ s.full_name }}</td>
               <td style="text-align:center;font-weight:700;color:#2e7d32;">{{ s.present }}</td>
               <td style="text-align:center;color:#888;">{{ s.total }}</td>

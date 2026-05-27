@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Trainee Attendance Report — {{ student.full_name }}</title>
+  <title>Trainee Attendance Report — {{ trainee.full_name if trainee else '' }}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:Arial, sans-serif; font-size:12px; color:#111; background:#fff; padding:30px 40px; }
@@ -15,8 +15,7 @@
     .info-box { background:#f0f0f0; border-radius:4px; padding:14px 18px; margin-bottom:20px; display:flex; gap:0; }
     .info-col { flex:1; }
     .info-col p { margin-bottom:5px; font-size:12px; line-height:1.6; }
-    .info-col p strong { font-weight:700; }
-    .unit-title { background:#1565c0; color:#fff; padding:7px 12px; font-size:12px; font-weight:700; margin-bottom:0; border-radius:3px 3px 0 0; }
+    .unit-title { background:#1565c0; color:#fff; padding:7px 12px; font-size:12px; font-weight:700; border-radius:3px 3px 0 0; }
     .unit-summary { background:#e3f2fd; padding:6px 12px; font-size:11px; margin-bottom:8px; display:flex; gap:24px; border-radius:0 0 3px 3px; }
     .unit-summary span { font-weight:600; }
     table { width:100%; border-collapse:collapse; margin-bottom:24px; }
@@ -41,53 +40,50 @@
 <div class="header">
   <img src="{{ LOGO_URL }}" alt="Logo">
   <h1>Thika Technical Training Institute</h1>
-  <h2>Department of {{ dept_name }}</h2>
+  <h2>Department of {{ dept.name if dept else '' }}</h2>
   <h3>Trainee Attendance Report</h3>
 </div>
 <hr class="divider">
 
 <div class="info-box">
   <div class="info-col">
-    <p><strong>STUDENT:</strong> {{ student.full_name }}</p>
-    <p><strong>ADM NO:</strong> {{ student.admission_number }}</p>
-    <p><strong>CLASS:</strong> {{ student.classes.name if student.classes else '—' }}</p>
+    <p><strong>STUDENT:</strong> {{ trainee.full_name if trainee else '—' }}</p>
+    <p><strong>ADM NO:</strong> {{ trainee.admission_no if trainee else '—' }}</p>
+    <p><strong>DEPARTMENT:</strong> {{ dept.name if dept else '' }}</p>
   </div>
   <div class="info-col">
-    <p><strong>UNIT:</strong> {{ summary.unit_code }} — {{ summary.unit_name }}</p>
-    <p><strong>DEPARTMENT:</strong> {{ dept_name }}</p>
-    <p><strong>DATE GENERATED:</strong> {{ generated }}</p>
+    <p><strong>TOTAL SESSIONS:</strong> {{ summary.total }}</p>
+    <p><strong>PRESENT:</strong> {{ summary.present }} / {{ summary.total }} ({{ summary.percentage }}%)</p>
+    <p><strong>DATE GENERATED:</strong> {{ now().strftime('%d %b %Y') }}</p>
   </div>
 </div>
 
-<!-- Unit summary -->
 <div style="margin-bottom:24px;">
-  <div class="unit-title">{{ summary.unit_code }} — {{ summary.unit_name }}</div>
+  <div class="unit-title">All Attendance Records</div>
   <div class="unit-summary">
     <span style="color:#1a7a1a;">✓ Present: {{ summary.present }}</span>
     <span style="color:#c00;">✗ Absent: {{ summary.absent }}</span>
     <span>Total: {{ summary.total }}</span>
-    <span style="color:{% if summary.pct >= 75 %}#1a7a1a{% elif summary.pct >= 50 %}#e07000{% else %}#c00{% endif %};">
-      Attendance: {{ summary.pct }}%
+    <span style="color:{% if summary.percentage >= 75 %}#1a7a1a{% elif summary.percentage >= 50 %}#e07000{% else %}#c00{% endif %};">
+      Attendance: {{ summary.percentage }}%
     </span>
   </div>
   <table>
     <thead>
-      <tr><th>#</th><th>Week</th><th>Lesson</th><th>Year</th><th>Term</th><th>Status</th><th>Trainer</th><th>Date</th></tr>
+      <tr><th>#</th><th>Unit</th><th>Week</th><th>Lesson</th><th>Status</th><th>Date</th></tr>
     </thead>
     <tbody>
-      {% for r in records %}
+      {% for r in attendance %}
       <tr>
         <td>{{ loop.index }}</td>
+        <td>{{ r.units.code if r.units else '—' }}</td>
         <td>Week {{ r.week }}</td>
         <td>{{ r.lesson }}</td>
-        <td>{{ r.year }}</td>
-        <td>Term {{ r.term }}</td>
         <td class="{{ r.status }}">{{ '✓ Present' if r.status == 'present' else '✗ Absent' }}</td>
-        <td>{{ r.trainers.name if r.trainers else '—' }}</td>
         <td>{{ r.attendance_date | to_eat('%d %b %Y') }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px;">No records found.</td></tr>
+      <tr><td colspan="6" style="text-align:center;color:#aaa;padding:16px;">No records found.</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -108,7 +104,7 @@
   </div>
 </div>
 
-<div class="footer">&copy; 2026 Thika Technical Training Institute. All rights reserved by Lawrence K.</div>
+<div class="footer">&copy; 2026 Thika Technical Training Institute</div>
 
 <div class="no-print">
   <button onclick="window.print()"

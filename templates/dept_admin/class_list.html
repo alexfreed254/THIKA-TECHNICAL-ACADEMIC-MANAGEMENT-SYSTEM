@@ -33,7 +33,7 @@ td { padding:11px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
           <select name="class_id" onchange="this.form.submit()">
             <option value="">-- Select Class --</option>
             {% for c in classes %}
-              <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+              <option value="{{ c.id }}" {% if class_id_filter == c.id %}selected{% endif %}>{{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -42,11 +42,11 @@ td { padding:11px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
     </div>
   </div>
 
-  {% if class_id and cls %}
+  {% if class_id_filter and selected_class %}
   <div class="card">
     <div class="card-header">
-      <span><i class="fas fa-users"></i> {{ cls.name }} — {{ students|length }} student(s)</span>
-      <a href="/dept-admin/class-list-pdf?class_id={{ class_id }}" target="_blank" class="btn btn-pdf" style="padding:6px 14px;font-size:12px;">
+      <span><i class="fas fa-users"></i> {{ selected_class.name }} — {{ students|length }} student(s)</span>
+      <a href="/dept-admin/class-list/pdf?class_id={{ class_id_filter }}" target="_blank" class="btn btn-pdf" style="padding:6px 14px;font-size:12px;">
         <i class="fas fa-file-pdf"></i> Download PDF
       </a>
     </div>
@@ -60,7 +60,7 @@ td { padding:11px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
           {% for s in students %}
           <tr>
             <td style="color:#aaa">{{ loop.index }}</td>
-            <td><strong style="font-family:monospace;color:#1565c0;">{{ s.admission_number }}</strong></td>
+            <td><strong style="font-family:monospace;color:#1565c0;">{{ s.admission_no }}</strong></td>
             <td>{{ s.full_name }}</td>
           </tr>
           {% endfor %}
@@ -75,11 +75,11 @@ td { padding:11px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
     {% endif %}
   </div>
 
-  {% elif not class_id %}
+  {% elif not class_id_filter %}
   <div class="card">
     <div class="empty-state">
       <i class="fas fa-arrow-up"></i>
-      Select a department and class above to view the class list for downloading class list per class with signature column.
+      Select a class above to view the class list.
     </div>
   </div>
   {% endif %}
