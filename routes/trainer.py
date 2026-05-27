@@ -130,6 +130,11 @@ def attendance():
     db = get_service_client()
     user = current_user()
     dept_id = user.get("department_id")
+    dept_name = "Department"
+    if dept_id:
+        dept = db.table("departments").select("name").eq("id", dept_id).single().execute().data
+        if dept:
+            dept_name = dept["name"]
 
     # Classes assigned to this trainer
     cu_rows = (db.table("class_units")
@@ -295,7 +300,8 @@ def attendance():
                           year=year,
                           term=term,
                           attendance_submitted=attendance_submitted,
-                          active_event=active_event)
+                          active_event=active_event,
+                          dept_name=dept_name)
 
 
 # ── Assessment Review ─────────────────────────────────────────────────────────
