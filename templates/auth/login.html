@@ -108,6 +108,38 @@
       line-height: 1.75;
     }
 
+    .hero-apply {
+      padding: 28px 24px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(230,81,0,0.15), rgba(191,54,12,0.08));
+      border: 1px solid rgba(255,152,0,0.25);
+      text-align: center;
+    }
+    .hero-apply p {
+      font-size: 0.88rem;
+      color: rgba(248,250,252,0.72);
+      margin-top: 14px;
+      line-height: 1.6;
+    }
+    .hero-apply-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 32px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: linear-gradient(135deg, #e65100, #bf360c);
+      color: #fff;
+      text-decoration: none;
+      box-shadow: 0 12px 30px rgba(230,81,0,0.35);
+      transition: transform .2s, filter .2s;
+    }
+    .hero-apply-btn:hover { filter: brightness(1.08); transform: translateY(-2px); color: #fff; }
+    .hero-apply-btn i { font-size: 1.15rem; }
+
     .login-panel {
       background: #ffffff;
       padding: 50px 48px;
@@ -331,7 +363,10 @@
         <div class="stat"><strong>24/7</strong><small>Access</small></div>
       </div>
 
-      <div class="hero-footer">Access the system with your official credentials. Select your user type above to sign in.</div>
+      <div class="hero-apply">
+        <a href="#" class="hero-apply-btn" id="heroApplyBtn"><i class="fas fa-file-signature"></i> Apply for a Course</a>
+        <p>No account yet? Prospective trainees can apply by submitting your details and documents.</p>
+      </div>
     </section>
 
     <section class="login-panel">
@@ -497,6 +532,13 @@
           }
         }
       });
+    });
+
+    // Hero "Apply for a Course" button — switch to Apply tab
+    document.getElementById('heroApplyBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelector('.tab.apply-tab').click();
+      document.querySelector('.login-panel').scrollIntoView({ behavior: 'smooth' });
     });
 
     // Check URL param to show apply tab on load
