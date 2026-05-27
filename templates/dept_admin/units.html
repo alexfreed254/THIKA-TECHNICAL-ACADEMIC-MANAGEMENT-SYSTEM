@@ -95,7 +95,7 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
           <td>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <button type="button" class="btn btn-edit"
-                onclick="openEditModal('{{ u.id }}','{{ u.code }}','{{ u.name | replace("'","\\'")|replace('"','\\"') }}','{{ u.course_id or '' }}')"
+                onclick="openEditModal('{{ u.id }}','{{ u.code }}','{{ u.name|replace(&quot;'&quot;,&quot;&apos;&quot;)|replace('&quot;','&quot;') }}','{{ u.course_id or '' }}')"
               ><i class="fas fa-pen"></i> Edit</button>
               <form method="post" style="display:inline" onsubmit="return confirm('Delete unit {{ u.code }}? This cannot be undone.')">
                 <input type="hidden" name="action" value="delete">

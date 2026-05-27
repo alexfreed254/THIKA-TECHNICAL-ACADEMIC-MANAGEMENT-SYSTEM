@@ -6,7 +6,7 @@ Hosted on Render. Database + Auth via Supabase.
 
 import os
 import traceback
-from datetime import timedelta
+from datetime import timedelta, datetime
 from flask import Flask, render_template
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -117,7 +117,8 @@ def inject_globals():
         "unread_notification_count": unread_count,
         "pending_employers_count": pending_employers,
         "get_alert_classes": get_alert_classes,
-        "TAILWIND_CDN": "https://cdn.tailwindcss.com"
+        "TAILWIND_CDN": "https://cdn.tailwindcss.com",
+        "now": datetime.now
     }
 
 # ── Jinja2 filter: convert UTC ISO string → EAT display string ───────────────

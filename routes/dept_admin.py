@@ -312,8 +312,9 @@ def students():
     if not students_list:
         students_list = db.table("user_profiles").select("*").eq("role", "student").eq("department_id", dept_id).order("full_name").execute().data or []
     classes = db.table("classes").select("*").eq("department_id", dept_id).order("name").execute().data or []
+    search = request.args.get("q", "")
     return render_template("dept_admin/students.html", students=students_list, classes=classes,
-                           error=error, new_creds=new_creds)
+                           error=error, new_creds=new_creds, search=search)
 
 
 # ── Assign Units to Trainers ──────────────────────────────────────────────────
@@ -570,7 +571,7 @@ def marks():
     class_id = request.args.get("class_id", "")
     unit_id  = request.args.get("unit_id", "")
     query = (db.table("marks")
-        .select("*, units(name, code, department_id), user_profiles!marks_student_id_fkey(full_name, admission_no), classes(name)")
+        .select("*, student:user_profiles!marks_student_id_fkey(full_name, admission_no), trainer:user_profiles!marks_trainer_id_fkey(full_name), units(name, code, department_id), classes(name, departments(name))")
         .eq("year", int(year)))
     if term:     query = query.eq("term", term)
     if class_id: query = query.eq("class_id", class_id)
@@ -593,7 +594,7 @@ def download_marks_pdf():
     class_id = request.args.get("class_id", "")
     unit_id  = request.args.get("unit_id", "")
     query = (db.table("marks")
-        .select("*, units(name, code, department_id), user_profiles!marks_student_id_fkey(full_name, admission_no), classes(name)")
+        .select("*, student:user_profiles!marks_student_id_fkey(full_name, admission_no), trainer:user_profiles!marks_trainer_id_fkey(full_name), units(name, code, department_id), classes(name, departments(name))")
         .eq("year", int(year)))
     if term:     query = query.eq("term", term)
     if class_id: query = query.eq("class_id", class_id)
@@ -680,19 +681,21 @@ def class_list():
     db = get_service_client()
     dept_id = _dept_id()
     dept = db.table("departments").select("*").eq("id", dept_id).single().execute().data or {}
-    class_id_filter = request.args.get("class_id", "")
+    class_id = request.args.get("class_id", "")
     classes = db.table("classes").select("*, courses(name)").eq("department_id", dept_id).order("name").execute().data or []
-    selected_class = None
+    cls = None
     students = []
-    if class_id_filter:
-        selected_class = next((c for c in classes if c["id"] == class_id_filter), None)
+    if class_id:
+        cls = next((c for c in classes if str(c["id"]) == class_id), None)
         enrollments = (db.table("enrollments")
             .select("*, user_profiles(id, full_name, admission_no, email, mobile_number)")
-            .eq("class_id", class_id_filter).execute().data or [])
+            .eq("class_id", class_id).execute().data or [])
         students = [e.get("user_profiles", {}) for e in enrollments if e.get("user_profiles")]
+        for s in students:
+            s["admission_number"] = s.get("admission_no", "")
     return render_template("dept_admin/class_list.html",
-                           dept=dept, classes=classes, selected_class=selected_class,
-                           students=students, class_id_filter=class_id_filter)
+                           dept=dept, classes=classes, cls=cls,
+                           students=students, class_id=class_id)
 
 
 @dept_admin_bp.route("/class-list/pdf")
@@ -701,17 +704,20 @@ def class_list_pdf():
     db = get_service_client()
     dept_id = _dept_id()
     dept = db.table("departments").select("*").eq("id", dept_id).single().execute().data or {}
-    class_id_filter = request.args.get("class_id", "")
-    selected_class = None
+    class_id = request.args.get("class_id", "")
+    cls = None
     students = []
-    if class_id_filter:
-        selected_class = db.table("classes").select("*, courses(name)").eq("id", class_id_filter).single().execute().data
+    if class_id:
+        cls = db.table("classes").select("*, courses(name)").eq("id", class_id).single().execute().data
         enrollments = (db.table("enrollments")
             .select("*, user_profiles(id, full_name, admission_no, email, mobile_number)")
-            .eq("class_id", class_id_filter).execute().data or [])
+            .eq("class_id", class_id).execute().data or [])
         students = [e.get("user_profiles", {}) for e in enrollments if e.get("user_profiles")]
+        for s in students:
+            s["admission_number"] = s.get("admission_no", "")
     return render_template("dept_admin/class_list_pdf.html",
-                           dept=dept, selected_class=selected_class, students=students)
+                           cls=cls, dept_name=dept.get("name",""),
+                           students=students, date_gen=datetime.now().strftime("%d %b %Y"))
 
 
 # ── Trainee Attendance Search ─────────────────────────────────────────────────
@@ -722,33 +728,53 @@ def trainee_search():
     db = get_service_client()
     dept_id = _dept_id()
     q = request.args.get("q", "").strip()
-    trainee = None
-    attendance_records = []
+    student_id = request.args.get("student_id", "")
+    unit_id = request.args.get("unit_id", "")
+    students = []
+    student = None
+    records = []
+    units_list = []
     summary = {}
+
     if q:
-        rows = (db.table("user_profiles").select("*").eq("role", "student")
-            .eq("department_id", dept_id).ilike("admission_no", f"%{q}%").limit(1).execute().data or [])
-        if not rows:
-            rows = (db.table("user_profiles").select("*").eq("role", "student")
-                .eq("department_id", dept_id).ilike("full_name", f"%{q}%").limit(1).execute().data or [])
-        if rows:
-            trainee = rows[0]
-            attendance_records = (db.table("attendance")
-                .select("*, units(name, code), user_profiles:student_id(enrollments(classes(name)))")
-                .eq("student_id", trainee["id"]).order("attendance_date", desc=True).execute().data or [])
-                
-            for att in attendance_records:
-                student = att.get("user_profiles") or {}
-                enrolls = student.get("enrollments") or []
-                first_enroll = enrolls[0] if enrolls else {}
-                cls = first_enroll.get("classes") or {}
-                att["classes"] = cls
-            total   = len(attendance_records)
-            present = sum(1 for a in attendance_records if a["status"] == "present")
-            summary = {"total": total, "present": present, "absent": total - present,
-                       "percentage": round(present / total * 100, 1) if total else 0}
+        students = (db.table("user_profiles").select("*, classes!enrollments(name)")
+            .eq("role", "student").eq("department_id", dept_id)
+            .or_(f"admission_no.ilike.%{q}%,full_name.ilike.%{q}%")
+            .limit(20).execute().data or [])
+
+    if student_id:
+        student = db.table("user_profiles").select("*, classes!enrollments(name)").eq("id", student_id).single().execute().data
+        if student:
+            units_list = (db.table("attendance").select("unit_id, units!inner(id, name, code)")
+                .eq("student_id", student_id)
+                .execute().data or [])
+            seen = set()
+            deduped = []
+            for u in units_list:
+                uid = u["unit_id"]
+                if uid not in seen:
+                    seen.add(uid)
+                    deduped.append(u.get("units", u))
+            units_list = deduped
+
+    if student_id and unit_id:
+        records = (db.table("attendance")
+            .select("*, units(name, code), trainers:user_profiles!attendance_trainer_id_fkey(name)")
+            .eq("student_id", student_id).eq("unit_id", unit_id)
+            .order("attendance_date", desc=True).execute().data or [])
+
+        total = len(records)
+        present = sum(1 for a in records if a["status"] == "present")
+        unit_info = db.table("units").select("name, code").eq("id", unit_id).single().execute().data or {}
+        summary = {"total": total, "present": present, "absent": total - present,
+                   "pct": round(present / total * 100, 1) if total else 0,
+                   "unit_code": unit_info.get("code", ""),
+                   "unit_name": unit_info.get("name", "")}
+
     return render_template("dept_admin/trainee_search.html",
-                           query=q, trainee=trainee, attendance=attendance_records, summary=summary)
+                           query=q, students=students, student=student,
+                           student_id=student_id, unit_id=unit_id,
+                           units_list=units_list, records=records, summary=summary)
 
 
 @dept_admin_bp.route("/trainee-report-pdf")
@@ -758,28 +784,30 @@ def trainee_report_pdf():
     dept_id = _dept_id()
     dept = db.table("departments").select("*").eq("id", dept_id).single().execute().data or {}
     student_id = request.args.get("student_id", "")
-    trainee = None
-    attendance_records = []
+    unit_id = request.args.get("unit_id", "")
+    student = None
+    records = []
     summary = {}
-    if student_id:
-        trainee = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
-        if trainee:
-            attendance_records = (db.table("attendance")
-                .select("*, units(name, code), user_profiles:student_id(enrollments(classes(name)))")
-                .eq("student_id", student_id).order("attendance_date", desc=True).execute().data or [])
-                
-            for att in attendance_records:
-                student = att.get("user_profiles") or {}
-                enrolls = student.get("enrollments") or []
-                first_enroll = enrolls[0] if enrolls else {}
-                cls = first_enroll.get("classes") or {}
-                att["classes"] = cls
-            total   = len(attendance_records)
-            present = sum(1 for a in attendance_records if a["status"] == "present")
+    if student_id and unit_id:
+        student = db.table("user_profiles").select("*, classes!enrollments(name)").eq("id", student_id).single().execute().data
+        if student:
+            if not student.get("admission_number"):
+                student["admission_number"] = student.get("admission_no", "")
+            records = (db.table("attendance")
+                .select("*, units(name, code), trainers:user_profiles!attendance_trainer_id_fkey(name)")
+                .eq("student_id", student_id).eq("unit_id", unit_id)
+                .order("attendance_date", desc=True).execute().data or [])
+            unit_info = db.table("units").select("name, code").eq("id", unit_id).single().execute().data or {}
+            total = len(records)
+            present = sum(1 for a in records if a["status"] == "present")
             summary = {"total": total, "present": present, "absent": total - present,
-                       "percentage": round(present / total * 100, 1) if total else 0}
+                       "pct": round(present / total * 100, 1) if total else 0,
+                       "unit_code": unit_info.get("code", ""),
+                       "unit_name": unit_info.get("name", "")}
     return render_template("dept_admin/trainee_report_pdf.html",
-                           dept=dept, trainee=trainee, attendance=attendance_records, summary=summary)
+                           dept_name=dept.get("name",""), student=student,
+                           records=records, summary=summary,
+                           generated=datetime.now().strftime("%d %b %Y"))
 
 
 # ── Assessment Sheet ──────────────────────────────────────────────────────────
@@ -789,19 +817,57 @@ def trainee_report_pdf():
 def assessment_sheet():
     db = get_service_client()
     dept_id = _dept_id()
-    class_id_filter = request.args.get("class_id", "")
-    unit_id_filter  = request.args.get("unit_id", "")
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    year     = request.args.get("year", "")
+    term     = request.args.get("term", "")
+    min_pct  = int(request.args.get("min_pct", 80))
+
     classes = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
     units   = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
-    assessments = []
-    if class_id_filter and unit_id_filter:
-        assessments = (db.table("assessments")
-            .select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no), units(name, code), classes(name)")
-            .eq("class_id", class_id_filter).eq("unit_id", unit_id_filter)
-            .order("uploaded_at", desc=True).execute().data or [])
+    cls = None
+    unit = None
+    eligible = []
+    term_label = f"Term {term}" if term else "All Terms"
+
+    if class_id and unit_id:
+        cls = db.table("classes").select("id, name").eq("id", class_id).single().execute().data
+        unit = db.table("units").select("id, name, code").eq("id", unit_id).single().execute().data
+        enrollments = (db.table("enrollments")
+            .select("student_id, user_profiles!inner(id, full_name, admission_no)")
+            .eq("class_id", class_id).execute().data or [])
+        for e in enrollments:
+            student = e.get("user_profiles") or {}
+            sid = student.get("id")
+            if not sid:
+                continue
+            att_query = db.table("attendance").select("status").eq("student_id", sid).eq("unit_id", unit_id)
+            if year:
+                att_query = att_query.eq("year", int(year))
+            if term:
+                att_query = att_query.eq("term", term)
+            att_records = att_query.execute().data or []
+            total = len(att_records)
+            if total == 0:
+                continue
+            present = sum(1 for a in att_records if a["status"] == "present")
+            pct = round(present / total * 100, 1)
+            if pct >= min_pct:
+                eligible.append({
+                    "admission_number": student.get("admission_no", ""),
+                    "full_name": student.get("full_name", ""),
+                    "present": present,
+                    "total": total,
+                    "pct": pct
+                })
+        eligible.sort(key=lambda x: x["full_name"])
+
     return render_template("dept_admin/assessment_sheet.html",
-                           classes=classes, units=units, assessments=assessments,
-                           class_id_filter=class_id_filter, unit_id_filter=unit_id_filter)
+                           classes=classes, units=units,
+                           class_id=class_id, unit_id=unit_id,
+                           year=year, term=term, min_pct=min_pct,
+                           cls=cls, unit=unit, term_label=term_label,
+                           eligible=eligible)
 
 
 @dept_admin_bp.route("/assessment-sheet/pdf")
@@ -810,34 +876,118 @@ def assessment_sheet_pdf():
     db = get_service_client()
     dept_id = _dept_id()
     dept = db.table("departments").select("*").eq("id", dept_id).single().execute().data or {}
-    class_id_filter = request.args.get("class_id", "")
-    unit_id_filter  = request.args.get("unit_id", "")
-    selected_class = selected_unit = None
-    assessments = []
-    if class_id_filter and unit_id_filter:
-        selected_class = db.table("classes").select("*, courses(name)").eq("id", class_id_filter).single().execute().data
-        selected_unit  = db.table("units").select("*").eq("id", unit_id_filter).single().execute().data
-        assessments = (db.table("assessments")
-            .select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no), units(name, code), classes(name)")
-            .eq("class_id", class_id_filter).eq("unit_id", unit_id_filter)
-            .order("uploaded_at", desc=True).execute().data or [])
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    year     = request.args.get("year", "")
+    term     = request.args.get("term", "")
+    min_pct  = int(request.args.get("min_pct", 80))
+
+    cls = None
+    unit = None
+    eligible = []
+    term_label = f"Term {term}" if term else "All Terms"
+
+    if class_id and unit_id:
+        cls = db.table("classes").select("id, name").eq("id", class_id).single().execute().data
+        unit = db.table("units").select("id, name, code").eq("id", unit_id).single().execute().data
+        enrollments = (db.table("enrollments")
+            .select("student_id, user_profiles!inner(id, full_name, admission_no)")
+            .eq("class_id", class_id).execute().data or [])
+        for e in enrollments:
+            student = e.get("user_profiles") or {}
+            sid = student.get("id")
+            if not sid:
+                continue
+            att_query = db.table("attendance").select("status").eq("student_id", sid).eq("unit_id", unit_id)
+            if year:
+                att_query = att_query.eq("year", int(year))
+            if term:
+                att_query = att_query.eq("term", term)
+            att_records = att_query.execute().data or []
+            total = len(att_records)
+            if total == 0:
+                continue
+            present = sum(1 for a in att_records if a["status"] == "present")
+            pct = round(present / total * 100, 1)
+            if pct >= min_pct:
+                eligible.append({
+                    "admission_number": student.get("admission_no", ""),
+                    "full_name": student.get("full_name", ""),
+                    "present": present,
+                    "total": total,
+                    "pct": pct
+                })
+        eligible.sort(key=lambda x: x["full_name"])
+
     return render_template("dept_admin/assessment_sheet_pdf.html",
-                           dept=dept, selected_class=selected_class,
-                           selected_unit=selected_unit, assessments=assessments)
+                           cls=cls, unit=unit, dept_name=dept.get("name",""),
+                           term_label=term_label, year=year, min_pct=min_pct,
+                           eligible=eligible, date_gen=datetime.now().strftime("%d %b %Y"))
 
 
 # ── Credentials ───────────────────────────────────────────────────────────────
 
-@dept_admin_bp.route("/credentials")
+@dept_admin_bp.route("/credentials", methods=["GET", "POST"])
 @dept_admin_required
 def credentials():
     db = get_service_client()
     dept_id = _dept_id()
-    trainers = (db.table("user_profiles").select("id, full_name, email, staff_no, is_active")
-        .eq("role", "trainer").eq("department_id", dept_id).order("full_name").execute().data or [])
-    students = (db.table("user_profiles").select("id, full_name, email, admission_no, is_active")
-        .eq("role", "student").eq("department_id", dept_id).order("full_name").execute().data or [])
-    return render_template("dept_admin/credentials.html", trainers=trainers, students=students)
+    msg = None
+    tab = request.args.get("tab", "trainers")
+    search_t = request.args.get("search_t", "")
+    search_s = request.args.get("search_s", "")
+    filter_class = request.args.get("filter_class", "")
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "update_trainer":
+            tid = request.form.get("trainer_id")
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "").strip()
+            if username:
+                db.table("auth_users").update({"username": username}).eq("user_id", tid).execute()
+            if password:
+                from auth_utils import hash_password
+                db.table("auth_users").update({"password_hash": hash_password(password)}).eq("user_id", tid).execute()
+            msg = f"Trainer credentials updated."
+        elif action == "update_student":
+            sid = request.form.get("student_id")
+            password = request.form.get("password", "").strip()
+            if password:
+                from auth_utils import hash_password
+                db.table("auth_users").update({"password_hash": hash_password(password)}).eq("user_id", sid).execute()
+            msg = "Student password updated."
+        elif action == "reset_student":
+            sid = request.form.get("student_id")
+            from auth_utils import hash_password
+            db.table("auth_users").update({"password_hash": hash_password("123456")}).eq("user_id", sid).execute()
+            msg = "Student password reset to 123456."
+        return redirect(url_for("dept_admin.credentials", tab=tab, search_t=search_t,
+                                search_s=search_s, filter_class=filter_class))
+
+    tq = db.table("user_profiles").select("id, full_name, email, staff_no, is_active, departments(name)")
+    tq = tq.eq("role", "trainer").eq("department_id", dept_id)
+    if search_t:
+        tq = tq.or_(f"full_name.ilike.%{search_t}%,staff_no.ilike.%{search_t}%")
+    trainers_list = tq.order("full_name").execute().data or []
+
+    sq = db.table("user_profiles").select("id, full_name, admission_no, email, is_active, classes!enrollments(name)")
+    sq = sq.eq("role", "student").eq("department_id", dept_id)
+    if search_s:
+        sq = sq.or_(f"full_name.ilike.%{search_s}%,admission_no.ilike.%{search_s}%")
+    if filter_class:
+        sq = sq.eq("enrollments.class_id", filter_class)
+    students_list = sq.order("full_name").execute().data or []
+    for s in students_list:
+        if not s.get("admission_number"):
+            s["admission_number"] = s.get("admission_no", "")
+
+    classes_list = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
+    return render_template("dept_admin/credentials.html",
+                           tab=tab, search_t=search_t, search_s=search_s,
+                           filter_class=filter_class, msg=msg,
+                           trainers_list=trainers_list, students_list=students_list,
+                           classes_list=classes_list)
 
 
 # ── Import Data ───────────────────────────────────────────────────────────────
@@ -900,7 +1050,13 @@ def import_data():
                     flash(f"Import complete. {created} students created.", "success")
             except Exception as exc:
                 error = f"Error reading file: {exc}"
-    return render_template("dept_admin/import.html", classes=classes, results=results, error=error)
+    result_summary = None
+    if results:
+        result_summary = {
+            "success": sum(1 for r in results if r["status"] == "created"),
+            "errors": [r["msg"] for r in results if r["status"] == "error"]
+        }
+    return render_template("dept_admin/import.html", classes=classes, results=results, result=result_summary, error=error)
 
 
 # ── Companies ─────────────────────────────────────────────────────────────────
@@ -922,6 +1078,19 @@ def companies():
     companies_list = query.order("name").execute().data or []
     return render_template("dept_admin/companies.html",
                            companies=companies_list, industries=INDUSTRIES, industry=industry)
+
+
+@dept_admin_bp.route("/companies/<company_id>")
+@dept_admin_required
+def get_company(company_id):
+    db = get_service_client()
+    dept_id = _dept_id()
+    company = db.table("companies").select("*").eq("id", company_id).single().execute().data
+    if not company or company.get("department_id") != dept_id:
+        return {"error": "Not found"}, 404
+    return {k: company.get(k) for k in ("id","name","industry_classification","address","city",
+        "phone_number","email","website","latitude","longitude","geofence_radius_meters",
+        "available_slots","contact_person","contact_phone","contact_email","description","is_active")}
 
 
 @dept_admin_bp.route("/companies/add", methods=["POST"])
