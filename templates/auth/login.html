@@ -47,6 +47,7 @@
       background: #fff;
       display: grid;
       place-items: center;
+      margin: 0 auto;
       box-shadow: 0 20px 40px rgba(15,23,42,0.35);
     }
 
@@ -58,9 +59,10 @@
 
     .hero h1 {
       font-size: clamp(2rem, 2.8vw, 2.8rem);
-      line-height: 1.05;
+      line-height: 1.15;
       letter-spacing: 0.04em;
       text-transform: uppercase;
+      text-align: center;
     }
 
     .hero p {
@@ -68,6 +70,8 @@
       font-size: 1rem;
       line-height: 1.8;
       color: rgba(248,250,252,0.82);
+      text-align: center;
+      margin: 0 auto;
     }
 
     .stats {
@@ -97,6 +101,10 @@
       letter-spacing: 0.12em;
       color: rgba(248,250,252,0.72);
       font-size: 0.8rem;
+    }
+
+    .hero > div:has(h1) {
+      text-align: center;
     }
 
     .hero-footer {
