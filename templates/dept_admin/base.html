@@ -10,18 +10,36 @@
     .sidebar {
       background: linear-gradient(180deg, #1565c0 0%, #0d47a1 100%);
       color: #fff;
+      display: flex;
+      flex-direction: column;
     }
-    .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
     .sidebar-header img { height: 58px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); margin-bottom: 10px; }
     .sidebar-header h2 { font-size: 13px; font-weight: 700; opacity: .9; }
     .role-badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: 3px 12px; font-size: 11px; margin-top: 6px; }
-    .sidebar-menu { flex: 1; padding: 16px 0; overflow-y: auto; }
-    .sidebar-menu a { display: block; padding: 12px 22px; color: rgba(255,255,255,.82); text-decoration: none; transition: all .25s; border-left: 4px solid transparent; font-size: 13px; }
+    .sidebar-menu { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .sidebar-menu a { display: block; padding: 10px 22px 10px 36px; color: rgba(255,255,255,.78); text-decoration: none; transition: all .2s; font-size: 13px; border-left: 3px solid transparent; }
     .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,.1); color: #fff; border-left-color: #ffd700; }
-    .menu-section { padding: 10px 22px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,.4); }
-    .sidebar-footer { padding: 14px; border-top: 1px solid rgba(255,255,255,.1); display: flex; gap: 10px; }
+    .menu-group { }
+    .menu-group-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 18px 10px 22px; cursor: pointer;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: rgba(255,255,255,.5); transition: color .2s;
+      user-select: none;
+    }
+    .menu-group-header:hover { color: rgba(255,255,255,.8); }
+    .menu-group-header .arrow { transition: transform .3s ease; font-size: 10px; }
+    .menu-group-header .arrow.open { transform: rotate(90deg); }
+    .menu-group-content { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .25s ease; opacity: 0; }
+    .menu-group-content.open { max-height: 600px; opacity: 1; }
+    .menu-group-content a { padding-left: 44px; font-size: 12.5px; border-left-color: transparent; }
+    .menu-group-content a i { width: 18px; text-align: center; margin-right: 6px; font-size: 12px; }
+    .sidebar-footer { padding: 14px; border-top: 1px solid rgba(255,255,255,.1); display: flex; gap: 10px; flex-shrink: 0; }
     .sidebar-footer a { display: flex; align-items: center; justify-content: center; padding: 9px; background: rgba(220,38,38,.25); color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px; flex: 1; }
     .sidebar-footer a:hover { background: rgba(220,38,38,.45); }
+    .sidebar-menu .direct-link { padding: 10px 22px 10px 22px; }
+    .sidebar-menu .direct-link i { width: 20px; text-align: center; margin-right: 8px; }
     .notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: background 0.3s ease; }
     .notification-bell:hover { background: rgba(255,255,255,0.2); }
     .notification-badge { position: absolute; top: -5px; right: -5px; background: #c62828; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 50%; min-width: 18px; text-align: center; }
@@ -46,42 +64,86 @@
       <div class="role-badge"><i class="fas fa-user-tie"></i> Dept Admin</div>
     </div>
     <div class="sidebar-menu">
-      <div class="menu-section">Overview</div>
-      <a href="/dept-admin/welcome"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
 
-      <div class="menu-section">Manage</div>
-      <a href="/dept-admin/classes"><i class="fas fa-door-open fa-fw"></i> Classes</a>
-      <a href="/dept-admin/trainers"><i class="fas fa-chalkboard-teacher fa-fw"></i> Trainers</a>
-      <a href="/dept-admin/students"><i class="fas fa-user-graduate fa-fw"></i> Students</a>
-      <a href="/dept-admin/units"><i class="fas fa-book fa-fw"></i> Units</a>
-      <a href="/dept-admin/assign-units"><i class="fas fa-link fa-fw"></i> Assign Units</a>
-      <a href="/dept-admin/credentials"><i class="fas fa-key fa-fw"></i> Manage Credentials</a>
+      <a href="/dept-admin/welcome" class="direct-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
 
-      <div class="menu-section">Reports &amp; Tools</div>
-      <a href="/dept-admin/attendance"><i class="fas fa-clipboard-list fa-fw"></i> Attendance</a>
-      <a href="/dept-admin/class-list"><i class="fas fa-list-ol fa-fw"></i> Class List</a>
-      <a href="/dept-admin/trainee-search"><i class="fas fa-search fa-fw"></i> Trainee Attendance Search</a>
-      <a href="/dept-admin/assessment-sheet"><i class="fas fa-file-certificate fa-fw"></i> Assessment Sheet</a>
-      <a href="/dept-admin/import"><i class="fas fa-file-excel fa-fw"></i> Import Data</a>
+      <div class="menu-group" data-group="admissions">
+        <div class="menu-group-header"><span><i class="fas fa-file-upload" style="width:20px;text-align:center;margin-right:6px"></i> Admissions</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/admission/hod"><i class="fas fa-file-upload"></i> Admission Requests</a>
+          <a href="/dept-admin/applications"><i class="fas fa-file-signature"></i> Course Applications</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Exams</div>
-      <a href="/dept-admin/exam-bookings"><i class="fas fa-calendar-check fa-fw"></i> Exam Bookings Approval</a>
-      <a href="/dept-admin/marks"><i class="fas fa-chart-line fa-fw"></i> Marks Report</a>
-      <a href="/dept-admin/trainer-documents"><i class="fas fa-folder-open fa-fw"></i> Trainer POE</a>
-      <a href="/dept-admin/trainee-poe"><i class="fas fa-folder-open fa-fw"></i> Trainee POE</a>
+      <div class="menu-group" data-group="academic">
+        <div class="menu-group-header"><span><i class="fas fa-book-open" style="width:20px;text-align:center;margin-right:6px"></i> Academic Management</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/dept-admin/classes"><i class="fas fa-door-open"></i> Classes</a>
+          <a href="/dept-admin/trainers"><i class="fas fa-chalkboard-teacher"></i> Trainers</a>
+          <a href="/dept-admin/students"><i class="fas fa-user-graduate"></i> Students</a>
+          <a href="/dept-admin/units"><i class="fas fa-book"></i> Units</a>
+          <a href="/dept-admin/assign-units"><i class="fas fa-link"></i> Assign Units</a>
+          <a href="/dept-admin/credentials"><i class="fas fa-key"></i> Manage Credentials</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Dual Training</div>
-      <a href="/dept-admin/companies"><i class="fas fa-building fa-fw"></i> Industry Partners</a>
+      <div class="menu-group" data-group="attendance">
+        <div class="menu-group-header"><span><i class="fas fa-clipboard-list" style="width:20px;text-align:center;margin-right:6px"></i> Attendance &amp; Records</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/dept-admin/attendance"><i class="fas fa-clipboard-list"></i> Unit Attendance</a>
+          <a href="/dept-admin/class-list"><i class="fas fa-list-ol"></i> Class List</a>
+          <a href="/dept-admin/trainee-search"><i class="fas fa-search"></i> Unit Attendance Search</a>
+          <a href="/dept-admin/assessment-sheet"><i class="fas fa-file-certificate"></i> Formative Assessment Sheets</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Admission</div>
-      <a href="/admission/hod"><i class="fas fa-file-upload fa-fw"></i> Admission Requests</a>
-      <a href="/dept-admin/applications"><i class="fas fa-file-signature fa-fw"></i> Course Applications</a>
+      <div class="menu-group" data-group="exams">
+        <div class="menu-group-header"><span><i class="fas fa-calendar-check" style="width:20px;text-align:center;margin-right:6px"></i> Examinations</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/dept-admin/exam-bookings"><i class="fas fa-calendar-check"></i> Exam Booking Approvals</a>
+          <a href="/dept-admin/marks"><i class="fas fa-chart-line"></i> Formative Assessment / Marks Reports</a>
+          <a href="/dept-admin/trainer-documents"><i class="fas fa-folder-open"></i> Trainer / Lecturer POE</a>
+          <a href="/dept-admin/trainee-poe"><i class="fas fa-folder-open"></i> Trainees / Students POE</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Clearance</div>
-      <a href="/clearance/approver"><i class="fas fa-clipboard-check fa-fw"></i> Clearance Approvals</a>
+      <div class="menu-group" data-group="dual">
+        <div class="menu-group-header"><span><i class="fas fa-building" style="width:20px;text-align:center;margin-right:6px"></i> Dual Training</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/dept-admin/companies"><i class="fas fa-building"></i> Industry Partners</a>
+        </div>
+      </div>
 
-      <div class="menu-section">Profile</div>
-      <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
+      <div class="menu-group" data-group="clearance">
+        <div class="menu-group-header"><span><i class="fas fa-clipboard-check" style="width:20px;text-align:center;margin-right:6px"></i> Student Clearance</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/clearance/approver"><i class="fas fa-clipboard-check"></i> Student Clearance Approvals</a>
+        </div>
+      </div>
+
+      <div class="menu-group" data-group="reports">
+        <div class="menu-group-header"><span><i class="fas fa-chart-bar" style="width:20px;text-align:center;margin-right:6px"></i> Reports &amp; Tools</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/dept-admin/download-unit-report"><i class="fas fa-download"></i> View &amp; Download Reports</a>
+          <a href="/dept-admin/import"><i class="fas fa-file-excel"></i> Import Data</a>
+        </div>
+      </div>
+
+      <div class="menu-group" data-group="profile">
+        <div class="menu-group-header"><span><i class="fas fa-user-circle" style="width:20px;text-align:center;margin-right:6px"></i> Profile</span><span class="arrow">&#9654;</span></div>
+        <div class="menu-group-content">
+          <a href="/auth/profile"><i class="fas fa-user-circle"></i> My Profile</a>
+          <div class="menu-group" data-group="prefs" style="margin-left:6px">
+            <div class="menu-group-header" style="font-size:12px;padding:8px 18px 8px 22px"><span><i class="fas fa-cog" style="width:18px;text-align:center;margin-right:6px"></i> Preferences</span><span class="arrow">&#9654;</span></div>
+            <div class="menu-group-content">
+              <a href="#" onclick="toggleTheme();return false" style="padding-left:56px;font-size:12px"><i class="fas fa-adjust"></i> <span id="themeLabel">Light / Dark Mode</span></a>
+              <a href="#" onclick="toggleZoom();return false" style="padding-left:56px;font-size:12px"><i class="fas fa-search-plus"></i> Screen Zoom</a>
+            </div>
+          </div>
+          <a href="/auth/logout" style="color:rgba(255,100,100,.9)"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+      </div>
+
     </div>
     <div class="sidebar-footer">
       <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -129,13 +191,63 @@
 
   toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
   overlay.addEventListener('click', closeSidebar);
+
+  // ── Accordion expand/collapse ─────────────────────────────
+  document.querySelectorAll('.menu-group-header').forEach(header => {
+    header.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const content = this.nextElementSibling;
+      const arrow = this.querySelector('.arrow');
+      const isOpen = content.classList.contains('open');
+      content.classList.toggle('open');
+      if (arrow) arrow.classList.toggle('open');
+    });
+  });
+
+  // ── Active link highlighting + auto-open parent groups ──
+  const path = window.location.pathname;
+  document.querySelectorAll('.sidebar-menu a').forEach(a => {
+    const href = a.getAttribute('href');
+    if (href && href !== '#' && path.startsWith(href)) {
+      a.classList.add('active');
+      // Open all parent .menu-group-content
+      let parent = a.closest('.menu-group-content');
+      while (parent) {
+        parent.classList.add('open');
+        const arrow = parent.previousElementSibling?.querySelector('.arrow');
+        if (arrow) arrow.classList.add('open');
+        parent = parent.parentElement?.closest('.menu-group-content');
+      }
+    }
+  });
+
+  // Close sidebar on link click (mobile)
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
     a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
   });
-  const path = window.location.pathname;
-  document.querySelectorAll('.sidebar-menu a').forEach(a => {
-    if (a.getAttribute('href') === path) a.classList.add('active');
-  });
+
+  // ── Theme toggle ───────────────────────────────────────────
+  function toggleTheme() {
+    const label = document.getElementById('themeLabel');
+    const isDark = document.body.classList.toggle('dark-mode');
+    label.textContent = isDark ? 'Dark Mode' : 'Light Mode';
+    localStorage.setItem('dept_admin_theme', isDark ? 'dark' : 'light');
+  }
+  // Restore theme
+  if (localStorage.getItem('dept_admin_theme') === 'dark') {
+    document.body.classList.add('dark-mode');
+    const label = document.getElementById('themeLabel');
+    if (label) label.textContent = 'Dark Mode';
+  }
+
+  // ── Zoom toggle ────────────────────────────────────────────
+  let zoomLevel = parseFloat(localStorage.getItem('dept_admin_zoom') || '1');
+  document.body.style.zoom = zoomLevel;
+  function toggleZoom() {
+    zoomLevel = zoomLevel === 1 ? 1.15 : zoomLevel === 1.15 ? 1.3 : 1;
+    document.body.style.zoom = zoomLevel;
+    localStorage.setItem('dept_admin_zoom', zoomLevel);
+  }
 </script>
 </body>
 </html>
