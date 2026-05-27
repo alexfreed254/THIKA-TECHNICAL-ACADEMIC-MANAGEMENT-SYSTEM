@@ -265,17 +265,60 @@ def attendance():
 def assessments():
     db = get_service_client()
     user = current_user()
-    
     assigned_unit_ids = _trainer_assigned_unit_ids(db)
-    
-    q = db.table("assessments").select("*, user_profiles(full_name, admission_no), units(name, code), classes(name)").order("uploaded_at", desc=True)
+
+    # Get all assessments with joins
+    q = db.table("assessments").select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no), units(name, code), classes(id, name)").order("uploaded_at", desc=True)
     if assigned_unit_ids:
         q = q.in_("unit_id", assigned_unit_ids)
-    
     assessments_list = q.execute().data or []
 
+    # Build class/unit hierarchy for drill-down
+    classes_map = {}
+    units_map = {}
+    status_counts = {"total": 0, "pending": 0, "approved": 0, "rejected": 0}
+    for a in assessments_list:
+        status_counts["total"] += 1
+        s = a.get("status", "pending")
+        if s in status_counts:
+            status_counts[s] += 1
+
+        cls = a.get("classes") or {}
+        cid = cls.get("id")
+        if cid:
+            if cid not in classes_map:
+                classes_map[cid] = {"id": cid, "name": cls.get("name", ""), "units": {}}
+            u = a.get("units") or {}
+            uid = a.get("unit_id")
+            if uid:
+                if uid not in classes_map[cid]["units"]:
+                    classes_map[cid]["units"][uid] = {
+                        "id": uid,
+                        "name": u.get("name", ""),
+                        "code": u.get("code", ""),
+                        "total": 0, "pending": 0, "approved": 0, "rejected": 0
+                    }
+                classes_map[cid]["units"][uid]["total"] += 1
+                classes_map[cid]["units"][uid][s] += 1
+                classes_map[cid]["units"][uid]["assessments"] = classes_map[cid]["units"][uid].get("assessments", []) + [a]
+
+    # Also get assigned units for the class list
+    class_list = []
+    for cid, cdata in classes_map.items():
+        unit_list = list(cdata["units"].values())
+        unit_pending = sum(u["pending"] for u in unit_list)
+        class_list.append({
+            "id": cid,
+            "name": cdata["name"],
+            "units": sorted(unit_list, key=lambda u: u["name"]),
+            "unit_count": len(unit_list),
+            "pending": unit_pending
+        })
+    class_list.sort(key=lambda c: c["name"])
+
     return render_template("trainer/assessments.html",
-                          assessments=assessments_list)
+                          classes=class_list,
+                          status_counts=status_counts)
 
 
 @trainer_bp.route("/assessment/<assessment_id>/review", methods=["GET", "POST"])
@@ -322,6 +365,60 @@ def review_assessment(assessment_id):
     return render_template("trainer/review_assessment.html",
                           assessment=assessment,
                           evidence=evidence)
+
+
+@trainer_bp.route("/assessment/<assessment_id>/delete", methods=["POST"])
+@trainer_required
+def delete_assessment(assessment_id):
+    """Delete an assessment and its evidence."""
+    db = get_service_client()
+    user = current_user()
+
+    assessment = db.table("assessments").select("*").eq("id", assessment_id).single().execute().data
+    if not assessment:
+        abort(404)
+    if not _check_unit_access(db, assessment["unit_id"]):
+        abort(403)
+
+    try:
+        evidence_list = db.table("evidence").select("*").eq("assessment_id", assessment_id).execute().data or []
+
+        # Delete evidence files from storage
+        svc = get_service_client()
+        for e in evidence_list:
+            try:
+                path_parts = e["file_path"].split("/storage/v1/object/public/")
+                if len(path_parts) > 1:
+                    storage_path = path_parts[1].split("/", 1)[1] if "/" in path_parts[1] else path_parts[1]
+                    bucket = path_parts[1].split("/")[0]
+                    svc.storage.from_(bucket).remove([storage_path])
+            except Exception:
+                pass
+
+        # Delete script file from storage
+        try:
+            sfp = assessment.get("script_file_path", "")
+            if sfp:
+                path_parts = sfp.split("/storage/v1/object/public/")
+                if len(path_parts) > 1:
+                    storage_path = path_parts[1].split("/", 1)[1] if "/" in path_parts[1] else path_parts[1]
+                    bucket = path_parts[1].split("/")[0]
+                    svc.storage.from_(bucket).remove([storage_path])
+        except Exception:
+            pass
+
+        # Delete evidence records
+        if evidence_list:
+            eids = [e["id"] for e in evidence_list]
+            db.table("evidence").delete().in_("id", eids).execute()
+
+        # Delete assessment record
+        db.table("assessments").delete().eq("id", assessment_id).execute()
+
+        write_audit_log("delete_assessment", target=f"assessment:{assessment_id}")
+        return jsonify({"success": True, "message": "Assessment deleted successfully."})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 # ── Attendance History ───────────────────────────────────────────────────────

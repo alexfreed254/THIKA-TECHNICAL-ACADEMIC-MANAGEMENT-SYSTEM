@@ -4,27 +4,43 @@
 {% block extra_style %}
 .page-wrap{padding:24px}
 .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;overflow:hidden}
-.card-header{background:#7b1fa2;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
+.card-header{background:#7b1fa2;color:#fff;padding:14px 20px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
 .card-body{padding:20px}
 .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
 .info-item label{display:block;font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px}
-.info-item p{font-size:14px;font-weight:600;color:#333}
+.info-item p{font-size:14px;font-weight:600;color:#333;margin:0}
 .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
 .badge-pending{background:#fff3e0;color:#e65100}
 .badge-approved{background:#e8f5e9;color:#2e7d32}
 .badge-rejected{background:#ffebee;color:#c62828}
 .evidence-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:12px}
-.evidence-item{border:1px solid #eee;border-radius:8px;overflow:hidden;text-align:center}
+.evidence-item{border:1px solid #eee;border-radius:8px;overflow:hidden;text-align:center;cursor:pointer;transition:box-shadow .2s}
+.evidence-item:hover{box-shadow:0 4px 12px rgba(0,0,0,.12)}
 .evidence-item img{width:100%;height:120px;object-fit:cover}
-.evidence-item p{padding:6px;font-size:11px;color:#555}
+.evidence-item .vid-placeholder{height:120px;display:flex;align-items:center;justify-content:center;background:#f5f5f5}
+.evidence-item p{padding:6px;font-size:11px;color:#555;margin:0}
+.script-link{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:#f5f5f5;border-radius:8px;color:#7b1fa2;font-weight:600;text-decoration:none;font-size:13px;transition:background .2s}
+.script-link:hover{background:#ede7f6}
 .form-group{margin-bottom:16px}
 .form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:6px}
-.form-group textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;resize:vertical;min-height:80px}
+.form-group textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;resize:vertical;min-height:80px;box-sizing:border-box;font-family:inherit}
+.form-group textarea:focus{outline:none;border-color:#7b1fa2;box-shadow:0 0 0 2px rgba(123,31,162,.12)}
 .btn-row{display:flex;gap:12px;flex-wrap:wrap}
-.btn{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700}
+.btn{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-decoration:none;transition:opacity .15s}
+.btn:hover{opacity:.85}
 .btn-approve{background:#2e7d32;color:#fff}
 .btn-reject{background:#c62828;color:#fff}
+.btn-delete{background:#ef5350;color:#fff}
 .btn-back{background:#f5f5f5;color:#333;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-content{background:#fff;border-radius:12px;max-width:90vw;max-height:90vh;overflow:auto;position:relative}
+.modal-content img{max-width:100%;max-height:85vh;display:block}
+.modal-close{position:absolute;top:10px;right:14px;font-size:24px;color:#fff;cursor:pointer;background:rgba(0,0,0,.4);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none}
+@media(max-width:600px){
+  .info-grid{grid-template-columns:1fr 1fr}
+  .evidence-grid{grid-template-columns:repeat(2,1fr)}
+}
 {% endblock %}
 {% block content %}
 <div class="page-wrap">
@@ -32,25 +48,33 @@
   <br><br>
 
   <div class="card">
-    <div class="card-header"><i class="fas fa-file-alt"></i> Assessment Details</div>
+    <div class="card-header">
+      <span><i class="fas fa-file-alt"></i> Assessment Details</span>
+      <span class="badge badge-{{ assessment.get('status','pending') }}">{{ assessment.get('status','pending')|title }}</span>
+    </div>
     <div class="card-body">
       <div class="info-grid">
-        <div class="info-item"><label>Student</label><p>{{ assessment.get('user_profiles',{}).get('full_name','—') }}</p></div>
-        <div class="info-item"><label>Admission No</label><p>{{ assessment.get('user_profiles',{}).get('admission_no','—') }}</p></div>
-        <div class="info-item"><label>Unit</label><p>{{ assessment.get('units',{}).get('name','—') }}</p></div>
-        <div class="info-item"><label>Class</label><p>{{ assessment.get('classes',{}).get('name','—') }}</p></div>
+        <div class="info-item"><label>Student</label><p><i class="fas fa-user-graduate" style="color:#7b1fa2;width:16px"></i> {{ assessment.get('user_profiles',{}).get('full_name','—') }}</p></div>
+        <div class="info-item"><label>Admission No</label><p><i class="fas fa-id-card" style="color:#7b1fa2;width:16px"></i> {{ assessment.get('user_profiles',{}).get('admission_no','—') }}</p></div>
+        <div class="info-item"><label>Unit</label><p><i class="fas fa-book" style="color:#7b1fa2;width:16px"></i> {{ assessment.get('units',{}).get('name','—') }}</p></div>
+        <div class="info-item"><label>Class</label><p><i class="fas fa-school" style="color:#7b1fa2;width:16px"></i> {{ assessment.get('classes',{}).get('name','—') }}</p></div>
         <div class="info-item"><label>Type</label><p>{{ assessment.get('assessment_type','—') }}</p></div>
-        <div class="info-item"><label>Assessment No</label><p>{{ assessment.get('assessment_no','—') }}</p></div>
-        <div class="info-item"><label>Term</label><p>{{ assessment.get('term','—') }}</p></div>
-        <div class="info-item"><label>Cycle</label><p>{{ assessment.get('cycle','—') }}</p></div>
+        <div class="info-item"><label>Assessment No</label><p>#{{ assessment.get('assessment_no','—') }}</p></div>
+        <div class="info-item"><label>Term / Cycle</label><p>Term {{ assessment.get('term','—') }}, Cycle {{ assessment.get('cycle','—') }}</p></div>
         <div class="info-item"><label>Year</label><p>{{ assessment.get('year','—') }}</p></div>
-        <div class="info-item"><label>Status</label><p><span class="badge badge-{{ assessment.get('status','pending') }}">{{ assessment.get('status','pending')|title }}</span></p></div>
+        <div class="info-item"><label>Uploaded</label><p>{{ assessment.get('uploaded_at','—')[:10] if assessment.get('uploaded_at') else '—' }}</p></div>
+        {% if assessment.get('reviewed_at') %}
+        <div class="info-item"><label>Reviewed</label><p>{{ assessment.get('reviewed_at','—')[:10] if assessment.get('reviewed_at') else '—' }}</p></div>
+        {% endif %}
       </div>
 
       {% if assessment.get('script_file_path') %}
       <div style="margin-bottom:16px">
-        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px">Script File</label>
-        <a href="{{ assessment.script_file_path }}" target="_blank" style="color:#7b1fa2;font-weight:600"><i class="fas fa-file-pdf"></i> {{ assessment.get('script_file_name','View Script') }}</a>
+        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:8px">Script File</label>
+        <a href="{{ assessment.script_file_path }}" target="_blank" class="script-link">
+          <i class="fas fa-file-pdf"></i> {{ assessment.get('script_file_name','View Script') }}
+          <i class="fas fa-external-link-alt" style="font-size:10px"></i>
+        </a>
       </div>
       {% endif %}
     </div>
@@ -58,15 +82,15 @@
 
   {% if evidence %}
   <div class="card">
-    <div class="card-header"><i class="fas fa-images"></i> Evidence ({{ evidence|length }})</div>
+    <div class="card-header"><span><i class="fas fa-images"></i> Evidence ({{ evidence|length }})</span></div>
     <div class="card-body">
       <div class="evidence-grid">
         {% for e in evidence %}
-        <div class="evidence-item">
+        <div class="evidence-item" onclick="openPreview('{{ e.file_path }}')">
           {% if e.file_type == 'photo' %}
           <img src="{{ e.file_path }}" alt="{{ e.file_name }}" onerror="this.src='/static/assets/THIKATTILOGO.jpg'">
           {% else %}
-          <div style="height:120px;display:flex;align-items:center;justify-content:center;background:#f5f5f5"><i class="fas fa-video fa-2x" style="color:#7b1fa2"></i></div>
+          <div class="vid-placeholder"><i class="fas fa-video fa-2x" style="color:#7b1fa2"></i></div>
           {% endif %}
           <p>{{ e.caption or e.file_name }}</p>
         </div>
@@ -78,27 +102,75 @@
 
   {% if assessment.get('status') == 'pending' %}
   <div class="card">
-    <div class="card-header"><i class="fas fa-gavel"></i> Review Decision</div>
+    <div class="card-header"><span><i class="fas fa-gavel"></i> Review Decision</span></div>
     <div class="card-body">
-      <form method="post">
+      <form method="post" id="reviewForm">
         <div class="form-group">
-          <label>Review Notes (optional)</label>
-          <textarea name="review_note" placeholder="Add feedback for the student..."></textarea>
+          <label for="review_note">Review Notes</label>
+          <textarea name="review_note" id="review_note" placeholder="Add feedback for the student (required for rejection)...">{{ assessment.get('review_note','') }}</textarea>
         </div>
         <div class="btn-row">
-          <button type="submit" name="action" value="approve" class="btn btn-approve"><i class="fas fa-check"></i> Approve</button>
-          <button type="submit" name="action" value="reject" class="btn btn-reject"><i class="fas fa-times"></i> Reject</button>
+          <button type="submit" name="action" value="approve" class="btn btn-approve" onclick="return confirm('Approve this assessment?')"><i class="fas fa-check"></i> Approve</button>
+          <button type="submit" name="action" value="reject" class="btn btn-reject" onclick="return requireNote()"><i class="fas fa-times"></i> Reject</button>
+          <button type="button" class="btn btn-delete" onclick="deleteAssessment('{{ assessment.id }}')"><i class="fas fa-trash"></i> Delete</button>
         </div>
       </form>
     </div>
   </div>
   {% else %}
   <div class="card">
-    <div class="card-header"><i class="fas fa-info-circle"></i> Review Notes</div>
+    <div class="card-header"><span><i class="fas fa-info-circle"></i> Review Notes</span></div>
     <div class="card-body">
-      <p>{{ assessment.get('review_note') or 'No notes provided.' }}</p>
+      <p style="margin:0;color:#555">{{ assessment.get('review_note') or 'No notes provided.' }}</p>
     </div>
   </div>
+  {% if assessment.get('status') != 'rejected' %}
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn btn-delete" onclick="deleteAssessment('{{ assessment.id }}')"><i class="fas fa-trash"></i> Delete Assessment</button>
+  </div>
+  {% endif %}
   {% endif %}
 </div>
+
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal" onclick="if(event.target===this)closePreview()">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closePreview()">&times;</button>
+    <img id="previewImage" src="" alt="Preview">
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function requireNote() {
+  const note = document.getElementById('review_note').value.trim();
+  if (!note) {
+    alert('Please provide a review note explaining why this assessment is being rejected.');
+    document.getElementById('review_note').focus();
+    return false;
+  }
+  return confirm('Reject this assessment?');
+}
+
+function deleteAssessment(id) {
+  if (!confirm('Delete this assessment permanently? This cannot be undone.')) return;
+  fetch('/trainer/assessment/' + id + '/delete', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) window.location.href = '/trainer/assessments';
+      else alert('Error: ' + d.message);
+    });
+}
+
+function openPreview(src) {
+  document.getElementById('previewImage').src = src;
+  document.getElementById('previewModal').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('open');
+}
+</script>
 {% endblock %}
