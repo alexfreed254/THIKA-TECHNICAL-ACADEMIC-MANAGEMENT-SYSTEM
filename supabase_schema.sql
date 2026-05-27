@@ -1775,8 +1775,45 @@ CREATE TRIGGER update_admission_documents_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- ────────────────────────────────────────────────────────────
+-- 15a. COURSE APPLICATIONS (public pre-registration)
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS course_applications (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    full_name       TEXT NOT NULL,
+    email           TEXT NOT NULL,
+    phone           TEXT,
+    department_id   UUID REFERENCES departments(id),
+    course_name     TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    document_paths  TEXT[] DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_at     TIMESTAMPTZ,
+    reviewed_by     UUID REFERENCES user_profiles(id),
+    review_notes    TEXT
+);
+
+ALTER TABLE course_applications ENABLE ROW LEVEL SECURITY;
+
+-- Public can insert (no auth required)
+CREATE POLICY course_applications_insert ON course_applications
+    FOR INSERT TO anon, authenticated
+    WITH CHECK (true);
+
+-- Authenticated staff can view
+CREATE POLICY course_applications_select ON course_applications
+    FOR SELECT TO authenticated
+    USING (true);
+
+-- Dept admin / super admin can update (review)
+CREATE POLICY course_applications_update ON course_applications
+    FOR UPDATE TO authenticated
+    USING (current_user_role() IN ('dept_admin', 'super_admin') AND current_user_active());
+
+-- ────────────────────────────────────────────────────────────
 -- 16. STORAGE BUCKETS (create manually in Supabase Dashboard)
 -- ────────────────────────────────────────────────────────────
 -- Create these buckets in Supabase Storage and set to PUBLIC:
 -- - assessment-scripts (for PDF uploads)
 -- - assessment-evidence (for photos/videos)
+-- - application-documents (for course application file uploads)

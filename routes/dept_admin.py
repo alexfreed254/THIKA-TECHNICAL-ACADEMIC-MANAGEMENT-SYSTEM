@@ -61,6 +61,10 @@ def dashboard():
         stats["approved"]    = sum(1 for a in dept_assessments if a["status"] == "approved")
         stats["rejected"]    = sum(1 for a in dept_assessments if a["status"] == "rejected")
 
+        # Course applications
+        stats["applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).execute().count or 0
+        stats["pending_applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).eq("status", "pending").execute().count or 0
+
         # Recent assessments specifically for this department
         recent_assessments = (db.table("assessments")
             .select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no), units!inner(name, department_id), classes(name)")
@@ -1190,3 +1194,50 @@ def delete_company(company_id):
     except Exception as e:
         flash(f"Error: {e}", "error")
     return redirect(url_for("dept_admin.companies"))
+
+
+# ── Course Applications (Public Pre-Registration) ──────────────────────────────
+
+@dept_admin_bp.route("/applications")
+@dept_admin_required
+def applications():
+    db = get_service_client()
+    dept_id = _dept_id()
+    applications = (db.table("course_applications")
+        .select("*")
+        .eq("department_id", dept_id)
+        .order("created_at", desc=True)
+        .execute().data or [])
+    return render_template("dept_admin/applications.html", applications=applications)
+
+
+@dept_admin_bp.route("/applications/<app_id>/review", methods=["POST"])
+@dept_admin_required
+def review_application(app_id):
+    db = get_service_client()
+    dept_id = _dept_id()
+    action = request.form.get("action", "")
+    notes = request.form.get("notes", "").strip()
+
+    app = db.table("course_applications").select("*").eq("id", app_id).single().execute().data
+    if not app or app.get("department_id") != dept_id:
+        abort(403)
+
+    status_map = {"approve": "approved", "reject": "rejected"}
+    new_status = status_map.get(action)
+    if not new_status:
+        flash("Invalid action.", "error")
+        return redirect(url_for("dept_admin.applications"))
+
+    try:
+        db.table("course_applications").update({
+            "status": new_status,
+            "reviewed_at": datetime.utcnow().isoformat(),
+            "reviewed_by": current_user()["id"],
+            "review_notes": notes,
+        }).eq("id", app_id).execute()
+        write_audit_log("review_course_application", target=f"app:{app_id},status:{new_status}")
+        flash(f"Application {new_status}.", "success")
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("dept_admin.applications"))

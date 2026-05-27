@@ -61,6 +61,9 @@ def _ensure_profile(user_id: str, email: str) -> dict:
 # ─────────────────────────────────────────────────────────────
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    db = get_service_client()
+    departments = db.table("departments").select("*").order("name").execute().data or []
+
     if is_authenticated():
         user = current_user()
         role = user.get("role")
@@ -100,7 +103,7 @@ def login():
             
             if not email or not password:
                 flash("Email and password are required", "error")
-                return render_template("auth/login.html")
+                return render_template("auth/login.html", departments=departments)
             
             profile = authenticate_staff(email, password)
             
@@ -109,7 +112,7 @@ def login():
                 if profile.pop("_unverified_employer", False):
                     flash("Your employer account is pending verification by the administrator. "
                           "You will be notified once approved.", "warning")
-                    return render_template("auth/login.html")
+                    return render_template("auth/login.html", departments=departments)
 
                 # Session tokens are already attached by authenticate_staff — no second call needed
                 sb_session = profile.pop("_session", None)
@@ -150,7 +153,7 @@ def login():
                     return redirect(url_for("main.index"))
             
             flash("Invalid email or password", "error")
-            return render_template("auth/login.html")
+            return render_template("auth/login.html", departments=departments)
             
         elif login_type == "student":
             admission_no = request.form.get("admission_no", "").strip()
@@ -158,7 +161,7 @@ def login():
             
             if not admission_no or not password:
                 flash("Admission number and password are required", "error")
-                return render_template("auth/login.html")
+                return render_template("auth/login.html", departments=departments)
             
             profile = authenticate_student(admission_no, password)
             
@@ -173,7 +176,7 @@ def login():
             
             flash("Invalid admission number or password", "error")
     
-    return render_template("auth/login.html")
+    return render_template("auth/login.html", departments=departments)
 
 
 # ─────────────────────────────────────────────────────────────

@@ -51,6 +51,13 @@ td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
       <div class="stat-icon" style="background:linear-gradient(135deg,#00838f,#006064)"><i class="fas fa-file-alt"></i></div>
       <div class="stat-info"><h3>Assessments</h3><p>{{ stats.assessments or 0 }}</p></div>
     </div>
+    <div class="stat-card" style="cursor:pointer;position:relative" onclick="location.href='/dept-admin/applications'">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#e65100,#bf360c)"><i class="fas fa-file-signature"></i></div>
+      <div class="stat-info"><h3>Applications</h3><p>{{ stats.applications or 0 }}</p></div>
+      {% if stats.pending_applications and stats.pending_applications > 0 %}
+      <span style="position:absolute;top:8px;right:8px;background:#c62828;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:50%;min-width:18px;text-align:center">{{ stats.pending_applications }}</span>
+      {% endif %}
+    </div>
   </div>
 
   <div class="card">

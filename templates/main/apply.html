@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apply for a Course | Thika Technical</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 45%, #2563eb 100%);
+      color: #0f172a;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .page-shell {
+      width: 100%;
+      max-width: 640px;
+      background: #fff;
+      border-radius: 28px;
+      box-shadow: 0 40px 90px rgba(15, 23, 42, 0.35);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .header {
+      background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
+      color: #f8fafc;
+      padding: 32px 40px;
+      text-align: center;
+    }
+    .header .logo {
+      width: 72px; height: 72px; border-radius: 50%; background: #fff;
+      display: grid; place-items: center; margin: 0 auto 16px;
+      box-shadow: 0 10px 30px rgba(15,23,42,0.35);
+    }
+    .header .logo img { width: 54px; height: 54px; object-fit: contain; }
+    .header h1 { font-size: 1.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+    .header p { font-size: 0.92rem; color: rgba(248,250,252,0.8); margin-top: 8px; }
+    .form-wrap { padding: 40px; display: grid; gap: 20px; }
+    .field { display: grid; gap: 8px; font-size: 0.95rem; }
+    .field label { font-weight: 700; color: #0f172a; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 14px 16px; border-radius: 14px;
+      border: 1px solid #e2e8f0; background: #f8fafc;
+      color: #0f172a; font-family: inherit; font-size: 0.95rem;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .field-file { border: 2px dashed #dbeafe; border-radius: 14px; padding: 20px; text-align: center; background: #f8fafc; cursor: pointer; transition: border-color .2s; }
+    .field-file:hover { border-color: #2563eb; }
+    .field-file i { font-size: 2rem; color: #2563eb; margin-bottom: 8px; }
+    .field-file p { color: #64748b; font-size: 0.9rem; }
+    .btn-submit {
+      width: 100%; padding: 16px; border: none; border-radius: 999px;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff; cursor: pointer;
+      box-shadow: 0 18px 40px rgba(37, 99, 235, 0.22);
+      transition: transform .2s, filter .2s; font-size: 1rem;
+    }
+    .btn-submit:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .btn-submit:active { transform: translateY(0); }
+    .footer { text-align: center; padding: 16px 40px 32px; font-size: 0.9rem; color: #64748b; }
+    .footer a { color: #2563eb; text-decoration: none; font-weight: 700; }
+    .alert {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      border-radius: 14px; border: 1px solid; font-size: 0.95rem;
+    }
+    .alert-error { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+    .alert-success { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+    @media (max-width: 680px) {
+      body { padding: 14px; }
+      .header { padding: 24px 20px; }
+      .form-wrap { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <div class="header">
+      <div class="logo">
+        <img src="{{ LOGO_URL }}" alt="TTTTI Logo">
+      </div>
+      <h1>Apply for a Course</h1>
+      <p>Submit your details and documents to apply for admission.</p>
+    </div>
+
+    <div class="form-wrap">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}"><i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i> {{ message }}</div>
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+
+      <form method="post" enctype="multipart/form-data">
+        <div class="field">
+          <label for="full_name">Full Name <span style="color:#dc2626">*</span></label>
+          <input id="full_name" type="text" name="full_name" placeholder="John Doe" required>
+        </div>
+        <div class="field">
+          <label for="email">Email Address <span style="color:#dc2626">*</span></label>
+          <input id="email" type="email" name="email" placeholder="john@example.com" required>
+        </div>
+        <div class="field">
+          <label for="phone">Phone Number</label>
+          <input id="phone" type="tel" name="phone" placeholder="+254 7XX XXX XXX">
+        </div>
+        <div class="field">
+          <label for="department_id">Department <span style="color:#dc2626">*</span></label>
+          <select id="department_id" name="department_id" required>
+            <option value="">-- Select Department --</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="course_name">Course Name <span style="color:#dc2626">*</span></label>
+          <textarea id="course_name" name="course_name" placeholder="e.g. Diploma in Information Technology" required></textarea>
+        </div>
+        <div class="field">
+          <label>Upload Documents (KCSE Cert, ID, etc.)</label>
+          <div class="field-file" onclick="document.getElementById('documents').click()">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p><strong>Click to upload</strong> or drag and drop</p>
+            <p style="font-size:0.82rem;color:#94a3b8">PDF, JPG, PNG — Max 5MB each</p>
+          </div>
+          <input id="documents" type="file" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="updateFileLabel(this)">
+          <div id="fileList" style="font-size:0.85rem;color:#64748b;margin-top:4px;"></div>
+        </div>
+        <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i> Submit Application</button>
+      </form>
+    </div>
+
+    <div class="footer">
+      Already have an account? <a href="/auth/login">Sign In</a>
+    </div>
+  </div>
+
+  <script>
+    function updateFileLabel(input) {
+      const list = document.getElementById('fileList');
+      if (input.files.length === 0) {
+        list.textContent = '';
+        return;
+      }
+      list.innerHTML = '<strong>Selected files:</strong><br>' +
+        Array.from(input.files).map(f => `&bull; ${f.name} (${(f.size / 1024).toFixed(1)} KB)`).join('<br>');
+    }
+  </script>
+</body>
+</html>

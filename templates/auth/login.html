@@ -124,17 +124,18 @@
 
     .tabs {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
     }
 
     .tab {
       border: 1px solid #dbeafe;
       border-radius: 999px;
-      padding: 14px 18px;
+      padding: 12px 10px;
       text-align: center;
       cursor: pointer;
       font-weight: 700;
+      font-size: 0.82rem;
       color: #475569;
       background: #f8fafc;
       transition: all 0.2s ease;
@@ -145,6 +146,9 @@
       background: #eff6ff;
       border-color: #93c5fd;
     }
+
+    .tab.apply-tab.active { color: #e65100; background: #fff3e0; border-color: #ffb74d; }
+    .tab.apply-tab i { margin-right: 4px; }
 
     .login-panel h2 {
       font-size: clamp(2rem, 2.4vw, 2.5rem);
@@ -258,6 +262,34 @@
       font-weight: 700;
     }
 
+    .apply-form { display: none; }
+    .apply-form.visible { display: grid; gap: 16px; }
+    .apply-form select, .apply-form textarea {
+      width: 100%; padding: 14px 16px; border-radius: 16px;
+      border: 1px solid #e2e8f0; background: #f8fafc;
+      color: #0f172a; font-family: inherit; font-size: 0.95rem;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .apply-form select:focus, .apply-form textarea:focus {
+      outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+    .apply-form textarea { resize: vertical; min-height: 60px; }
+    .apply-form .field-file {
+      border: 2px dashed #dbeafe; border-radius: 16px; padding: 18px; text-align: center;
+      background: #f8fafc; cursor: pointer; transition: border-color .2s;
+    }
+    .apply-form .field-file:hover { border-color: #2563eb; }
+    .apply-form .field-file i { font-size: 1.6rem; color: #2563eb; margin-bottom: 6px; }
+    .apply-form .field-file p { color: #64748b; font-size: 0.85rem; }
+    .btn-apply {
+      width: 100%; padding: 16px 18px; border: none; border-radius: 999px;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+      background: linear-gradient(135deg, #e65100, #bf360c); color: #fff; cursor: pointer;
+      box-shadow: 0 18px 40px rgba(230,81,0,0.22);
+      transition: transform .2s, filter .2s;
+    }
+    .btn-apply:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
     .alert {
       display: flex;
       align-items: center;
@@ -305,9 +337,10 @@
     <section class="login-panel">
       <div class="top">
         <div class="tabs">
-          <button type="button" class="tab {% if request.form.get('login_type', 'staff') == 'staff' and request.form.get('origin') != 'employer' %}active{% endif %}" data-type="staff">Staff / Admin</button>
+          <button type="button" class="tab {% if request.form.get('login_type', 'staff') == 'staff' and request.form.get('origin') != 'employer' and not request.args.get('apply') %}active{% endif %}" data-type="staff">Staff / Admin</button>
           <button type="button" class="tab {% if request.form.get('login_type') == 'student' %}active{% endif %}" data-type="student">Trainee</button>
           <button type="button" class="tab {% if request.form.get('origin') == 'employer' %}active{% endif %}" data-type="employer">Employer</button>
+          <button type="button" class="tab apply-tab {% if request.args.get('apply') %}active{% endif %}" data-type="apply"><i class="fas fa-file-signature"></i> Apply</button>
         </div>
         <h2>Welcome back</h2>
         <p>Sign in to your account to continue.</p>
@@ -366,8 +399,48 @@
         <button type="submit" class="btn-login"><i class="fas fa-arrow-right"></i> Sign In</button>
       </form>
 
+      <form method="post" action="/apply" enctype="multipart/form-data" class="apply-form" id="applyForm">
+        <div class="field">
+          <label for="afull_name">Full Name <span style="color:#dc2626">*</span></label>
+          <input id="afull_name" type="text" name="full_name" placeholder="John Doe" required>
+        </div>
+        <div class="field">
+          <label for="aemail">Email Address <span style="color:#dc2626">*</span></label>
+          <input id="aemail" type="email" name="email" placeholder="john@example.com" required>
+        </div>
+        <div class="field">
+          <label for="aphone">Phone Number</label>
+          <input id="aphone" type="tel" name="phone" placeholder="+254 7XX XXX XXX">
+        </div>
+        <div class="field">
+          <label for="adepartment_id">Department <span style="color:#dc2626">*</span></label>
+          <select id="adepartment_id" name="department_id" required>
+            <option value="">-- Select Department --</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="acourse_name">Course Name <span style="color:#dc2626">*</span></label>
+          <textarea id="acourse_name" name="course_name" placeholder="e.g. Diploma in Information Technology" required></textarea>
+        </div>
+        <div class="field">
+          <label>Upload Documents (KCSE Cert, ID, etc.)</label>
+          <div class="field-file" onclick="document.getElementById('adocuments').click()">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p><strong>Click to upload</strong> or drag and drop</p>
+            <p style="font-size:0.82rem;color:#94a3b8">PDF, JPG, PNG — Max 5MB each</p>
+          </div>
+          <input id="adocuments" type="file" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="updateApplyFileLabel(this)">
+          <div id="applyFileList" style="font-size:0.85rem;color:#64748b;margin-top:4px;"></div>
+        </div>
+        <button type="submit" class="btn-apply"><i class="fas fa-paper-plane"></i> Submit Application</button>
+      </form>
+
       <div class="login-footer">
         <span>New employer? <a href="/employer/register">Create employer account</a></span>
+        <a href="/apply"><i class="fas fa-file-signature"></i> Apply for a Course</a>
       </div>
     </section>
   </div>
@@ -379,6 +452,20 @@
     const studentField = document.getElementById('studentField');
     const loginType = document.getElementById('loginType');
     const origin = document.getElementById('origin');
+    const loginForm = document.getElementById('loginForm');
+    const applyForm = document.getElementById('applyForm');
+
+    function showLoginForms() {
+      loginForm.style.display = 'grid';
+      applyForm.classList.remove('visible');
+      applyForm.style.display = 'none';
+    }
+
+    function showApplyForm() {
+      loginForm.style.display = 'none';
+      applyForm.style.display = 'grid';
+      applyForm.classList.add('visible');
+    }
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -387,25 +474,45 @@
         const type = tab.dataset.type;
         loginType.value = type;
 
-        if (type === 'student') {
-          staffField.style.display = 'none';
-          employerField.style.display = 'none';
-          studentField.style.display = 'grid';
-          origin.value = 'auth';
-        } else if (type === 'employer') {
-          staffField.style.display = 'none';
-          employerField.style.display = 'grid';
-          studentField.style.display = 'none';
-          loginType.value = 'staff';
-          origin.value = 'employer';
+        if (type === 'apply') {
+          showApplyForm();
         } else {
-          staffField.style.display = 'grid';
-          employerField.style.display = 'none';
-          studentField.style.display = 'none';
-          origin.value = 'auth';
+          showLoginForms();
+          if (type === 'student') {
+            staffField.style.display = 'none';
+            employerField.style.display = 'none';
+            studentField.style.display = 'grid';
+            origin.value = 'auth';
+          } else if (type === 'employer') {
+            staffField.style.display = 'none';
+            employerField.style.display = 'grid';
+            studentField.style.display = 'none';
+            loginType.value = 'staff';
+            origin.value = 'employer';
+          } else {
+            staffField.style.display = 'grid';
+            employerField.style.display = 'none';
+            studentField.style.display = 'none';
+            origin.value = 'auth';
+          }
         }
       });
     });
+
+    // Check URL param to show apply tab on load
+    if (window.location.search.includes('apply=1')) {
+      document.querySelector('.tab.apply-tab').click();
+    }
+
+    function updateApplyFileLabel(input) {
+      const list = document.getElementById('applyFileList');
+      if (input.files.length === 0) {
+        list.textContent = '';
+        return;
+      }
+      list.innerHTML = '<strong>Selected files:</strong><br>' +
+        Array.from(input.files).map(f => `&bull; ${f.name} (${(f.size / 1024).toFixed(1)} KB)`).join('<br>');
+    }
   </script>
 </body>
 </html>
