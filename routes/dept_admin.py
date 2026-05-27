@@ -490,18 +490,24 @@ def exam_bookings():
     dept_id = _dept_id()
     status_filter = request.args.get("status", "pending")
     query = (db.table("exam_bookings")
-        .select("*, units(name, code, department_id), classes(name), student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no), reviewer:user_profiles!exam_bookings_approved_by_fkey(full_name)")
+        .select("*, units(name, code, department_id), student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no), reviewer:user_profiles!exam_bookings_approved_by_fkey(full_name)")
         .order("created_at", desc=True))
     if status_filter and status_filter != "all":
         query = query.eq("status", status_filter)
     bookings = query.execute().data or []
     bookings = [b for b in bookings if b.get("units", {}).get("department_id") == dept_id]
-    
-    # Post-process to map student_user and approved_by_user
+
+    # Attach class name via student enrollment (no FK between exam_bookings and classes)
     for b in bookings:
         b["student_user"] = b.get("student") or {}
         b["approved_by_user"] = b.get("reviewer") or {}
-        
+        student_id = b.get("student_id")
+        if student_id:
+            enroll = (db.table("enrollments")
+                .select("classes(name)")
+                .eq("student_id", student_id).limit(1).execute().data or [])
+            b["classes"] = enroll[0].get("classes") if enroll and enroll[0] else None
+
     return render_template("dept_admin/exam_bookings.html",
                            bookings=bookings, status_filter=status_filter)
 
