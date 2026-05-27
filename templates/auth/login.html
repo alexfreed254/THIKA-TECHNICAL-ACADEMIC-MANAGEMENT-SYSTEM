@@ -376,8 +376,8 @@
           <button type="button" class="tab {% if request.form.get('login_type') == 'student' %}active{% endif %}" data-type="student">Trainee</button>
           <button type="button" class="tab apply-tab {% if request.args.get('apply') %}active{% endif %}" data-type="apply"><i class="fas fa-file-signature"></i> Apply</button>
         </div>
-        <h2>Welcome back</h2>
-        <p>Sign in to your account to continue.</p>
+        <h2 id="welcomeHeading">Welcome back</h2>
+        <p id="welcomeSubtext">Sign in to your account to continue.</p>
       {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -487,18 +487,24 @@
     const origin = document.getElementById('origin');
     const loginForm = document.getElementById('loginForm');
     const applyForm = document.getElementById('applyForm');
+    const welcomeHeading = document.getElementById('welcomeHeading');
+    const welcomeSubtext = document.getElementById('welcomeSubtext');
     const staffIcon = document.getElementById('staffIcon');
 
     function showLoginForms() {
       loginForm.style.display = 'grid';
       applyForm.classList.remove('visible');
       applyForm.style.display = 'none';
+      welcomeHeading.style.display = '';
+      welcomeSubtext.style.display = '';
     }
 
     function showApplyForm() {
       loginForm.style.display = 'none';
       applyForm.style.display = 'grid';
       applyForm.classList.add('visible');
+      welcomeHeading.style.display = 'none';
+      welcomeSubtext.style.display = 'none';
     }
 
     const forgotPwdLink = document.getElementById('forgotPwdLink');
