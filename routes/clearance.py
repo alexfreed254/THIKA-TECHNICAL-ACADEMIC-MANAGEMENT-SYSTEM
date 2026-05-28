@@ -289,6 +289,37 @@ def reject_clearance(approval_id):
     return redirect(url_for("clearance.approver_dashboard"))
 
 
+@clearance_bp.route("/clearance-form/<request_id>")
+@login_required
+@student_required
+def clearance_form(request_id):
+    """Generate printable Student Clearance Form (TTTI/ADM/CLEAR/F1)."""
+    db = get_service_client()
+    user = current_user()
+
+    clearance_request_res = (db.table("clearance_requests")
+                             .select("*, courses(name, code), departments(name)")
+                             .eq("id", request_id)
+                             .limit(1)
+                             .execute().data)
+    if not clearance_request_res:
+        flash("Clearance request not found.", "error")
+        return redirect(url_for("clearance.dashboard"))
+
+    clearance_request = clearance_request_res[0]
+
+    # Students can only view their own
+    if user["role"] == "student" and clearance_request["student_id"] != user["id"]:
+        from flask import abort
+        abort(403)
+
+    student = db.table("user_profiles").select("*").eq("id", clearance_request["student_id"]).single().execute().data or {}
+
+    return render_template("clearance/clearance_form_pdf.html",
+                           clearance_request=clearance_request,
+                           student=student)
+
+
 def check_clearance_completion(request_id):
     """Check if all approvals are complete and update request status."""
     db = get_service_client()

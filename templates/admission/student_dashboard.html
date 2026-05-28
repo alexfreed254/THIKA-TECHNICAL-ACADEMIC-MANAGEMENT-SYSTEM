@@ -69,9 +69,12 @@
   </div>
   
   {% if admission_request.status == 'approved' %}
-  <div style="margin-top: 20px;">
+  <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
     <a href="/admission/approval-form/{{ admission_request.id }}" class="btn-submit" style="text-decoration: none; display: inline-block;">
       <i class="fas fa-file-alt"></i> Download Admission Approval Form
+    </a>
+    <a href="/admission/departmental-checklist/{{ admission_request.id }}" class="btn-submit" style="text-decoration: none; display: inline-block; background: #6a1b9a;">
+      <i class="fas fa-list-check"></i> Download Departmental Checklist
     </a>
   </div>
   {% endif %}

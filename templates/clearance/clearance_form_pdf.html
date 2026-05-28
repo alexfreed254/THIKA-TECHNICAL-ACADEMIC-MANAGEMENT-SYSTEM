@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Student Clearance Form — TTTI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Times New Roman',Times,serif;background:#e8e8e8;padding:20px;font-size:12px}
+    .page{max-width:900px;margin:0 auto;background:#fff;padding:28px 32px;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+
+    /* ── Header ── */
+    .header{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:12px}
+    .header img{height:72px;width:72px;object-fit:contain}
+    .header-text{flex:1;text-align:center}
+    .header-text h1{font-size:16px;font-weight:bold;text-transform:uppercase}
+    .header-text h2{font-size:13px;font-weight:bold;text-transform:uppercase;margin-top:3px}
+    .header-text .ref{font-size:10px;margin-top:4px;font-style:italic}
+
+    /* ── Student info bar ── */
+    .student-bar{border:1px solid #000;padding:6px 10px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px 20px;font-size:11px}
+    .student-bar span{white-space:nowrap}
+    .student-bar strong{font-weight:bold}
+
+    /* ── Section headings ── */
+    .section-heading{font-size:11px;font-weight:bold;text-transform:uppercase;background:#d0d0d0;border:1px solid #000;padding:4px 8px;text-align:center;letter-spacing:.5px}
+
+    /* ── Main clearance table ── */
+    .clearance-table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11px}
+    .clearance-table th,.clearance-table td{border:1px solid #000;padding:4px 6px;vertical-align:middle}
+    .clearance-table th{background:#e8e8e8;font-weight:bold;text-align:center;font-size:10px;text-transform:uppercase}
+    .clearance-table .sn{width:32px;text-align:center}
+    .clearance-table .subject{width:35%}
+    .clearance-table .lost{width:18%;text-align:center}
+    .clearance-table .cost{width:14%;text-align:center}
+    .clearance-table .sign{width:18%;text-align:center}
+    .clearance-table td.empty{min-height:20px;height:20px}
+
+    /* ── HOD sign row ── */
+    .hod-row{display:flex;gap:20px;border:1px solid #000;border-top:none;padding:6px 10px;font-size:11px;margin-bottom:10px}
+    .hod-row .hod-field{flex:1}
+    .hod-row .hod-field label{font-weight:bold;display:block;margin-bottom:2px}
+    .hod-row .hod-field .val{border-bottom:1px solid #555;min-height:18px;padding-bottom:2px}
+
+    /* ── Stamp area ── */
+    .stamp-area{border:2px dashed #888;min-height:70px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#888;font-style:italic;padding:8px}
+
+    /* ── Finance section ── */
+    .finance-section{border:1px solid #000;padding:8px 10px;margin-bottom:10px;font-size:11px}
+    .finance-row{display:flex;gap:20px;flex-wrap:wrap}
+    .finance-field{flex:1;min-width:180px}
+    .finance-field label{font-weight:bold;display:block;margin-bottom:2px}
+    .finance-field .val{border-bottom:1px solid #555;min-height:18px}
+
+    /* ── Print button ── */
+    .print-btn{position:fixed;top:20px;right:20px;background:#1565c0;color:#fff;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:Arial,sans-serif;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    .print-btn:hover{background:#0d47a1}
+    .back-btn{position:fixed;top:20px;left:20px;background:#555;color:#fff;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:Arial,sans-serif;z-index:999;text-decoration:none;display:inline-block}
+    .back-btn:hover{background:#333}
+
+    @media print{
+      body{background:#fff;padding:0}
+      .page{box-shadow:none;padding:16px}
+      .print-btn,.back-btn{display:none}
+    }
+  </style>
+</head>
+<body>
+
+<a href="/clearance/" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+<button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> Print / Save PDF</button>
+
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo">
+    <div class="header-text">
+      <h1>Thika Technical Training Institute</h1>
+      <h2>Student Clearance Form</h2>
+      <div class="ref">TTTI/ADM/CLEAR/F1</div>
+    </div>
+    <div style="min-width:80px;text-align:right;font-size:10px;font-style:italic">TTTI/ADM/CLEAR/F1</div>
+  </div>
+
+  <!-- ── STUDENT INFO BAR ── -->
+  <div class="student-bar">
+    <span><strong>Student's Name:</strong> {{ student.full_name }}</span>
+    <span><strong>Adm No:</strong> {{ student.admission_no }}</span>
+    <span><strong>ID No:</strong> {{ student.get('national_id','_______________') }}</span>
+    <span><strong>Phone No:</strong> {{ student.get('mobile_number','_______________') }}</span>
+    <span><strong>Email:</strong> {{ student.get('email','_______________') }}</span>
+  </div>
+  <div class="student-bar" style="margin-top:-8px">
+    <span><strong>Department:</strong> {{ clearance_request.departments.name if clearance_request else '___________________________' }}</span>
+    <span><strong>Course:</strong> {{ clearance_request.courses.name if clearance_request else '___________________________' }}</span>
+  </div>
+
+  <!-- ── SUBJECT / TRAINER SECTION ── -->
+  <div class="section-heading">Subject / Trainer Clearance</div>
+  <table class="clearance-table">
+    <thead>
+      <tr>
+        <th class="sn">S/No</th>
+        <th class="subject">Subject / Trainer</th>
+        <th class="lost">Lost Item(s)</th>
+        <th class="cost">Cost</th>
+        <th class="sign">Sign</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in range(1, 13) %}
+      <tr>
+        <td class="sn">{{ i }}</td>
+        <td class="empty">&nbsp;</td>
+        <td class="empty">&nbsp;</td>
+        <td class="empty">&nbsp;</td>
+        <td class="empty">&nbsp;</td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td colspan="2" style="font-weight:bold;text-align:right;padding-right:8px">Technician (One)</td>
+        <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="font-weight:bold;text-align:right;padding-right:8px">Technician (Two)</td>
+        <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── HOD SIGN ── -->
+  <div class="hod-row">
+    <div class="hod-field"><label>Student's Cleared / Not Cleared:</label><div class="val">&nbsp;</div></div>
+    <div class="hod-field"><label>HOD's Name:</label><div class="val">&nbsp;</div></div>
+    <div class="hod-field"><label>Sign:</label><div class="val">&nbsp;</div></div>
+    <div class="hod-field"><label>Stamp:</label><div class="stamp-area">Official Stamp</div></div>
+    <div class="hod-field"><label>Date:</label><div class="val">&nbsp;</div></div>
+  </div>
+
+  <!-- ── ACADEMIC DEPARTMENTS ── -->
+  <div style="display:flex;gap:10px;margin-bottom:10px">
+    <div style="flex:1">
+      <div class="section-heading">Academic Departments</div>
+      <table class="clearance-table">
+        <thead>
+          <tr>
+            <th class="sn">S/No</th>
+            <th>Department</th>
+            <th class="lost">Lost Items</th>
+            <th class="cost">Cost</th>
+            <th class="sign">HOD Sign</th>
+          </tr>
+        </thead>
+        <tbody>
+      {% set depts = [
+            'AGRIC &amp; ENVIRONMENTAL STUDIES',
+            'APPLIED SCIENCES',
+            'BUILDING AND CIVIL ENG.',
+            'BUSINESS STUDIES',
+            'ELECTRICAL &amp; ELECTRONICS ENG.',
+            'HEALTH SCIENCES',
+            'ICT',
+            'LIBERAL STUDIES',
+            'MOTOR VEHICLE',
+            'HOSPITALITY'
+          ] %}
+          {% for dept in depts %}
+          <tr>
+            <td class="sn">{{ loop.index }}</td>
+            <td style="font-size:10px">{{ dept }}</td>
+            <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="flex:0 0 260px">
+      <div class="section-heading">Other Sections</div>
+      <table class="clearance-table">
+        <thead>
+          <tr>
+            <th class="sn">S/No</th>
+            <th>Department</th>
+            <th class="lost">Lost Items</th>
+            <th class="cost">Cost</th>
+            <th class="sign">HOD Sign</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set others = ['INSTITUTE LIBRARY','KENYA NATIONAL LIBRARY','STORE','GAMES','DEAN OF STUDENTS'] %}
+          {% for sec in others %}
+          <tr>
+            <td class="sn">{{ loop.index }}</td>
+            <td style="font-size:10px">{{ sec }}</td>
+            <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <!-- Stamp area -->
+      <div style="margin-top:8px;border:1px solid #000;padding:4px">
+        <div style="font-size:10px;font-weight:bold;text-align:center;margin-bottom:4px">STAMP AREA</div>
+        <div class="stamp-area" style="min-height:60px">HOD Stamp</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FINANCE OFFICE CLEARANCE ── -->
+  <div class="section-heading">Finance Office Clearance</div>
+  <div class="finance-section">
+    <div class="finance-row">
+      <div class="finance-field">
+        <label>Cost of Lost Books (Ksh):</label>
+        <div class="val">&nbsp;</div>
+      </div>
+      <div class="finance-field">
+        <label>Cost of Lost Items (Ksh):</label>
+        <div class="val">&nbsp;</div>
+      </div>
+      <div class="finance-field">
+        <label>Total Cost Payable for Lost Items (Ksh):</label>
+        <div class="val">&nbsp;</div>
+      </div>
+    </div>
+    <div class="finance-row" style="margin-top:10px">
+      <div class="finance-field">
+        <label>Finance Balance if Any (Ksh):</label>
+        <div class="val">&nbsp;</div>
+      </div>
+      <div class="finance-field">
+        <label>Finance Officer (Sign):</label>
+        <div class="val">&nbsp;</div>
+      </div>
+      <div class="finance-field">
+        <label>Date:</label>
+        <div class="val">&nbsp;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div style="text-align:center;font-size:10px;color:#555;border-top:1px solid #ccc;padding-top:8px;margin-top:8px">
+    <p>THIKA TECHNICAL TRAINING INSTITUTE &nbsp;|&nbsp; P.O. Box 474-01000, Thika &nbsp;|&nbsp; TTTI/ADM/CLEAR/F1</p>
+    <p>Generated: {{ clearance_request.completed_at | to_eat('%d %b %Y') if clearance_request and clearance_request.completed_at else '' }}</p>
+  </div>
+
+</div>
+</body>
+</html>

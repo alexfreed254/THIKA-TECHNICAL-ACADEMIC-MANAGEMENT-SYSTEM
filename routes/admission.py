@@ -499,6 +499,55 @@ def reject_request(request_id):
     return redirect(url_for("admission.hod_dashboard"))
 
 
+@admission_bp.route("/departmental-checklist/<request_id>")
+@login_required
+def departmental_checklist(request_id):
+    """Generate printable Departmental Checklist (intake admission checklist)."""
+    db = get_service_client()
+    user = current_user()
+
+    admission_request_res = (db.table("admission_requests")
+                             .select("*, courses(name, code), departments(name), user_profiles:user_profiles!admission_requests_student_id_fkey(full_name, admission_no, email, mobile_number)")
+                             .eq("id", request_id)
+                             .limit(1)
+                             .execute().data)
+    if not admission_request_res:
+        flash("Admission request not found.", "error")
+        return redirect(url_for("admission.dashboard"))
+
+    admission_request = admission_request_res[0]
+
+    # Access control
+    if user["role"] == "student" and admission_request["student_id"] != user["id"]:
+        abort(403)
+    if user["role"] == "dept_admin" and admission_request["department_id"] != user.get("department_id"):
+        abort(403)
+
+    # Get uploaded documents
+    documents = (db.table("admission_documents")
+                 .select("*")
+                 .eq("admission_request_id", request_id)
+                 .execute().data or [])
+    uploaded_types = {doc["document_type"] for doc in documents}
+
+    # Build intake label from reviewed_at or submitted_at
+    from datetime import datetime as _dt
+    intake_label = None
+    date_str = admission_request.get("reviewed_at") or admission_request.get("submitted_at")
+    if date_str:
+        try:
+            dt = _dt.fromisoformat(date_str.replace("Z", "+00:00"))
+            intake_label = dt.strftime("%B %Y").upper() + " INTAKE"
+        except Exception:
+            pass
+
+    return render_template("admission/departmental_checklist.html",
+                           admission_request=admission_request,
+                           documents=documents,
+                           uploaded_types=uploaded_types,
+                           intake_label=intake_label)
+
+
 @admission_bp.route("/approval-form/<request_id>")
 @login_required
 def approval_form(request_id):

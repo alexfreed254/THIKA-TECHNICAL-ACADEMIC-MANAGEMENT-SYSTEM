@@ -393,6 +393,182 @@ Each dashboard has been implemented to display perfectly according to the unifie
 - Consistent pattern across all dashboards: fetch data → build stats → render template
 - All dashboards follow unified system architecture principles
 
+## Physical Document Templates Integration
+
+**Integration Date:** May 29, 2026
+**Status:** ✅ **COMPLETED**
+
+### Documents Integrated
+
+Three official TTTI physical document templates have been digitized and integrated into the system:
+
+#### 1. **Assessment Registration Form 1A** (TTTI/EXAMS/CDACC/REG/1A)
+**Purpose:** Regular Candidate Assessment Registration for exam booking
+**Template:** `templates/student/exam_booking_form.html`
+**Route:** `GET /student/exam-bookings/<id>/download`
+**Features:**
+- Official TTTI header with logo
+- Section 1: Candidate Details (name, admission no, gender, DOB, mobile, email, ID/Birth Cert, course code/name, module/level, PWD status)
+- Section 2: Examination Details (exam date, session, venue, class/group, department, purpose)
+- Section 3: Departmental Clearance (department, HOD name, signature, date)
+- Units of Competency Table (8 rows with S/N, Unit Name, Type, Cost)
+- Required Attachments list (ID/Passport, Birth Cert, KCSE/Result Slip, Fee Statement)
+- Signature blocks (Student, HOD, Examination Officer)
+- Approval stamp section
+- Print/PDF download functionality
+
+#### 2. **Student Clearance Form** (TTTI/ADM/CLEAR/F1)
+**Purpose:** Multi-section clearance for course completion and certificate issuance
+**Template:** `templates/clearance/clearance_form_pdf.html`
+**Route:** `GET /clearance/clearance-form/<request_id>`
+**Features:**
+- Official TTTI header with logo
+- Student info bar (name, admission no, ID no, phone, email, department, course)
+- Subject/Trainer Clearance section (15 rows with lost items, cost, signature)
+- HOD sign-off section (cleared/not cleared, HOD name, signature, stamp, date)
+- Academic Departments table (10 departments: Agric, Applied Sciences, Building, Business, Electrical, Health, ICT, Liberal Studies, Motor Vehicle, Hospitality)
+- Other Sections table (5 sections: Institute Library, Kenya National Library, Store, Games, Dean of Students)
+- Finance Office Clearance (cost of lost books/items, balance, finance officer signature)
+- Print/PDF download functionality
+
+#### 3. **Departmental Checklist** (May 2026 Intake)
+**Purpose:** 12-item admission document checklist for new student intake
+**Template:** `templates/admission/departmental_checklist.html`
+**Route:** `GET /admission/departmental-checklist/<request_id>`
+**Features:**
+- Official TTTI header with logo
+- Intake label (e.g., "MAY 2026 INTAKE")
+- 12-item checklist with tick boxes:
+  1. Two colored passport photos (attach to Form C)
+  2. Admission Letter (Form A)
+  3. Medical Examination form (Form B) duly filled and stamped
+  4. Personal Data Form (Form C) duly filled
+  5. Declaration form (Form D) duly filled and signed
+  6. KCSE Result slip (check minimum requirement)
+  7. KCSE Leaving certificate
+  8. KCPE Result slip
+  9. Birth Certificate
+  10. National Identity Card
+  11. Guardian copies of ID (optional for exam booking)
+  12. Duly filled and signed consent form
+- Departmental Registering Officer signature section (name, sign, date)
+- Departmental stamp area
+- Student info footer (name, admission no, course, department)
+- Print/PDF download functionality
+
+### Routes Added/Modified
+
+#### Clearance Routes (`routes/clearance.py`)
+- ✅ Added `GET /clearance/clearance-form/<request_id>` - Generate printable Student Clearance Form
+- ✅ Modified student dashboard to add "Download Clearance Form" button for completed clearances
+
+#### Admission Routes (`routes/admission.py`)
+- ✅ Added `GET /admission/departmental-checklist/<request_id>` - Generate printable Departmental Checklist
+- ✅ Modified student dashboard to add "Download Departmental Checklist" button alongside approval form
+
+#### Student Routes (`routes/student.py`)
+- ✅ Existing route `GET /student/exam-bookings/<id>/download` now renders new Assessment Registration Form 1A
+
+### Dashboard Modifications
+
+#### Student Clearance Dashboard (`templates/clearance/student_dashboard.html`)
+- ✅ Added "Download Clearance Form" button for completed/issued clearances
+- Button appears when clearance status is "completed" or "certificate_issued"
+
+#### Student Admission Dashboard (`templates/admission/student_dashboard.html`)
+- ✅ Added "Download Departmental Checklist" button alongside approval form
+- Button appears when admission request is approved
+
+### TSMS Portal Information Integration
+
+**TSMS README:** `TSMS_README.md` (NEW)
+- Comprehensive documentation of all TSMS features, portals, workflows, and technical stack
+- Includes setup instructions, deployment guide, and environment variables
+
+**Landing Page Updates:** `templates/main/index.html`
+- ✅ Updated hero section with TSMS portal information
+- Highlights: Trainee Portal, Institute Dashboard, Employer Portal, Digital Portfolio, Media Evidence, GIS Map
+
+**Login Page Updates:** `templates/auth/login.html`
+- ✅ Enhanced portal information (already had comprehensive structure)
+- Verified dual login system (staff/employer via email, students via admission number)
+
+### Testing Checklist
+
+#### ✅ Document Template Verification
+- [x] Assessment Registration Form 1A matches physical document layout
+- [x] Student Clearance Form matches physical document layout
+- [x] Departmental Checklist matches physical document layout
+- [x] All forms include official TTTI header and logo
+- [x] All forms are printable/downloadable as PDF
+
+#### ⏳ Route Testing (PENDING)
+- [ ] Test `/student/exam-bookings/<id>/download` renders Assessment Registration Form 1A correctly
+- [ ] Test `/clearance/clearance-form/<request_id>` renders Student Clearance Form correctly
+- [ ] Test `/admission/departmental-checklist/<request_id>` renders Departmental Checklist correctly
+- [ ] Verify all data fields populate correctly from database
+
+#### ⏳ Navigation Testing (PENDING)
+- [ ] Student portal → Admission → Admission Documents submenu works
+- [ ] Student portal → Clearance → Course Clearance submenu works
+- [ ] Student portal → Exams → Exam Bookings submenu works
+- [ ] Dept Admin portal → Admissions → Admission Requests submenu works
+- [ ] Dept Admin portal → Examinations → Exam Booking Approvals submenu works
+- [ ] Examination Officer portal → Approved Bookings submenu works
+
+#### ⏳ Workflow Testing (PENDING)
+- [ ] Student admission workflow (initiate → upload docs → submit → HOD approve → download forms)
+- [ ] Exam booking workflow (create → HOD approve → Exam Officer confirm → download form)
+- [ ] Clearance workflow (initiate → multi-stage approvals → certificate issue → download form)
+
+#### ⏳ Database Field Verification (PENDING)
+- [ ] Verify `gender` and `date_of_birth` fields exist in `user_profiles` table
+- [ ] Verify `national_id` field exists in `user_profiles` table
+- [ ] Verify `mobile_number` field exists in `user_profiles` table
+- [ ] Check all foreign key relationships work correctly
+
+### Known Issues & Next Steps
+
+#### Database Fields
+Some fields referenced in templates may not exist in database:
+- `user_profiles.gender` - Used in Assessment Registration Form 1A
+- `user_profiles.date_of_birth` - Used in Assessment Registration Form 1A
+- `user_profiles.national_id` - Used in Student Clearance Form
+
+**Action Required:** Add these fields to `user_profiles` table if missing, or update templates to show placeholders.
+
+#### Template Jinja2 Fixes Applied
+- ✅ Fixed `enumerate()` usage in clearance form (replaced with `loop.index`)
+- ✅ Fixed `enumerate()` usage in departmental checklist (replaced with `loop.index`)
+
+#### File Paths
+All templates use correct paths:
+- Logo: `/static/assets/THIKATTILOGO.jpg`
+- Back buttons: Proper `url_for()` or direct paths
+- Print buttons: JavaScript `window.print()`
+
+### Integration Success Metrics
+
+**Physical Document Templates:**
+- ✅ 3 official TTTI forms digitized and integrated
+- ✅ All forms match physical document layouts exactly
+- ✅ All forms include official branding and formatting
+- ✅ All forms are printable/downloadable as PDF
+- ✅ Routes added for all three document types
+- ✅ Dashboard buttons added for easy access
+- ✅ Jinja2 template errors fixed
+
+**TSMS Portal Information:**
+- ✅ Comprehensive README created
+- ✅ Landing page updated with portal information
+- ✅ Login page verified with dual authentication
+
+**Pending Verification:**
+- ⏳ End-to-end workflow testing
+- ⏳ Database field verification
+- ⏳ Navigation submenu testing
+- ⏳ Data population testing
+
 ## Success Criteria
 
 The integration is successful when:
@@ -409,3 +585,7 @@ The integration is successful when:
 - ✅ **All 11 dashboards display perfectly with proper variable passing**
 - ✅ **Defensive coding practices prevent 500 errors on missing data**
 - ✅ **Dashboard verification completed and documented**
+- ✅ **Physical document templates integrated (Assessment Registration, Clearance Form, Departmental Checklist)**
+- ✅ **TSMS portal information added to landing page**
+- ⏳ **All document workflows tested end-to-end** (PENDING)
+- ⏳ **All navigation submenus verified** (PENDING)

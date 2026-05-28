@@ -3,271 +3,284 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Exam Booking Form - THIKA TECHNICAL TRAINING INSTITUTE</title>
+  <title>Assessment Registration Form 1A — TTTI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
-      padding: 20px;
-    }
-    .form-container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: white;
-      padding: 40px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      border-bottom: 3px solid #1565c0;
-      padding-bottom: 20px;
-    }
-    .header h1 {
-      color: #1565c0;
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-    .header h2 {
-      color: #333;
-      font-size: 18px;
-      font-weight: normal;
-    }
-    .section {
-      margin-bottom: 25px;
-    }
-    .section-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #1565c0;
-      margin-bottom: 15px;
-      text-transform: uppercase;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 5px;
-    }
-    .field {
-      display: flex;
-      margin-bottom: 12px;
-    }
-    .field-label {
-      width: 200px;
-      font-weight: 600;
-      color: #333;
-    }
-    .field-value {
-      flex: 1;
-      color: #555;
-    }
-    .status-box {
-      background: #e8f5e9;
-      border: 2px solid #2e7d32;
-      border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-      margin: 30px 0;
-    }
-    .status-box h3 {
-      color: #2e7d32;
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-    .status-box p {
-      color: #333;
-      font-size: 14px;
-    }
-    .approval-section {
-      background: #f5f5f5;
-      border-radius: 8px;
-      padding: 20px;
-      margin-top: 30px;
-    }
-    .approval-section .section-title {
-      color: #2e7d32;
-    }
-    .signature-line {
-      margin-top: 40px;
-      border-top: 1px solid #333;
-      width: 200px;
-      padding-top: 10px;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #ddd;
-      color: #666;
-      font-size: 12px;
-    }
-    .print-btn {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #1565c0;
-      color: white;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .print-btn:hover {
-      background: #0d47a1;
-    }
-    @media print {
-      .print-btn {
-        display: none;
-      }
-      body {
-        background: white;
-        padding: 0;
-      }
-      .form-container {
-        box-shadow: none;
-        padding: 20px;
-      }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Times New Roman',Times,serif;background:#e8e8e8;padding:20px}
+    .page{max-width:820px;margin:0 auto;background:#fff;padding:36px 40px;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+
+    /* ── Header ── */
+    .header{display:flex;align-items:center;gap:18px;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:14px}
+    .header img{height:80px;width:80px;object-fit:contain}
+    .header-text{flex:1;text-align:center}
+    .header-text h1{font-size:17px;font-weight:bold;text-transform:uppercase;letter-spacing:.5px}
+    .header-text h2{font-size:14px;font-weight:bold;text-transform:uppercase;margin-top:4px}
+    .header-text .ref{font-size:11px;margin-top:6px;font-style:italic}
+
+    /* ── Instructions box ── */
+    .instructions{border:1px solid #000;padding:10px 14px;margin-bottom:14px;font-size:12px}
+    .instructions h3{font-size:12px;font-weight:bold;text-transform:uppercase;margin-bottom:6px}
+    .instructions p{margin-bottom:3px}
+
+    /* ── Required attachments ── */
+    .attachments{border:1px solid #000;padding:10px 14px;margin-bottom:14px;font-size:12px}
+    .attachments h3{font-size:12px;font-weight:bold;text-transform:uppercase;margin-bottom:6px}
+    .attachments ul{list-style:none;padding:0}
+    .attachments ul li::before{content:"• ";font-weight:bold}
+
+    /* ── Section headings ── */
+    .section-heading{font-size:12px;font-weight:bold;text-transform:uppercase;background:#f0f0f0;border:1px solid #000;padding:5px 10px;margin-bottom:0}
+
+    /* ── Field rows ── */
+    .field-row{display:flex;border-bottom:1px solid #ccc;min-height:26px;align-items:stretch}
+    .field-row:last-child{border-bottom:1px solid #000}
+    .field-label{font-size:12px;font-weight:bold;padding:4px 8px;min-width:200px;border-right:1px solid #ccc;display:flex;align-items:center}
+    .field-value{font-size:12px;padding:4px 8px;flex:1;display:flex;align-items:center}
+    .field-value.underline{border-bottom:1px solid #555;min-height:22px}
+
+    /* ── Two-column layout ── */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #000;margin-bottom:14px}
+    .two-col .field-row{border-bottom:1px solid #ccc;border-right:none}
+    .two-col .col{border-right:1px solid #000}
+    .two-col .col:last-child{border-right:none}
+
+    /* ── Section 3 clearance ── */
+    .clearance-section{border:1px solid #000;margin-bottom:14px}
+    .clearance-section .section-heading{border-bottom:1px solid #000}
+    .clearance-row{display:flex;border-bottom:1px solid #ccc;min-height:28px}
+    .clearance-row:last-child{border-bottom:none}
+    .clearance-label{font-size:12px;font-weight:bold;padding:4px 8px;min-width:160px;border-right:1px solid #ccc;display:flex;align-items:center}
+    .clearance-value{font-size:12px;padding:4px 8px;flex:1;display:flex;align-items:center}
+
+    /* ── Units table ── */
+    .units-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px}
+    .units-table th,.units-table td{border:1px solid #000;padding:5px 8px;text-align:left}
+    .units-table th{background:#f0f0f0;font-weight:bold;text-align:center}
+    .units-table td{min-height:22px}
+    .units-table .sn{width:40px;text-align:center}
+    .units-table .unit-col{width:45%}
+    .units-table .type-col{width:25%;text-align:center}
+    .units-table .cost-col{width:15%;text-align:right}
+
+    /* ── Approval stamp ── */
+    .approval-box{border:2px solid #1565c0;background:#e3f2fd;padding:14px 18px;margin-bottom:14px;text-align:center}
+    .approval-box h3{color:#1565c0;font-size:15px;font-weight:bold;margin-bottom:6px}
+    .approval-box p{font-size:12px;color:#333}
+
+    /* ── Signatures ── */
+    .sig-row{display:flex;justify-content:space-between;margin-top:30px;gap:20px}
+    .sig-block{flex:1;text-align:center}
+    .sig-line{border-top:1px solid #000;margin-top:40px;padding-top:6px;font-size:11px}
+
+    /* ── Footer ── */
+    .footer{text-align:center;margin-top:20px;font-size:11px;color:#555;border-top:1px solid #ccc;padding-top:10px}
+
+    /* ── Print button ── */
+    .print-btn{position:fixed;top:20px;right:20px;background:#1565c0;color:#fff;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:Arial,sans-serif;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    .print-btn:hover{background:#0d47a1}
+    .back-btn{position:fixed;top:20px;left:20px;background:#555;color:#fff;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:Arial,sans-serif;z-index:999;text-decoration:none;display:inline-block}
+    .back-btn:hover{background:#333}
+
+    @media print{
+      body{background:#fff;padding:0}
+      .page{box-shadow:none;padding:20px}
+      .print-btn,.back-btn{display:none}
     }
   </style>
 </head>
 <body>
-  <button class="print-btn" onclick="window.print()">
-    <i class="fas fa-print"></i> Print
-  </button>
-  
-  <div class="form-container">
-    <div class="header">
-      <img src="{{ LOGO_URL }}" alt="Logo" style="height: 80px; margin-bottom: 15px;">
-      <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
-      <h2>EXAM BOOKING FORM</h2>
-    </div>
-    
-    <div class="status-box">
-      <h3><i class="fas fa-check-circle"></i> APPROVED</h3>
-      <p>This exam booking has been reviewed and approved by the Department Administration.</p>
-    </div>
-    
-    <div class="section">
-      <div class="section-title">Student Information</div>
-      <div class="field">
-        <div class="field-label">Full Name:</div>
-        <div class="field-value">{{ booking.user_profiles.full_name }}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Admission Number:</div>
-        <div class="field-value">{{ booking.user_profiles.admission_no }}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Class:</div>
-        <div class="field-value">{{ booking.user_profiles.classes.name }}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Department:</div>
-        <div class="field-value">{{ booking.user_profiles.classes.departments.name }}</div>
-      </div>
-    </div>
-    
-    <div class="section">
-      <div class="section-title">Exam Details</div>
-      <div class="field">
-        <div class="field-label">Unit:</div>
-        <div class="field-value">{{ booking.units.name }} ({{ booking.units.code }})</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Exam Date:</div>
-        <div class="field-value">{{ booking.exam_date | to_eat('%d %B %Y') }}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Exam Session:</div>
-        <div class="field-value">{{ booking.exam_session|title }}</div>
-      </div>
-      {% if booking.exam_venue %}
-      <div class="field">
-        <div class="field-label">Exam Venue:</div>
-        <div class="field-value">{{ booking.exam_venue }}</div>
-      </div>
-      {% endif %}
-    </div>
-    
-    <div class="section">
-      <div class="section-title">Booking Information</div>
-      <div class="field">
-        <div class="field-label">Purpose:</div>
-        <div class="field-value">{{ booking.purpose }}</div>
-      </div>
-      {% if booking.special_requirements %}
-      <div class="field">
-        <div class="field-label">Special Requirements:</div>
-        <div class="field-value">{{ booking.special_requirements }}</div>
-      </div>
-      {% endif %}
-      <div class="field">
-        <div class="field-label">Booking Submitted:</div>
-        <div class="field-value">{{ booking.created_at | to_eat('%d %B %Y at %H:%M') }}</div>
-      </div>
-    </div>
-    
-    <div class="approval-section">
-      <div class="section-title">Approval Details</div>
-      <div class="field">
-        <div class="field-label">Approved By:</div>
-        <div class="field-value">{{ booking.user_profiles.full_name }}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Approval Date:</div>
-        <div class="field-value">{{ booking.approved_at | to_eat('%d %B %Y at %H:%M') }}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Status:</div>
-        <div class="field-value" style="color: #2e7d32; font-weight: bold;">✓ APPROVED</div>
-      </div>
-    </div>
-    
-    <div class="approval-section">
-      <div class="section-title">Requirements Checklist</div>
-      <div style="margin-bottom: 15px;">
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
-          <span>Student information verified</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
-          <span>Unit enrollment confirmed</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
-          <span>Exam date and session approved</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
-          <span>Booking purpose reviewed</span>
-        </div>
-        <div style="display: flex; align-items: center;">
-          <span style="color: #2e7d32; margin-right: 10px; font-size: 18px;">✓</span>
-          <span>Department authorization granted</span>
-        </div>
-      </div>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-top: 50px;">
-      <div>
-        <div class="signature-line">Student Signature</div>
-        <div style="font-size: 12px; color: #666; margin-top: 5px;">Date: _______________</div>
-      </div>
-      <div>
-        <div class="signature-line">Department Head Signature</div>
-        <div style="font-size: 12px; color: #666; margin-top: 5px;">Date: _______________</div>
-      </div>
-    </div>
-    
-    <div class="footer">
-      <p>THIKA TECHNICAL TRAINING INSTITUTE - Academic Management System</p>
-      <p>This document serves as official confirmation of exam booking approval.</p>
-      <p>Generated on: {{ 'now' | to_eat('%d %B %Y at %H:%M') }}</p>
+
+<a href="/student/exam-bookings" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+<button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> Print / Save PDF</button>
+
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo">
+    <div class="header-text">
+      <h1>Thika Technical Training Institute</h1>
+      <h2>Regular Candidate Assessment Registration Form 1A</h2>
+      <div class="ref">TTTI/EXAMS/CDACC/REG/1A</div>
     </div>
   </div>
+
+  <!-- ── APPROVAL STAMP ── -->
+  <div class="approval-box">
+    <h3><i class="fas fa-check-circle"></i> APPROVED — EXAM BOOKING CONFIRMED</h3>
+    <p>This form has been reviewed and approved by the Department Administration. Present this form at the examination venue.</p>
+  </div>
+
+  <!-- ── INSTRUCTIONS ── -->
+  <div class="instructions">
+    <h3>Instructions</h3>
+    <p>• Ensure you have registered on the student portal before filling this form.</p>
+    <p>• Attach all required documents listed below.</p>
+    <p>• Submit the completed form to the departmental HOD before the deadline.</p>
+  </div>
+
+  <!-- ── REQUIRED ATTACHMENTS ── -->
+  <div class="attachments">
+    <h3>Required Attachments</h3>
+    <ul>
+      <li>Copy of National ID / Passport</li>
+      <li>Copy of Birth Certificate</li>
+      <li>KCSE Certificate (for Module I) or Previous Module Result Slip (continuing students)</li>
+      <li>Fee Statement showing exam fee payment</li>
+    </ul>
+  </div>
+
+  <!-- ── SECTION 1: CANDIDATE DETAILS ── -->
+  <div class="section-heading">Section 1: Candidate Details</div>
+  <div style="border:1px solid #000;border-top:none;margin-bottom:14px">
+    <div class="field-row">
+      <div class="field-label">Full Name (as per ID):</div>
+      <div class="field-value">{{ booking.user_profiles.full_name }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Admission Number:</div>
+      <div class="field-value">{{ booking.user_profiles.admission_no }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Gender:</div>
+      <div class="field-value">{{ booking.user_profiles.get('gender','') or '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Date of Birth:</div>
+      <div class="field-value">{{ booking.user_profiles.get('date_of_birth','') or '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Mobile Number:</div>
+      <div class="field-value">{{ booking.user_profiles.get('mobile_number','') or '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Email Address:</div>
+      <div class="field-value">{{ booking.user_profiles.get('email','') or '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">National ID / Birth Cert. No.:</div>
+      <div class="field-value">_______________</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Course Code:</div>
+      <div class="field-value">{{ booking.units.code }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Course Name (see overleaf):</div>
+      <div class="field-value">{{ booking.units.name }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Module / Level / TEP:</div>
+      <div class="field-value">{{ booking.get('exam_session','') | title }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">PWD Status:</div>
+      <div class="field-value">{{ booking.get('special_requirements','') or 'N/A' }}</div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 2: EXAM DETAILS ── -->
+  <div class="section-heading">Section 2: Examination Details</div>
+  <div style="border:1px solid #000;border-top:none;margin-bottom:14px">
+    <div class="field-row">
+      <div class="field-label">Exam Date:</div>
+      <div class="field-value">{{ booking.exam_date | to_eat('%d %B %Y') if booking.exam_date else '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Exam Session:</div>
+      <div class="field-value">{{ booking.exam_session | title if booking.exam_session else '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Exam Venue:</div>
+      <div class="field-value">{{ booking.exam_venue or '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Class / Group:</div>
+      <div class="field-value">{{ booking.user_profiles.get('classes',{}).get('name','') or '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Department:</div>
+      <div class="field-value">{{ booking.user_profiles.get('classes',{}).get('departments',{}).get('name','') or '_______________' }}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Purpose:</div>
+      <div class="field-value">{{ booking.purpose or '_______________' }}</div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 3: DEPARTMENTAL CLEARANCE ── -->
+  <div class="clearance-section">
+    <div class="section-heading">Section 3: Departmental Clearance</div>
+    <div class="clearance-row">
+      <div class="clearance-label">Department:</div>
+      <div class="clearance-value">{{ booking.user_profiles.get('classes',{}).get('departments',{}).get('name','') or '___________________________' }}</div>
+    </div>
+    <div class="clearance-row">
+      <div class="clearance-label">HOD Name:</div>
+      <div class="clearance-value">{{ booking.approved_by_user.get('full_name','') or '___________________________' }}</div>
+    </div>
+    <div class="clearance-row">
+      <div class="clearance-label">Signature:</div>
+      <div class="clearance-value" style="min-height:36px">___________________________</div>
+    </div>
+    <div class="clearance-row">
+      <div class="clearance-label">Date:</div>
+      <div class="clearance-value">{{ booking.approved_at | to_eat('%d %B %Y') if booking.approved_at else '_______________' }}</div>
+    </div>
+  </div>
+
+  <!-- ── UNITS OF COMPETENCY TABLE ── -->
+  <table class="units-table">
+    <thead>
+      <tr>
+        <th class="sn">S/N</th>
+        <th class="unit-col">Unit of Competency</th>
+        <th class="type-col">Unit Type (Core/Common/Basic)</th>
+        <th class="cost-col">Unit Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="sn">1</td>
+        <td>{{ booking.units.name }} ({{ booking.units.code }})</td>
+        <td style="text-align:center">Core</td>
+        <td style="text-align:right">—</td>
+      </tr>
+      {% for i in range(2, 9) %}
+      <tr>
+        <td class="sn">{{ i }}</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td colspan="3" style="text-align:right;font-weight:bold;padding-right:12px">Total Cost (Ksh):</td>
+        <td style="text-align:right">—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── SIGNATURES ── -->
+  <div class="sig-row">
+    <div class="sig-block">
+      <div class="sig-line">Student Signature &amp; Date</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line">HOD Signature &amp; Stamp</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line">Examination Officer</div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="footer">
+    <p>THIKA TECHNICAL TRAINING INSTITUTE &nbsp;|&nbsp; P.O. Box 474-01000, Thika &nbsp;|&nbsp; TTTI/EXAMS/CDACC/REG/1A</p>
+    <p>Account Name: Thika Technical Training Institute &nbsp;|&nbsp; Generated: {{ booking.approved_at | to_eat('%d %b %Y %H:%M') if booking.approved_at else '' }}</p>
+  </div>
+
+</div>
 </body>
 </html>

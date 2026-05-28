@@ -83,6 +83,9 @@
     <form method="POST" action="/clearance/issue-certificate/{{ clearance_request.id }}">
       <button type="submit" class="btn-certificate">Issue Certificate</button>
     </form>
+    <a href="/clearance/clearance-form/{{ clearance_request.id }}" class="btn-certificate" style="background:#1565c0;margin-left:10px;display:inline-block;margin-top:8px">
+      <i class="fas fa-file-alt"></i> Download Clearance Form
+    </a>
   </div>
   {% endif %}
   
@@ -90,6 +93,9 @@
   <div class="certificate-ready" style="background: #cce5ff;">
     <h4>Certificate Issued</h4>
     <p style="margin: 10px 0;">Your certificate was issued on {{ clearance_request.certificate_issued_at | to_eat }}</p>
+    <a href="/clearance/clearance-form/{{ clearance_request.id }}" class="btn-certificate" style="background:#1565c0;display:inline-block;margin-top:8px">
+      <i class="fas fa-file-alt"></i> Download Clearance Form
+    </a>
   </div>
   {% endif %}
 </div>
