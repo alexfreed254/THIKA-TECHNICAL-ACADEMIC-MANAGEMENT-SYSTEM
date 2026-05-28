@@ -197,6 +197,69 @@ def dashboard():
     except Exception:
         clearance_eligible = False
 
+    # ── ATTACHMENT / INTERNSHIP DATA ──────────────────────────────────────────
+    current_attachment = None
+    attachment_stats = {
+        'total': 0,
+        'active': 0,
+        'completed': 0,
+        'pending': 0
+    }
+    recent_logbook_entries = []
+    pending_competencies = 0
+    
+    try:
+        # Get current active attachment
+        attachments = (db.table("industrial_attachments")
+                      .select("*, companies(name, address, latitude, longitude), units(name, code), mentors(user_profiles(full_name))")
+                      .eq("student_id", student_id)
+                      .order("created_at", desc=True)
+                      .execute().data or [])
+        
+        # Count attachment stats
+        attachment_stats['total'] = len(attachments)
+        for att in attachments:
+            status = att.get('status', '')
+            if status == 'active':
+                attachment_stats['active'] += 1
+                if not current_attachment:
+                    current_attachment = att
+                    # Flatten mentor name
+                    mentors_obj = current_attachment.get("mentors") or {}
+                    user_profiles_obj = mentors_obj.get("user_profiles") or {}
+                    current_attachment["mentor_name"] = user_profiles_obj.get("full_name", "Not Assigned")
+            elif status == 'completed':
+                attachment_stats['completed'] += 1
+            elif status == 'pending':
+                attachment_stats['pending'] += 1
+        
+        # Get recent logbook entries (last 5)
+        if current_attachment:
+            recent_logbook_entries = (db.table("digital_logbook")
+                                     .select("*, units(name, code)")
+                                     .eq("student_id", student_id)
+                                     .eq("attachment_id", current_attachment["id"])
+                                     .order("log_date", desc=True)
+                                     .limit(5)
+                                     .execute().data or [])
+        
+        # Get pending competencies count
+        pending_competencies = (db.table("competency_tracking")
+                               .select("id", count="exact")
+                               .eq("student_id", student_id)
+                               .eq("competency_status", "NYC")
+                               .execute().count or 0)
+        
+        # Add attachment stats to main stats
+        stats['attachment_active'] = attachment_stats['active']
+        stats['attachment_total'] = attachment_stats['total']
+        stats['logbook_entries'] = len(recent_logbook_entries)
+        stats['pending_competencies'] = pending_competencies
+        
+    except Exception as e:
+        print(f"Error loading attachment data: {e}")
+        # Continue without attachment data
+
     return render_template("student/dashboard.html",
                           student=student,
                           stats=stats,
@@ -207,7 +270,11 @@ def dashboard():
                           attendance_data=attendance_data,
                           overall_pct=overall_pct,
                           total_attended=total_attended,
-                          current_month=current_month)
+                          current_month=current_month,
+                          current_attachment=current_attachment,
+                          attachment_stats=attachment_stats,
+                          recent_logbook_entries=recent_logbook_entries,
+                          pending_competencies=pending_competencies)
 
 
 # ── Profile Management ───────────────────────────────────────────────────────
