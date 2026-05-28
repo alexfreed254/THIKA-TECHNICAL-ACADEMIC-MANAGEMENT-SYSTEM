@@ -153,10 +153,10 @@ def dashboard():
                   .execute().data or [])
         
         # Batch fetch evidence counts to avoid N+1 queries
+        evidence_map = {}
         if recent_assessments:
             a_ids = [r['id'] for r in recent_assessments]
             evidence_rows = db.table("evidence").select("assessment_id").in_("assessment_id", a_ids).execute().data or []
-            evidence_map = {}
             for ev in evidence_rows:
                 evidence_map[ev['assessment_id']] = evidence_map.get(ev['assessment_id'], 0) + 1
 
