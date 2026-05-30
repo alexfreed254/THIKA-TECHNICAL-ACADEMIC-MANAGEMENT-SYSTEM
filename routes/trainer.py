@@ -116,7 +116,7 @@ def dashboard():
         pending_assessments = []
         units_list = []
 
-    return render_template("trainer/dashboard.html",
+    return render_template("trainer/dashboard_enhanced.html",
                           stats=stats,
                           pending_assessments=pending_assessments,
                           units_list=units_list)

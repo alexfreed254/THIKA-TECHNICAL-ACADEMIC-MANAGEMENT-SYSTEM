@@ -534,3 +534,211 @@ def apply_job(job_id):
             flash(f"Application failed: {err[:120]}", "danger")
 
     return redirect(url_for("employer.job_board"))
+
+
+# ── Industry/Employer Supervisor Dashboard for Log Verification ─────────────
+
+@employer_bp.route("/supervisor")
+@employer_required
+def supervisor_dashboard():
+    """Industry/Employer Supervisor dashboard for trainee log verification."""
+    user = current_user()
+    db = get_service_client()
+    employer = _employer_row()
+    employer_id = employer["id"]
+
+    # Get company associated with this employer
+    company = None
+    try:
+        company_rows = db.table("companies").select("*").eq("created_by", user["id"]).execute().data or []
+        if company_rows:
+            company = company_rows[0]
+    except Exception:
+        pass
+
+    # Get active attachments for this company
+    attachments = []
+    if company:
+        try:
+            attachments = (db.table("industrial_attachments")
+                          .select("*, user_profiles(full_name, admission_no), units(name, code), companies(name)")
+                          .eq("company_id", company["id"])
+                          .in_("status", ["active", "approved"])
+                          .order("created_at", desc=True)
+                          .execute().data or [])
+        except Exception as e:
+            flash(f"Error loading attachments: {e}", "danger")
+
+    # Get recent logbook entries for verification
+    recent_logs = []
+    if company:
+        try:
+            attachment_ids = [a["id"] for a in attachments]
+            if attachment_ids:
+                recent_logs = (db.table("digital_logbook")
+                             .select("*, user_profiles(full_name, admission_no), units(name, code)")
+                             .in_("attachment_id", attachment_ids)
+                             .eq("mentor_approval_status", "pending")
+                             .order("log_date", desc=True)
+                             .limit(20)
+                             .execute().data or [])
+        except Exception as e:
+            flash(f"Error loading logs: {e}", "danger")
+
+    return render_template("employer/supervisor_dashboard.html",
+                          user=user,
+                          employer=employer,
+                          company=company,
+                          attachments=attachments,
+                          recent_logs=recent_logs)
+
+
+@employer_bp.route("/supervisor/search-trainee", methods=["GET", "POST"])
+@employer_required
+def search_trainee():
+    """Search trainee by name or admission number for log verification."""
+    user = current_user()
+    db = get_service_client()
+    employer = _employer_row()
+
+    query_str = request.form.get("query", "").strip() if request.method == "POST" else request.args.get("q", "").strip()
+    trainee = None
+    attachments = []
+    logs = []
+
+    if query_str:
+        try:
+            # Search for trainee
+            trainee_rows = db.table("user_profiles").select(
+                "*, departments(name), courses(name)"
+            ).eq("role", "student").or_(f"full_name.ilike.%{query_str}%,admission_no.ilike.%{query_str}%").execute().data or []
+
+            if trainee_rows:
+                trainee = trainee_rows[0]
+
+                # Get attachments for this trainee
+                attachments = (db.table("industrial_attachments")
+                              .select("*, companies(name, address), units(name, code)")
+                              .eq("student_id", trainee["id"])
+                              .order("created_at", desc=True)
+                              .execute().data or [])
+
+                # Get logbook entries
+                if attachments:
+                    attachment_ids = [a["id"] for a in attachments]
+                    logs = (db.table("digital_logbook")
+                           .select("*")
+                           .in_("attachment_id", attachment_ids)
+                           .order("log_date", desc=True)
+                           .execute().data or [])
+
+        except Exception as e:
+            flash(f"Search error: {e}", "danger")
+
+    return render_template("employer/supervisor_search.html",
+                          user=user,
+                          employer=employer,
+                          query=query_str,
+                          trainee=trainee,
+                          attachments=attachments,
+                          logs=logs)
+
+
+@employer_bp.route("/supervisor/logs/<log_id>/approve", methods=["POST"])
+@employer_required
+def approve_log(log_id):
+    """Approve a trainee logbook entry."""
+    user = current_user()
+    db = get_service_client()
+    employer = _employer_row()
+
+    try:
+        # Get log entry
+        log = db.table("digital_logbook").select("*").eq("id", log_id).single().execute().data
+
+        if not log:
+            flash("Log entry not found.", "danger")
+            return redirect(url_for("employer.supervisor_dashboard"))
+
+        # Verify the trainee is attached to this employer's company
+        attachment = db.table("industrial_attachments").select("*").eq("id", log["attachment_id"]).single().execute().data
+        company = db.table("companies").select("*").eq("created_by", user["id"]).execute().data or []
+
+        if not company or (attachment and attachment.get("company_id") != company[0]["id"]):
+            flash("Permission denied.", "danger")
+            return redirect(url_for("employer.supervisor_dashboard"))
+
+        # Update log approval status
+        db.table("digital_logbook").update({
+            "mentor_approval_status": "approved",
+            "mentor_approved_at": datetime.now().isoformat(),
+            "mentor_comments": request.form.get("comments", "")
+        }).eq("id", log_id).execute()
+
+        # Send notification to trainee
+        from notifications import create_notification
+        create_notification(
+            user_id=log["student_id"],
+            title="Logbook Entry Approved",
+            message=f"Your logbook entry for {log['log_date']} has been approved by your supervisor.",
+            notification_type="success",
+            action_url="/student/logbook"
+        )
+
+        write_audit_log("approve_trainee_log", target=f"log:{log_id}")
+        flash("Logbook entry approved.", "success")
+
+    except Exception as e:
+        flash(f"Error approving log: {e}", "danger")
+
+    return redirect(url_for("employer.supervisor_dashboard"))
+
+
+@employer_bp.route("/supervisor/logs/<log_id>/reject", methods=["POST"])
+@employer_required
+def reject_log(log_id):
+    """Reject a trainee logbook entry."""
+    user = current_user()
+    db = get_service_client()
+    employer = _employer_row()
+
+    try:
+        # Get log entry
+        log = db.table("digital_logbook").select("*").eq("id", log_id).single().execute().data
+
+        if not log:
+            flash("Log entry not found.", "danger")
+            return redirect(url_for("employer.supervisor_dashboard"))
+
+        # Verify the trainee is attached to this employer's company
+        attachment = db.table("industrial_attachments").select("*").eq("id", log["attachment_id"]).single().execute().data
+        company = db.table("companies").select("*").eq("created_by", user["id"]).execute().data or []
+
+        if not company or (attachment and attachment.get("company_id") != company[0]["id"]):
+            flash("Permission denied.", "danger")
+            return redirect(url_for("employer.supervisor_dashboard"))
+
+        # Update log approval status
+        db.table("digital_logbook").update({
+            "mentor_approval_status": "rejected",
+            "mentor_approved_at": datetime.now().isoformat(),
+            "mentor_comments": request.form.get("comments", "")
+        }).eq("id", log_id).execute()
+
+        # Send notification to trainee
+        from notifications import create_notification
+        create_notification(
+            user_id=log["student_id"],
+            title="Logbook Entry Rejected",
+            message=f"Your logbook entry for {log['log_date']} has been rejected. Please review and resubmit.",
+            notification_type="warning",
+            action_url="/student/logbook"
+        )
+
+        write_audit_log("reject_trainee_log", target=f"log:{log_id}")
+        flash("Logbook entry rejected.", "warning")
+
+    except Exception as e:
+        flash(f"Error rejecting log: {e}", "danger")
+
+    return redirect(url_for("employer.supervisor_dashboard"))

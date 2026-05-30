@@ -47,7 +47,7 @@ def dashboard():
         booking["user_profiles"] = student
         booking["approved_by_user"] = booking.get("approver") or {}
     
-    return render_template("examination_officer/dashboard.html",
+    return render_template("examination_officer/dashboard_enhanced.html",
                           total_approved=total_approved,
                           total_pending=total_pending,
                           total_completed=total_completed,

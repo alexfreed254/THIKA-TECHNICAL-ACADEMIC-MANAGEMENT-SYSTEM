@@ -260,7 +260,7 @@ def dashboard():
         print(f"Error loading attachment data: {e}")
         # Continue without attachment data
 
-    return render_template("student/dashboard.html",
+    return render_template("student/dashboard_enhanced.html",
                           student=student,
                           stats=stats,
                           recent_assessments=recent_assessments,
@@ -1628,3 +1628,172 @@ def my_jobs():
             .order("created_at", desc=True)
             .execute().data or [])
     return render_template("student/jobs.html", applications=apps)
+
+
+# ── Post-Training Employment Tracking ─────────────────────────────────────────
+
+@student_bp.route("/employment-status", methods=["GET", "POST"])
+@student_required
+def employment_status():
+    """Update and view post-training employment status."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    if request.method == "POST":
+        employment_status = request.form.get("employment_status")
+        company_name = request.form.get("company_name", "").strip()
+        job_title = request.form.get("job_title", "").strip()
+        start_date = request.form.get("start_date")
+        latitude = request.form.get("latitude")
+        longitude = request.form.get("longitude")
+        location_address = request.form.get("location_address", "").strip()
+
+        if not employment_status:
+            flash("Employment status is required.", "error")
+            return redirect(url_for("student.employment_status"))
+
+        try:
+            # Check if employment record exists
+            existing = (db.table("employment_tracking")
+                       .select("*")
+                       .eq("student_id", student_id)
+                       .execute().data or [])
+
+            update_data = {
+                "employment_status": employment_status,
+                "company_name": company_name if employment_status == "employed" else None,
+                "job_title": job_title if employment_status == "employed" else None,
+                "start_date": start_date if employment_status == "employed" else None,
+                "latitude": float(latitude) if latitude else None,
+                "longitude": float(longitude) if longitude else None,
+                "location_address": location_address,
+                "updated_at": datetime.now().isoformat()
+            }
+
+            if existing:
+                db.table("employment_tracking").update(update_data).eq("id", existing[0]["id"]).execute()
+            else:
+                update_data["student_id"] = student_id
+                db.table("employment_tracking").insert(update_data).execute()
+
+            write_audit_log("update_employment_status", target=f"student:{student_id}")
+            flash("Employment status updated successfully.", "success")
+        except Exception as e:
+            flash(f"Error updating employment status: {e}", "error")
+
+        return redirect(url_for("student.employment_status"))
+
+    # Get current employment status
+    employment_record = (db.table("employment_tracking")
+                        .select("*")
+                        .eq("student_id", student_id)
+                        .execute().data or [])
+
+    current_status = employment_record[0] if employment_record else None
+
+    # Get project uploads
+    projects = (db.table("employment_projects")
+               .select("*")
+               .eq("student_id", student_id)
+               .order("created_at", desc=True)
+               .execute().data or [])
+
+    return render_template("student/employment_status.html",
+                          current_status=current_status,
+                          projects=projects)
+
+
+@student_bp.route("/employment-projects", methods=["GET", "POST"])
+@student_required
+def employment_projects():
+    """Upload and manage post-training project evidence."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    if request.method == "POST":
+        project_name = request.form.get("project_name", "").strip()
+        description = request.form.get("description", "").strip()
+        latitude = request.form.get("latitude")
+        longitude = request.form.get("longitude")
+        location_address = request.form.get("location_address", "").strip()
+
+        if not project_name:
+            flash("Project name is required.", "error")
+            return redirect(url_for("student.employment_projects"))
+
+        try:
+            # Handle file uploads
+            evidence_paths = []
+            files = request.files.getlist("project_files")
+            for file in files:
+                if file and file.filename:
+                    ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+                    if ext in {"jpg", "jpeg", "png", "webp", "pdf", "mp4", "mov", "avi", "webm", "mp3", "wav", "ogg", "m4a"}:
+                        filename = f"employment_projects/{student_id}_{uuid.uuid4().hex}.{ext}"
+                        file_data = file.read()
+                        get_service_client().storage.from_("assessment-evidence").upload(
+                            filename, file_data, {"content-type": f"image/{ext}" if ext in ("jpg","jpeg","png","webp") else "application/pdf" if ext == "pdf" else f"video/{ext}" if ext in ("mp4","mov","avi","webm") else f"audio/{ext}"}
+                        )
+                        evidence_paths.append(filename)
+
+            db.table("employment_projects").insert({
+                "student_id": student_id,
+                "project_name": project_name,
+                "description": description,
+                "latitude": float(latitude) if latitude else None,
+                "longitude": float(longitude) if longitude else None,
+                "location_address": location_address,
+                "evidence_urls": evidence_paths if evidence_paths else None,
+                "created_at": datetime.now().isoformat()
+            }).execute()
+
+            write_audit_log("upload_employment_project", target=f"student:{student_id}")
+            flash("Project uploaded successfully.", "success")
+        except Exception as e:
+            flash(f"Error uploading project: {e}", "error")
+
+        return redirect(url_for("student.employment_projects"))
+
+    projects = (db.table("employment_projects")
+               .select("*")
+               .eq("student_id", student_id)
+               .order("created_at", desc=True)
+               .execute().data or [])
+
+    return render_template("student/employment_projects.html", projects=projects)
+
+
+@student_bp.route("/employment-projects/<project_id>/delete", methods=["POST"])
+@student_required
+def delete_employment_project(project_id):
+    """Delete an employment project."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    try:
+        project = db.table("employment_projects").select("*").eq("id", project_id).eq("student_id", student_id).single().execute().data
+
+        if not project:
+            abort(403)
+
+        # Delete evidence files from storage
+        if project.get("evidence_urls"):
+            for url in project["evidence_urls"]:
+                try:
+                    storage_path = url.split("assessment-evidence/")[-1]
+                    get_service_client().storage.from_("assessment-evidence").remove([storage_path])
+                except Exception:
+                    pass
+
+        # Delete project record
+        db.table("employment_projects").delete().eq("id", project_id).execute()
+
+        write_audit_log("delete_employment_project", target=f"project:{project_id}")
+        flash("Project deleted successfully.", "success")
+    except Exception as e:
+        flash(f"Error deleting project: {e}", "error")
+
+    return redirect(url_for("student.employment_projects"))

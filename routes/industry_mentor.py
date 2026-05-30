@@ -75,7 +75,7 @@ def dashboard():
         if attachment and attachment.get("company_id") == company_id:
             company_competencies.append(comp)
     
-    return render_template("industry_mentor/dashboard.html",
+    return render_template("industry_mentor/dashboard_enhanced.html",
                           mentor=mentor,
                           attachments=attachments,
                           pending_logbooks=company_logbooks,

@@ -92,7 +92,7 @@ def dashboard():
         units_list = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
     except Exception as e:
         flash(f"Error loading dashboard: {e}", "danger")
-    return render_template("dept_admin/dashboard.html",
+    return render_template("dept_admin/dashboard_enhanced.html",
                            dept=dept, stats=stats,
                            recent_assessments=recent_assessments,
                            recent_attendance=recent_attendance,

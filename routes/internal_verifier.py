@@ -41,7 +41,7 @@ def dashboard():
                      .execute().data or [])
     rejected_count = len(rejected_count)
     
-    return render_template("internal_verifier/dashboard.html",
+    return render_template("internal_verifier/dashboard_enhanced.html",
                           pending_competencies=pending_competencies,
                           total_pending=total_pending,
                           verified_count=verified_count,
