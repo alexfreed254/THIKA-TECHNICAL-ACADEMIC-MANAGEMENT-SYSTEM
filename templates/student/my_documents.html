@@ -1,0 +1,570 @@
+{% extends "student/base.html" %}
+
+{% block title %}My Documents{% endblock %}
+{% block page_title %}My Documents{% endblock %}
+
+{% block extra_style %}
+<style>
+  .page-wrap { padding: 24px; max-width: 900px; margin: 0 auto; }
+  .section-title { 
+    font-size: 16px; 
+    font-weight: 700; 
+    color: #1e293b; 
+    margin: 0 0 20px 0; 
+    padding-bottom: 10px; 
+    border-bottom: 2px solid #e2e8f0; 
+  }
+  .info-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 16px; 
+    margin-bottom: 30px; 
+  }
+  .info-item { 
+    background: #f8fafc; 
+    padding: 14px 16px; 
+    border-radius: 8px; 
+    border: 1px solid #e2e8f0; 
+  }
+  .info-label { 
+    font-size: 11px; 
+    font-weight: 600; 
+    color: #64748b; 
+    margin-bottom: 4px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+  }
+  .info-value { 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #1e293b; 
+  }
+  .doc-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+    gap: 20px; 
+    margin-bottom: 30px; 
+  }
+  .doc-card { 
+    background: #fff; 
+    padding: 20px; 
+    border-radius: 10px; 
+    border: 2px solid #e2e8f0; 
+    transition: all 0.2s; 
+  }
+  .doc-card:hover { 
+    border-color: #cbd5e1; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+  }
+  .doc-card.uploaded { border-color: #22c55e; background: #f0fdf4; }
+  .doc-card.missing { border-color: #ef4444; }
+  .doc-card.uploading { border-color: #f59e0b; background: #fffbeb; }
+  .doc-label { 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #1e293b; 
+    margin-bottom: 8px; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+  }
+  .doc-label .required { color: #ef4444; }
+  .doc-status { 
+    font-size: 12px; 
+    font-weight: 600; 
+    margin-bottom: 12px; 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+  }
+  .doc-status.no-file { color: #94a3b8; }
+  .doc-status.uploading { color: #f59e0b; }
+  .doc-status.uploaded { color: #22c55e; }
+  .doc-status.missing { color: #ef4444; }
+  .doc-status.rejected { color: #dc2626; }
+  .file-input-wrapper { 
+    position: relative; 
+    margin-bottom: 10px; 
+  }
+  .file-input { 
+    width: 100%; 
+    padding: 10px 14px; 
+    border: 2px dashed #cbd5e1; 
+    border-radius: 8px; 
+    font-size: 13px; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    background: #fff; 
+  }
+  .file-input:hover { 
+    border-color: #3b82f6; 
+    background: #f8fafc; 
+  }
+  .file-input::file-selector-button {
+    padding: 6px 14px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 10px;
+  }
+  .file-input::file-selector-button:hover {
+    background: #2563eb;
+  }
+  .file-info { 
+    font-size: 12px; 
+    color: #64748b; 
+    margin-top: 8px; 
+  }
+  .btn-save { 
+    background: #22c55e; 
+    color: white; 
+    padding: 14px 32px; 
+    border: none; 
+    border-radius: 8px; 
+    font-size: 14px; 
+    font-weight: 700; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    display: block; 
+    margin: 0 auto; 
+  }
+  .btn-save:hover { 
+    background: #16a34a; 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); 
+  }
+  .btn-save:disabled { 
+    background: #cbd5e1; 
+    cursor: not-allowed; 
+    transform: none; 
+    box-shadow: none; 
+  }
+  .progress-bar { 
+    background: #e2e8f0; 
+    height: 6px; 
+    border-radius: 3px; 
+    overflow: hidden; 
+    margin-top: 10px; 
+  }
+  .progress-fill { 
+    background: #3b82f6; 
+    height: 100%; 
+    transition: width 0.3s; 
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  
+  <!-- PERSONAL INFORMATION SECTION -->
+  <h2 class="section-title">PERSONAL INFORMATION</h2>
+  <div class="info-grid">
+    <div class="info-item">
+      <div class="info-label">Full Name</div>
+      <div class="info-value">{{ student.full_name or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Admission Number</div>
+      <div class="info-value">{{ student.admission_no or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Gender</div>
+      <div class="info-value">{{ student.gender or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Phone Number</div>
+      <div class="info-value">{{ student.mobile_number or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">County</div>
+      <div class="info-value">{{ student.county or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Sub County</div>
+      <div class="info-value">{{ student.sub_county or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Village / Address</div>
+      <div class="info-value">{{ student.village or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Course</div>
+      <div class="info-value">{{ course_name or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Department</div>
+      <div class="info-value">{{ department_name or '—' }}</div>
+    </div>
+  </div>
+
+  <!-- DOCUMENT UPLOAD SECTION -->
+  <h2 class="section-title">DOCUMENT UPLOAD SECTION</h2>
+  
+  <form id="documents-form" method="POST" action="/student/documents" enctype="multipart/form-data">
+    <div class="doc-grid">
+      
+      <!-- Passport Photos -->
+      <div class="doc-card {{ 'uploaded' if documents.get('passport_photo') else 'missing' }}" data-doc-type="passport_photo">
+        <div class="doc-label">
+          <i class="fas fa-camera"></i> Passport Photos <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('passport_photo') else 'no-file' }}">
+          {% if documents.get('passport_photo') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="passport_photo" class="file-input" accept="image/*" onchange="handleFileSelect(this, 'passport_photo')">
+        </div>
+        {% if documents.get('passport_photo') %}
+        <div class="file-info">
+          <p>{{ documents.passport_photo.file_name }}</p>
+          <p>{{ (documents.passport_photo.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Admission Letter -->
+      <div class="doc-card {{ 'uploaded' if documents.get('admission_letter') else 'missing' }}" data-doc-type="admission_letter">
+        <div class="doc-label">
+          <i class="fas fa-envelope"></i> Admission Letter <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('admission_letter') else 'no-file' }}">
+          {% if documents.get('admission_letter') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="admission_letter" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'admission_letter')">
+        </div>
+        {% if documents.get('admission_letter') %}
+        <div class="file-info">
+          <p>{{ documents.admission_letter.file_name }}</p>
+          <p>{{ (documents.admission_letter.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Medical Examination Form -->
+      <div class="doc-card {{ 'uploaded' if documents.get('medical_form') else 'missing' }}" data-doc-type="medical_form">
+        <div class="doc-label">
+          <i class="fas fa-notes-medical"></i> Medical Examination Form <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('medical_form') else 'no-file' }}">
+          {% if documents.get('medical_form') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="medical_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'medical_form')">
+        </div>
+        {% if documents.get('medical_form') %}
+        <div class="file-info">
+          <p>{{ documents.medical_form.file_name }}</p>
+          <p>{{ (documents.medical_form.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Personal Data Form -->
+      <div class="doc-card {{ 'uploaded' if documents.get('personal_data_form') else 'missing' }}" data-doc-type="personal_data_form">
+        <div class="doc-label">
+          <i class="fas fa-user-edit"></i> Personal Data Form <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('personal_data_form') else 'no-file' }}">
+          {% if documents.get('personal_data_form') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="personal_data_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'personal_data_form')">
+        </div>
+        {% if documents.get('personal_data_form') %}
+        <div class="file-info">
+          <p>{{ documents.personal_data_form.file_name }}</p>
+          <p>{{ (documents.personal_data_form.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Declaration Form -->
+      <div class="doc-card {{ 'uploaded' if documents.get('declaration_form') else 'missing' }}" data-doc-type="declaration_form">
+        <div class="doc-label">
+          <i class="fas fa-file-signature"></i> Declaration Form <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('declaration_form') else 'no-file' }}">
+          {% if documents.get('declaration_form') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="declaration_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'declaration_form')">
+        </div>
+        {% if documents.get('declaration_form') %}
+        <div class="file-info">
+          <p>{{ documents.declaration_form.file_name }}</p>
+          <p>{{ (documents.declaration_form.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- KCSE Result Slip -->
+      <div class="doc-card {{ 'uploaded' if documents.get('kcse_result_slip') else 'missing' }}" data-doc-type="kcse_result_slip">
+        <div class="doc-label">
+          <i class="fas fa-scroll"></i> KCSE Result Slip <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('kcse_result_slip') else 'no-file' }}">
+          {% if documents.get('kcse_result_slip') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="kcse_result_slip" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'kcse_result_slip')">
+        </div>
+        {% if documents.get('kcse_result_slip') %}
+        <div class="file-info">
+          <p>{{ documents.kcse_result_slip.file_name }}</p>
+          <p>{{ (documents.kcse_result_slip.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- KCSE Certificate -->
+      <div class="doc-card {{ 'uploaded' if documents.get('kcse_certificate') else 'missing' }}" data-doc-type="kcse_certificate">
+        <div class="doc-label">
+          <i class="fas fa-certificate"></i> KCSE Certificate <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('kcse_certificate') else 'no-file' }}">
+          {% if documents.get('kcse_certificate') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="kcse_certificate" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'kcse_certificate')">
+        </div>
+        {% if documents.get('kcse_certificate') %}
+        <div class="file-info">
+          <p>{{ documents.kcse_certificate.file_name }}</p>
+          <p>{{ (documents.kcse_certificate.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- KCPE Result Slip -->
+      <div class="doc-card {{ 'uploaded' if documents.get('kcpe_result_slip') else 'missing' }}" data-doc-type="kcpe_result_slip">
+        <div class="doc-label">
+          <i class="fas fa-scroll"></i> KCPE Result Slip <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('kcpe_result_slip') else 'no-file' }}">
+          {% if documents.get('kcpe_result_slip') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="kcpe_result_slip" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'kcpe_result_slip')">
+        </div>
+        {% if documents.get('kcpe_result_slip') %}
+        <div class="file-info">
+          <p>{{ documents.kcpe_result_slip.file_name }}</p>
+          <p>{{ (documents.kcpe_result_slip.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Birth Certificate -->
+      <div class="doc-card {{ 'uploaded' if documents.get('birth_certificate') else 'missing' }}" data-doc-type="birth_certificate">
+        <div class="doc-label">
+          <i class="fas fa-baby"></i> Birth Certificate <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('birth_certificate') else 'no-file' }}">
+          {% if documents.get('birth_certificate') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="birth_certificate" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'birth_certificate')">
+        </div>
+        {% if documents.get('birth_certificate') %}
+        <div class="file-info">
+          <p>{{ documents.birth_certificate.file_name }}</p>
+          <p>{{ (documents.birth_certificate.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- National ID -->
+      <div class="doc-card {{ 'uploaded' if documents.get('national_id') else 'missing' }}" data-doc-type="national_id">
+        <div class="doc-label">
+          <i class="fas fa-id-card"></i> National ID <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('national_id') else 'no-file' }}">
+          {% if documents.get('national_id') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="national_id" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'national_id')">
+        </div>
+        {% if documents.get('national_id') %}
+        <div class="file-info">
+          <p>{{ documents.national_id.file_name }}</p>
+          <p>{{ (documents.national_id.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Guardian ID Copies -->
+      <div class="doc-card {{ 'uploaded' if documents.get('guardian_id') else 'missing' }}" data-doc-type="guardian_id">
+        <div class="doc-label">
+          <i class="fas fa-users"></i> Guardian ID Copies
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('guardian_id') else 'no-file' }}">
+          {% if documents.get('guardian_id') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="guardian_id" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'guardian_id')">
+        </div>
+        {% if documents.get('guardian_id') %}
+        <div class="file-info">
+          <p>{{ documents.guardian_id.file_name }}</p>
+          <p>{{ (documents.guardian_id.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Consent Form -->
+      <div class="doc-card {{ 'uploaded' if documents.get('consent_form') else 'missing' }}" data-doc-type="consent_form">
+        <div class="doc-label">
+          <i class="fas fa-file-contract"></i> Consent Form <span class="required">*</span>
+        </div>
+        <div class="doc-status {{ 'uploaded' if documents.get('consent_form') else 'no-file' }}">
+          {% if documents.get('consent_form') %}
+            <i class="fas fa-check-circle"></i> Uploaded Successfully
+          {% else %}
+            <i class="fas fa-file"></i> No file selected
+          {% endif %}
+        </div>
+        <div class="file-input-wrapper">
+          <input type="file" name="consent_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'consent_form')">
+        </div>
+        {% if documents.get('consent_form') %}
+        <div class="file-info">
+          <p>{{ documents.consent_form.file_name }}</p>
+          <p>{{ (documents.consent_form.file_size / 1024) | round(1) }} KB</p>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <button type="submit" class="btn-save" id="save-btn">
+      <i class="fas fa-save"></i> SAVE DOCUMENTS
+    </button>
+  </form>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function handleFileSelect(input, docType) {
+  const card = input.closest('.doc-card');
+  const statusDiv = card.querySelector('.doc-status');
+  const fileInfo = card.querySelector('.file-info');
+  
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const fileSize = (file.size / 1024).toFixed(1);
+    
+    // Update status to uploading
+    statusDiv.className = 'doc-status uploading';
+    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    
+    // Update file info
+    if (!fileInfo) {
+      const newFileInfo = document.createElement('div');
+      newFileInfo.className = 'file-info';
+      card.appendChild(newFileInfo);
+    }
+    card.querySelector('.file-info').innerHTML = `
+      <p>${file.name}</p>
+      <p>${fileSize} KB</p>
+    `;
+    
+    // Simulate upload completion (in real implementation, this would be an AJAX call)
+    setTimeout(() => {
+      statusDiv.className = 'doc-status uploaded';
+      statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Uploaded Successfully';
+      card.classList.remove('missing');
+      card.classList.add('uploaded');
+    }, 1000);
+  } else {
+    // No file selected
+    statusDiv.className = 'doc-status no-file';
+    statusDiv.innerHTML = '<i class="fas fa-file"></i> No file selected';
+    card.classList.remove('uploaded');
+    card.classList.add('missing');
+  }
+}
+
+// Form submission
+document.getElementById('documents-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  // Check if at least one file is selected
+  const inputs = this.querySelectorAll('input[type="file"]');
+  let hasFile = false;
+  inputs.forEach(input => {
+    if (input.files && input.files[0]) {
+      hasFile = true;
+    }
+  });
+  
+  if (!hasFile) {
+    alert('Please select at least one file to upload.');
+    return;
+  }
+  
+  // Show saving state
+  const saveBtn = document.getElementById('save-btn');
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  
+  // Submit form (in real implementation, this would be an AJAX call)
+  setTimeout(() => {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-save"></i> SAVE DOCUMENTS';
+    alert('Documents saved successfully!');
+  }, 1500);
+});
+</script>
+{% endblock %}

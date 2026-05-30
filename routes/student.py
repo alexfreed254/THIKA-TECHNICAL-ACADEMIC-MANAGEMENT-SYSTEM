@@ -385,6 +385,103 @@ def profile():
     return render_template("student/profile.html", student=student)
 
 
+# ── My Documents ───────────────────────────────────────────────────────────────
+
+@student_bp.route("/documents", methods=["GET", "POST"])
+@student_required
+def my_documents():
+    """Manage student personal documents with individual file uploads."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    if request.method == "POST":
+        # Handle document uploads
+        document_types = [
+            'passport_photo', 'admission_letter', 'medical_form', 'personal_data_form',
+            'declaration_form', 'kcse_result_slip', 'kcse_certificate', 'kcpe_result_slip',
+            'birth_certificate', 'national_id', 'guardian_id', 'consent_form'
+        ]
+        
+        uploaded_count = 0
+        for doc_type in document_types:
+            if doc_type in request.files:
+                file = request.files[doc_type]
+                if file and file.filename:
+                    try:
+                        # Upload to Supabase Storage
+                        ext = file.filename.rsplit('.', 1)[1].lower()
+                        filename = f"student_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
+                        
+                        storage_client = get_service_client().storage
+                        storage_client.from_("student-documents").upload(
+                            filename,
+                            file.read(),
+                            {"content-type": f"application/{ext}" if ext == 'pdf' else f"image/{ext}"}
+                        )
+                        
+                        # Get public URL
+                        public_url = storage_client.from_("student-documents").get_public_url(filename)
+                        
+                        # Check if document already exists
+                        existing = db.table("student_documents").select("*").eq("student_id", student_id).eq("document_type", doc_type).execute().data
+                        
+                        if existing:
+                            # Update existing document
+                            db.table("student_documents").update({
+                                "file_path": filename,
+                                "file_name": file.filename,
+                                "file_size": len(file.read()) if file else 0,
+                                "uploaded_at": "now()"
+                            }).eq("id", existing[0]["id"]).execute()
+                        else:
+                            # Insert new document
+                            db.table("student_documents").insert({
+                                "student_id": student_id,
+                                "document_type": doc_type,
+                                "file_path": filename,
+                                "file_name": file.filename,
+                                "file_size": len(file.read()) if file else 0,
+                                "status": "pending"
+                            }).execute()
+                        
+                        uploaded_count += 1
+                    except Exception as e:
+                        flash(f'Error uploading {doc_type.replace("_", " ").title()}: {e}', 'danger')
+        
+        if uploaded_count > 0:
+            write_audit_log("upload_documents", target=f"user:{student_id}", detail={"count": uploaded_count})
+            flash(f'{uploaded_count} document(s) uploaded successfully.', 'success')
+        
+        return redirect(url_for("student.my_documents"))
+
+    # GET request - fetch student data and documents
+    student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
+    
+    # Get course and department info
+    enrollment = db.table("enrollments").select("*, classes(name, course_id)").eq("student_id", student_id).execute().data or []
+    course_name = ""
+    department_name = ""
+    
+    if enrollment:
+        class_data = enrollment[0].get("classes", {})
+        course_id = class_data.get("course_id")
+        if course_id:
+            course = db.table("courses").select("*, departments(name)").eq("id", course_id).single().execute().data or {}
+            course_name = course.get("name", "")
+            department_name = course.get("departments", {}).get("name", "")
+    
+    # Get uploaded documents
+    documents_data = db.table("student_documents").select("*").eq("student_id", student_id).execute().data or []
+    documents = {doc["document_type"]: doc for doc in documents_data}
+    
+    return render_template("student/my_documents.html", 
+                          student=student, 
+                          course_name=course_name,
+                          department_name=department_name,
+                          documents=documents)
+
+
 # ── Assessment Upload ─────────────────────────────────────────────────────────
 
 @student_bp.route("/assessments")
