@@ -13,6 +13,7 @@
       color: #333;
       display: flex;
       flex-direction: column;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.1);
     }
     .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
     .sidebar-header img { height: 58px; border-radius: 50%; border: 2px solid #e5e7eb; margin-bottom: 10px; }
@@ -47,6 +48,9 @@
     .notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #f3f4f6; transition: background 0.3s ease; }
     .notification-bell:hover { background: #e5e7eb; }
     .notification-badge { position: absolute; top: -5px; right: -5px; background: #c62828; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 50%; min-width: 18px; text-align: center; }
+    @media (min-width: 769px) {
+      .sidebar { transform: translateX(0) !important; }
+    }
     {% block extra_style %}{% endblock %}
   </style>
 </head>
