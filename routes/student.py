@@ -756,14 +756,26 @@ def my_units():
     user = current_user()
     student_id = user["id"]
 
+    # Get student's enrollments
     enrollments = (db.table("enrollments")
-                  .select("*, units(name, code, id), classes(name)")
+                  .select("*, classes(name)")
                   .eq("student_id", student_id)
                   .execute().data or [])
 
+    # Get class_ids from enrollments
+    class_ids = [e["class_id"] for e in enrollments]
+
+    # Get class_units for those classes (this links classes to units)
+    class_units_data = []
+    if class_ids:
+        class_units_data = (db.table("class_units")
+                           .select("*, units(name, code, id)")
+                           .in_("class_id", class_ids)
+                           .execute().data or [])
+
     units_data = []
-    for enr in enrollments:
-        unit = enr.get("units") or {}
+    for cu in class_units_data:
+        unit = cu.get("units") or {}
         uid = unit.get("id")
         if not uid:
             continue
@@ -775,11 +787,20 @@ def my_units():
         total = len(att)
         present = sum(1 for a in att if a.get("status") == "present")
         pct = round(present / total * 100, 1) if total > 0 else 0
+        
+        # Get class name from enrollments
+        class_id = cu.get("class_id")
+        class_name = ""
+        for enr in enrollments:
+            if enr.get("class_id") == class_id:
+                class_name = (enr.get("classes") or {}).get("name", "")
+                break
+        
         units_data.append({
             "id": uid,
             "code": unit.get("code", ""),
             "name": unit.get("name", ""),
-            "class_name": (enr.get("classes") or {}).get("name", ""),
+            "class_name": class_name,
             "attended": present,
             "total": total,
             "pct": pct
