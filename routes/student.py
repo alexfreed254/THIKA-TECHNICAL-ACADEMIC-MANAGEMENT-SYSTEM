@@ -10,7 +10,7 @@ Combines features from both:
 import re
 from typing import Optional
 from flask import (Blueprint, render_template, request,
-                   redirect, url_for, abort, flash)
+                   redirect, url_for, abort, flash, make_response)
 from auth_utils import (student_required, write_audit_log, current_user)
 from db import get_service_client
 from datetime import datetime
@@ -1109,6 +1109,435 @@ def new_exam_booking():
                           units=units,
                           error=error,
                           today_min=datetime.now().strftime("%Y-%m-%d"))
+
+
+# ── New Exam Booking Workflow (Semi-Digital) ─────────────────────────────────────
+
+@student_bp.route("/exam-booking-form")
+@student_required
+def exam_booking_form():
+    """Show new exam booking form with document verification and unit selection."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    # Get student data
+    student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
+    
+    # Get course and department info
+    enrollment = db.table("enrollments").select("*, classes(name, course_id)").eq("student_id", student_id).execute().data or []
+    course_name = ""
+    department_name = ""
+    class_id = None
+    
+    if enrollment:
+        class_data = enrollment[0].get("classes", {})
+        class_id = class_data.get("id")
+        course_id = class_data.get("course_id")
+        if course_id:
+            course = db.table("courses").select("*, departments(name)").eq("id", course_id).single().execute().data or {}
+            course_name = course.get("name", "")
+            department_name = course.get("departments", {}).get("name", "")
+    
+    # Get units for the student's class
+    units = []
+    if class_id:
+        cu_rows = (db.table("class_units")
+                   .select("*, units(name, code)")
+                   .eq("class_id", class_id)
+                   .execute().data or [])
+        units = cu_rows
+    
+    # Get uploaded documents
+    documents_data = db.table("student_documents").select("*").eq("student_id", student_id).execute().data or []
+    documents = {doc["document_type"]: doc for doc in documents_data}
+    
+    # Check required documents
+    required_docs = ['national_id', 'birth_certificate', 'kcse_certificate', 'passport_photo']
+    missing_documents = any(doc not in documents for doc in required_docs)
+    
+    # Check if can download (all docs present + at least one unit selected)
+    can_download = not missing_documents and len(units) > 0
+    
+    return render_template("student/exam_booking_new.html",
+                          student=student,
+                          course_name=course_name,
+                          department_name=department_name,
+                          units=units,
+                          documents=documents,
+                          missing_documents=missing_documents,
+                          can_download=can_download)
+
+
+@student_bp.route("/exam-booking-submit", methods=["POST"])
+@student_required
+def exam_booking_submit():
+    """Handle exam booking form submission and generate multi-page PDF."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    # Get selected units
+    selected_units = request.form.getlist("selected_units")
+    
+    if not selected_units:
+        flash('Please select at least one unit.', 'danger')
+        return redirect(url_for("student.exam_booking_form"))
+    
+    # Get student data
+    student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
+    
+    # Get course and department info
+    enrollment = db.table("enrollments").select("*, classes(name, course_id)").eq("student_id", student_id).execute().data or []
+    course_name = ""
+    department_name = ""
+    
+    if enrollment:
+        class_data = enrollment[0].get("classes", {})
+        course_id = class_data.get("course_id")
+        if course_id:
+            course = db.table("courses").select("*, departments(name)").eq("id", course_id).single().execute().data or {}
+            course_name = course.get("name", "")
+            department_name = course.get("departments", {}).get("name", "")
+    
+    # Get units details
+    units_data = []
+    for unit_id in selected_units:
+        unit = db.table("units").select("*").eq("id", unit_id).single().execute().data
+        if unit:
+            unit_type = request.form.get(f"unit_type_{unit_id}", "core")
+            units_data.append({
+                "unit": unit,
+                "type": unit_type
+            })
+    
+    # Get documents
+    documents_data = db.table("student_documents").select("*").eq("student_id", student_id).execute().data or []
+    documents = {doc["document_type"]: doc for doc in documents_data}
+    
+    # Generate serial number: EXAM/DEPT/COURSE/YEAR/SERIES/UNIQUE_SERIAL
+    # Get department code
+    dept_code = ""
+    if enrollment:
+        class_data = enrollment[0].get("classes", {})
+        course_id = class_data.get("course_id")
+        if course_id:
+            course = db.table("courses").select("*, departments(code)").eq("id", course_id).single().execute().data or {}
+            dept_code = course.get("departments", {}).get("code", "GEN")
+    
+    # Get course code
+    course_code = ""
+    if enrollment:
+        class_data = enrollment[0].get("classes", {})
+        course_id = class_data.get("course_id")
+        if course_id:
+            course = db.table("courses").select("code").eq("id", course_id).single().execute().data or {}
+            course_code = course.get("code", "GEN")
+    
+    # Generate serial components
+    year = datetime.now().year
+    series = "1"  # Can be 1, 2, or 3 for different exam series in a year
+    unique_serial = str(uuid.uuid4().int)[:8]
+    
+    serial_number = f"EXAM/{dept_code}/{course_code}/{year}/{series}/{unique_serial}"
+    
+    # Create exam booking record with serial number
+    for unit_data in units_data:
+        db.table("exam_bookings").insert({
+            "student_id": student_id,
+            "unit_id": unit_data["unit"]["id"],
+            "exam_date": datetime.now().date(),
+            "exam_session": "morning",
+            "purpose": f"Exam booking for {unit_data['unit']['name']} ({unit_data['type']})",
+            "status": "pending",
+            "serial_number": serial_number
+        }).execute()
+    
+    write_audit_log("create_exam_booking", target=f"booking:{serial_number}", detail={"units": len(units_data)})
+    
+    # Generate multi-page PDF with embedded documents
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        import io
+        from PIL import Image as PILImage
+        import os
+        
+        # Create PDF buffer
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        
+        # Story (content) list
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            textColor=colors.darkblue,
+            alignment=TA_CENTER,
+            spaceAfter=12
+        )
+        
+        header_style = ParagraphStyle(
+            'CustomHeader',
+            parent=styles['Heading2'],
+            fontSize=12,
+            textColor=colors.black,
+            alignment=TA_CENTER,
+            spaceAfter=6
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.black,
+            spaceAfter=6
+        )
+        
+        # PAGE 1: COVER PAGE
+        story.append(Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title_style))
+        story.append(Spacer(1, 12))
+        story.append(Paragraph("EXAMINATION BOOKING FORM", header_style))
+        story.append(Spacer(1, 12))
+        story.append(Paragraph(f"Serial Number: {serial_number}", normal_style))
+        story.append(Paragraph(f"Academic Year: {year}", normal_style))
+        story.append(Paragraph(f"Exam Series: {series}", normal_style))
+        story.append(Spacer(1, 24))
+        
+        # PAGE 2: STUDENT DETAILS
+        story.append(Paragraph("STUDENT DETAILS", header_style))
+        story.append(Spacer(1, 12))
+        
+        student_data = [
+            ["Full Name:", student.get("full_name", "")],
+            ["Admission Number:", student.get("admission_no", "")],
+            ["Course:", course_name],
+            ["Department:", department_name],
+            ["Phone:", student.get("mobile_number", "")],
+            ["Email:", student.get("email", "")],
+            ["PWD Status:", student.get("pwd_status", "N/A")]
+        ]
+        
+        student_table = Table(student_data, colWidths=[2*inch, 4*inch])
+        student_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(student_table)
+        story.append(Spacer(1, 24))
+        
+        # PAGE 3: UNIT REGISTRATION
+        story.append(Paragraph("UNIT REGISTRATION", header_style))
+        story.append(Spacer(1, 12))
+        
+        unit_headers = ["S/N", "Unit Name", "Unit Code", "Type"]
+        unit_rows = [[str(i+1), u["unit"]["name"], u["unit"]["code"], u["type"].title()] for i, u in enumerate(units_data)]
+        unit_table_data = [unit_headers] + unit_rows
+        
+        unit_table = Table(unit_table_data, colWidths=[0.5*inch, 2.5*inch, 1.5*inch, 1*inch])
+        unit_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(unit_table)
+        story.append(Spacer(1, 24))
+        
+        # PAGE 4: DOCUMENT VERIFICATION SUMMARY
+        story.append(Paragraph("DOCUMENT VERIFICATION SUMMARY", header_style))
+        story.append(Spacer(1, 12))
+        
+        doc_headers = ["Document", "Status", "Reference ID"]
+        doc_rows = []
+        required_docs_list = [
+            ("National ID", "national_id"),
+            ("Birth Certificate", "birth_certificate"),
+            ("KCSE Certificate", "kcse_certificate"),
+            ("Passport Photo", "passport_photo")
+        ]
+        
+        for doc_name, doc_type in required_docs_list:
+            doc = documents.get(doc_type)
+            status = "✓ Attached" if doc else "✗ Missing"
+            ref_id = doc.get("id", "")[:8] if doc else "N/A"
+            doc_rows.append([doc_name, status, ref_id])
+        
+        doc_table_data = [doc_headers] + doc_rows
+        doc_table = Table(doc_table_data, colWidths=[2*inch, 1.5*inch, 2*inch])
+        doc_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(doc_table)
+        story.append(Spacer(1, 24))
+        
+        # PAGE 5-7: ATTACHED DOCUMENTS
+        story.append(Paragraph("ATTACHED DOCUMENTS", header_style))
+        story.append(Spacer(1, 12))
+        
+        storage_client = get_service_client().storage
+        
+        for doc_name, doc_type in required_docs_list:
+            doc = documents.get(doc_type)
+            if doc:
+                story.append(Paragraph(f"{doc_name}:", normal_style))
+                story.append(Spacer(1, 6))
+                
+                try:
+                    # Download file from Supabase Storage
+                    file_path = doc.get("file_path")
+                    if file_path:
+                        # Get file from storage
+                        file_data = storage_client.from_("student-documents").download(file_path)
+                        
+                        # Create image from file data
+                        img_buffer = io.BytesIO(file_data)
+                        try:
+                            img = PILImage.open(img_buffer)
+                            
+                            # Convert to RGB if necessary
+                            if img.mode != 'RGB':
+                                img = img.convert('RGB')
+                            
+                            # Resize to fit page (max width 5 inches, max height 6 inches)
+                            img_width, img_height = img.size
+                            max_width = 5 * inch
+                            max_height = 6 * inch
+                            
+                            if img_width > max_width or img_height > max_height:
+                                ratio = min(max_width / img_width, max_height / img_height)
+                                new_width = int(img_width * ratio)
+                                new_height = int(img_height * ratio)
+                                img = img.resize((new_width, new_height), PILImage.LANCZOS)
+                            
+                            # Add image to story
+                            img_buffer.seek(0)
+                            rl_image = Image(img_buffer, width=img.width, height=img.height)
+                            story.append(rl_image)
+                            story.append(Spacer(1, 12))
+                        except Exception as e:
+                            story.append(Paragraph(f"[Error loading image: {str(e)}]", normal_style))
+                            story.append(Spacer(1, 12))
+                except Exception as e:
+                    story.append(Paragraph(f"[Error downloading document: {str(e)}]", normal_style))
+                    story.append(Spacer(1, 12))
+            else:
+                story.append(Paragraph(f"{doc_name}: NOT UPLOADED", normal_style))
+                story.append(Spacer(1, 12))
+        
+        # PAGE 8: SYSTEM VERIFICATION
+        story.append(Paragraph("SYSTEM VERIFICATION", header_style))
+        story.append(Spacer(1, 12))
+        
+        verification_data = [
+            ["Serial Number:", serial_number],
+            ["Generated On:", datetime.now().strftime("%d %B %Y %H:%M:%S")],
+            ["System Status:", "READY FOR HOD VERIFICATION" if not any(doc not in documents for doc_type in required_docs_list) else "INCOMPLETE"],
+            ["Total Units:", str(len(units_data))]
+        ]
+        
+        verification_table = Table(verification_data, colWidths=[2*inch, 4*inch])
+        verification_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(verification_table)
+        story.append(Spacer(1, 24))
+        
+        # PAGE 9: SIGNATURE PAGE (LEFT BLANK FOR PHYSICAL USE)
+        story.append(Paragraph("OFFICIAL SIGNATURES", header_style))
+        story.append(Spacer(1, 12))
+        story.append(Paragraph("This form must be signed and stamped by:", normal_style))
+        story.append(Spacer(1, 12))
+        
+        signature_data = [
+            ["1. HOD (Head of Department)", "_________________________"],
+            ["   Signature & Stamp", ""],
+            ["   Date:", "_________________________"],
+            ["", ""],
+            ["2. Examinations Office", "_________________________"],
+            ["   Signature & Stamp", ""],
+            ["   Date:", "_________________________"],
+            ["", ""],
+            ["3. Student Signature", "_________________________"],
+            ["   Date:", "_________________________"]
+        ]
+        
+        signature_table = Table(signature_data, colWidths=[3*inch, 3*inch])
+        signature_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+        ]))
+        story.append(signature_table)
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF value
+        pdf_value = buffer.getvalue()
+        buffer.close()
+        
+        # Save PDF to Supabase Storage
+        pdf_filename = f"exam_bookings/{student_id}_{serial_number}.pdf"
+        storage_client.from_("exam-bookings").upload(pdf_filename, pdf_value, {"content-type": "application/pdf"})
+        
+        # Get public URL
+        pdf_url = storage_client.from_("exam-bookings").get_public_url(pdf_filename)
+        
+        flash(f'Exam booking form generated successfully! Serial Number: {serial_number}', 'success')
+        flash('Please download and print the form, then submit to HOD for verification.', 'info')
+        
+        # Return PDF for download
+        response = make_response(pdf_value)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=Exam_Booking_{serial_number}.pdf'
+        return response
+        
+    except ImportError:
+        # If reportlab is not installed, fall back to simple message
+        flash(f'Exam booking created successfully! Serial Number: {serial_number}', 'success')
+        flash('PDF generation requires reportlab library. Please install it: pip install reportlab pillow', 'warning')
+        flash('Please download and print the form, then submit to HOD for verification.', 'info')
+        return redirect(url_for("student.exam_bookings"))
+    except Exception as e:
+        flash(f'Error generating PDF: {e}', 'danger')
+        flash(f'Exam booking created successfully! Serial Number: {serial_number}', 'success')
+        return redirect(url_for("student.exam_bookings"))
 
 
 @student_bp.route("/exam-bookings/<booking_id>/download")

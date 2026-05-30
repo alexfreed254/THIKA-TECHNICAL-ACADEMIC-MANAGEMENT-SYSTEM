@@ -380,6 +380,7 @@ CREATE TABLE IF NOT EXISTS exam_bookings (
     approved_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
     approved_at TIMESTAMPTZ,
     rejection_reason TEXT,
+    serial_number TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(student_id, unit_id, exam_date)
@@ -1390,42 +1391,8 @@ CREATE POLICY competency_tracking_super_admin ON competency_tracking
 -- ────────────────────────────────────────────────────────────
 -- 17. SEED DATA (Departments and Courses)
 -- ────────────────────────────────────────────────────────────
-
-INSERT INTO departments (name, code) VALUES
-    ('Electrical Engineering', 'EE'),
-    ('Mechanical Engineering', 'ME'),
-    ('Information Technology', 'IT'),
-    ('Civil Engineering', 'CE'),
-    ('Automotive Engineering', 'AE'),
-    ('Welding & Fabrication', 'WF'),
-    ('Plumbing', 'PL'),
-    ('Carpentry', 'CA')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO courses (name, code, department_id)
-SELECT 'Certificate in Electrical Installation', 'CEI', id
-FROM departments WHERE code = 'EE'
-ON CONFLICT (code, department_id) DO NOTHING;
-
-INSERT INTO courses (name, code, department_id)
-SELECT 'Diploma in Mechanical Engineering', 'DME', id
-FROM departments WHERE code = 'ME'
-ON CONFLICT (code, department_id) DO NOTHING;
-
-INSERT INTO courses (name, code, department_id)
-SELECT 'Certificate in ICT', 'CICT', id
-FROM departments WHERE code = 'IT'
-ON CONFLICT (code, department_id) DO NOTHING;
-
-INSERT INTO courses (name, code, department_id)
-SELECT 'Certificate in Civil Engineering', 'CCE', id
-FROM departments WHERE code = 'CE'
-ON CONFLICT (code, department_id) DO NOTHING;
-
-INSERT INTO courses (name, code, department_id)
-SELECT 'Certificate in Automotive Engineering', 'CAE', id
-FROM departments WHERE code = 'AE'
-ON CONFLICT (code, department_id) DO NOTHING;
+-- NOTE: Departments and courses should be added by Super Admin through the admin interface
+-- No pre-seeded data - Super Admin manages all departments and courses
 
 -- ────────────────────────────────────────────────────────────
 -- 18. TVET ONLINE TRAINEE CLEARANCE SYSTEM

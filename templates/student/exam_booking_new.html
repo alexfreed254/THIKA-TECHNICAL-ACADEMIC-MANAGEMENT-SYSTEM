@@ -1,0 +1,425 @@
+{% extends "student/base.html" %}
+
+{% block title %}Exam Booking Form{% endblock %}
+{% block page_title %}Exam Booking Form{% endblock %}
+
+{% block extra_style %}
+<style>
+  .page-wrap { padding: 24px; max-width: 1000px; margin: 0 auto; }
+  .section-title { 
+    font-size: 16px; 
+    font-weight: 700; 
+    color: #1e293b; 
+    margin: 0 0 20px 0; 
+    padding-bottom: 10px; 
+    border-bottom: 2px solid #e2e8f0; 
+  }
+  .info-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 16px; 
+    margin-bottom: 30px; 
+  }
+  .info-item { 
+    background: #f8fafc; 
+    padding: 14px 16px; 
+    border-radius: 8px; 
+    border: 1px solid #e2e8f0; 
+  }
+  .info-label { 
+    font-size: 11px; 
+    font-weight: 600; 
+    color: #64748b; 
+    margin-bottom: 4px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+  }
+  .info-value { 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #1e293b; 
+  }
+  .doc-status-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+    gap: 16px; 
+    margin-bottom: 30px; 
+  }
+  .doc-status-card { 
+    background: #fff; 
+    padding: 16px; 
+    border-radius: 10px; 
+    border: 2px solid #e2e8f0; 
+    transition: all 0.2s; 
+  }
+  .doc-status-card.uploaded { border-color: #22c55e; background: #f0fdf4; }
+  .doc-status-card.missing { border-color: #ef4444; background: #fef2f2; }
+  .doc-status-label { 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #1e293b; 
+    margin-bottom: 8px; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+  }
+  .doc-status-indicator { 
+    font-size: 12px; 
+    font-weight: 600; 
+    margin-bottom: 8px; 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+  }
+  .doc-status-indicator.uploaded { color: #22c55e; }
+  .doc-status-indicator.missing { color: #ef4444; }
+  .units-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+    gap: 16px; 
+    margin-bottom: 30px; 
+  }
+  .unit-card { 
+    background: #fff; 
+    padding: 16px; 
+    border-radius: 10px; 
+    border: 2px solid #e2e8f0; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+  }
+  .unit-card:hover { 
+    border-color: #3b82f6; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+  }
+  .unit-card.selected { 
+    border-color: #3b82f6; 
+    background: #eff6ff; 
+  }
+  .unit-card input { 
+    display: none; 
+  }
+  .unit-label { 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #1e293b; 
+    margin-bottom: 4px; 
+  }
+  .unit-code { 
+    font-size: 12px; 
+    color: #64748b; 
+  }
+  .unit-type-select { 
+    margin-top: 10px; 
+  }
+  .unit-type-select label { 
+    font-size: 12px; 
+    color: #64748b; 
+    margin-right: 12px; 
+  }
+  .unit-type-select input { 
+    margin-right: 4px; 
+  }
+  .booking-status { 
+    background: #fff; 
+    padding: 20px; 
+    border-radius: 10px; 
+    border: 2px solid #e2e8f0; 
+    margin-bottom: 30px; 
+    text-align: center; 
+  }
+  .booking-status.ready { border-color: #22c55e; background: #f0fdf4; }
+  .booking-status.missing { border-color: #ef4444; background: #fef2f2; }
+  .booking-status.incomplete { border-color: #f59e0b; background: #fffbeb; }
+  .status-icon { 
+    font-size: 48px; 
+    margin-bottom: 12px; 
+  }
+  .status-title { 
+    font-size: 18px; 
+    font-weight: 700; 
+    margin-bottom: 8px; 
+  }
+  .status-message { 
+    font-size: 14px; 
+    color: #64748b; 
+  }
+  .btn-download { 
+    background: #22c55e; 
+    color: white; 
+    padding: 14px 32px; 
+    border: none; 
+    border-radius: 8px; 
+    font-size: 14px; 
+    font-weight: 700; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 8px; 
+  }
+  .btn-download:hover { 
+    background: #16a34a; 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); 
+  }
+  .btn-download:disabled { 
+    background: #cbd5e1; 
+    cursor: not-allowed; 
+    transform: none; 
+    box-shadow: none; 
+  }
+  .btn-documents { 
+    background: #3b82f6; 
+    color: white; 
+    padding: 10px 20px; 
+    border: none; 
+    border-radius: 8px; 
+    font-size: 13px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    text-decoration: none; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 6px; 
+  }
+  .btn-documents:hover { 
+    background: #2563eb; 
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  
+  <!-- STEP 1: STUDENT DETAILS (AUTO-FILLED) -->
+  <h2 class="section-title">STEP 1: STUDENT DETAILS (AUTO-FILLED)</h2>
+  <div class="info-grid">
+    <div class="info-item">
+      <div class="info-label">Full Name</div>
+      <div class="info-value">{{ student.full_name or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Admission Number</div>
+      <div class="info-value">{{ student.admission_no or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Course</div>
+      <div class="info-value">{{ course_name or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Department</div>
+      <div class="info-value">{{ department_name or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Module / Level</div>
+      <div class="info-value">{{ student.level or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Phone Number</div>
+      <div class="info-value">{{ student.mobile_number or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Email</div>
+      <div class="info-value">{{ student.email or '—' }}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">PWD Status</div>
+      <div class="info-value">{{ student.pwd_status or 'N/A' }}</div>
+    </div>
+  </div>
+
+  <!-- STEP 2: DOCUMENT VERIFICATION (AUTO CHECK FROM "MY DOCUMENTS") -->
+  <h2 class="section-title">STEP 2: DOCUMENT VERIFICATION (AUTO CHECK FROM "MY DOCUMENTS")</h2>
+  
+  <div class="doc-status-grid">
+    <div class="doc-status-card {{ 'uploaded' if documents.get('national_id') else 'missing' }}">
+      <div class="doc-status-label">
+        <i class="fas fa-id-card"></i> National ID
+      </div>
+      <div class="doc-status-indicator {{ 'uploaded' if documents.get('national_id') else 'missing' }}">
+        {% if documents.get('national_id') %}
+          <i class="fas fa-check-circle"></i> Uploaded
+        {% else %}
+          <i class="fas fa-times-circle"></i> Missing
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="doc-status-card {{ 'uploaded' if documents.get('birth_certificate') else 'missing' }}">
+      <div class="doc-status-label">
+        <i class="fas fa-baby"></i> Birth Certificate
+      </div>
+      <div class="doc-status-indicator {{ 'uploaded' if documents.get('birth_certificate') else 'missing' }}">
+        {% if documents.get('birth_certificate') %}
+          <i class="fas fa-check-circle"></i> Uploaded
+        {% else %}
+          <i class="fas fa-times-circle"></i> Missing
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="doc-status-card {{ 'uploaded' if documents.get('kcse_certificate') else 'missing' }}">
+      <div class="doc-status-label">
+        <i class="fas fa-certificate"></i> KCSE Certificate
+      </div>
+      <div class="doc-status-indicator {{ 'uploaded' if documents.get('kcse_certificate') else 'missing' }}">
+        {% if documents.get('kcse_certificate') %}
+          <i class="fas fa-check-circle"></i> Uploaded
+        {% else %}
+          <i class="fas fa-times-circle"></i> Missing
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="doc-status-card {{ 'uploaded' if documents.get('passport_photo') else 'missing' }}">
+      <div class="doc-status-label">
+        <i class="fas fa-camera"></i> Passport Photo
+      </div>
+      <div class="doc-status-indicator {{ 'uploaded' if documents.get('passport_photo') else 'missing' }}">
+        {% if documents.get('passport_photo') %}
+          <i class="fas fa-check-circle"></i> Uploaded
+        {% else %}
+          <i class="fas fa-times-circle"></i> Missing
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="doc-status-card {{ 'uploaded' if documents.get('fee_statement') else 'missing' }}">
+      <div class="doc-status-label">
+        <i class="fas fa-file-invoice-dollar"></i> Fee Statement
+      </div>
+      <div class="doc-status-indicator {{ 'uploaded' if documents.get('fee_statement') else 'missing' }}">
+        {% if documents.get('fee_statement') %}
+          <i class="fas fa-check-circle"></i> Uploaded
+        {% else %}
+          <i class="fas fa-times-circle"></i> Missing
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if missing_documents %}
+  <div style="text-align: center; margin-bottom: 30px; padding: 16px; background: #fef2f2; border-radius: 8px; border: 2px solid #ef4444;">
+    <p style="color: #dc2626; font-weight: 600; margin-bottom: 8px;">
+      <i class="fas fa-exclamation-triangle"></i> Missing Documents Warning
+    </p>
+    <p style="color: #64748b; margin-bottom: 12px;">You cannot download the exam booking form until all required documents are uploaded.</p>
+    <a href="/student/documents" class="btn-documents">
+      <i class="fas fa-folder-open"></i> View My Documents
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- STEP 3: UNIT REGISTRATION + VALIDATION -->
+  <h2 class="section-title">STEP 3: UNIT REGISTRATION + VALIDATION</h2>
+  
+  <form id="exam-booking-form" method="POST" action="/student/exam-booking-submit">
+    <div class="units-grid">
+      {% for unit in units %}
+      <div class="unit-card" onclick="this.querySelector('input').click()">
+        <input type="checkbox" name="selected_units" value="{{ unit.units.id }}" id="unit-{{ unit.units.id }}" onchange="updateSelection()">
+        <div class="unit-label">{{ unit.units.name }}</div>
+        <div class="unit-code">{{ unit.units.code }}</div>
+        <div class="unit-type-select">
+          <label><input type="radio" name="unit_type_{{ unit.units.id }}" value="core"> Core</label>
+          <label><input type="radio" name="unit_type_{{ unit.units.id }}" value="common"> Common</label>
+          <label><input type="radio" name="unit_type_{{ unit.units.id }}" value="basic"> Basic</label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- BOOKING STATUS INDICATOR -->
+    <div class="booking-status {{ 'ready' if can_download else 'missing' if missing_documents else 'incomplete' }}">
+      {% if can_download %}
+        <div class="status-icon" style="color: #22c55e;">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="status-title" style="color: #16a34a;">Ready to Download</div>
+        <div class="status-message">All documents verified and units selected. You can now download your exam booking form.</div>
+      {% elif missing_documents %}
+        <div class="status-icon" style="color: #ef4444;">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="status-title" style="color: #dc2626;">Missing Documents</div>
+        <div class="status-message">Please upload all required documents in My Documents before downloading the form.</div>
+      {% else %}
+        <div class="status-icon" style="color: #f59e0b;">
+          <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="status-title" style="color: #d97706;">Incomplete Unit Selection</div>
+        <div class="status-message">Please select at least one unit to continue.</div>
+      {% endif %}
+    </div>
+
+    <!-- DOWNLOAD BUTTON -->
+    <div style="text-align: center;">
+      <button type="submit" class="btn-download" id="download-btn" {% if not can_download %}disabled{% endif %}>
+        <i class="fas fa-download"></i> DOWNLOAD EXAM BOOKING FORM PDF
+      </button>
+      {% if not can_download %}
+      <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
+        {% if missing_documents %}Missing documents{% else %}Select units to enable download{% endif %}
+      </p>
+      {% endif %}
+    </div>
+  </form>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function updateSelection() {
+  const checkboxes = document.querySelectorAll('input[name="selected_units"]:checked');
+  const downloadBtn = document.getElementById('download-btn');
+  const statusDiv = document.querySelector('.booking-status');
+  
+  if (checkboxes.length > 0 && !{{ 'true' if missing_documents else 'false' }}) {
+    downloadBtn.disabled = false;
+    statusDiv.className = 'booking-status ready';
+    statusDiv.innerHTML = `
+      <div class="status-icon" style="color: #22c55e;">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="status-title" style="color: #16a34a;">Ready to Download</div>
+      <div class="status-message">All documents verified and ${checkboxes.length} unit(s) selected. You can now download your exam booking form.</div>
+    `;
+  } else {
+    downloadBtn.disabled = true;
+    if ({{ 'true' if missing_documents else 'false' }}) {
+      statusDiv.className = 'booking-status missing';
+      statusDiv.innerHTML = `
+        <div class="status-icon" style="color: #ef4444;">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="status-title" style="color: #dc2626;">Missing Documents</div>
+        <div class="status-message">Please upload all required documents in My Documents before downloading the form.</div>
+      `;
+    } else {
+      statusDiv.className = 'booking-status incomplete';
+      statusDiv.innerHTML = `
+        <div class="status-icon" style="color: #f59e0b;">
+          <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="status-title" style="color: #d97706;">Incomplete Unit Selection</div>
+        <div class="status-message">Please select at least one unit to continue.</div>
+      `;
+    }
+  }
+}
+
+// Update card visual selection
+document.querySelectorAll('.unit-card').forEach(card => {
+  const checkbox = card.querySelector('input[type="checkbox"]');
+  checkbox.addEventListener('change', function() {
+    if (this.checked) {
+      card.classList.add('selected');
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+});
+</script>
+{% endblock %}
