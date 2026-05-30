@@ -1040,75 +1040,8 @@ def exam_bookings():
 @student_bp.route("/exam-bookings/new", methods=["GET", "POST"])
 @student_required
 def new_exam_booking():
-    """Create a new exam booking."""
-    db = get_service_client()
-    user = current_user()
-    student = _student_row()
-    
-    # Get student's class via enrollments table
-    enrollment = (db.table("enrollments")
-                  .select("class_id")
-                  .eq("student_id", student["id"])
-                  .limit(1)
-                  .execute().data or [])
-    class_id = enrollment[0]["class_id"] if enrollment else None
-    
-    # Get units for the student's class
-    units = []
-    if class_id:
-        cu_rows = (db.table("class_units")
-                   .select("*, units(name, code)")
-                   .eq("class_id", class_id)
-                   .execute().data or [])
-        units = cu_rows
-    
-    error = None
-    
-    if request.method == "POST":
-        unit_id = request.form.get("unit_id")
-        exam_date = request.form.get("exam_date")
-        exam_session = request.form.get("exam_session")
-        exam_venue = request.form.get("exam_venue")
-        purpose = request.form.get("purpose")
-        special_requirements = request.form.get("special_requirements")
-        
-        if not all([unit_id, exam_date, exam_session, purpose]):
-            error = "Unit, exam date, session, and purpose are required."
-        else:
-            try:
-                # Check if booking already exists
-                existing = (db.table("exam_bookings")
-                           .select("id")
-                           .eq("student_id", student["id"])
-                           .eq("unit_id", unit_id)
-                           .eq("exam_date", exam_date)
-                           .execute().data)
-                
-                if existing:
-                    error = "You already have a booking for this unit on this date."
-                else:
-                    booking_data = {
-                        "student_id": student["id"],
-                        "unit_id": unit_id,
-                        "exam_date": exam_date,
-                        "exam_session": exam_session,
-                        "exam_venue": exam_venue,
-                        "purpose": purpose,
-                        "special_requirements": special_requirements,
-                        "status": "pending"
-                    }
-                    
-                    db.table("exam_bookings").insert(booking_data).execute()
-                    write_audit_log("create_exam_booking", target=f"unit:{unit_id}")
-                    flash('Exam booking submitted successfully. Waiting for approval.', 'success')
-                    return redirect(url_for("student.exam_bookings"))
-            except Exception as e:
-                error = f"Error creating booking: {e}"
-    
-    return render_template("student/new_exam_booking.html",
-                          units=units,
-                          error=error,
-                          today_min=datetime.now().strftime("%Y-%m-%d"))
+    """Redirect to new exam booking form."""
+    return redirect(url_for("student.exam_booking_form"))
 
 
 # ── New Exam Booking Workflow (Semi-Digital) ─────────────────────────────────────

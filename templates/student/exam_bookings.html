@@ -41,15 +41,12 @@
 {% block content %}
 <div class="content-header">
   <h2>Exam Bookings</h2>
-  <a href="{{ url_for('student.new_exam_booking') }}" class="btn btn-primary">
-    <i class="fas fa-plus"></i> New Booking
-  </a>
 </div>
 
 {% if not bookings %}
 <div class="empty-state">
   <i class="fas fa-calendar-plus"></i>
-  <p>No exam bookings yet. Create your first booking.</p>
+  <p>No exam bookings yet. <a href="{{ url_for('student.exam_booking_form') }}">Create your first booking</a>.</p>
 </div>
 {% else %}
 {% for booking in bookings %}
