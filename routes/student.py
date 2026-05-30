@@ -23,6 +23,32 @@ student_bp = Blueprint("student", __name__)
 EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 ALLOWED_PASSPORT_IMAGES = {'jpg', 'jpeg', 'png', 'webp'}
 
+# Template helper functions
+def get_file_icon_class(url):
+    """Get CSS class for file icon based on extension."""
+    if not url:
+        return ''
+    ext = url.split('.').pop().lower()
+    if ext == 'pdf':
+        return 'pdf'
+    if ext in ['mp4', 'mkv', 'avi', 'mov']:
+        return 'video'
+    if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        return 'image'
+    if ext in ['mp3', 'wav', 'ogg']:
+        return 'audio'
+    return ''
+
+def get_filename_from_url(url):
+    """Extract filename from URL."""
+    if not url:
+        return 'Unknown'
+    return url.split('/').pop().split('?')[0]
+
+# Register template functions
+student_bp.jinja_env.globals.update(get_file_icon_class=get_file_icon_class)
+student_bp.jinja_env.globals.update(get_filename_from_url=get_filename_from_url)
+
 
 def _validate_password(pwd: str) -> Optional[str]:
     if len(pwd) < 8:
@@ -1017,6 +1043,54 @@ def unit_report_pdf():
                          200,
                          {"Content-Type": "application/pdf",
                           "Content-Disposition": f"attachment; filename=attendance_{unit.get('code', 'unit')}.pdf"})
+
+
+# ── Portfolio of Evidence View ─────────────────────────────────────────────────
+
+@student_bp.route("/portfolio-view")
+@student_required
+def portfolio_view():
+    """View all POE submissions with filters."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    
+    # Get student's class
+    enrollment = db.table("enrollments").select("class_id").eq("student_id", student_id).execute().data or []
+    class_id = enrollment[0]["class_id"] if enrollment else None
+    
+    # Get units for the student's class
+    units = []
+    if class_id:
+        cu_rows = db.table("class_units").select("*, units(name, code)").eq("class_id", class_id).execute().data or []
+        units = cu_rows
+    
+    # Get all POE submissions (from assessments table)
+    poe_submissions = (db.table("assessments")
+                      .select("*, units(name, code)")
+                      .eq("student_id", student_id)
+                      .order("created_at", desc=True)
+                      .execute().data or [])
+    
+    # Add unit name to each submission
+    for poe in poe_submissions:
+        if poe.get("units"):
+            poe["unit_name"] = poe["units"].get("name", "")
+        else:
+            poe["unit_name"] = "N/A"
+    
+    # Calculate statistics
+    stats = {
+        "total": len(poe_submissions),
+        "pending": len([p for p in poe_submissions if p.get("status") == "pending"]),
+        "approved": len([p for p in poe_submissions if p.get("status") == "approved"]),
+        "rejected": len([p for p in poe_submissions if p.get("status") == "rejected"])
+    }
+    
+    return render_template("student/portfolio_view.html",
+                          poe_submissions=poe_submissions,
+                          units=units,
+                          stats=stats)
 
 
 # ── Portfolio of Evidence Upload (Premium Design) ─────────────────────────────
