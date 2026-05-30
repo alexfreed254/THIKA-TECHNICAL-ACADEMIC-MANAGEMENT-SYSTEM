@@ -8,9 +8,10 @@ Combines features from both:
 """
 
 import re
+import os
 from typing import Optional
 from flask import (Blueprint, render_template, request,
-                   redirect, url_for, abort, flash, make_response)
+                   redirect, url_for, abort, flash, make_response, jsonify)
 from auth_utils import (student_required, write_audit_log, current_user)
 from db import get_service_client
 from datetime import datetime
@@ -1016,6 +1017,127 @@ def unit_report_pdf():
                          200,
                          {"Content-Type": "application/pdf",
                           "Content-Disposition": f"attachment; filename=attendance_{unit.get('code', 'unit')}.pdf"})
+
+
+# ── Portfolio of Evidence Upload (Premium Design) ─────────────────────────────
+
+@student_bp.route("/upload-poe")
+@student_required
+def upload_poe():
+    """Show premium POE upload interface with radio selectors and multi-file upload."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    
+    # Get student data
+    student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
+    
+    # Get student's class
+    enrollment = db.table("enrollments").select("class_id").eq("student_id", student_id).execute().data or []
+    class_id = enrollment[0]["class_id"] if enrollment else None
+    
+    # Get classes available
+    classes = []
+    if class_id:
+        classes = db.table("classes").select("*").eq("id", class_id).execute().data or []
+    
+    # Get units for the student's class
+    units = []
+    if class_id:
+        cu_rows = db.table("class_units").select("*, units(name, code)").eq("class_id", class_id).execute().data or []
+        units = cu_rows
+    
+    current_year = datetime.now().year
+    
+    return render_template("student/upload_poe.html",
+                          student=student,
+                          classes=classes,
+                          units=units,
+                          current_year=current_year)
+
+
+@student_bp.route("/poe-upload", methods=["POST"])
+@student_required
+def poe_upload():
+    """Handle POE file uploads with Supabase Storage."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    
+    try:
+        # Get form data
+        admission_no = request.form.get('admissionNo', '')
+        class_name = request.form.get('className', '')
+        unit_name = request.form.get('unitName', '')
+        cycle = request.form.get('cycle', '1')
+        term = request.form.get('term', '1')
+        year = request.form.get('year', str(datetime.now().year))
+        assessment_type = request.form.get('assessmentType', 'Formative')
+        assessment_no = request.form.get('assessmentNo', '01')
+        upload_choice = request.form.get('uploadChoice', 'script')
+        
+        if not admission_no or not upload_choice:
+            return jsonify({'success': False, 'error': 'Missing core validation fields.'}), 400
+        
+        # Get files
+        files = request.files.getlist('files')
+        saved_records = []
+        
+        storage_client = get_service_client().storage
+        
+        for file in files:
+            if file.filename == '':
+                continue
+            
+            # Get file extension
+            orig_ext = os.path.splitext(file.filename)[1].lower()
+            
+            # Generate clean filename
+            clean_filename = f"{admission_no}-{unit_name.replace(' ', '_')}-CYCLE{cycle}-TERM{term}-{year}-{assessment_type}-{assessment_no}_{upload_choice}{orig_ext}"
+            
+            # Create storage path: POE/CLASS/UNIT/ADMISSION_NO/
+            storage_path = f"POE/{class_name.replace(' ', '_')}/{unit_name.replace(' ', '_')}/{admission_no}/{clean_filename}"
+            
+            # Read file data
+            file_data = file.read()
+            
+            # Upload to Supabase Storage
+            storage_client.from_("assessment-evidence").upload(storage_path, file_data, {
+                "content-type": file.content_type,
+                "upsert": "true"
+            })
+            
+            # Get public URL
+            public_url = storage_client.from_("assessment-evidence").get_public_url(storage_path)
+            
+            # Save to database (assessments table or create new table for POE)
+            # For now, we'll use the existing assessments table
+            assessment_data = {
+                "student_id": student_id,
+                "unit_id": None,  # Will need to map unit_name to unit_id
+                "title": f"{assessment_type} Assessment {assessment_no} - {upload_choice}",
+                "description": f"POE Upload: {upload_choice} for {unit_name}",
+                "due_date": datetime.now().date(),
+                "submission_type": upload_choice,
+                "status": "pending",
+                "evidence_urls": [public_url]
+            }
+            
+            # Insert into assessments table
+            db.table("assessments").insert(assessment_data).execute()
+            
+            saved_records.append(clean_filename)
+        
+        write_audit_log("poe_upload", target=f"student:{student_id}", detail={
+            "files": len(saved_records),
+            "type": upload_choice,
+            "unit": unit_name
+        })
+        
+        return jsonify({'success': True, 'uploaded': saved_records})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ── Exam Bookings ─────────────────────────────────────────────────────────────

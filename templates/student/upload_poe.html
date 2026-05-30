@@ -1,0 +1,474 @@
+{% extends "student/base.html" %}
+
+{% block title %}Upload Portfolio of Evidence{% endblock %}
+{% block page_title %}Upload Portfolio of Evidence{% endblock %}
+
+{% block extra_style %}
+<style>
+  .upload-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  
+  .radio-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 2px solid #334155;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  
+  .radio-card:hover {
+    border-color: #475569;
+  }
+  
+  .radio-card input[type="radio"]:checked + .radio-card-content {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+  }
+  
+  .radio-card input[type="radio"]:checked + .radio-card-content .radio-icon {
+    color: #f59e0b;
+  }
+  
+  .radio-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+  }
+  
+  .dropzone {
+    border: 2px dashed #334155;
+    border-radius: 12px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  
+  .dropzone:hover {
+    border-color: #475569;
+  }
+  
+  .dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  
+  .dropzone-icon {
+    padding: 16px;
+    background: #1e293b;
+    border-radius: 50%;
+    border: 1px solid #334155;
+    margin-bottom: 12px;
+    transition: transform 0.2s;
+  }
+  
+  .dropzone:hover .dropzone-icon {
+    transform: scale(1.05);
+  }
+  
+  .file-queue-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .file-queue-item .file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 80%;
+    overflow: hidden;
+  }
+  
+  .file-queue-item .file-name {
+    font-weight: 500;
+    color: #e2e8f0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .file-queue-item .file-size {
+    font-size: 12px;
+    color: #64748b;
+  }
+  
+  .btn-remove {
+    padding: 6px;
+    color: #64748b;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  
+  .btn-remove:hover {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+  }
+  
+  .btn-upload {
+    background: #f59e0b;
+    color: #0f172a;
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .btn-upload:hover {
+    background: #fbbf24;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  }
+  
+  .btn-upload:active {
+    transform: scale(0.98);
+  }
+  
+  .btn-clear {
+    padding: 10px 20px;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .btn-clear:hover {
+    background: #1e293b;
+  }
+  
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .status-badge.connected {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+  
+  .status-badge.connected .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+  
+  <header style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 24px; margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="padding: 12px; background: #f59e0b; color: #0f172a; border-radius: 12px; font-weight: 900; font-size: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);">
+        <i class="fas fa-bolt"></i>
+      </div>
+      <div>
+        <h1 style="font-size: 24px; font-weight: 700; margin: 0;">Portfolio of Evidence</h1>
+        <p style="font-size: 14px; color: #64748b; margin: 4px 0 0 0;">E-Portfolio Verification System Portal</p>
+      </div>
+    </div>
+    <span class="status-badge connected">
+      <span class="status-dot"></span> Cloud Storage Connected
+    </span>
+  </header>
+
+  <form id="portfolioUploadForm" style="display: grid; grid-template-columns: 1fr; gap: 32px;">
+    
+    <!-- Assessment Context -->
+    <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(51, 65, 85, 0.8); border-radius: 16px; padding: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+      <div style="grid-column: 1 / -1;">
+        <h2 style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #64748b; text-transform: uppercase; border-bottom: 1px solid rgba(51, 65, 85, 0.6); padding-bottom: 8px; margin-bottom: 16px;">Assessment Context</h2>
+      </div>
+      
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">TRAINEE ADMISSION NO</label>
+        <input type="text" name="admissionNo" value="{{ student.admission_no or '' }}" readonly style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #94a3b8;">
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">CLASS PROGRAM</label>
+        <select name="className" id="classSelect" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #e2e8f0; cursor: pointer;">
+          {% for class in classes %}
+          <option value="{{ class.name }}">{{ class.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">UNIT OF COMPETENCY</label>
+        <select name="unitName" id="unitSelect" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #e2e8f0; cursor: pointer;">
+          {% for unit in units %}
+          <option value="{{ unit.name }}">{{ unit.name }} ({{ unit.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">CYCLE</label>
+        <input type="number" name="cycle" min="1" max="4" value="1" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #e2e8f0;">
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">TERM</label>
+        <input type="number" name="term" min="1" max="3" value="1" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #e2e8f0;">
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">YEAR</label>
+        <input type="text" name="year" value="{{ current_year }}" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #e2e8f0;">
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">ASSESSMENT NO</label>
+        <input type="text" name="assessmentNo" value="01" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #e2e8f0;">
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; color: #64748b;">ASSESSMENT TYPE</label>
+        <select name="assessmentType" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #e2e8f0; cursor: pointer;">
+          <option value="Formative">Formative</option>
+          <option value="Summative">Summative</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- File Upload Section -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+      
+      <!-- Radio Selectors -->
+      <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(51, 65, 85, 0.8); border-radius: 16px; padding: 24px;">
+        <h3 style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #64748b; text-transform: uppercase; margin-bottom: 16px;">1. Select Artifact Channel Category</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+          <label class="radio-card">
+            <input type="radio" name="uploadChoice" value="script" checked>
+            <div class="radio-card-content" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+              <i class="fas fa-file-pdf text-xl radio-icon" style="color: #64748b; margin-bottom: 8px;"></i>
+              <span style="font-size: 12px; font-weight: 500; color: #cbd5e1;">Scanned Script</span>
+            </div>
+          </label>
+
+          <label class="radio-card">
+            <input type="radio" name="uploadChoice" value="video">
+            <div class="radio-card-content" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+              <i class="fas fa-video text-xl radio-icon" style="color: #64748b; margin-bottom: 8px;"></i>
+              <span style="font-size: 12px; font-weight: 500; color: #cbd5e1;">Video Evidence</span>
+            </div>
+          </label>
+
+          <label class="radio-card">
+            <input type="radio" name="uploadChoice" value="photo">
+            <div class="radio-card-content" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+              <i class="fas fa-camera text-xl radio-icon" style="color: #64748b; margin-bottom: 8px;"></i>
+              <span style="font-size: 12px; font-weight: 500; color: #cbd5e1;">Photo / Image</span>
+            </div>
+          </label>
+
+          <label class="radio-card">
+            <input type="radio" name="uploadChoice" value="audio">
+            <div class="radio-card-content" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+              <i class="fas fa-microphone text-xl radio-icon" style="color: #64748b; margin-bottom: 8px;"></i>
+              <span style="font-size: 12px; font-weight: 500; color: #cbd5e1;">Audio Track</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Dropzone -->
+      <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(51, 65, 85, 0.8); border-radius: 16px; padding: 24px;">
+        <h3 style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #64748b; text-transform: uppercase; margin-bottom: 16px;">2. Manage Multi-Select Dropzone Files</h3>
+        
+        <div id="dropzoneArea" class="dropzone">
+          <input type="file" id="fileInput" name="files" multiple>
+          <div class="dropzone-icon">
+            <i class="fas fa-cloud-arrow-up text-2xl" style="color: #f59e0b;"></i>
+          </div>
+          <p style="font-size: 14px; font-weight: 500; margin-bottom: 4px;" id="dropzoneText">Click or Drag & Drop local files to queue</p>
+          <p style="font-size: 12px; color: #64748b;" id="dropzoneAcceptLabel">Accepts only target configurations</p>
+        </div>
+
+        <div id="fileQueueContainer" style="margin-top: 16px; display: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 4px;">
+            <span>Selected Queue Assets</span>
+            <span id="queueCounter" style="color: #f59e0b;">0 Files Added</span>
+          </div>
+          <div id="fileQueueList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; margin-top: 8px;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 16px;">
+      <button type="button" id="resetBtn" class="btn-clear">Clear Form</button>
+      <button type="submit" class="btn-upload">
+        <i class="fas fa-paper-plane"></i> Execute Transmission Upload
+      </button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Track unique upload queues per radio type
+  const stateQueues = { script: [], video: [], photo: [], audio: [] };
+  
+  const typeConfigs = {
+    script: { mime: "application/pdf", icon: "fa-file-pdf", color: "#f59e0b", label: "PDF Documents only" },
+    video:  { mime: "video/*", icon: "fa-video", color: "#0ea5e9", label: "Video Records (MP4, MKV, etc)" },
+    photo:  { mime: "image/*", icon: "fa-camera", color: "#10b981", label: "Images/Photographs (PNG, JPG)" },
+    audio:  { mime: "audio/*", icon: "fa-microphone", color: "#8b5cf6", label: "Audio Transcripts (MP3, WAV)" }
+  };
+
+  const fileInput = document.getElementById('fileInput');
+  const dropzoneArea = document.getElementById('dropzoneArea');
+  const fileQueueContainer = document.getElementById('fileQueueContainer');
+  const fileQueueList = document.getElementById('fileQueueList');
+  const queueCounter = document.getElementById('queueCounter');
+
+  function getActiveType() {
+    return document.querySelector('input[name="uploadChoice"]:checked').value;
+  }
+
+  // Handle adaptive dynamic switching between categories
+  document.querySelectorAll('input[name="uploadChoice"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const config = typeConfigs[getActiveType()];
+      fileInput.accept = config.mime;
+      document.querySelector('.dropzone-icon i').className = `fas ${config.icon} text-2xl`;
+      document.querySelector('.dropzone-icon i').style.color = config.color;
+      document.getElementById('dropzoneAcceptLabel').innerText = config.label;
+      renderQueue();
+    });
+  });
+
+  // Intercept standard input adjustments
+  fileInput.addEventListener('change', (e) => {
+    const currentType = getActiveType();
+    stateQueues[currentType] = [...stateQueues[currentType], ...Array.from(e.target.files)];
+    renderQueue();
+    fileInput.value = ''; // clear input native
+  });
+
+  function removeFileFromQueue(index) {
+    const currentType = getActiveType();
+    stateQueues[currentType].splice(index, 1);
+    renderQueue();
+  }
+
+  function renderQueue() {
+    const currentType = getActiveType();
+    const currentFiles = stateQueues[currentType];
+    fileQueueList.innerHTML = '';
+    
+    if (currentFiles.length === 0) {
+      fileQueueContainer.style.display = 'none';
+      return;
+    }
+    
+    fileQueueContainer.style.display = 'block';
+    queueCounter.innerText = `${currentFiles.length} item(s) in channel queue`;
+    
+    currentFiles.forEach((file, idx) => {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      const row = document.createElement('div');
+      row.className = 'file-queue-item';
+      row.innerHTML = `
+        <div class="file-info">
+          <i class="fas ${typeConfigs[currentType].icon}" style="color: ${typeConfigs[currentType].color};"></i>
+          <div style="overflow: hidden;">
+            <p class="file-name">${file.name}</p>
+            <p class="file-size">${sizeMB} MB</p>
+          </div>
+        </div>
+        <button type="button" onclick="removeFileFromQueue(${idx})" class="btn-remove">
+          <i class="fas fa-trash-can"></i>
+        </button>
+      `;
+      fileQueueList.appendChild(row);
+    });
+  }
+
+  // Submissions XHR Async Request Transmission Logic
+  document.getElementById('portfolioUploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentType = getActiveType();
+    if (stateQueues[currentType].length === 0) {
+      alert('Please upload files to the current dynamic selection queue.');
+      return;
+    }
+
+    const formData = new FormData(e.target);
+    // Append files from our local queue array tracking system configuration state
+    stateQueues[currentType].forEach(file => {
+      formData.append('files', file);
+    });
+
+    try {
+      const res = await fetch('/student/poe-upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        alert('Asynchronous upload completed successfully!');
+        stateQueues[currentType] = [];
+        renderQueue();
+      } else {
+        alert('Error encountered: ' + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Server submission communication breakdown failure pipeline.');
+    }
+  });
+
+  // Reset button
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    document.getElementById('portfolioUploadForm').reset();
+    Object.keys(stateQueues).forEach(key => stateQueues[key] = []);
+    renderQueue();
+  });
+
+  // Fire initialization sequence on DOM completion
+  document.querySelector('input[name="uploadChoice"]:checked').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
