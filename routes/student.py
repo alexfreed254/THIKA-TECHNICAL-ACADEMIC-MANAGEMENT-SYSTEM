@@ -46,8 +46,13 @@ def get_filename_from_url(url):
     return url.split('/').pop().split('?')[0]
 
 # Register template functions
-student_bp.jinja_env.globals.update(get_file_icon_class=get_file_icon_class)
-student_bp.jinja_env.globals.update(get_filename_from_url=get_filename_from_url)
+@student_bp.app_context_processor
+def inject_student_helpers():
+    return {
+        'get_file_icon_class': get_file_icon_class,
+        'get_filename_from_url': get_filename_from_url
+    }
+
 
 
 def _validate_password(pwd: str) -> Optional[str]:
@@ -407,7 +412,7 @@ def profile():
             except Exception as e:
                 flash(f'Error uploading passport: {e}', 'danger')
 
-    student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
+    student = db.table("user_profiles").select("*, departments(name)").eq("id", student_id).single().execute().data
     
     return render_template("student/profile.html", student=student)
 
@@ -1225,7 +1230,7 @@ def exam_bookings():
     student_id = user["id"]
     
     bookings = (db.table("exam_bookings")
-                .select("*, units(name, code), user_profiles!exam_bookings_approved_by_fkey(full_name)")
+                .select("*, units(name, code), user_profiles:user_profiles!exam_bookings_approved_by_fkey(full_name)")
                 .eq("student_id", student_id)
                 .order("created_at", desc=True)
                 .execute().data or [])
@@ -1678,7 +1683,7 @@ def download_exam_booking(booking_id):
     student_id = user["id"]
     
     booking = (db.table("exam_bookings")
-               .select("*, units(name, code), user_profiles!exam_bookings_approved_by_fkey(full_name), user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, classes(name, departments(name)))")
+               .select("*, units(name, code), approved_by_user:user_profiles!exam_bookings_approved_by_fkey(full_name), user_profiles:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, classes(name, departments(name)))")
                .eq("id", booking_id)
                .eq("student_id", student_id)
                .single()
