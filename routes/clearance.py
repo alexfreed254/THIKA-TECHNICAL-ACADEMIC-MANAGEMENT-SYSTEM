@@ -31,9 +31,9 @@ def dashboard():
                        .limit(1)
                        .execute().data)
     
-    # Get student's enrollments for the course selector
+    # Get student's enrollments via classes → courses (no direct FK to courses)
     enrollments = (db.table("enrollments")
-                  .select("*, courses(name, code)")
+                  .select("*, classes(course_id, courses(name, code))")
                   .eq("student_id", student_id)
                   .execute().data or [])
 

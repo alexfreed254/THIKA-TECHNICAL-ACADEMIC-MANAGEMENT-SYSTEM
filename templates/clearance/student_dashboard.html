@@ -54,7 +54,11 @@
       <select name="course_id" required>
         <option value="">Choose a course</option>
         {% for enrollment in enrollments %}
-        <option value="{{ enrollment.course_id }}">{{ enrollment.courses.name }} ({{ enrollment.courses.code }})</option>
+        {% set cls = enrollment.get('classes') or {} %}
+        {% set crs = cls.get('courses') or {} %}
+        {% if cls.get('course_id') and crs.get('name') %}
+        <option value="{{ cls.get('course_id') }}">{{ crs.get('name') }} ({{ crs.get('code','') }})</option>
+        {% endif %}
         {% endfor %}
       </select>
     </div>
