@@ -29,7 +29,7 @@
           <div>
             <h3>{{ job.get('title','—') }}</h3>
             <div class="job-meta">
-              <span><i class="fas fa-building"></i> {{ job.get('company','—') }}</span>
+              <span><i class="fas fa-building"></i> {{ (job.get('employers') or {}).get('company_name','—') }}</span>
               <span><i class="fas fa-briefcase"></i> {{ job.get('type','—') }}</span>
               <span><i class="fas fa-map-marker-alt"></i> {{ job.get('location','—') }}</span>
             </div>

@@ -2443,7 +2443,7 @@ def my_jobs():
     user = current_user()
     student_id = user["id"]
     apps = (db.table("job_applications")
-            .select("*, job_postings(title, company, type, location)")
+            .select("*, job_postings(title, type, location, employers(company_name))")
             .eq("student_id", student_id)
             .order("created_at", desc=True)
             .execute().data or [])
