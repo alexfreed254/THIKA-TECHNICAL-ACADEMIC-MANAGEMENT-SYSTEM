@@ -1,5 +1,5 @@
 """
-app_unified.py — Unified Flask application entry point.
+app.py — Unified Flask application entry point.
 Combines Attendance Management + E-Portfolio Management
 Hosted on Render. Database + Auth via Supabase.
 """
@@ -72,19 +72,29 @@ app.register_blueprint(notifications_bp, url_prefix="/notifications")
 def inject_globals():
     from auth_utils import current_user
     from notifications import get_unread_count
+
     user = current_user()
     unread_count = 0
     pending_employers = 0
     dept_name = None
+
     if user:
         unread_count = get_unread_count(user["id"])
-        
+
         # Fetch department name if user is associated with a department
         if user.get("department_id"):
             try:
                 from db import get_service_client
+
                 svc = get_service_client()
-                dept_row = svc.table("departments").select("name").eq("id", user["department_id"]).single().execute().data
+                dept_row = (
+                    svc.table("departments")
+                    .select("name")
+                    .eq("id", user["department_id"])
+                    .single()
+                    .execute()
+                    .data
+                )
                 if dept_row:
                     dept_name = dept_row.get("name")
             except Exception:
@@ -94,6 +104,7 @@ def inject_globals():
         if user.get("role") == "super_admin":
             try:
                 from db import get_service_client
+
                 svc = get_service_client()
                 emp_rows = svc.table("employers").select("is_verified").execute().data or []
                 pending_employers = sum(1 for e in emp_rows if not e.get("is_verified"))
@@ -103,14 +114,15 @@ def inject_globals():
     # Helper to map notification types to Tailwind alert classes
     def get_alert_classes(ntype):
         mapping = {
-            'success': 'bg-green-50 border-green-200 text-green-800',
-            'warning': 'bg-yellow-50 border-yellow-200 text-yellow-800',
-            'error':   'bg-red-50 border-red-200 text-red-800',
-            'info':    'bg-blue-50 border-blue-200 text-blue-800'
+            "success": "bg-green-50 border-green-200 text-green-800",
+            "warning": "bg-yellow-50 border-yellow-200 text-yellow-800",
+            "error": "bg-red-50 border-red-200 text-red-800",
+            "info": "bg-blue-50 border-blue-200 text-blue-800",
         }
-        return mapping.get(ntype, mapping['info'])
+        return mapping.get(ntype, mapping["info"])
 
     supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+
     def storage_url(bucket, path):
         if not path:
             return ""
@@ -128,66 +140,76 @@ def inject_globals():
         "storage_url": storage_url,
         "SUPABASE_URL": supabase_url,
         "BUCKET_SCRIPTS": "assessment-scripts",
-        "BUCKET_EVIDENCE": "assessment-evidence"
+        "BUCKET_EVIDENCE": "assessment-evidence",
     }
 
 # ── Jinja2 filter: convert UTC ISO string → EAT display string ───────────────
 import pytz
 from datetime import datetime as _dt
 
-_EAT = pytz.timezone('Africa/Nairobi')
+_EAT = pytz.timezone("Africa/Nairobi")
 
-@app.template_filter('to_eat')
-def to_eat_filter(value, fmt='%d %b %Y %H:%M'):
-    """
-    Convert a UTC ISO datetime string (from Supabase) to EAT (Africa/Nairobi).
-    Usage in templates:  {{ r.attendance_date | to_eat }}
-                         {{ r.created_at | to_eat('%d %b %Y') }}
+
+@app.template_filter("to_eat")
+def to_eat_filter(value, fmt="%d %b %Y %H:%M"):
+    """Convert a UTC ISO datetime string (from Supabase) to EAT.
+
     Returns '—' if value is falsy or unparseable.
     """
     if not value:
-        return '—'
+        return "—"
+
     try:
         # Handle both 'Z' suffix and '+00:00' offset
-        s = str(value).replace('Z', '+00:00')
+        s = str(value).replace("Z", "+00:00")
+
         # Try with microseconds first, then without
-        for fmt_parse in ('%Y-%m-%dT%H:%M:%S.%f%z', '%Y-%m-%dT%H:%M:%S%z',
-                          '%Y-%m-%d %H:%M:%S.%f%z', '%Y-%m-%d %H:%M:%S%z'):
+        for fmt_parse in (
+            "%Y-%m-%dT%H:%M:%S.%f%z",
+            "%Y-%m-%dT%H:%M:%S%z",
+            "%Y-%m-%d %H:%M:%S.%f%z",
+            "%Y-%m-%d %H:%M:%S%z",
+        ):
             try:
                 utc_dt = _dt.strptime(s, fmt_parse)
                 eat_dt = utc_dt.astimezone(_EAT)
                 return eat_dt.strftime(fmt)
             except ValueError:
                 continue
-        # Fallback: treat as naive local, just slice
-        return str(value)[:16].replace('T', ' ')
+
+        return str(value)[:16].replace("T", " ")
     except Exception:
-        return str(value)[:16].replace('T', ' ')
+        return str(value)[:16].replace("T", " ")
 
 # ── Error handlers ────────────────────────────────────────────────────────────
 @app.errorhandler(400)
 def bad_request(e):
     return render_template("errors/400.html"), 400
 
+
 @app.errorhandler(403)
 def forbidden(e):
     return render_template("errors/403.html"), 403
+
 
 @app.errorhandler(404)
 def not_found(e):
     return render_template("errors/404.html"), 404
 
+
 @app.errorhandler(500)
 def server_error(e):
-    # Print full traceback to Render logs
     traceback.print_exc()
     return render_template("errors/500.html", error=str(e)), 500
+
 
 @app.errorhandler(Exception)
 def unhandled_exception(e):
     traceback.print_exc()
     return render_template("errors/500.html", error=str(e)), 500
 
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+

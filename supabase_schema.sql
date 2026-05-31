@@ -94,6 +94,8 @@ RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_user_profiles_updated_at ON user_profiles;
+
 CREATE TRIGGER trg_user_profiles_updated_at
     BEFORE UPDATE ON user_profiles
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -102,12 +104,15 @@ CREATE TRIGGER trg_user_profiles_updated_at
 -- ADD FOREIGN KEY CONSTRAINTS FOR TABLES CREATED BEFORE user_profiles
 -- ────────────────────────────────────────────────────────────
 
+ALTER TABLE courses DROP CONSTRAINT IF EXISTS courses_created_by_fkey;
 ALTER TABLE courses ADD CONSTRAINT courses_created_by_fkey 
     FOREIGN KEY (created_by) REFERENCES user_profiles(id) ON DELETE SET NULL;
 
+ALTER TABLE classes DROP CONSTRAINT IF EXISTS classes_created_by_fkey;
 ALTER TABLE classes ADD CONSTRAINT classes_created_by_fkey 
     FOREIGN KEY (created_by) REFERENCES user_profiles(id) ON DELETE SET NULL;
 
+ALTER TABLE units DROP CONSTRAINT IF EXISTS units_created_by_fkey;
 ALTER TABLE units ADD CONSTRAINT units_created_by_fkey 
     FOREIGN KEY (created_by) REFERENCES user_profiles(id) ON DELETE SET NULL;
 
@@ -216,6 +221,7 @@ CREATE TABLE IF NOT EXISTS assessments (
 );
 
 -- Trigger for assessments updated_at
+DROP TRIGGER IF EXISTS trg_assessments_updated_at ON assessments;
 CREATE TRIGGER trg_assessments_updated_at
     BEFORE UPDATE ON assessments
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -256,6 +262,7 @@ CREATE TABLE IF NOT EXISTS employers (
 );
 
 -- Trigger for employers updated_at
+DROP TRIGGER IF EXISTS trg_employers_updated_at ON employers;
 CREATE TRIGGER trg_employers_updated_at
     BEFORE UPDATE ON employers
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -298,6 +305,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
 );
 
 -- Trigger for job_postings updated_at
+DROP TRIGGER IF EXISTS trg_job_postings_updated_at ON job_postings;
 CREATE TRIGGER trg_job_postings_updated_at
     BEFORE UPDATE ON job_postings
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -322,6 +330,7 @@ CREATE TABLE IF NOT EXISTS job_applications (
 );
 
 -- Trigger for job_applications updated_at
+DROP TRIGGER IF EXISTS trg_job_applications_updated_at ON job_applications;
 CREATE TRIGGER trg_job_applications_updated_at
     BEFORE UPDATE ON job_applications
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -387,6 +396,7 @@ CREATE TABLE IF NOT EXISTS exam_bookings (
 );
 
 -- Trigger for exam_bookings updated_at
+DROP TRIGGER IF EXISTS trg_exam_bookings_updated_at ON exam_bookings;
 CREATE TRIGGER trg_exam_bookings_updated_at
     BEFORE UPDATE ON exam_bookings
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -421,6 +431,7 @@ CREATE TABLE IF NOT EXISTS marks (
 );
 
 -- Trigger for marks updated_at
+DROP TRIGGER IF EXISTS trg_marks_updated_at ON marks;
 CREATE TRIGGER trg_marks_updated_at
     BEFORE UPDATE ON marks
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -446,6 +457,7 @@ END;
 $$;
 
 -- Trigger to auto-calculate grade
+DROP TRIGGER IF EXISTS trg_marks_calculate_grade ON marks;
 CREATE TRIGGER trg_marks_calculate_grade
     BEFORE INSERT OR UPDATE ON marks
     FOR EACH ROW
@@ -500,6 +512,7 @@ CREATE TABLE IF NOT EXISTS trainer_documents (
 );
 
 -- Trigger for trainer_documents updated_at
+DROP TRIGGER IF EXISTS trg_trainer_documents_updated_at ON trainer_documents;
 CREATE TRIGGER trg_trainer_documents_updated_at
     BEFORE UPDATE ON trainer_documents
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -544,6 +557,7 @@ CREATE TABLE IF NOT EXISTS trainee_documents (
 );
 
 -- Trigger for trainee_documents updated_at
+DROP TRIGGER IF EXISTS trg_trainee_documents_updated_at ON trainee_documents;
 CREATE TRIGGER trg_trainee_documents_updated_at
     BEFORE UPDATE ON trainee_documents
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -597,6 +611,7 @@ CREATE TABLE IF NOT EXISTS companies (
 );
 
 -- Trigger for companies updated_at
+DROP TRIGGER IF EXISTS trg_companies_updated_at ON companies;
 CREATE TRIGGER trg_companies_updated_at
     BEFORE UPDATE ON companies
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -624,6 +639,7 @@ CREATE TABLE IF NOT EXISTS mentors (
 );
 
 -- Trigger for mentors updated_at
+DROP TRIGGER IF EXISTS trg_mentors_updated_at ON mentors;
 CREATE TRIGGER trg_mentors_updated_at
     BEFORE UPDATE ON mentors
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -657,6 +673,7 @@ CREATE TABLE IF NOT EXISTS industrial_attachments (
 );
 
 -- Trigger for industrial_attachments updated_at
+DROP TRIGGER IF EXISTS trg_industrial_attachments_updated_at ON industrial_attachments;
 CREATE TRIGGER trg_industrial_attachments_updated_at
     BEFORE UPDATE ON industrial_attachments
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -714,6 +731,7 @@ CREATE TABLE IF NOT EXISTS digital_logbook (
 );
 
 -- Trigger for digital_logbook updated_at
+DROP TRIGGER IF EXISTS trg_digital_logbook_updated_at ON digital_logbook;
 CREATE TRIGGER trg_digital_logbook_updated_at
     BEFORE UPDATE ON digital_logbook
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -747,6 +765,7 @@ CREATE TABLE IF NOT EXISTS competency_tracking (
 );
 
 -- Trigger for competency_tracking updated_at
+DROP TRIGGER IF EXISTS trg_competency_tracking_updated_at ON competency_tracking;
 CREATE TRIGGER trg_competency_tracking_updated_at
     BEFORE UPDATE ON competency_tracking
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -803,12 +822,14 @@ ALTER TABLE system_logs   ENABLE ROW LEVEL SECURITY;
 -- ── departments ──────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS dept_super_admin ON departments;
 CREATE POLICY dept_super_admin ON departments
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Dept admin: read own department
+DROP POLICY IF EXISTS dept_dept_admin_read ON departments;
 CREATE POLICY dept_dept_admin_read ON departments
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = id);
@@ -816,17 +837,20 @@ CREATE POLICY dept_dept_admin_read ON departments
 -- ── user_profiles ─────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS user_profiles_super_admin ON user_profiles;
 CREATE POLICY user_profiles_super_admin ON user_profiles
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Dept admin: read users in own department
+DROP POLICY IF EXISTS user_profiles_dept_admin_read ON user_profiles;
 CREATE POLICY user_profiles_dept_admin_read ON user_profiles
     FOR SELECT TO authenticated
     USING (current_user_role() IN ('dept_admin', 'trainer') AND current_user_dept() = department_id);
 
 -- Users can read own profile
+DROP POLICY IF EXISTS user_profiles_own_read ON user_profiles;
 CREATE POLICY user_profiles_own_read ON user_profiles
     FOR SELECT TO authenticated
     USING (id = auth.uid());
@@ -834,12 +858,14 @@ CREATE POLICY user_profiles_own_read ON user_profiles
 -- ── courses ─────────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS courses_super_admin ON courses;
 CREATE POLICY courses_super_admin ON courses
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Dept admin: read courses in own department
+DROP POLICY IF EXISTS courses_dept_admin_read ON courses;
 CREATE POLICY courses_dept_admin_read ON courses
     FOR SELECT TO authenticated
     USING (current_user_role() IN ('dept_admin', 'trainer') AND current_user_dept() = department_id);
@@ -847,18 +873,21 @@ CREATE POLICY courses_dept_admin_read ON courses
 -- ── classes ─────────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS classes_super_admin ON classes;
 CREATE POLICY classes_super_admin ON classes
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Dept admin: full access to own department
+DROP POLICY IF EXISTS classes_dept_admin ON classes;
 CREATE POLICY classes_dept_admin ON classes
     FOR ALL TO authenticated
     USING (current_user_role() IN ('dept_admin', 'trainer') AND current_user_dept() = department_id)
     WITH CHECK (current_user_role() IN ('dept_admin', 'trainer') AND current_user_dept() = department_id);
 
 -- Students: read own class
+DROP POLICY IF EXISTS classes_student_read ON classes;
 CREATE POLICY classes_student_read ON classes
     FOR SELECT TO authenticated
     USING (current_user_role() = 'student' AND id IN (
@@ -868,12 +897,14 @@ CREATE POLICY classes_student_read ON classes
 -- ── units ───────────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS units_super_admin ON units;
 CREATE POLICY units_super_admin ON units
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Dept admin/trainer: read units in own department
+DROP POLICY IF EXISTS units_dept_read ON units;
 CREATE POLICY units_dept_read ON units
     FOR SELECT TO authenticated
     USING (current_user_role() IN ('dept_admin', 'trainer') AND current_user_dept() = department_id);
@@ -881,18 +912,21 @@ CREATE POLICY units_dept_read ON units
 -- ── attendance ──────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS attendance_super_admin ON attendance;
 CREATE POLICY attendance_super_admin ON attendance
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Trainer: full access to own units
+DROP POLICY IF EXISTS attendance_trainer ON attendance;
 CREATE POLICY attendance_trainer ON attendance
     FOR ALL TO authenticated
     USING (current_user_role() = 'trainer' AND trainer_id = auth.uid())
     WITH CHECK (current_user_role() = 'trainer' AND trainer_id = auth.uid());
 
 -- Dept admin: read attendance in own department
+DROP POLICY IF EXISTS attendance_dept_admin_read ON attendance;
 CREATE POLICY attendance_dept_admin_read ON attendance
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -900,6 +934,7 @@ CREATE POLICY attendance_dept_admin_read ON attendance
     ));
 
 -- Student: read own attendance
+DROP POLICY IF EXISTS attendance_student_read ON attendance;
 CREATE POLICY attendance_student_read ON attendance
     FOR SELECT TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid());
@@ -907,12 +942,14 @@ CREATE POLICY attendance_student_read ON attendance
 -- ── assessments ─────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS assessments_super_admin ON assessments;
 CREATE POLICY assessments_super_admin ON assessments
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Trainer: full access to assigned units
+DROP POLICY IF EXISTS assessments_trainer ON assessments;
 CREATE POLICY assessments_trainer ON assessments
     FOR ALL TO authenticated
     USING (current_user_role() = 'trainer' AND unit_id IN (
@@ -923,6 +960,7 @@ CREATE POLICY assessments_trainer ON assessments
     ));
 
 -- Dept admin: read assessments in own department
+DROP POLICY IF EXISTS assessments_dept_admin_read ON assessments;
 CREATE POLICY assessments_dept_admin_read ON assessments
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -930,6 +968,7 @@ CREATE POLICY assessments_dept_admin_read ON assessments
     ));
 
 -- Student: full access to own assessments
+DROP POLICY IF EXISTS assessments_student ON assessments;
 CREATE POLICY assessments_student ON assessments
     FOR ALL TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid())
@@ -938,12 +977,14 @@ CREATE POLICY assessments_student ON assessments
 -- ── evidence ────────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS evidence_super_admin ON evidence;
 CREATE POLICY evidence_super_admin ON evidence
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Trainer: read evidence for assigned units
+DROP POLICY IF EXISTS evidence_trainer_read ON evidence;
 CREATE POLICY evidence_trainer_read ON evidence
     FOR SELECT TO authenticated
     USING (current_user_role() = 'trainer' AND assessment_id IN (
@@ -953,6 +994,7 @@ CREATE POLICY evidence_trainer_read ON evidence
     ));
 
 -- Student: full access to own evidence
+DROP POLICY IF EXISTS evidence_student ON evidence;
 CREATE POLICY evidence_student ON evidence
     FOR ALL TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid())
@@ -961,6 +1003,7 @@ CREATE POLICY evidence_student ON evidence
 -- ── system_logs ─────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS system_logs_super_admin ON system_logs;
 CREATE POLICY system_logs_super_admin ON system_logs
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -969,21 +1012,25 @@ CREATE POLICY system_logs_super_admin ON system_logs
 -- ── employers ───────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS employers_super_admin ON employers;
 CREATE POLICY employers_super_admin ON employers
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Employers can view and update own record
+DROP POLICY IF EXISTS employers_own_read ON employers;
 CREATE POLICY employers_own_read ON employers
     FOR SELECT TO authenticated
     USING (profile_id = auth.uid());
 
+DROP POLICY IF EXISTS employers_own_update ON employers;
 CREATE POLICY employers_own_update ON employers
     FOR UPDATE TO authenticated
     USING (profile_id = auth.uid());
 
 -- Public can view verified employers
+DROP POLICY IF EXISTS employers_public_read ON employers;
 CREATE POLICY employers_public_read ON employers
     FOR SELECT TO authenticated
     USING (is_verified = true);
@@ -991,22 +1038,26 @@ CREATE POLICY employers_public_read ON employers
 -- ── employer_verifications ─────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS employer_verifications_super_admin ON employer_verifications;
 CREATE POLICY employer_verifications_super_admin ON employer_verifications
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Students can view own verifications
+DROP POLICY IF EXISTS employer_verifications_student_read ON employer_verifications;
 CREATE POLICY employer_verifications_student_read ON employer_verifications
     FOR SELECT TO authenticated
     USING (trainee_id = auth.uid());
 
 -- Employers can view verifications for their company
+DROP POLICY IF EXISTS employer_verifications_employer_read ON employer_verifications;
 CREATE POLICY employer_verifications_employer_read ON employer_verifications
     FOR SELECT TO authenticated
     USING (employer_id IN (SELECT id FROM employers WHERE profile_id = auth.uid()));
 
 -- Anyone can submit a verification
+DROP POLICY IF EXISTS employer_verifications_insert ON employer_verifications;
 CREATE POLICY employer_verifications_insert ON employer_verifications
     FOR INSERT TO authenticated
     WITH CHECK (true);
@@ -1014,18 +1065,21 @@ CREATE POLICY employer_verifications_insert ON employer_verifications
 -- ── job_postings ────────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS job_postings_super_admin ON job_postings;
 CREATE POLICY job_postings_super_admin ON job_postings
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Employers can manage own postings
+DROP POLICY IF EXISTS job_postings_employer_manage ON job_postings;
 CREATE POLICY job_postings_employer_manage ON job_postings
     FOR ALL TO authenticated
     USING (employer_id IN (SELECT id FROM employers WHERE profile_id = auth.uid()))
     WITH CHECK (employer_id IN (SELECT id FROM employers WHERE profile_id = auth.uid()));
 
 -- Public can view active job postings
+DROP POLICY IF EXISTS job_postings_public_read ON job_postings;
 CREATE POLICY job_postings_public_read ON job_postings
     FOR SELECT TO authenticated
     USING (is_active = true);
@@ -1033,22 +1087,26 @@ CREATE POLICY job_postings_public_read ON job_postings
 -- ── job_applications ──────────────────────────────────────────
 
 -- Super admin: full access
+DROP POLICY IF EXISTS job_applications_super_admin ON job_applications;
 CREATE POLICY job_applications_super_admin ON job_applications
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Students can view own applications
+DROP POLICY IF EXISTS job_applications_student_read ON job_applications;
 CREATE POLICY job_applications_student_read ON job_applications
     FOR SELECT TO authenticated
     USING (student_id = auth.uid());
 
 -- Students can apply to jobs
+DROP POLICY IF EXISTS job_applications_student_insert ON job_applications;
 CREATE POLICY job_applications_student_insert ON job_applications
     FOR INSERT TO authenticated
     WITH CHECK (student_id = auth.uid());
 
 -- Employers can view applications for their jobs
+DROP POLICY IF EXISTS job_applications_employer_read ON job_applications;
 CREATE POLICY job_applications_employer_read ON job_applications
     FOR SELECT TO authenticated
     USING (job_id IN (
@@ -1057,6 +1115,7 @@ CREATE POLICY job_applications_employer_read ON job_applications
     ));
 
 -- Employers can update application status
+DROP POLICY IF EXISTS job_applications_employer_update ON job_applications;
 CREATE POLICY job_applications_employer_update ON job_applications
     FOR UPDATE TO authenticated
     USING (job_id IN (
@@ -1067,21 +1126,25 @@ CREATE POLICY job_applications_employer_update ON job_applications
 -- ── notifications ─────────────────────────────────────────────
 
 -- Users can view their own notifications
+DROP POLICY IF EXISTS notifications_user_read ON notifications;
 CREATE POLICY notifications_user_read ON notifications
     FOR SELECT TO authenticated
     USING (user_id = auth.uid());
 
 -- Users can mark their own notifications as read
+DROP POLICY IF EXISTS notifications_user_update ON notifications;
 CREATE POLICY notifications_user_update ON notifications
     FOR UPDATE TO authenticated
     USING (user_id = auth.uid());
 
 -- System can insert notifications for any user
+DROP POLICY IF EXISTS notifications_insert ON notifications;
 CREATE POLICY notifications_insert ON notifications
     FOR INSERT TO authenticated
     WITH CHECK (true);
 
 -- Super admin: full access
+DROP POLICY IF EXISTS notifications_super_admin ON notifications;
 CREATE POLICY notifications_super_admin ON notifications
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1090,16 +1153,19 @@ CREATE POLICY notifications_super_admin ON notifications
 -- ── exam_bookings ─────────────────────────────────────────────
 
 -- Students can view their own exam bookings
+DROP POLICY IF EXISTS exam_bookings_student_read ON exam_bookings;
 CREATE POLICY exam_bookings_student_read ON exam_bookings
     FOR SELECT TO authenticated
     USING (student_id = auth.uid());
 
 -- Students can create exam bookings
+DROP POLICY IF EXISTS exam_bookings_student_insert ON exam_bookings;
 CREATE POLICY exam_bookings_student_insert ON exam_bookings
     FOR INSERT TO authenticated
     WITH CHECK (student_id = auth.uid());
 
 -- Dept admin can view exam bookings in their department
+DROP POLICY IF EXISTS exam_bookings_dept_admin_read ON exam_bookings;
 CREATE POLICY exam_bookings_dept_admin_read ON exam_bookings
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1107,6 +1173,7 @@ CREATE POLICY exam_bookings_dept_admin_read ON exam_bookings
     ));
 
 -- Dept admin can approve/reject exam bookings in their department
+DROP POLICY IF EXISTS exam_bookings_dept_admin_update ON exam_bookings;
 CREATE POLICY exam_bookings_dept_admin_update ON exam_bookings
     FOR UPDATE TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1114,6 +1181,7 @@ CREATE POLICY exam_bookings_dept_admin_update ON exam_bookings
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS exam_bookings_super_admin ON exam_bookings;
 CREATE POLICY exam_bookings_super_admin ON exam_bookings
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1122,26 +1190,31 @@ CREATE POLICY exam_bookings_super_admin ON exam_bookings
 -- ── marks ─────────────────────────────────────────────────────
 
 -- Students can view their own marks
+DROP POLICY IF EXISTS marks_student_read ON marks;
 CREATE POLICY marks_student_read ON marks
     FOR SELECT TO authenticated
     USING (student_id = auth.uid());
 
 -- Trainers can view marks for their assigned units
+DROP POLICY IF EXISTS marks_trainer_read ON marks;
 CREATE POLICY marks_trainer_read ON marks
     FOR SELECT TO authenticated
     USING (current_user_role() = 'trainer' AND trainer_id = auth.uid());
 
 -- Trainers can insert marks for their assigned units and classes
+DROP POLICY IF EXISTS marks_trainer_insert ON marks;
 CREATE POLICY marks_trainer_insert ON marks
     FOR INSERT TO authenticated
     WITH CHECK (current_user_role() = 'trainer' AND trainer_id = auth.uid());
 
 -- Trainers can update marks they entered
+DROP POLICY IF EXISTS marks_trainer_update ON marks;
 CREATE POLICY marks_trainer_update ON marks
     FOR UPDATE TO authenticated
     USING (current_user_role() = 'trainer' AND trainer_id = auth.uid());
 
 -- Dept admin can view marks in their department
+DROP POLICY IF EXISTS marks_dept_admin_read ON marks;
 CREATE POLICY marks_dept_admin_read ON marks
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1149,6 +1222,7 @@ CREATE POLICY marks_dept_admin_read ON marks
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS marks_super_admin ON marks;
 CREATE POLICY marks_super_admin ON marks
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1157,12 +1231,14 @@ CREATE POLICY marks_super_admin ON marks
 -- ── trainer_documents ───────────────────────────────────────────────
 
 -- Trainers can manage their own documents
+DROP POLICY IF EXISTS trainer_documents_trainer_manage ON trainer_documents;
 CREATE POLICY trainer_documents_trainer_manage ON trainer_documents
     FOR ALL TO authenticated
     USING (current_user_role() = 'trainer' AND trainer_id = auth.uid())
     WITH CHECK (current_user_role() = 'trainer' AND trainer_id = auth.uid());
 
 -- Dept admin can view trainer documents in their department
+DROP POLICY IF EXISTS trainer_documents_dept_admin_read ON trainer_documents;
 CREATE POLICY trainer_documents_dept_admin_read ON trainer_documents
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1170,6 +1246,7 @@ CREATE POLICY trainer_documents_dept_admin_read ON trainer_documents
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS trainer_documents_super_admin ON trainer_documents;
 CREATE POLICY trainer_documents_super_admin ON trainer_documents
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1178,12 +1255,14 @@ CREATE POLICY trainer_documents_super_admin ON trainer_documents
 -- ── trainee_documents ───────────────────────────────────────────────
 
 -- Students can manage their own documents
+DROP POLICY IF EXISTS trainee_documents_student_manage ON trainee_documents;
 CREATE POLICY trainee_documents_student_manage ON trainee_documents
     FOR ALL TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid())
     WITH CHECK (current_user_role() = 'student' AND student_id = auth.uid());
 
 -- Trainers can view trainee documents for their assigned units
+DROP POLICY IF EXISTS trainee_documents_trainer_read ON trainee_documents;
 CREATE POLICY trainee_documents_trainer_read ON trainee_documents
     FOR SELECT TO authenticated
     USING (current_user_role() = 'trainer' AND unit_id IN (
@@ -1191,6 +1270,7 @@ CREATE POLICY trainee_documents_trainer_read ON trainee_documents
     ));
 
 -- Dept admin can view trainee documents in their department
+DROP POLICY IF EXISTS trainee_documents_dept_admin_read ON trainee_documents;
 CREATE POLICY trainee_documents_dept_admin_read ON trainee_documents
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1198,6 +1278,7 @@ CREATE POLICY trainee_documents_dept_admin_read ON trainee_documents
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS trainee_documents_super_admin ON trainee_documents;
 CREATE POLICY trainee_documents_super_admin ON trainee_documents
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1206,18 +1287,21 @@ CREATE POLICY trainee_documents_super_admin ON trainee_documents
 -- ── companies ────────────────────────────────────────────────────────
 
 -- Dept admin can manage companies in their department
+DROP POLICY IF EXISTS companies_dept_admin_manage ON companies;
 CREATE POLICY companies_dept_admin_manage ON companies
     FOR ALL TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = department_id)
     WITH CHECK (current_user_role() = 'dept_admin' AND current_user_dept() = department_id);
 
 -- Super admin: full access
+DROP POLICY IF EXISTS companies_super_admin ON companies;
 CREATE POLICY companies_super_admin ON companies
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- All authenticated users can view companies
+DROP POLICY IF EXISTS companies_read ON companies;
 CREATE POLICY companies_read ON companies
     FOR SELECT TO authenticated
     USING (true);
@@ -1225,11 +1309,13 @@ CREATE POLICY companies_read ON companies
 -- ── mentors ───────────────────────────────────────────────────────────
 
 -- Industry mentors can view their own records
+DROP POLICY IF EXISTS mentors_read ON mentors;
 CREATE POLICY mentors_read ON mentors
     FOR SELECT TO authenticated
     USING (current_user_role() = 'industry_mentor' AND user_id = auth.uid());
 
 -- Dept admin can manage mentors in their department
+DROP POLICY IF EXISTS mentors_dept_admin_manage ON mentors;
 CREATE POLICY mentors_dept_admin_manage ON mentors
     FOR ALL TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1240,6 +1326,7 @@ CREATE POLICY mentors_dept_admin_manage ON mentors
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS mentors_super_admin ON mentors;
 CREATE POLICY mentors_super_admin ON mentors
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1248,11 +1335,13 @@ CREATE POLICY mentors_super_admin ON mentors
 -- ── industrial_attachments ─────────────────────────────────────────────
 
 -- Students can view their own attachments
+DROP POLICY IF EXISTS industrial_attachments_student_read ON industrial_attachments;
 CREATE POLICY industrial_attachments_student_read ON industrial_attachments
     FOR SELECT TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid());
 
 -- Industry mentors can view attachments for their company
+DROP POLICY IF EXISTS industrial_attachments_mentor_read ON industrial_attachments;
 CREATE POLICY industrial_attachments_mentor_read ON industrial_attachments
     FOR SELECT TO authenticated
     USING (current_user_role() = 'industry_mentor' AND company_id IN (
@@ -1260,6 +1349,7 @@ CREATE POLICY industrial_attachments_mentor_read ON industrial_attachments
     ));
 
 -- Dept admin can manage attachments in their department
+DROP POLICY IF EXISTS industrial_attachments_dept_admin_manage ON industrial_attachments;
 CREATE POLICY industrial_attachments_dept_admin_manage ON industrial_attachments
     FOR ALL TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1270,6 +1360,7 @@ CREATE POLICY industrial_attachments_dept_admin_manage ON industrial_attachments
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS industrial_attachments_super_admin ON industrial_attachments;
 CREATE POLICY industrial_attachments_super_admin ON industrial_attachments
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1278,16 +1369,19 @@ CREATE POLICY industrial_attachments_super_admin ON industrial_attachments
 -- ── location_logs ─────────────────────────────────────────────────────
 
 -- Students can create their own location logs
+DROP POLICY IF EXISTS location_logs_student_create ON location_logs;
 CREATE POLICY location_logs_student_create ON location_logs
     FOR INSERT TO authenticated
     WITH CHECK (current_user_role() = 'student' AND student_id = auth.uid());
 
 -- Students can view their own location logs
+DROP POLICY IF EXISTS location_logs_student_read ON location_logs;
 CREATE POLICY location_logs_student_read ON location_logs
     FOR SELECT TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid());
 
 -- Industry mentors can view location logs for their company
+DROP POLICY IF EXISTS location_logs_mentor_read ON location_logs;
 CREATE POLICY location_logs_mentor_read ON location_logs
     FOR SELECT TO authenticated
     USING (current_user_role() = 'industry_mentor' AND attachment_id IN (
@@ -1297,6 +1391,7 @@ CREATE POLICY location_logs_mentor_read ON location_logs
     ));
 
 -- Dept admin can view location logs in their department
+DROP POLICY IF EXISTS location_logs_dept_admin_read ON location_logs;
 CREATE POLICY location_logs_dept_admin_read ON location_logs
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1306,6 +1401,7 @@ CREATE POLICY location_logs_dept_admin_read ON location_logs
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS location_logs_super_admin ON location_logs;
 CREATE POLICY location_logs_super_admin ON location_logs
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1314,12 +1410,14 @@ CREATE POLICY location_logs_super_admin ON location_logs
 -- ── digital_logbook ───────────────────────────────────────────────────
 
 -- Students can manage their own logbook entries
+DROP POLICY IF EXISTS digital_logbook_student_manage ON digital_logbook;
 CREATE POLICY digital_logbook_student_manage ON digital_logbook
     FOR ALL TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid())
     WITH CHECK (current_user_role() = 'student' AND student_id = auth.uid());
 
 -- Industry mentors can view and approve logbook entries for their company
+DROP POLICY IF EXISTS digital_logbook_mentor_manage ON digital_logbook;
 CREATE POLICY digital_logbook_mentor_manage ON digital_logbook
     FOR SELECT TO authenticated
     USING (current_user_role() = 'industry_mentor' AND attachment_id IN (
@@ -1328,6 +1426,7 @@ CREATE POLICY digital_logbook_mentor_manage ON digital_logbook
         )
     ));
 
+DROP POLICY IF EXISTS digital_logbook_mentor_approve ON digital_logbook;
 CREATE POLICY digital_logbook_mentor_approve ON digital_logbook
     FOR UPDATE TO authenticated
     USING (current_user_role() = 'industry_mentor' AND attachment_id IN (
@@ -1338,6 +1437,7 @@ CREATE POLICY digital_logbook_mentor_approve ON digital_logbook
     WITH CHECK (current_user_role() = 'industry_mentor' AND mentor_approved_by = auth.uid());
 
 -- Dept admin can view logbook entries in their department
+DROP POLICY IF EXISTS digital_logbook_dept_admin_read ON digital_logbook;
 CREATE POLICY digital_logbook_dept_admin_read ON digital_logbook
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1347,6 +1447,7 @@ CREATE POLICY digital_logbook_dept_admin_read ON digital_logbook
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS digital_logbook_super_admin ON digital_logbook;
 CREATE POLICY digital_logbook_super_admin ON digital_logbook
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1355,11 +1456,13 @@ CREATE POLICY digital_logbook_super_admin ON digital_logbook
 -- ── competency_tracking ───────────────────────────────────────────────
 
 -- Students can view their own competency tracking
+DROP POLICY IF EXISTS competency_tracking_student_read ON competency_tracking;
 CREATE POLICY competency_tracking_student_read ON competency_tracking
     FOR SELECT TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid());
 
 -- Industry mentors can assess competencies for their company
+DROP POLICY IF EXISTS competency_tracking_mentor_assess ON competency_tracking;
 CREATE POLICY competency_tracking_mentor_assess ON competency_tracking
     FOR ALL TO authenticated
     USING (current_user_role() = 'industry_mentor' AND attachment_id IN (
@@ -1370,12 +1473,14 @@ CREATE POLICY competency_tracking_mentor_assess ON competency_tracking
     WITH CHECK (current_user_role() = 'industry_mentor' AND assessed_by = auth.uid());
 
 -- Internal verifiers can verify competencies
+DROP POLICY IF EXISTS competency_tracking_verifier_verify ON competency_tracking;
 CREATE POLICY competency_tracking_verifier_verify ON competency_tracking
     FOR UPDATE TO authenticated
     USING (current_user_role() = 'internal_verifier')
     WITH CHECK (current_user_role() = 'internal_verifier' AND verified_by = auth.uid());
 
 -- Dept admin can view competency tracking in their department
+DROP POLICY IF EXISTS competency_tracking_dept_admin_read ON competency_tracking;
 CREATE POLICY competency_tracking_dept_admin_read ON competency_tracking
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = (
@@ -1383,6 +1488,7 @@ CREATE POLICY competency_tracking_dept_admin_read ON competency_tracking
     ));
 
 -- Super admin: full access
+DROP POLICY IF EXISTS competency_tracking_super_admin ON competency_tracking;
 CREATE POLICY competency_tracking_super_admin ON competency_tracking
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1452,23 +1558,33 @@ CREATE TABLE IF NOT EXISTS clearance_approvals (
 );
 
 -- Indexes for clearance tables
+DROP INDEX IF EXISTS idx_clearance_requests_student;
 CREATE INDEX idx_clearance_requests_student ON clearance_requests(student_id);
+DROP INDEX IF EXISTS idx_clearance_requests_status;
 CREATE INDEX idx_clearance_requests_status ON clearance_requests(status);
+DROP INDEX IF EXISTS idx_clearance_requests_department;
 CREATE INDEX idx_clearance_requests_department ON clearance_requests(department_id);
+DROP INDEX IF EXISTS idx_clearance_approvals_request;
 CREATE INDEX idx_clearance_approvals_request ON clearance_approvals(clearance_request_id);
+DROP INDEX IF EXISTS idx_clearance_approvals_stage;
 CREATE INDEX idx_clearance_approvals_stage ON clearance_approvals(clearance_stage_id);
+DROP INDEX IF EXISTS idx_clearance_approvals_approver;
 CREATE INDEX idx_clearance_approvals_approver ON clearance_approvals(approver_id);
 
 -- Trigger for updated_at on clearance tables
+DROP TRIGGER IF EXISTS update_clearance_departments_updated_at ON clearance_departments;
 CREATE TRIGGER update_clearance_departments_updated_at BEFORE UPDATE ON clearance_departments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_clearance_stages_updated_at ON clearance_stages;
 CREATE TRIGGER update_clearance_stages_updated_at BEFORE UPDATE ON clearance_stages
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_clearance_requests_updated_at ON clearance_requests;
 CREATE TRIGGER update_clearance_requests_updated_at BEFORE UPDATE ON clearance_requests
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_clearance_approvals_updated_at ON clearance_approvals;
 CREATE TRIGGER update_clearance_approvals_updated_at BEFORE UPDATE ON clearance_approvals
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -1479,30 +1595,36 @@ ALTER TABLE clearance_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clearance_approvals ENABLE ROW LEVEL SECURITY;
 
 -- Clearance departments: Super admin full access, others read-only
+DROP POLICY IF EXISTS clearance_departments_super_admin ON clearance_departments;
 CREATE POLICY clearance_departments_super_admin ON clearance_departments
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
+DROP POLICY IF EXISTS clearance_departments_read ON clearance_departments;
 CREATE POLICY clearance_departments_read ON clearance_departments
     FOR SELECT TO authenticated
     USING (current_user_active());
 
 -- Clearance stages: Super admin full access, others read-only
+DROP POLICY IF EXISTS clearance_stages_super_admin ON clearance_stages;
 CREATE POLICY clearance_stages_super_admin ON clearance_stages
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
+DROP POLICY IF EXISTS clearance_stages_read ON clearance_stages;
 CREATE POLICY clearance_stages_read ON clearance_stages
     FOR SELECT TO authenticated
     USING (current_user_active());
 
 -- Clearance requests: Students can see their own, approvers can see pending approvals
+DROP POLICY IF EXISTS clearance_requests_student_read ON clearance_requests;
 CREATE POLICY clearance_requests_student_read ON clearance_requests
     FOR SELECT TO authenticated
     USING (current_user_role() = 'student' AND student_id = auth.uid());
 
+DROP POLICY IF EXISTS clearance_requests_approver_read ON clearance_requests;
 CREATE POLICY clearance_requests_approver_read ON clearance_requests
     FOR SELECT TO authenticated
     USING (
@@ -1515,12 +1637,14 @@ CREATE POLICY clearance_requests_approver_read ON clearance_requests
         )
     );
 
+DROP POLICY IF EXISTS clearance_requests_super_admin ON clearance_requests;
 CREATE POLICY clearance_requests_super_admin ON clearance_requests
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
     WITH CHECK (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Clearance approvals: Approvers can update their assigned approvals
+DROP POLICY IF EXISTS clearance_approvals_student_read ON clearance_approvals;
 CREATE POLICY clearance_approvals_student_read ON clearance_approvals
     FOR SELECT TO authenticated
     USING (
@@ -1529,6 +1653,7 @@ CREATE POLICY clearance_approvals_student_read ON clearance_approvals
         )
     );
 
+DROP POLICY IF EXISTS clearance_approvals_approver_update ON clearance_approvals;
 CREATE POLICY clearance_approvals_approver_update ON clearance_approvals
     FOR UPDATE TO authenticated
     USING (
@@ -1539,6 +1664,7 @@ CREATE POLICY clearance_approvals_approver_update ON clearance_approvals
         )
     );
 
+DROP POLICY IF EXISTS clearance_approvals_super_admin ON clearance_approvals;
 CREATE POLICY clearance_approvals_super_admin ON clearance_approvals
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active())
@@ -1672,22 +1798,27 @@ CREATE INDEX IF NOT EXISTS idx_admission_documents_type ON admission_documents(d
 -- RLS for admission_requests
 ALTER TABLE admission_requests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS admission_requests_student_read ON admission_requests;
 CREATE POLICY admission_requests_student_read ON admission_requests
     FOR SELECT TO authenticated
     USING (student_id = auth.uid());
 
+DROP POLICY IF EXISTS admission_requests_hod_read ON admission_requests;
 CREATE POLICY admission_requests_hod_read ON admission_requests
     FOR SELECT TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = department_id);
 
+DROP POLICY IF EXISTS admission_requests_student_insert ON admission_requests;
 CREATE POLICY admission_requests_student_insert ON admission_requests
     FOR INSERT TO authenticated
     WITH CHECK (student_id = auth.uid());
 
+DROP POLICY IF EXISTS admission_requests_hod_update ON admission_requests;
 CREATE POLICY admission_requests_hod_update ON admission_requests
     FOR UPDATE TO authenticated
     USING (current_user_role() = 'dept_admin' AND current_user_dept() = department_id);
 
+DROP POLICY IF EXISTS admission_requests_super_admin ON admission_requests;
 CREATE POLICY admission_requests_super_admin ON admission_requests
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active());
@@ -1695,12 +1826,14 @@ CREATE POLICY admission_requests_super_admin ON admission_requests
 -- RLS for admission_documents
 ALTER TABLE admission_documents ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS admission_documents_student_read ON admission_documents;
 CREATE POLICY admission_documents_student_read ON admission_documents
     FOR SELECT TO authenticated
     USING (EXISTS (
         SELECT 1 FROM admission_requests WHERE id = admission_documents.admission_request_id AND student_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS admission_documents_hod_read ON admission_documents;
 CREATE POLICY admission_documents_hod_read ON admission_documents
     FOR SELECT TO authenticated
     USING (EXISTS (
@@ -1710,12 +1843,14 @@ CREATE POLICY admission_documents_hod_read ON admission_documents
         AND current_user_dept() = ar.department_id
     ));
 
+DROP POLICY IF EXISTS admission_documents_student_insert ON admission_documents;
 CREATE POLICY admission_documents_student_insert ON admission_documents
     FOR INSERT TO authenticated
     WITH CHECK (EXISTS (
         SELECT 1 FROM admission_requests WHERE id = admission_documents.admission_request_id AND student_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS admission_documents_hod_update ON admission_documents;
 CREATE POLICY admission_documents_hod_update ON admission_documents
     FOR UPDATE TO authenticated
     USING (EXISTS (
@@ -1725,17 +1860,20 @@ CREATE POLICY admission_documents_hod_update ON admission_documents
         AND current_user_dept() = ar.department_id
     ));
 
+DROP POLICY IF EXISTS admission_documents_super_admin ON admission_documents;
 CREATE POLICY admission_documents_super_admin ON admission_documents
     FOR ALL TO authenticated
     USING (current_user_role() = 'super_admin' AND current_user_active());
 
 -- Trigger for updated_at on admission_requests
+DROP TRIGGER IF EXISTS update_admission_requests_updated_at ON admission_requests;
 CREATE TRIGGER update_admission_requests_updated_at
     BEFORE UPDATE ON admission_requests
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Trigger for updated_at on admission_documents
+DROP TRIGGER IF EXISTS update_admission_documents_updated_at ON admission_documents;
 CREATE TRIGGER update_admission_documents_updated_at
     BEFORE UPDATE ON admission_documents
     FOR EACH ROW
@@ -1763,16 +1901,19 @@ CREATE TABLE IF NOT EXISTS course_applications (
 ALTER TABLE course_applications ENABLE ROW LEVEL SECURITY;
 
 -- Public can insert (no auth required)
+DROP POLICY IF EXISTS course_applications_insert ON course_applications;
 CREATE POLICY course_applications_insert ON course_applications
     FOR INSERT TO anon, authenticated
     WITH CHECK (true);
 
 -- Authenticated staff can view
+DROP POLICY IF EXISTS course_applications_select ON course_applications;
 CREATE POLICY course_applications_select ON course_applications
     FOR SELECT TO authenticated
     USING (true);
 
 -- Dept admin / super admin can update (review)
+DROP POLICY IF EXISTS course_applications_update ON course_applications;
 CREATE POLICY course_applications_update ON course_applications
     FOR UPDATE TO authenticated
     USING (current_user_role() IN ('dept_admin', 'super_admin') AND current_user_active());
