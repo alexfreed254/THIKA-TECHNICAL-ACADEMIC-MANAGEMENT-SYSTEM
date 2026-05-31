@@ -1,0 +1,332 @@
+{% extends "student/base.html" %}
+{% block title %}Employment Status{% endblock %}
+{% block page_title %}Employment Status{% endblock %}
+
+{% block extra_style %}
+.es-wrap { padding: 24px; max-width: 860px; margin: 0 auto; }
+
+.es-card {
+  background: #fff; border-radius: 16px;
+  border: 1px solid #e2e8f0; margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
+}
+.es-head {
+  background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  color: #fff; padding: 14px 22px;
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+}
+
+/* Current status banner */
+.status-banner {
+  border-radius: 13px; padding: 18px 22px;
+  border: 2px solid; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 16px;
+}
+.status-banner.employed        { background:#f0fdf4;border-color:#bbf7d0; }
+.status-banner.self_employed   { background:#eff6ff;border-color:#bfdbfe; }
+.status-banner.unemployed      { background:#fff7ed;border-color:#fed7aa; }
+.status-banner.continuing_education { background:#faf5ff;border-color:#e9d5ff; }
+.status-banner.other           { background:#f8fafc;border-color:#e2e8f0; }
+.sb-icon { font-size: 32px; flex-shrink: 0; }
+.sb-label { font-size: 18px; font-weight: 800; color: #1e293b; }
+.sb-meta  { font-size: 13px; color: #64748b; margin-top: 3px; }
+
+/* Form */
+.f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:600px){ .f-grid { grid-template-columns: 1fr; } }
+.f-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.f-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing:.05em; }
+.f-label .req { color: #dc2626; }
+.f-input, .f-select {
+  padding: 10px 13px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; font-size: 13.5px; font-family: 'Inter',sans-serif;
+  color: #0f172a; background: #fff; width: 100%;
+  transition: border-color .18s, box-shadow .18s;
+}
+.f-input:focus,.f-select:focus {
+  outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+
+/* Status option cards */
+.status-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px; margin-bottom: 18px;
+}
+.status-opt { position: relative; cursor: pointer; }
+.status-opt input[type=radio] { position: absolute; opacity: 0; width: 100%; height: 100%; top:0;left:0;cursor:pointer;z-index:1; }
+.status-opt-label {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 10px; border: 2px solid #e2e8f0; border-radius: 12px;
+  background: #f8fafc; text-align: center; pointer-events: none;
+  transition: all .18s;
+}
+.status-opt input:checked + .status-opt-label {
+  border-color: #2563eb; background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.status-opt-icon { font-size: 24px; }
+.status-opt-text { font-size: 12px; font-weight: 700; color: #334155; }
+
+/* Submit btn */
+.btn-save {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 28px; border: none; border-radius: 11px;
+  font-size: 13.5px; font-weight: 700; font-family: 'Inter',sans-serif;
+  cursor: pointer; transition: all .2s;
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: #fff; box-shadow: 0 4px 14px rgba(15,44,84,.3);
+}
+.btn-save:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(15,44,84,.4); }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 14px; }
+.info-item { background: #f8fafc; padding: 13px 16px; border-radius: 10px; border: 1px solid #e2e8f0; }
+.info-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing:.05em; margin-bottom: 5px; }
+.info-value { font-size: 13.5px; font-weight: 600; color: #1e293b; }
+
+/* Empty */
+.empty { text-align:center;padding:40px 24px;color:#94a3b8; }
+.empty i { font-size:44px;display:block;margin-bottom:12px;opacity:.3; }
+{% endblock %}
+
+{% block content %}
+<div class="es-wrap">
+
+  <!-- ── Current status (if set) ─── -->
+  {% if current_status %}
+  {% set st = current_status.get('employment_status','unemployed') %}
+  {% set icons = {'employed':'💼','self_employed':'🏢','unemployed':'🔍','continuing_education':'🎓','other':'ℹ️'} %}
+  {% set labels = {'employed':'Employed','self_employed':'Self-Employed','unemployed':'Seeking Employment','continuing_education':'Continuing Education','other':'Other'} %}
+
+  <div class="status-banner {{ st }}">
+    <div class="sb-icon">{{ icons.get(st,'📋') }}</div>
+    <div>
+      <div class="sb-label">{{ labels.get(st, st|title) }}</div>
+      {% if current_status.get('company_name') %}
+      <div class="sb-meta">
+        <i class="fas fa-building" style="margin-right:5px"></i>{{ current_status.get('company_name') }}
+        {% if current_status.get('job_title') %} &bull; {{ current_status.get('job_title') }}{% endif %}
+      </div>
+      {% endif %}
+      {% if current_status.get('start_date') %}
+      <div class="sb-meta"><i class="fas fa-calendar" style="margin-right:5px"></i>Since {{ current_status.get('start_date') }}</div>
+      {% endif %}
+      {% if current_status.get('location_address') %}
+      <div class="sb-meta"><i class="fas fa-map-marker-alt" style="margin-right:5px"></i>{{ current_status.get('location_address') }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Details grid -->
+  <div class="es-card" style="margin-bottom:24px">
+    <div class="es-head"><i class="fas fa-id-card"></i> Current Employment Details</div>
+    <div style="padding:22px">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Status</div>
+          <div class="info-value">{{ labels.get(st, st|title) }}</div>
+        </div>
+        {% if current_status.get('company_name') %}
+        <div class="info-item">
+          <div class="info-label">Company / Organisation</div>
+          <div class="info-value">{{ current_status.get('company_name') }}</div>
+        </div>
+        {% endif %}
+        {% if current_status.get('job_title') %}
+        <div class="info-item">
+          <div class="info-label">Job Title / Role</div>
+          <div class="info-value">{{ current_status.get('job_title') }}</div>
+        </div>
+        {% endif %}
+        {% if current_status.get('start_date') %}
+        <div class="info-item">
+          <div class="info-label">Start Date</div>
+          <div class="info-value">{{ current_status.get('start_date') }}</div>
+        </div>
+        {% endif %}
+        {% if current_status.get('location_address') %}
+        <div class="info-item">
+          <div class="info-label">Location</div>
+          <div class="info-value">{{ current_status.get('location_address') }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Update form ─── -->
+  <div class="es-card">
+    <div class="es-head">
+      <i class="fas fa-edit"></i>
+      {{ 'Update Employment Status' if current_status else 'Set Your Employment Status' }}
+    </div>
+    <div style="padding:22px">
+      <p style="font-size:13.5px;color:#64748b;margin-bottom:20px">
+        Let your institution know your employment status after completing your training.
+        This helps TTTI track graduate outcomes and improve programmes.
+      </p>
+
+      <form method="POST" action="/student/employment-status" id="esForm">
+
+        <!-- Status selector cards -->
+        <div class="f-field">
+          <label class="f-label">Employment Status <span class="req">*</span></label>
+          <div class="status-grid">
+
+            <label class="status-opt">
+              <input type="radio" name="employment_status" value="employed" required
+                     {% if current_status and current_status.get('employment_status') == 'employed' %}checked{% endif %}
+                     onchange="toggleEmployed(true)">
+              <div class="status-opt-label">
+                <span class="status-opt-icon">💼</span>
+                <span class="status-opt-text">Employed</span>
+              </div>
+            </label>
+
+            <label class="status-opt">
+              <input type="radio" name="employment_status" value="self_employed"
+                     {% if current_status and current_status.get('employment_status') == 'self_employed' %}checked{% endif %}
+                     onchange="toggleEmployed(true)">
+              <div class="status-opt-label">
+                <span class="status-opt-icon">🏢</span>
+                <span class="status-opt-text">Self-Employed</span>
+              </div>
+            </label>
+
+            <label class="status-opt">
+              <input type="radio" name="employment_status" value="unemployed"
+                     {% if current_status and current_status.get('employment_status') == 'unemployed' %}checked{% endif %}
+                     onchange="toggleEmployed(false)">
+              <div class="status-opt-label">
+                <span class="status-opt-icon">🔍</span>
+                <span class="status-opt-text">Seeking Work</span>
+              </div>
+            </label>
+
+            <label class="status-opt">
+              <input type="radio" name="employment_status" value="continuing_education"
+                     {% if current_status and current_status.get('employment_status') == 'continuing_education' %}checked{% endif %}
+                     onchange="toggleEmployed(false)">
+              <div class="status-opt-label">
+                <span class="status-opt-icon">🎓</span>
+                <span class="status-opt-text">Further Study</span>
+              </div>
+            </label>
+
+            <label class="status-opt">
+              <input type="radio" name="employment_status" value="other"
+                     {% if current_status and current_status.get('employment_status') == 'other' %}checked{% endif %}
+                     onchange="toggleEmployed(false)">
+              <div class="status-opt-label">
+                <span class="status-opt-icon">ℹ️</span>
+                <span class="status-opt-text">Other</span>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- Employment details (shown when employed/self-employed) -->
+        <div id="employedFields" style="display:{% if current_status and current_status.get('employment_status') in ('employed','self_employed') %}block{% else %}none{% endif %}">
+          <div class="f-grid">
+            <div class="f-field">
+              <label class="f-label">Company / Organisation Name</label>
+              <input class="f-input" type="text" name="company_name"
+                     value="{{ current_status.get('company_name','') if current_status else '' }}"
+                     placeholder="e.g. Kenya Power, ABC Ltd">
+            </div>
+            <div class="f-field">
+              <label class="f-label">Job Title / Role</label>
+              <input class="f-input" type="text" name="job_title"
+                     value="{{ current_status.get('job_title','') if current_status else '' }}"
+                     placeholder="e.g. Electrical Technician">
+            </div>
+          </div>
+          <div class="f-grid">
+            <div class="f-field">
+              <label class="f-label">Start Date</label>
+              <input class="f-input" type="date" name="start_date"
+                     value="{{ current_status.get('start_date','') if current_status else '' }}">
+            </div>
+            <div class="f-field">
+              <label class="f-label">Location / Address</label>
+              <input class="f-input" type="text" name="location_address"
+                     value="{{ current_status.get('location_address','') if current_status else '' }}"
+                     placeholder="e.g. Industrial Area, Nairobi">
+            </div>
+          </div>
+        </div>
+
+        <!-- Location (always available) -->
+        <div id="otherFields">
+          <div class="f-grid" id="locationFields" style="{% if not current_status or current_status.get('employment_status') not in ('employed','self_employed') %}display:grid{% else %}display:none{% endif %}">
+            <div class="f-field">
+              <label class="f-label">Location / Address</label>
+              <input class="f-input" type="text" name="location_address"
+                     id="locationAddr2"
+                     value="{{ current_status.get('location_address','') if current_status else '' }}"
+                     placeholder="Town / County">
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden GPS fields -->
+        <input type="hidden" name="latitude"  id="gpsLat" value="{{ current_status.get('latitude','') if current_status else '' }}">
+        <input type="hidden" name="longitude" id="gpsLng" value="{{ current_status.get('longitude','') if current_status else '' }}">
+
+        <div style="display:flex;align-items:center;gap:14px;margin-top:6px;flex-wrap:wrap">
+          <button type="submit" class="btn-save">
+            <i class="fas fa-save"></i>
+            {{ 'Update Status' if current_status else 'Save Status' }}
+          </button>
+          <span id="gpsMsg" style="font-size:12px;color:#94a3b8"></span>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Info box ─── -->
+  <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:13px;padding:16px 20px">
+    <div style="font-size:13px;font-weight:700;color:#0e7490;margin-bottom:8px">
+      <i class="fas fa-info-circle" style="margin-right:6px"></i>Why we collect this information
+    </div>
+    <p style="font-size:13px;color:#0e7490;line-height:1.7;margin:0">
+      TTTI uses graduate employment data for tracer studies to evaluate training effectiveness and improve courses.
+      Your information is kept confidential and used only for institutional reporting.
+    </p>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function toggleEmployed(isEmployed) {
+    document.getElementById('employedFields').style.display = isEmployed ? 'block' : 'none';
+    document.getElementById('locationFields').style.display = isEmployed ? 'none' : 'grid';
+  }
+
+  /* Capture GPS silently on page load */
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      document.getElementById('gpsLat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('gpsLng').value = pos.coords.longitude.toFixed(6);
+      document.getElementById('gpsMsg').textContent = '📍 Location captured (' + Math.round(pos.coords.accuracy) + 'm accuracy)';
+    }, function(){}, { enableHighAccuracy: false, timeout: 8000 });
+  }
+
+  /* Submit spinner */
+  document.getElementById('esForm').addEventListener('submit', function() {
+    const btn = this.querySelector('.btn-save');
+    btn.innerHTML = '<span style="display:inline-block;width:15px;height:15px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:7px"></span> Saving…';
+    btn.disabled = true;
+  });
+
+  const s = document.createElement('style');
+  s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+</script>
+{% endblock %}
