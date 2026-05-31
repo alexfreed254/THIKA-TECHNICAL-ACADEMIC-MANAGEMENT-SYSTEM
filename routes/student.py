@@ -422,7 +422,32 @@ def my_documents():
     student_id = user["id"]
 
     if request.method == "POST":
-        # Handle document uploads
+        form_action = request.form.get("form_action", "documents")
+
+        # ── Handle personal info update ───────────────────────────────────────
+        if form_action == "update_profile":
+            mobile_raw = request.form.get("mobile_number", "").strip()
+            mobile = _clean_mobile_number(mobile_raw) if mobile_raw else ""
+            updates = {
+                "gender":        request.form.get("gender", "").strip() or None,
+                "mobile_number": mobile or None,
+                "county":        request.form.get("county", "").strip() or None,
+                "sub_county":    request.form.get("sub_county", "").strip() or None,
+                "village":       request.form.get("village", "").strip() or None,
+                "national_id_no":request.form.get("national_id_no", "").strip() or None,
+                "date_of_birth": request.form.get("date_of_birth", "").strip() or None,
+            }
+            # Remove None values so we don't overwrite existing data with nulls
+            updates = {k: v for k, v in updates.items() if v is not None}
+            try:
+                db.table("user_profiles").update(updates).eq("id", student_id).execute()
+                write_audit_log("update_profile", target=f"user:{student_id}", detail=updates)
+                flash('Personal information updated successfully.', 'success')
+            except Exception as e:
+                flash(f'Error updating profile: {e}', 'danger')
+            return redirect(url_for("student.my_documents"))
+
+        # ── Handle document uploads ───────────────────────────────────────────
         document_types = [
             'passport_photo', 'admission_letter', 'medical_form', 'personal_data_form',
             'declaration_form', 'kcse_result_slip', 'kcse_certificate', 'kcpe_result_slip',

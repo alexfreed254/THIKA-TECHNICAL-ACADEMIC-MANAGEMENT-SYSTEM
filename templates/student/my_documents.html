@@ -5,39 +5,68 @@
 
 {% block extra_style %}
 <style>
-  .page-wrap { padding: 24px; max-width: 900px; margin: 0 auto; }
-  .section-title { 
-    font-size: 16px; 
-    font-weight: 700; 
-    color: #1e293b; 
-    margin: 0 0 20px 0; 
-    padding-bottom: 10px; 
-    border-bottom: 2px solid #e2e8f0; 
+  .page-wrap { padding: 24px; max-width: 960px; margin: 0 auto; }
+
+  /* Section header */
+  .section-card {
+    background: #fff; border-radius: 16px;
+    border: 1px solid #e2e8f0; margin-bottom: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
   }
-  .info-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-    gap: 16px; 
-    margin-bottom: 30px; 
+  .section-head {
+    background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+    color: #fff; padding: 14px 22px;
+    font-size: 13.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
   }
-  .info-item { 
-    background: #f8fafc; 
-    padding: 14px 16px; 
-    border-radius: 8px; 
-    border: 1px solid #e2e8f0; 
+  .section-head i { font-size: 16px; }
+  .section-body { padding: 22px; }
+
+  /* Profile form grid */
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
   }
-  .info-label { 
-    font-size: 11px; 
-    font-weight: 600; 
-    color: #64748b; 
-    margin-bottom: 4px; 
-    text-transform: uppercase; 
-    letter-spacing: 0.5px; 
+  @media(max-width:720px){ .profile-grid { grid-template-columns: 1fr 1fr; } }
+  @media(max-width:480px){ .profile-grid { grid-template-columns: 1fr; } }
+
+  .pf-field { display: flex; flex-direction: column; gap: 6px; }
+  .pf-label {
+    font-size: 11.5px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: .05em;
   }
-  .info-value { 
-    font-size: 14px; 
-    font-weight: 600; 
-    color: #1e293b; 
+  .pf-label .req { color: #dc2626; margin-left: 2px; }
+
+  .pf-input, .pf-select {
+    padding: 10px 13px; border: 1.5px solid #e2e8f0;
+    border-radius: 10px; font-size: 13.5px;
+    font-family: 'Inter', sans-serif; color: #0f172a;
+    background: #fff; width: 100%;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .pf-input:focus, .pf-select:focus {
+    outline: none; border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+  }
+  .pf-input.readonly { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; cursor: default; }
+  .pf-hint { font-size: 11px; color: #94a3b8; }
+
+  .btn-save-profile {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 28px; border: none; border-radius: 10px;
+    font-size: 13.5px; font-weight: 700; font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: all .2s;
+    background: linear-gradient(135deg, #1e5a9f, #154070);
+    color: #fff; box-shadow: 0 4px 14px rgba(30,90,159,.3);
+  }
+  .btn-save-profile:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(30,90,159,.4); }
+
+  /* readonly static display (Course / Department) */
+  .pf-static {
+    padding: 10px 13px; border: 1.5px solid #e2e8f0;
+    border-radius: 10px; font-size: 13.5px; font-weight: 600;
+    color: #0369a1; background: #f0f9ff; border-color: #bae6fd;
   }
   .doc-grid { 
     display: grid; 
@@ -160,52 +189,135 @@
 
 {% block content %}
 <div class="page-wrap">
-  
-  <!-- PERSONAL INFORMATION SECTION -->
-  <h2 class="section-title">PERSONAL INFORMATION</h2>
-  <div class="info-grid">
-    <div class="info-item">
-      <div class="info-label">Full Name</div>
-      <div class="info-value">{{ student.full_name or '—' }}</div>
+
+  <!-- ── PERSONAL INFORMATION (editable) ──────────────────── -->
+  <div class="section-card">
+    <div class="section-head">
+      <span><i class="fas fa-user-edit"></i>&nbsp; Personal Information</span>
+      <span style="font-size:11px;opacity:.75;font-weight:500">Fields marked <span style="color:#fbbf24">*</span> are editable</span>
     </div>
-    <div class="info-item">
-      <div class="info-label">Admission Number</div>
-      <div class="info-value">{{ student.admission_no or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Gender</div>
-      <div class="info-value">{{ student.gender or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Phone Number</div>
-      <div class="info-value">{{ student.mobile_number or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">County</div>
-      <div class="info-value">{{ student.county or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Sub County</div>
-      <div class="info-value">{{ student.sub_county or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Village / Address</div>
-      <div class="info-value">{{ student.village or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Course</div>
-      <div class="info-value">{{ course_name or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Department</div>
-      <div class="info-value">{{ department_name or '—' }}</div>
+    <div class="section-body">
+
+      <form method="POST" action="/student/documents" id="profile-form">
+        <input type="hidden" name="form_action" value="update_profile">
+
+        <div class="profile-grid">
+
+          <!-- Full Name (read-only) -->
+          <div class="pf-field">
+            <label class="pf-label">Full Name</label>
+            <input class="pf-input readonly" type="text"
+                   value="{{ student.get('full_name','') }}" readonly>
+            <span class="pf-hint">Official name — contact admin to change</span>
+          </div>
+
+          <!-- Admission Number (read-only) -->
+          <div class="pf-field">
+            <label class="pf-label">Admission Number</label>
+            <input class="pf-input readonly" type="text"
+                   value="{{ student.get('admission_no','') }}" readonly>
+            <span class="pf-hint">System-assigned — cannot be changed</span>
+          </div>
+
+          <!-- Gender (editable) -->
+          <div class="pf-field">
+            <label class="pf-label">Gender <span class="req">*</span></label>
+            <select class="pf-select" name="gender">
+              <option value="">-- Select Gender --</option>
+              <option value="Male"   {% if student.get('gender') == 'Male'   %}selected{% endif %}>Male</option>
+              <option value="Female" {% if student.get('gender') == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Other"  {% if student.get('gender') == 'Other'  %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+          <!-- Phone Number (editable) -->
+          <div class="pf-field">
+            <label class="pf-label">Phone Number <span class="req">*</span></label>
+            <input class="pf-input" type="tel" name="mobile_number"
+                   value="{{ student.get('mobile_number','') }}"
+                   placeholder="e.g. 0712345678">
+          </div>
+
+          <!-- Date of Birth (editable) -->
+          <div class="pf-field">
+            <label class="pf-label">Date of Birth <span class="req">*</span></label>
+            <input class="pf-input" type="date" name="date_of_birth"
+                   value="{{ student.get('date_of_birth','') }}">
+          </div>
+
+          <!-- National ID No (editable) -->
+          <div class="pf-field">
+            <label class="pf-label">National ID / Birth Cert No. <span class="req">*</span></label>
+            <input class="pf-input" type="text" name="national_id_no"
+                   value="{{ student.get('national_id_no','') }}"
+                   placeholder="Enter ID or Birth Cert number">
+          </div>
+
+          <!-- County (editable) -->
+          <div class="pf-field">
+            <label class="pf-label">County <span class="req">*</span></label>
+            <input class="pf-input" type="text" name="county"
+                   value="{{ student.get('county','') }}"
+                   placeholder="e.g. Kiambu">
+          </div>
+
+          <!-- Sub County (editable) -->
+          <div class="pf-field">
+            <label class="pf-label">Sub County <span class="req">*</span></label>
+            <input class="pf-input" type="text" name="sub_county"
+                   value="{{ student.get('sub_county','') }}"
+                   placeholder="e.g. Thika">
+          </div>
+
+          <!-- Village / Address (editable) -->
+          <div class="pf-field">
+            <label class="pf-label">Village / Address <span class="req">*</span></label>
+            <input class="pf-input" type="text" name="village"
+                   value="{{ student.get('village','') }}"
+                   placeholder="e.g. Makongeni">
+          </div>
+
+          <!-- Course (read-only) -->
+          <div class="pf-field">
+            <label class="pf-label">Course</label>
+            <div class="pf-static">{{ course_name or '—' }}</div>
+            <span class="pf-hint">Set by your department enrollment</span>
+          </div>
+
+          <!-- Department (read-only) -->
+          <div class="pf-field">
+            <label class="pf-label">Department</label>
+            <div class="pf-static">{{ department_name or '—' }}</div>
+            <span class="pf-hint">Set by your department enrollment</span>
+          </div>
+
+        </div>
+
+        <div style="margin-top:22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <button type="submit" class="btn-save-profile">
+            <i class="fas fa-save"></i> Save Personal Information
+          </button>
+          <span style="font-size:12.5px;color:#64748b">
+            <i class="fas fa-info-circle" style="color:#0891b2;margin-right:4px"></i>
+            Only editable fields will be updated. Read-only fields are locked.
+          </span>
+        </div>
+      </form>
+
     </div>
   </div>
 
-  <!-- DOCUMENT UPLOAD SECTION -->
-  <h2 class="section-title">DOCUMENT UPLOAD SECTION</h2>
+  <!-- ── DOCUMENT UPLOAD SECTION ───────────────────────────── -->
+  <div class="section-card">
+    <div class="section-head">
+      <span><i class="fas fa-folder-open"></i>&nbsp; My Documents</span>
+      <span style="font-size:11px;opacity:.75;font-weight:500">Upload or replace required documents</span>
+    </div>
+  </div>
   
+  <div style="padding:22px;background:#fff;border-radius:0 0 16px 16px;border:1px solid #e2e8f0;border-top:none;margin-top:-1px;box-shadow:0 2px 12px rgba(0,0,0,.06)">
   <form id="documents-form" method="POST" action="/student/documents" enctype="multipart/form-data">
+    <input type="hidden" name="form_action" value="documents">
     <div class="doc-grid">
       
       <!-- Passport Photos -->
@@ -490,6 +602,7 @@
       <i class="fas fa-save"></i> SAVE DOCUMENTS
     </button>
   </form>
+  </div>
 
 </div>
 {% endblock %}
