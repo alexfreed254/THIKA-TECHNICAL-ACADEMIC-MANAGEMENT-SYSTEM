@@ -10,34 +10,69 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   {% block extra_head %}{% endblock %}
   <style>
-    /* ── Student portal sidebar: vibrant teal-indigo ─────────── */
+    /* ── Student portal: teal-navy gradient ──────────────────── */
     .sidebar {
-      background: linear-gradient(180deg, #0f2c54 0%, #1a3d6e 40%, #164e63 100%);
+      background: linear-gradient(180deg, #0f2c54 0%, #1a3d6e 55%, #0e4f7a 100%);
     }
-    .sidebar-menu a:hover, .sidebar-menu a.active {
+
+    /* Flat menu — single-level links only */
+    .sidebar-menu a {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 20px;
+      color: rgba(255,255,255,.75);
+      font-size: 13px;
+      font-weight: 500;
+      border-left: 3px solid transparent;
+      transition: all .18s;
+      text-decoration: none;
+      border-radius: 0 8px 8px 0;
+      margin: 1px 8px 1px 0;
+    }
+    .sidebar-menu a i {
+      width: 20px;
+      text-align: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .sidebar-menu a:hover,
+    .sidebar-menu a.active {
       background: rgba(255,255,255,.13);
-      border-left-color: #22d3ee;
       color: #fff;
+      border-left-color: #22d3ee;
+      text-decoration: none;
     }
-    .sidebar-menu .menu-group-header:hover { color: rgba(255,255,255,.85); }
 
-    /* Topbar with a hint of brand colour */
-    .topbar {
-      border-bottom: 2px solid #e0f2fe;
+    /* Section dividers */
+    .menu-divider {
+      height: 1px;
+      background: rgba(255,255,255,.1);
+      margin: 8px 16px;
     }
-    .topbar-title { color: #0f2c54; }
+    .menu-label {
+      padding: 10px 20px 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.3px;
+      color: rgba(255,255,255,.35);
+      font-weight: 700;
+    }
 
-    /* Flash messages with left border accent */
+    /* Flash message styling */
     .flash-success, .flash-error, .flash-warning, .flash-info {
       display: flex; align-items: center; gap: 12px;
-      padding: 13px 22px;
-      font-size: 13.5px; font-weight: 500;
+      padding: 13px 22px; font-size: 13.5px; font-weight: 500;
       border-left: 4px solid;
     }
-    .flash-success { background: #f0fdf4; color: #15803d; border-left-color: #16a34a; }
-    .flash-error   { background: #fef2f2; color: #991b1b; border-left-color: #dc2626; }
-    .flash-warning { background: #fffbeb; color: #92400e; border-left-color: #d97706; }
-    .flash-info    { background: #f0f9ff; color: #0e7490; border-left-color: #0891b2; }
+    .flash-success { background:#f0fdf4; color:#15803d; border-left-color:#16a34a; }
+    .flash-error   { background:#fef2f2; color:#991b1b; border-left-color:#dc2626; }
+    .flash-warning { background:#fffbeb; color:#92400e; border-left-color:#d97706; }
+    .flash-info    { background:#f0f9ff; color:#0e7490; border-left-color:#0891b2; }
+
+    /* Topbar */
+    .topbar { border-bottom: 2px solid #e0f2fe; }
+    .topbar-title { color: #0f2c54; font-size: 16px; font-weight: 700; font-family: 'Poppins', sans-serif; }
 
     {% block extra_style %}{% endblock %}
   </style>
@@ -55,118 +90,76 @@
 <div class="dashboard-container">
 
   <!-- ── Sidebar ────────────────────────────────────────────── -->
-  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Student menu">
+  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Student navigation">
+
     <div class="sidebar-header">
       <img src="{{ LOGO_URL }}" alt="TTTI Logo">
       <h2>THIKA TECHNICAL<br>TRAINING INSTITUTE</h2>
-      <div class="role-badge"><i class="fas fa-user-graduate"></i>&nbsp; Trainee Portal</div>
+      <div class="role-badge"><i class="fas fa-user-graduate"></i>&nbsp; TRAINEE PORTAL</div>
     </div>
 
     <div class="sidebar-menu">
 
-      <!-- Dashboard -->
-      <a href="/student/dashboard" class="direct-link">
-        <i class="fas fa-tachometer-alt"></i> Dashboard
+      <!-- Overview -->
+      <a href="/student/dashboard"><i class="fas fa-house"></i> Dashboard</a>
+
+      <div class="menu-divider"></div>
+      <div class="menu-label">Academic</div>
+
+      <a href="/student/units"><i class="fas fa-book-open"></i> My Units</a>
+      <a href="/student/attendance"><i class="fas fa-clipboard-list"></i> Lesson Attendance</a>
+      <a href="/student/marks"><i class="fas fa-chart-line"></i> Marks &amp; Transcripts</a>
+      <a href="/student/upload-poe"><i class="fas fa-cloud-upload-alt"></i> Upload POE</a>
+      <a href="/student/portfolio"><i class="fas fa-folder-open"></i> Portfolio of Evidence</a>
+      <a href="/student/assessments"><i class="fas fa-file-alt"></i> My Assessments</a>
+
+      <div class="menu-divider"></div>
+      <div class="menu-label">Admission</div>
+
+      <a href="/admission/"><i class="fas fa-file-upload"></i> Admission Documents</a>
+      <a href="/student/documents"><i class="fas fa-archive"></i> My Documents</a>
+
+      <div class="menu-divider"></div>
+      <div class="menu-label">Examinations</div>
+
+      <a href="/student/exam-booking-form"><i class="fas fa-file-signature"></i> Exam Booking Form</a>
+      <a href="/student/exam-bookings"><i class="fas fa-list-alt"></i> My Bookings</a>
+
+      <div class="menu-divider"></div>
+      <div class="menu-label">Dual Training</div>
+
+      <a href="/student/industrial-attachment"><i class="fas fa-industry"></i> Industrial Attachment</a>
+      <a href="/student/logbook"><i class="fas fa-book"></i> Digital Logbook</a>
+
+      <div class="menu-divider"></div>
+      <div class="menu-label">Clearance</div>
+
+      <a href="/clearance/"><i class="fas fa-clipboard-check"></i> Course Clearance</a>
+
+      <div class="menu-divider"></div>
+      <div class="menu-label">Job Portal</div>
+
+      <a href="/student/jobs"><i class="fas fa-briefcase"></i> Browse Jobs</a>
+      <a href="/student/employment-status"><i class="fas fa-user-tie"></i> Employment Status</a>
+
+      <div class="menu-divider"></div>
+      <div class="menu-label">Account</div>
+
+      <a href="/auth/profile"><i class="fas fa-user-circle"></i> My Profile</a>
+      <a href="/notifications">
+        <i class="fas fa-bell"></i> Notifications
+        {% if unread_notification_count > 0 %}
+        <span style="margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;padding:1px 7px;font-size:10px;font-weight:700;flex-shrink:0">{{ unread_notification_count }}</span>
+        {% endif %}
       </a>
-
-      <!-- Academic -->
-      <div class="menu-group">
-        <div class="menu-group-header">
-          <span><i class="fas fa-graduation-cap" style="width:18px;text-align:center;margin-right:8px"></i>Academic</span>
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="menu-group-content">
-          <a href="/student/units"><i class="fas fa-book"></i> My Units</a>
-          <a href="/student/attendance"><i class="fas fa-calendar-check"></i> Lesson Attendance</a>
-          <a href="/student/marks"><i class="fas fa-chart-line"></i> Marks &amp; Transcripts</a>
-          <a href="/student/upload-poe"><i class="fas fa-cloud-upload-alt"></i> Upload POE</a>
-          <a href="/student/portfolio"><i class="fas fa-folder-open"></i> Portfolio of Evidence</a>
-          <a href="/student/assessments"><i class="fas fa-file-alt"></i> My Assessments</a>
-        </div>
-      </div>
-
-      <!-- Admission -->
-      <div class="menu-group">
-        <div class="menu-group-header">
-          <span><i class="fas fa-file-upload" style="width:18px;text-align:center;margin-right:8px"></i>Admission</span>
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="menu-group-content">
-          <a href="/admission/"><i class="fas fa-file-upload"></i> Admission Documents</a>
-          <a href="/student/documents"><i class="fas fa-folder"></i> My Documents</a>
-        </div>
-      </div>
-
-      <!-- Exams -->
-      <div class="menu-group">
-        <div class="menu-group-header">
-          <span><i class="fas fa-calendar-plus" style="width:18px;text-align:center;margin-right:8px"></i>Examinations</span>
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="menu-group-content">
-          <a href="/student/exam-booking-form"><i class="fas fa-file-alt"></i> Exam Booking Form</a>
-          <a href="/student/exam-bookings"><i class="fas fa-list-alt"></i> My Bookings</a>
-        </div>
-      </div>
-
-      <!-- Dual Training -->
-      <div class="menu-group">
-        <div class="menu-group-header">
-          <span><i class="fas fa-industry" style="width:18px;text-align:center;margin-right:8px"></i>Dual Training</span>
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="menu-group-content">
-          <a href="/student/industrial-attachment"><i class="fas fa-building"></i> Industrial Attachment</a>
-          <a href="/student/logbook"><i class="fas fa-book-open"></i> Digital Logbook</a>
-        </div>
-      </div>
-
-      <!-- Clearance -->
-      <div class="menu-group">
-        <div class="menu-group-header">
-          <span><i class="fas fa-clipboard-check" style="width:18px;text-align:center;margin-right:8px"></i>Clearance</span>
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="menu-group-content">
-          <a href="/clearance/"><i class="fas fa-clipboard-check"></i> Course Clearance</a>
-        </div>
-      </div>
-
-      <!-- Jobs -->
-      <div class="menu-group">
-        <div class="menu-group-header">
-          <span><i class="fas fa-briefcase" style="width:18px;text-align:center;margin-right:8px"></i>Job Portal</span>
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="menu-group-content">
-          <a href="/student/jobs"><i class="fas fa-briefcase"></i> Browse Jobs</a>
-          <a href="/student/employment-status"><i class="fas fa-user-tie"></i> Employment Status</a>
-        </div>
-      </div>
-
-      <!-- Profile -->
-      <div class="menu-group">
-        <div class="menu-group-header">
-          <span><i class="fas fa-user-circle" style="width:18px;text-align:center;margin-right:8px"></i>My Account</span>
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="menu-group-content">
-          <a href="/auth/profile"><i class="fas fa-user-edit"></i> My Profile</a>
-          <a href="/notifications"><i class="fas fa-bell"></i> Notifications
-            {% if unread_notification_count > 0 %}
-            <span style="margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;padding:1px 7px;font-size:10px;font-weight:700">{{ unread_notification_count }}</span>
-            {% endif %}
-          </a>
-          <a href="#" onclick="toggleTheme(); return false"><i class="fas fa-moon"></i> <span id="themeLabel">Dark Mode</span></a>
-          <a href="#" onclick="toggleZoom(); return false"><i class="fas fa-search-plus"></i> Zoom: <span id="zoomLabel">100%</span></a>
-        </div>
-      </div>
+      <a href="#" onclick="toggleTheme(); return false"><i class="fas fa-moon"></i> <span id="themeLabel">Dark Mode</span></a>
+      <a href="#" onclick="toggleZoom(); return false"><i class="fas fa-magnifying-glass-plus"></i> Zoom: <span id="zoomLabel">100%</span></a>
 
     </div>
 
     <div class="sidebar-footer">
       <a href="/auth/logout">
-        <i class="fas fa-sign-out-alt"></i> Sign Out
+        <i class="fas fa-right-from-bracket"></i> Sign Out
       </a>
     </div>
   </aside>
@@ -174,7 +167,6 @@
   <!-- ── Main content ────────────────────────────────────────── -->
   <div class="main-content">
 
-    <!-- Topbar -->
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:12px">
         <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
@@ -193,7 +185,6 @@
       </div>
     </header>
 
-    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}
       <div class="flash-{{ 'success' if cat == 'success' else 'error' if cat in ('error','danger') else 'warning' if cat == 'warning' else 'info' }}" role="alert">
@@ -203,41 +194,38 @@
       {% endfor %}
     {% endwith %}
 
-    <!-- Page body -->
     <main>
       {% block content %}{% endblock %}
     </main>
 
-  </div><!-- /main-content -->
-</div><!-- /dashboard-container -->
+  </div>
+</div>
 
 <!-- ── TTTI Guardian AI Assistant ─────────────────────────────── -->
-<div id="ai-fab" onclick="toggleAI()"
+<button id="ai-fab" onclick="toggleAI()"
      style="position:fixed;bottom:24px;right:24px;z-index:1000;width:54px;height:54px;border-radius:50%;
             background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;cursor:pointer;
             display:flex;align-items:center;justify-content:center;font-size:22px;
-            box-shadow:0 8px 28px rgba(37,99,235,.45);transition:transform .2s;
-            animation:pulseGlow 3s ease infinite;" title="TTTI Guardian — AI Assistant">
+            box-shadow:0 8px 28px rgba(37,99,235,.45);transition:transform .2s;" title="TTTI Guardian — AI Assistant">
   <i class="fas fa-robot"></i>
-</div>
+</button>
 
 <div id="ai-panel"
      style="display:none;position:fixed;bottom:90px;right:24px;z-index:999;
             width:320px;background:#fff;border-radius:20px;
-            box-shadow:0 20px 60px rgba(0,0,0,.18);border:1px solid #e2e8f0;
-            animation:slideInUp .3s cubic-bezier(.175,.885,.32,1.1);">
+            box-shadow:0 20px 60px rgba(0,0,0,.18);border:1px solid #e2e8f0;">
   <div style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;padding:16px 20px;border-radius:20px 20px 0 0;display:flex;align-items:center;gap:10px">
     <i class="fas fa-robot" style="font-size:20px"></i>
     <div>
       <div style="font-weight:700;font-size:14px">TTTI Guardian</div>
       <div style="font-size:11px;opacity:.8">AI Academic Assistant</div>
     </div>
-    <button onclick="toggleAI()" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:18px">&times;</button>
+    <button onclick="toggleAI()" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:20px;line-height:1">&times;</button>
   </div>
   <div style="padding:16px 20px">
-    <div id="ai-messages" style="height:200px;overflow-y:auto;margin-bottom:12px;display:grid;gap:10px;font-size:13px">
+    <div id="ai-messages" style="height:200px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;font-size:13px">
       <div style="background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#0e7490;max-width:90%;border:1px solid #bae6fd">
-        Hello! 👋 I'm your TTTI Guardian. I can guide you through admissions, assessments, attendance, clearance, and more. What do you need help with?
+        Hello! 👋 I'm TTTI Guardian. Ask me about POE uploads, attendance, exam booking, clearance, or industrial attachment.
       </div>
     </div>
     <div style="display:flex;gap:8px">
@@ -245,7 +233,7 @@
              style="flex:1;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:13px;outline:none;font-family:inherit"
              onkeydown="if(event.key==='Enter')sendAI()">
       <button onclick="sendAI()"
-              style="padding:9px 14px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:13px;font-weight:600">
+              style="padding:9px 14px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:13px">
         <i class="fas fa-paper-plane"></i>
       </button>
     </div>
@@ -259,20 +247,8 @@
 </div>
 
 <style>
-  .ai-chip {
-    background: #f0f9ff; color: #0e7490; border: 1px solid #bae6fd;
-    border-radius: 9999px; padding: 4px 10px; font-size: 11.5px;
-    cursor: pointer; font-weight: 600; transition: all .2s;
-  }
-  .ai-chip:hover { background: #0891b2; color: #fff; border-color: #0891b2; }
-  @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 8px 28px rgba(37,99,235,.45); }
-    50%       { box-shadow: 0 8px 40px rgba(124,58,237,.6); }
-  }
-  @keyframes slideInUp {
-    from { transform: translateY(16px); opacity: 0; }
-    to   { transform: translateY(0); opacity: 1; }
-  }
+  .ai-chip { background:#f0f9ff;color:#0e7490;border:1px solid #bae6fd;border-radius:9999px;padding:4px 10px;font-size:11.5px;cursor:pointer;font-weight:600;transition:all .2s; }
+  .ai-chip:hover { background:#0891b2;color:#fff;border-color:#0891b2; }
 </style>
 
 {% block scripts %}{% endblock %}
@@ -280,7 +256,7 @@
 {% block extra_scripts %}{% endblock %}
 
 <script>
-  /* ── Sidebar toggle ──────────────────────────────────────── */
+  /* ── Sidebar toggle (mobile) ─────────────────────────────── */
   const toggle  = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
@@ -294,35 +270,14 @@
     a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
   });
 
-  /* ── Accordion ───────────────────────────────────────────── */
-  document.querySelectorAll('.menu-group-header').forEach(header => {
-    header.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const content = this.nextElementSibling;
-      const arrow   = this.querySelector('.arrow');
-      content.classList.toggle('open');
-      if (arrow) arrow.classList.toggle('open');
-    });
-  });
-
-  /* ── Active link + auto-open parent ─────────────────────── */
+  /* ── Active link highlight ───────────────────────────────── */
   const path = window.location.pathname;
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
     const href = a.getAttribute('href');
     if (href && href !== '#' && path.startsWith(href) && href.length > 1) {
       a.classList.add('active');
-      let parent = a.closest('.menu-group-content');
-      while (parent) {
-        parent.classList.add('open');
-        const arrow = parent.previousElementSibling?.querySelector('.arrow');
-        if (arrow) arrow.classList.add('open');
-        parent = parent.parentElement?.closest('.menu-group-content');
-      }
     }
   });
-
-  /* ── Desktop: always show sidebar ───────────────────────── */
-  if (window.innerWidth > 768) sidebar.classList.remove('open');
 
   /* ── Dark mode ───────────────────────────────────────────── */
   function toggleTheme() {
@@ -337,8 +292,8 @@
   }
 
   /* ── Zoom ────────────────────────────────────────────────── */
-  let zoomLevel = parseFloat(localStorage.getItem('ttti_zoom') || '1');
   const zoomLevels = [1, 1.1, 1.2];
+  let zoomLevel = parseFloat(localStorage.getItem('ttti_zoom') || '1');
   function applyZoom() {
     document.body.style.zoom = zoomLevel;
     const lbl = document.getElementById('zoomLabel');
@@ -354,66 +309,56 @@
 
   /* ── Toast system ────────────────────────────────────────── */
   window.showToast = function(message, type = 'info', duration = 4000) {
-    const container = document.getElementById('toast-container');
-    const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-      <i class="fas fa-${icons[type] || icons.info}"></i>
-      <span class="toast-msg">${message}</span>
-      <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
-    `;
-    container.appendChild(toast);
-    setTimeout(() => {
-      toast.classList.add('toast-out');
-      setTimeout(() => toast.remove(), 300);
-    }, duration);
+    const icons = { success:'check-circle', error:'exclamation-circle', warning:'exclamation-triangle', info:'info-circle' };
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<i class="fas fa-${icons[type]||icons.info}"></i><span class="toast-msg">${message}</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+    document.getElementById('toast-container').appendChild(t);
+    setTimeout(() => { t.classList.add('toast-out'); setTimeout(() => t.remove(), 300); }, duration);
   };
 
   /* ── AI Guardian ─────────────────────────────────────────── */
   const aiPanel = document.getElementById('ai-panel');
-  const aiResponses = {
-    'poe':        'To upload POE: go to Academic → Upload POE. Select your unit, fill in task details, and attach supporting files (PDF, image, video). Your trainer will review and approve.',
-    'attendance': 'View your attendance at Academic → Lesson Attendance. You need ≥75% attendance to be eligible for exams. If low, contact your trainer.',
-    'exam':       'To book an exam: go to Examinations → Exam Booking Form. Ensure your admission documents are complete and your attendance is ≥75%. HOD must approve before the exam office confirms.',
-    'clearance':  'Clearance runs through 7 stages: Trainer → HOD → Library → Store → Games → Finance → Deputy Principal. Go to Clearance → Course Clearance to start. Finance must be cleared before final approval.',
-    'admission':  'Upload your 9 admission documents at Admission → Admission Documents. Your HOD will verify each one. Download the Departmental Checklist after full approval.',
-    'default':    'I can help with: POE uploads, attendance, exam bookings, clearance, admission documents, industrial attachment, and job portal. What specifically do you need?'
+  const aiReplies = {
+    poe:        'To upload POE: go to Upload POE in the sidebar. Select your unit, fill in task details (title, description, skills, hours), and attach supporting files. Your trainer will review and approve it.',
+    attendance: 'Check Lesson Attendance in the sidebar. You need ≥75% to book exams. If your attendance is low, contact your trainer immediately.',
+    exam:       'Click Exam Booking Form in the sidebar. Ensure your admission documents are complete and attendance is ≥75%. Your HOD must approve before the Exam Officer confirms.',
+    clearance:  'Go to Course Clearance. The 7-stage process: Trainer → HOD → Library → Store → Games → Finance → Deputy Principal. All fees must be cleared before final approval.',
+    admission:  'Go to Admission Documents. Upload all 9 required documents. Your HOD will verify each one. Once approved, download the Departmental Checklist.',
+    default:    'I can help with: POE uploads, attendance checks, exam booking, clearance steps, admission documents, and industrial attachment. What do you need?'
   };
 
-  function toggleAI() {
-    aiPanel.style.display = aiPanel.style.display === 'none' ? 'block' : 'none';
-  }
+  function toggleAI() { aiPanel.style.display = aiPanel.style.display === 'none' ? 'block' : 'none'; }
 
   function sendAI() {
     const input = document.getElementById('ai-input');
     const text  = input.value.trim();
     if (!text) return;
-    addAIMsg(text, 'user');
+    addMsg(text, 'user');
     input.value = '';
     setTimeout(() => {
       const lower = text.toLowerCase();
-      let response = aiResponses.default;
-      if (lower.includes('poe') || lower.includes('portfolio') || lower.includes('upload')) response = aiResponses.poe;
-      else if (lower.includes('attend')) response = aiResponses.attendance;
-      else if (lower.includes('exam') || lower.includes('book')) response = aiResponses.exam;
-      else if (lower.includes('clear')) response = aiResponses.clearance;
-      else if (lower.includes('admit') || lower.includes('document')) response = aiResponses.admission;
-      addAIMsg(response, 'bot');
-    }, 600);
+      let resp = aiReplies.default;
+      if (lower.includes('poe') || lower.includes('portfolio') || lower.includes('upload')) resp = aiReplies.poe;
+      else if (lower.includes('attend')) resp = aiReplies.attendance;
+      else if (lower.includes('exam') || lower.includes('book')) resp = aiReplies.exam;
+      else if (lower.includes('clear')) resp = aiReplies.clearance;
+      else if (lower.includes('admit') || lower.includes('document')) resp = aiReplies.admission;
+      addMsg(resp, 'bot');
+    }, 500);
   }
 
   function quickAI(q) { document.getElementById('ai-input').value = q; sendAI(); }
 
-  function addAIMsg(text, role) {
-    const msgs = document.getElementById('ai-messages');
-    const div  = document.createElement('div');
+  function addMsg(text, role) {
+    const box = document.getElementById('ai-messages');
+    const div = document.createElement('div');
     div.style.cssText = role === 'user'
-      ? 'background:#eff6ff;border-radius:12px 12px 4px 12px;padding:9px 13px;color:#1d4ed8;margin-left:auto;max-width:88%;font-size:13px;border:1px solid #dbeafe'
+      ? 'background:#eff6ff;border-radius:12px 12px 4px 12px;padding:9px 13px;color:#1d4ed8;align-self:flex-end;max-width:88%;font-size:13px;border:1px solid #dbeafe'
       : 'background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#0e7490;max-width:90%;font-size:13px;border:1px solid #bae6fd';
     div.textContent = text;
-    msgs.appendChild(div);
-    msgs.scrollTop = msgs.scrollHeight;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
   }
 </script>
 </body>

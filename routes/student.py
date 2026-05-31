@@ -437,24 +437,24 @@ def my_documents():
                     try:
                         # Upload to Supabase Storage
                         ext = file.filename.rsplit('.', 1)[1].lower()
-                        filename = f"student_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
+                        filename = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
                         
                         storage_client = get_service_client().storage
-                        storage_client.from_("student-documents").upload(
+                        storage_client.from_("assessment-evidence").upload(
                             filename,
                             file.read(),
                             {"content-type": f"application/{ext}" if ext == 'pdf' else f"image/{ext}"}
                         )
                         
                         # Get public URL
-                        public_url = storage_client.from_("student-documents").get_public_url(filename)
+                        public_url = storage_client.from_("assessment-evidence").get_public_url(filename)
                         
                         # Check if document already exists
-                        existing = db.table("student_documents").select("*").eq("student_id", student_id).eq("document_type", doc_type).execute().data
+                        existing = db.table("trainee_documents").select("*").eq("student_id", student_id).eq("document_type", doc_type).execute().data
                         
                         if existing:
                             # Update existing document
-                            db.table("student_documents").update({
+                            db.table("trainee_documents").update({
                                 "file_path": filename,
                                 "file_name": file.filename,
                                 "file_size": len(file.read()) if file else 0,
@@ -462,7 +462,7 @@ def my_documents():
                             }).eq("id", existing[0]["id"]).execute()
                         else:
                             # Insert new document
-                            db.table("student_documents").insert({
+                            db.table("trainee_documents").insert({
                                 "student_id": student_id,
                                 "document_type": doc_type,
                                 "file_path": filename,
@@ -498,7 +498,7 @@ def my_documents():
             department_name = course.get("departments", {}).get("name", "")
     
     # Get uploaded documents
-    documents_data = db.table("student_documents").select("*").eq("student_id", student_id).execute().data or []
+    documents_data = db.table("trainee_documents").select("*").eq("student_id", student_id).execute().data or []
     documents = {doc["document_type"]: doc for doc in documents_data}
     
     return render_template("student/my_documents.html", 
@@ -570,7 +570,7 @@ def upload_assessment():
     
     if request.method == "POST":
         unit_id = request.form.get("unit_id")
-        assessment_type = request.form.get("assessment_type")
+        assessment_type = (request.form.get("assessment_type") or "").upper()
         assessment_no = request.form.get("assessment_no", type=int)
         term = request.form.get("term", type=int)
         cycle = request.form.get("cycle", type=int)
@@ -1277,7 +1277,7 @@ def exam_booking_form():
         units = cu_rows
     
     # Get uploaded documents
-    documents_data = db.table("student_documents").select("*").eq("student_id", student_id).execute().data or []
+    documents_data = db.table("trainee_documents").select("*").eq("student_id", student_id).execute().data or []
     documents = {doc["document_type"]: doc for doc in documents_data}
     
     # Check required documents
@@ -1340,7 +1340,7 @@ def exam_booking_submit():
             })
     
     # Get documents
-    documents_data = db.table("student_documents").select("*").eq("student_id", student_id).execute().data or []
+    documents_data = db.table("trainee_documents").select("*").eq("student_id", student_id).execute().data or []
     documents = {doc["document_type"]: doc for doc in documents_data}
     
     # Generate serial number: EXAM/DEPT/COURSE/YEAR/SERIES/UNIQUE_SERIAL
@@ -1542,7 +1542,7 @@ def exam_booking_submit():
                     file_path = doc.get("file_path")
                     if file_path:
                         # Get file from storage
-                        file_data = storage_client.from_("student-documents").download(file_path)
+                        file_data = storage_client.from_("assessment-evidence").download(file_path)
                         
                         # Create image from file data
                         img_buffer = io.BytesIO(file_data)

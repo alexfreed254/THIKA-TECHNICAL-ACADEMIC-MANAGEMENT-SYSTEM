@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS assessments (
     student_id      UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
     class_id        UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
     unit_id         UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
-    assessment_type TEXT NOT NULL CHECK (assessment_type IN ('PRACTICAL','THEORY','ORAL')),
+    assessment_type TEXT NOT NULL CHECK (assessment_type IN ('PRACTICAL','THEORY','ORAL','oral','practical','theory','written','Formative','Summative')),
     assessment_no   INTEGER NOT NULL,
     term            INTEGER NOT NULL CHECK (term IN (1,2,3)),
     cycle           INTEGER NOT NULL CHECK (cycle IN (1,2,3)),
