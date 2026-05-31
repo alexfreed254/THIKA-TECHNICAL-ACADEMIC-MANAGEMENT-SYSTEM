@@ -1,222 +1,665 @@
 {% extends "student/base.html" %}
+{% block title %}Industrial Attachment{% endblock %}
+{% block page_title %}Industrial Attachment{% endblock %}
 
-{% block title %}Manage Attachment{% endblock %}
-{% block page_title %}Manage Attachment{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+{% endblock %}
 
 {% block extra_style %}
-<style>
-  .status-badge { padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; }
-  .status-pending { background: #fff3cd; color: #856404; }
-  .status-approved { background: #d4edda; color: #155724; }
-  .status-active { background: #cce5ff; color: #004085; }
-  .status-completed { background: #e2e3e5; color: #383d41; }
-  .status-rejected { background: #f8d7da; color: #721c24; }
+.ia-wrap { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
-  .overview-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-  .info-item { background: #f8f9fa; padding: 12px; border-radius: 6px; }
-  .info-label { font-size: 12px; color: #666; margin-bottom: 4px; }
-  .info-value { font-weight: 600; font-size: 14px; }
+/* Cards */
+.ia-card {
+  background: #fff; border-radius: 16px;
+  border: 1px solid #e2e8f0; margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
+}
+.ia-card-head {
+  background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  color: #fff; padding: 14px 22px;
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+}
+.ia-card-body { padding: 24px; }
 
-  .request-form { background: white; border-radius: 8px; padding: 25px; margin-bottom: 20px; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-  .form-group textarea { height: 80px; resize: vertical; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+/* Status banner */
+.status-banner {
+  border-radius: 14px; padding: 20px 24px;
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 24px; border: 2px solid; flex-wrap: wrap;
+}
+.status-banner.active   { background:#eff6ff;border-color:#bfdbfe; }
+.status-banner.pending  { background:#fffbeb;border-color:#fde68a; }
+.status-banner.approved { background:#f0fdf4;border-color:#bbf7d0; }
+.status-banner.completed{ background:#f8fafc;border-color:#e2e8f0; }
+.status-banner.rejected { background:#fef2f2;border-color:#fecaca; }
+.status-icon { font-size: 36px; flex-shrink: 0; }
+.status-banner.active   .status-icon { color: #2563eb; }
+.status-banner.pending  .status-icon { color: #d97706; }
+.status-banner.approved .status-icon { color: #16a34a; }
+.status-banner.completed .status-icon{ color: #64748b; }
+.status-banner.rejected .status-icon { color: #dc2626; }
 
-  .btn-primary { background: #e67e22; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  .btn-primary:hover { background: #d35400; }
+/* Info grid */
+.info-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+  gap: 14px; margin-top: 16px;
+}
+.info-item { background: #f8fafc; padding: 13px 16px; border-radius: 10px; border: 1px solid #e2e8f0; }
+.info-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+.info-value { font-size: 13.5px; font-weight: 600; color: #1e293b; }
 
-  .gps-section { background: #e3f2fd; padding: 20px; border-radius: 8px; margin-top: 20px; }
-  .gps-coords { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-  .gps-coords input { flex: 1; min-width: 140px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-  .btn-gps { background: #2196f3; color: white; padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; }
-  .btn-gps:hover { background: #1976d2; }
-  .btn-checkin { background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
-  .btn-checkin:hover { background: #1e8449; }
-  .btn-checkout { background: #e67e22; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
-  .btn-checkout:hover { background: #d35400; }
-  .gps-status { margin-top: 10px; font-size: 13px; color: #555; }
+/* Form fields */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+@media(max-width:700px){ .form-grid,.form-grid.three { grid-template-columns: 1fr; } }
 
-  .today-checkin { margin-top: 15px; }
-  .today-item { display: flex; justify-content: space-between; padding: 8px 12px; background: white; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
-  .checkin-time { color: #555; }
-  .checkin-status { font-weight: 500; }
-  .checkin-within { color: #27ae60; }
-  .checkin-outside { color: #e67e22; }
+.f-field { display: flex; flex-direction: column; gap: 6px; }
+.f-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing:.05em; }
+.f-label .req { color:#dc2626; margin-left:2px; }
+.f-input, .f-select, .f-textarea {
+  padding: 10px 13px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; font-size: 13.5px;
+  font-family: 'Inter', sans-serif; color: #0f172a;
+  background: #fff; width: 100%;
+  transition: border-color .18s, box-shadow .18s;
+}
+.f-input:focus, .f-select:focus, .f-textarea:focus {
+  outline: none; border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.f-textarea { resize: vertical; min-height: 80px; }
+.f-hint { font-size: 11px; color: #94a3b8; }
 
-  .no-attachment { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px; }
-  .no-attachment i { font-size: 48px; color: #ccc; margin-bottom: 15px; }
+/* Map */
+.map-container { height: 320px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+.map-instructions { font-size: 12.5px; color: #64748b; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
 
-  @media (max-width: 600px) {
-    .form-row { grid-template-columns: 1fr; }
-    .gps-coords { flex-direction: column; }
-  }
-</style>
+/* GPS coords row */
+.coords-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.coords-row .f-field { flex: 1; min-width: 130px; }
+.btn-gps {
+  padding: 10px 16px; background: linear-gradient(135deg,#0891b2,#0e7490);
+  color: #fff; border: none; border-radius: 10px; font-size: 13px;
+  font-weight: 700; cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 7px; height: 42px;
+  transition: all .2s; flex-shrink: 0;
+}
+.btn-gps:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* GPS check-in section */
+.checkin-section {
+  background: linear-gradient(135deg,#e0f2fe,#f0f9ff);
+  border: 1.5px solid #bae6fd; border-radius: 14px;
+  padding: 20px 22px; margin-top: 16px;
+}
+.checkin-btns { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.btn-checkin {
+  padding: 11px 22px; background: linear-gradient(135deg,#16a34a,#15803d);
+  color: #fff; border: none; border-radius: 10px; font-size: 13.5px;
+  font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 7px;
+  transition: all .2s;
+}
+.btn-checkin:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(22,163,74,.3); }
+.btn-checkout {
+  padding: 11px 22px; background: linear-gradient(135deg,#ea580c,#c2410c);
+  color: #fff; border: none; border-radius: 10px; font-size: 13.5px;
+  font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 7px;
+  transition: all .2s;
+}
+.btn-checkout:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(234,88,12,.3); }
+
+/* Today's logs */
+.log-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px; background: #fff; border-radius: 8px;
+  margin-top: 8px; border: 1px solid #e2e8f0; font-size: 13px;
+  flex-wrap: wrap; gap: 8px;
+}
+.log-time { color: #475569; font-weight: 600; }
+.log-status-ok { color: #16a34a; font-weight: 700; }
+.log-status-out { color: #ea580c; font-weight: 700; }
+
+/* Action buttons */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 28px; border: none; border-radius: 11px;
+  font-size: 13.5px; font-weight: 700; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all .2s;
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: #fff; box-shadow: 0 4px 14px rgba(15,44,84,.3);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(15,44,84,.4); }
+
+.btn-logbook {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px; border: 2px solid #1a3d6e; border-radius: 11px;
+  font-size: 13.5px; font-weight: 700; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all .2s;
+  background: #fff; color: #1a3d6e; text-decoration: none;
+}
+.btn-logbook:hover { background: #eff6ff; color: #1a3d6e; }
+
+/* Attachment history table */
+.hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hist-table th {
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: rgba(255,255,255,.9); padding: 10px 14px;
+  text-align: left; font-size: 11.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.hist-table td {
+  padding: 11px 14px; border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle; color: #334155;
+}
+.hist-table tr:last-child td { border-bottom: none; }
+.hist-table tbody tr:hover td { background: #f8fafc; }
+
+/* Status pills */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 9999px;
+  font-size: 11.5px; font-weight: 700;
+}
+.pill-active   { background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe; }
+.pill-pending  { background:#fffbeb;color:#92400e;border:1px solid #fde68a; }
+.pill-approved { background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0; }
+.pill-completed{ background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
+.pill-rejected { background:#fef2f2;color:#991b1b;border:1px solid #fecaca; }
 {% endblock %}
 
 {% block content %}
-{% if current_attachment %}
-<div class="overview-card">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-    <h3 style="margin:0"><i class="fas fa-building"></i> {{ current_attachment.companies.name }}</h3>
-    <span class="status-badge status-{{ current_attachment.status }}">{{ current_attachment.status|capitalize }}</span>
-  </div>
+<div class="ia-wrap">
 
-  <div class="info-grid">
-    <div class="info-item">
-      <div class="info-label">Unit</div>
-      <div class="info-value">{{ current_attachment.units.name }} ({{ current_attachment.units.code }})</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Start Date</div>
-      <div class="info-value">{{ current_attachment.start_date }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">End Date</div>
-      <div class="info-value">{{ current_attachment.end_date }}</div>
-    </div>
-    {% if current_attachment.mentor_name %}
-    <div class="info-item">
-      <div class="info-label">Industry Mentor</div>
-      <div class="info-value">{{ current_attachment.mentor_name }}</div>
-    </div>
-    {% endif %}
-  </div>
+  {% if current_attachment %}
+  {# ── ACTIVE / CURRENT ATTACHMENT ───────────────────────────────────── #}
 
-  {% if current_attachment.attachment_goals %}
-  <div style="margin-top:15px">
-    <div class="info-label">Attachment Goals</div>
-    <div class="info-value">{{ current_attachment.attachment_goals }}</div>
-  </div>
-  {% endif %}
+  {% set co = current_attachment.get('companies') or {} %}
+  {% set st = current_attachment.get('status','pending') %}
 
-  {% if current_attachment.status == 'active' %}
-  <div class="gps-section">
-    <h4 style="margin:0 0 10px"><i class="fas fa-map-marker-alt"></i> GPS Attendance</h4>
-    <p style="margin:0 0 12px;font-size:13px;color:#555">Check in at your company location to record daily attendance.</p>
-    <form id="gpsForm" method="POST">
-      <input type="hidden" name="attachment_id" value="{{ current_attachment.id }}">
-      <div class="gps-coords">
-        <input type="number" step="any" name="latitude" id="latitude" placeholder="Latitude" required>
-        <input type="number" step="any" name="longitude" id="longitude" placeholder="Longitude" required>
-        <button type="button" class="btn-gps" onclick="getLocation()"><i class="fas fa-crosshairs"></i> Auto-Detect</button>
+  <!-- Status banner -->
+  <div class="status-banner {{ st }}">
+    <div class="status-icon">
+      {% if st == 'active' %}<i class="fas fa-circle-check"></i>
+      {% elif st == 'pending' %}<i class="fas fa-clock"></i>
+      {% elif st == 'approved' %}<i class="fas fa-thumbs-up"></i>
+      {% elif st == 'completed' %}<i class="fas fa-flag-checkered"></i>
+      {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+    </div>
+    <div style="flex:1">
+      <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px">
+        {{ co.get('name','—') }}
+        <span class="pill pill-{{ st }}" style="margin-left:10px">{{ st|title }}</span>
       </div>
-      <div class="gps-status" id="gpsStatus"></div>
+      <div style="font-size:13px;color:#64748b">
+        <i class="fas fa-map-marker-alt" style="margin-right:5px;color:#1e5a9f"></i>{{ co.get('address','—') }}
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a href="/student/logbook" class="btn-logbook">
+        <i class="fas fa-book-open"></i> Daily Logbook
+      </a>
+    </div>
+  </div>
+
+  <!-- Details grid -->
+  <div class="ia-card">
+    <div class="ia-card-head"><i class="fas fa-info-circle"></i> Attachment Details</div>
+    <div class="ia-card-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Company / Place</div>
+          <div class="info-value">{{ co.get('name','—') }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Address</div>
+          <div class="info-value">{{ co.get('address','—') }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Supervisor</div>
+          <div class="info-value">{{ co.get('contact_person','—') }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Supervisor Contact</div>
+          <div class="info-value">{{ co.get('contact_phone','—') }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Start Date</div>
+          <div class="info-value">{{ current_attachment.get('start_date','—') }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">End Date</div>
+          <div class="info-value">{{ current_attachment.get('end_date','—') }}</div>
+        </div>
+        {% set u = current_attachment.get('units') or {} %}
+        {% if u %}
+        <div class="info-item">
+          <div class="info-label">Unit</div>
+          <div class="info-value">{{ u.get('name','—') }} ({{ u.get('code','') }})</div>
+        </div>
+        {% endif %}
+        {% if current_attachment.get('final_grade') %}
+        <div class="info-item">
+          <div class="info-label">Final Grade</div>
+          <div class="info-value" style="font-size:18px;color:#1e5a9f">{{ current_attachment.get('final_grade') }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if current_attachment.get('attachment_goals') %}
+      <div style="margin-top:16px;background:#f8fafc;border-radius:10px;padding:13px 16px;border:1px solid #e2e8f0">
+        <div class="info-label">Attachment Goals</div>
+        <div style="font-size:13.5px;color:#334155;margin-top:5px">{{ current_attachment.get('attachment_goals') }}</div>
+      </div>
+      {% endif %}
+      {% if current_attachment.get('supervisor_notes') %}
+      <div style="margin-top:12px;background:#eff6ff;border-radius:10px;padding:13px 16px;border:1px solid #bfdbfe">
+        <div class="info-label">Supervisor Notes</div>
+        <div style="font-size:13.5px;color:#1d4ed8;margin-top:5px">{{ current_attachment.get('supervisor_notes') }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Interactive site map -->
+  {% if co.get('latitude') and co.get('longitude') %}
+  <div class="ia-card">
+    <div class="ia-card-head"><i class="fas fa-map-marked-alt"></i> Attachment Site Location</div>
+    <div class="ia-card-body" style="padding:16px">
+      <div id="siteMap" class="map-container"></div>
       <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
-        <button type="submit" formaction="/student/check-in" class="btn-checkin"><i class="fas fa-sign-in-alt"></i> Check In</button>
-        <button type="submit" formaction="/student/check-out" class="btn-checkout"><i class="fas fa-sign-out-alt"></i> Check Out</button>
-      </div>
-    </form>
-    {% if today_logs %}
-    <div class="today-checkin">
-      <h5 style="margin:0 0 8px">Today's Activity</h5>
-      {% for log in today_logs %}
-      <div class="today-item">
-        <span class="checkin-time"><i class="far fa-clock"></i> {{ log.check_in_time[:16] }}</span>
-        <span class="checkin-status {{ 'checkin-within' if log.is_within_geofence else 'checkin-outside' }}">
-          {% if log.check_out_time %}
-            <i class="fas fa-check-circle"></i> Checked out
-          {% else %}
-            <i class="fas fa-play-circle"></i> Active
-          {% endif %}
-          {% if log.is_within_geofence %}&middot; On site{% else %}&middot; Outside geofence{% endif %}
+        <a href="https://www.google.com/maps?q={{ co.get('latitude') }},{{ co.get('longitude') }}"
+           target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">
+          <i class="fas fa-map"></i> Open in Google Maps
+        </a>
+        <span style="font-size:12px;color:#94a3b8;align-self:center">
+          Coordinates: {{ co.get('latitude') }}, {{ co.get('longitude') }}
         </span>
       </div>
-      {% endfor %}
     </div>
-    {% endif %}
   </div>
   {% endif %}
-</div>
-{% else %}
-<div class="no-attachment">
-  <i class="fas fa-building"></i>
-  <h3>No Active Attachment</h3>
-  <p>You don't have an active industrial attachment placement. Complete the form below to submit a request.</p>
-</div>
-{% endif %}
 
-{% if not current_attachment or current_attachment.status in ['pending', 'rejected', 'completed'] %}
-<div class="request-form">
-  <h3 style="margin-top:0">Request Industrial Attachment</h3>
-  <form method="POST" action="/student/industrial-attachment/request">
-    <div class="form-group">
-      <label>Select Company *</label>
-      <select name="company_id" required>
-        <option value="">Choose a company</option>
-        {% for company in companies %}
-        <option value="{{ company.id }}">{{ company.name }} {{ '- ' + company.city if company.city else '' }}</option>
+  <!-- GPS Check-in (active only) -->
+  {% if st == 'active' %}
+  <div class="ia-card">
+    <div class="ia-card-head"><i class="fas fa-crosshairs"></i> GPS Attendance — Today</div>
+    <div class="ia-card-body">
+      <p style="font-size:13.5px;color:#64748b;margin-bottom:16px">
+        Record your daily attendance by checking in from your attachment site.
+        Your GPS coordinates are captured and timestamped automatically.
+      </p>
+      <form id="gpsForm" method="POST">
+        <input type="hidden" name="attachment_id" value="{{ current_attachment.get('id') }}">
+        <div class="coords-row" style="margin-bottom:14px">
+          <div class="f-field">
+            <label class="f-label">Latitude</label>
+            <input class="f-input" type="number" step="any" name="latitude" id="latitude" placeholder="e.g. -1.0332">
+          </div>
+          <div class="f-field">
+            <label class="f-label">Longitude</label>
+            <input class="f-input" type="number" step="any" name="longitude" id="longitude" placeholder="e.g. 37.0694">
+          </div>
+          <button type="button" class="btn-gps" onclick="autoDetect()">
+            <i class="fas fa-crosshairs"></i> Auto-Detect GPS
+          </button>
+        </div>
+        <div id="gpsStatus" style="font-size:13px;color:#64748b;margin-bottom:12px"></div>
+        <div class="checkin-btns">
+          <button type="submit" formaction="/student/check-in" class="btn-checkin">
+            <i class="fas fa-sign-in-alt"></i> Check In
+          </button>
+          <button type="submit" formaction="/student/check-out" class="btn-checkout">
+            <i class="fas fa-sign-out-alt"></i> Check Out
+          </button>
+        </div>
+      </form>
+
+      {% if today_logs %}
+      <div style="margin-top:18px">
+        <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Today's Activity</div>
+        {% for log in today_logs %}
+        <div class="log-row">
+          <span class="log-time"><i class="far fa-clock" style="margin-right:5px"></i>{{ log.get('check_in_time','')[:16].replace('T',' ') }}</span>
+          <span>
+            {% if log.get('check_out_time') %}
+            <span class="log-status-ok"><i class="fas fa-check-circle"></i> Checked out {{ log.get('check_out_time','')[:16].replace('T',' ') }}</span>
+            {% else %}
+            <span class="log-status-out"><i class="fas fa-play-circle"></i> Active check-in</span>
+            {% endif %}
+          </span>
+          <span style="font-size:12px;color:{{ '#16a34a' if log.get('is_within_geofence') else '#d97706' }}">
+            <i class="fas fa-map-pin"></i>
+            {{ 'On site' if log.get('is_within_geofence') else 'Outside geofence' }}
+          </span>
+        </div>
         {% endfor %}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Select Unit *</label>
-      <select name="unit_id" required>
-        <option value="">Choose a unit</option>
-        {% for unit in enrolled_units %}
-        <option value="{{ unit.unit_id }}">{{ unit.units.name }} ({{ unit.units.code }})</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Start Date *</label>
-        <input type="date" name="start_date" required>
       </div>
-      <div class="form-group">
-        <label>End Date *</label>
-        <input type="date" name="end_date" required>
-      </div>
+      {% endif %}
     </div>
-    <div class="form-group">
-      <label>Attachment Goals</label>
-      <textarea name="attachment_goals" placeholder="What do you hope to achieve during this attachment?"></textarea>
+  </div>
+  {% endif %}
+
+  <!-- Past attachments table -->
+  {% if all_attachments and all_attachments|length > 1 %}
+  <div class="ia-card">
+    <div class="ia-card-head"><i class="fas fa-history"></i> Attachment History</div>
+    <div style="overflow-x:auto">
+      <table class="hist-table">
+        <thead>
+          <tr>
+            <th>Company</th><th>Period</th><th>Unit</th><th>Status</th><th>Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for att in all_attachments %}
+          {% set ac = att.get('companies') or {} %}
+          <tr>
+            <td><strong>{{ ac.get('name','—') }}</strong><br><span style="font-size:12px;color:#94a3b8">{{ ac.get('address','') }}</span></td>
+            <td style="white-space:nowrap;font-size:12.5px">{{ att.get('start_date','—') }}<br>to {{ att.get('end_date','—') }}</td>
+            <td>{% set au = att.get('units') or {} %}{{ au.get('code','—') }}</td>
+            <td><span class="pill pill-{{ att.get('status','pending') }}">{{ att.get('status','pending')|title }}</span></td>
+            <td style="font-weight:700;color:#1e5a9f">{{ att.get('final_grade','—') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="form-group">
-      <label>Learning Objectives</label>
-      <textarea name="learning_objectives" placeholder="Specific skills or competencies you want to develop"></textarea>
+  </div>
+  {% endif %}
+
+  {% if st in ['rejected','completed'] %}
+  {# Allow new request if previous is rejected/completed #}
+  {% endif %}
+
+  {% else %}
+  {# ── NO ATTACHMENT — CREATION FORM ──────────────────────────────────── #}
+
+  <div style="text-align:center;padding:32px 24px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;margin-bottom:28px;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+    <i class="fas fa-industry" style="font-size:52px;color:#cbd5e1;display:block;margin-bottom:14px"></i>
+    <h3 style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px">Register Your Industrial Attachment</h3>
+    <p style="font-size:13.5px;color:#64748b;max-width:520px;margin:0 auto">
+      Fill in the form below to register your industrial attachment placement.
+      Your supervisor will receive notification and can review your daily logs.
+    </p>
+  </div>
+
+  {% endif %}
+
+  {# ── ATTACHMENT CREATION / REQUEST FORM (show when no active attachment) #}
+  {% if not current_attachment or current_attachment.get('status') in ['rejected','completed'] %}
+  <div class="ia-card">
+    <div class="ia-card-head">
+      <i class="fas fa-plus-circle"></i>
+      {{ 'New Attachment Request' if current_attachment else 'Register Industrial Attachment' }}
     </div>
-    <button type="submit" class="btn-primary"><i class="fas fa-paper-plane"></i> Submit Request</button>
-  </form>
+    <div class="ia-card-body">
+      <form method="POST" action="/student/industrial-attachment/request" id="attachForm">
+
+        <!-- Company / Workplace -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
+            <i class="fas fa-building" style="margin-right:6px"></i>Company / Workplace Information
+          </div>
+          <div class="form-grid" style="margin-bottom:16px">
+            <div class="f-field">
+              <label class="f-label">Company / Place Name <span class="req">*</span></label>
+              <input class="f-input" type="text" name="company_name" required
+                     placeholder="e.g. Kenya Power, ABC Motors, Self-employed">
+            </div>
+            <div class="f-field">
+              <label class="f-label">Industry Type <span class="req">*</span></label>
+              <select class="f-select" name="industry_type" required>
+                <option value="">-- Select Industry --</option>
+                <option>Electrical Engineering</option>
+                <option>Mechanical Engineering</option>
+                <option>Information Technology</option>
+                <option>Civil Engineering</option>
+                <option>Automotive Engineering</option>
+                <option>Hospitality</option>
+                <option>Business Management</option>
+                <option>Health Sciences</option>
+                <option>Agriculture</option>
+                <option>Construction</option>
+                <option>Manufacturing</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="f-field" style="margin-bottom:16px">
+            <label class="f-label">Company / Site Address <span class="req">*</span></label>
+            <input class="f-input" type="text" name="company_address" required
+                   placeholder="e.g. Industrial Area, Nairobi / Thika Town">
+          </div>
+        </div>
+
+        <!-- Supervisor -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
+            <i class="fas fa-user-hard-hat" style="margin-right:6px"></i>Industry Supervisor Details
+          </div>
+          <div class="form-grid">
+            <div class="f-field">
+              <label class="f-label">Supervisor Full Name <span class="req">*</span></label>
+              <input class="f-input" type="text" name="supervisor_name" required
+                     placeholder="e.g. John Mwangi">
+            </div>
+            <div class="f-field">
+              <label class="f-label">Supervisor Phone / Email <span class="req">*</span></label>
+              <input class="f-input" type="text" name="supervisor_contact" required
+                     placeholder="e.g. 0712345678 or sup@company.co.ke">
+            </div>
+          </div>
+        </div>
+
+        <!-- Dates & Unit -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
+            <i class="fas fa-calendar-alt" style="margin-right:6px"></i>Attachment Period &amp; Unit
+          </div>
+          <div class="form-grid three">
+            <div class="f-field">
+              <label class="f-label">Start Date <span class="req">*</span></label>
+              <input class="f-input" type="date" name="start_date" required
+                     min="{{ now().strftime('%Y-%m-%d') }}">
+            </div>
+            <div class="f-field">
+              <label class="f-label">End Date <span class="req">*</span></label>
+              <input class="f-input" type="date" name="end_date" required>
+            </div>
+            <div class="f-field">
+              <label class="f-label">Unit of Competency <span class="req">*</span></label>
+              <select class="f-select" name="unit_id" required>
+                <option value="">-- Select Unit --</option>
+                {% for u in enrolled_units %}
+                {% set unit = u.get('units') or {} %}
+                <option value="{{ unit.get('id') }}">{{ unit.get('name','?') }} ({{ unit.get('code','') }})</option>
+                {% endfor %}
+              </select>
+              {% if not enrolled_units %}
+              <span class="f-hint" style="color:#dc2626">No units found — contact your department admin.</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Site Location (map) -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
+            <i class="fas fa-map-marker-alt" style="margin-right:6px"></i>Site Coordinates (GPS Location)
+          </div>
+          <div class="coords-row" style="margin-bottom:12px">
+            <div class="f-field">
+              <label class="f-label">Latitude</label>
+              <input class="f-input" type="number" step="any" name="latitude" id="regLat"
+                     placeholder="e.g. -1.0332">
+            </div>
+            <div class="f-field">
+              <label class="f-label">Longitude</label>
+              <input class="f-input" type="number" step="any" name="longitude" id="regLng"
+                     placeholder="e.g. 37.0694">
+            </div>
+            <button type="button" class="btn-gps" onclick="detectForForm()">
+              <i class="fas fa-crosshairs"></i> Detect GPS
+            </button>
+          </div>
+          <div id="regGpsStatus" style="font-size:12.5px;color:#64748b;margin-bottom:12px"></div>
+          <div id="regMap" class="map-container"></div>
+          <div class="map-instructions">
+            <i class="fas fa-info-circle" style="color:#0891b2"></i>
+            Click anywhere on the map to set the site coordinates, or use the GPS button above.
+          </div>
+        </div>
+
+        <!-- Goals -->
+        <div style="margin-bottom:20px">
+          <div class="f-field" style="margin-bottom:14px">
+            <label class="f-label">Attachment Goals</label>
+            <textarea class="f-textarea" name="attachment_goals"
+                      placeholder="What do you hope to achieve during this attachment?"></textarea>
+          </div>
+          <div class="f-field">
+            <label class="f-label">Learning Objectives</label>
+            <textarea class="f-textarea" name="learning_objectives"
+                      placeholder="Specific skills or competencies you want to develop"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary">
+          <i class="fas fa-paper-plane"></i> Submit Attachment Request
+        </button>
+
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
-{% endif %}
 {% endblock %}
 
 {% block extra_script %}
 <script>
-function getLocation() {
-  const status = document.getElementById('gpsStatus');
-  if (navigator.geolocation) {
-    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting location...';
-    navigator.geolocation.getCurrentPosition(function(position) {
-      document.getElementById('latitude').value = position.coords.latitude;
-      document.getElementById('longitude').value = position.coords.longitude;
-      status.innerHTML = '<span style="color:#27ae60"><i class="fas fa-check-circle"></i> Location detected</span>';
-    }, function(error) {
-      let msg = 'Unable to get location. Please enter manually.';
-      if (error.code === 1) msg = 'Location permission denied. Enable GPS or enter manually.';
-      else if (error.code === 2) msg = 'GPS unavailable. Enter coordinates manually.';
-      else if (error.code === 3) msg = 'GPS request timed out. Try again.';
-      status.innerHTML = '<span style="color:#e67e22"><i class="fas fa-exclamation-triangle"></i> ' + msg + '</span>';
-      console.error(error);
-    }, { enableHighAccuracy: true, timeout: 10000 });
-  } else {
-    status.innerHTML = '<span style="color:#e67e22"><i class="fas fa-exclamation-triangle"></i> Geolocation not supported by your browser.</span>';
-  }
-}
+document.addEventListener('DOMContentLoaded', function () {
 
-// Auto-detect location when page loads for an active attachment
-document.addEventListener('DOMContentLoaded', function() {
-  const latField = document.getElementById('latitude');
-  const lonField = document.getElementById('longitude');
-  if (latField && !latField.value && navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(pos) {
-      latField.value = pos.coords.latitude;
-      lonField.value = pos.coords.longitude;
-    }, function() {}, { enableHighAccuracy: true, timeout: 5000 });
+  /* ── Site map for existing attachment ──────────────── */
+  const siteMapEl = document.getElementById('siteMap');
+  if (siteMapEl) {
+    {% if current_attachment and co.get('latitude') and co.get('longitude') %}
+    const lat = {{ co.get('latitude') }};
+    const lng = {{ co.get('longitude') }};
+    const siteMap = L.map('siteMap').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(siteMap);
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="background:#1e5a9f;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
+      iconSize: [16, 16], iconAnchor: [8, 8]
+    });
+    L.marker([lat, lng], { icon })
+      .addTo(siteMap)
+      .bindPopup('<b>{{ co.get("name","Site") }}</b><br>{{ co.get("address","") }}')
+      .openPopup();
+    {% endif %}
+  }
+
+  /* ── Registration map (click-to-set coords) ─────────── */
+  const regMapEl = document.getElementById('regMap');
+  if (regMapEl) {
+    const defaultLat = -1.0332, defaultLng = 37.0694; // Thika
+    const regMap = L.map('regMap').setView([defaultLat, defaultLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(regMap);
+
+    let marker = null;
+
+    function setMapPoint(lat, lng) {
+      document.getElementById('regLat').value = lat.toFixed(6);
+      document.getElementById('regLng').value = lng.toFixed(6);
+      if (marker) { marker.setLatLng([lat, lng]); }
+      else {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(regMap);
+        marker.on('dragend', function (e) {
+          const pos = e.target.getLatLng();
+          document.getElementById('regLat').value = pos.lat.toFixed(6);
+          document.getElementById('regLng').value = pos.lng.toFixed(6);
+        });
+      }
+      regMap.setView([lat, lng], 15);
+    }
+
+    regMap.on('click', function (e) { setMapPoint(e.latlng.lat, e.latlng.lng); });
+
+    // Expose for GPS button
+    window._setMapPoint = setMapPoint;
+    window._regMap      = regMap;
+
+    // If lat/lng inputs already have values (e.g. after GPS), place marker
+    const initLat = parseFloat(document.getElementById('regLat').value);
+    const initLng = parseFloat(document.getElementById('regLng').value);
+    if (!isNaN(initLat) && !isNaN(initLng)) setMapPoint(initLat, initLng);
   }
 });
+
+/* ── GPS detection (registration form) ───────────── */
+function detectForForm() {
+  const status = document.getElementById('regGpsStatus');
+  if (!navigator.geolocation) {
+    status.innerHTML = '<span style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Geolocation not supported.</span>';
+    return;
+  }
+  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting your location…';
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    document.getElementById('regLat').value = lat.toFixed(6);
+    document.getElementById('regLng').value = lng.toFixed(6);
+    status.innerHTML = '<span style="color:#16a34a"><i class="fas fa-check-circle"></i> Location detected — accuracy: ' + Math.round(pos.coords.accuracy) + 'm</span>';
+    if (window._setMapPoint) window._setMapPoint(lat, lng);
+  }, function (err) {
+    const msgs = { 1:'Permission denied.', 2:'GPS unavailable.', 3:'Request timed out.' };
+    status.innerHTML = '<span style="color:#d97706"><i class="fas fa-exclamation-triangle"></i> ' + (msgs[err.code] || 'GPS error.') + ' Enter coordinates manually.</span>';
+  }, { enableHighAccuracy: true, timeout: 12000 });
+}
+
+/* ── GPS detection (check-in form) ───────────────── */
+function autoDetect() {
+  const status = document.getElementById('gpsStatus');
+  if (!navigator.geolocation) {
+    status.innerHTML = '<span style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Geolocation not supported.</span>';
+    return;
+  }
+  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting location…';
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    document.getElementById('latitude').value  = pos.coords.latitude.toFixed(6);
+    document.getElementById('longitude').value = pos.coords.longitude.toFixed(6);
+    status.innerHTML = '<span style="color:#16a34a"><i class="fas fa-check-circle"></i> GPS captured — accuracy: ' + Math.round(pos.coords.accuracy) + 'm</span>';
+  }, function (err) {
+    const msgs = { 1:'Permission denied.', 2:'GPS unavailable.', 3:'Timed out.' };
+    status.innerHTML = '<span style="color:#d97706"><i class="fas fa-exclamation-triangle"></i> ' + (msgs[err.code]||'Error.') + '</span>';
+  }, { enableHighAccuracy: true, timeout: 12000 });
+}
+
+/* Auto-detect on page load (check-in form) */
+const latEl = document.getElementById('latitude');
+if (latEl && navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    latEl.value = pos.coords.latitude.toFixed(6);
+    document.getElementById('longitude').value = pos.coords.longitude.toFixed(6);
+  }, function(){}, { enableHighAccuracy: true, timeout: 6000 });
+}
+
+/* Date validation */
+const endDate = document.querySelector('[name="end_date"]');
+const startDate = document.querySelector('[name="start_date"]');
+if (startDate && endDate) {
+  startDate.addEventListener('change', function () {
+    endDate.min = this.value;
+    if (endDate.value && endDate.value < this.value) endDate.value = '';
+  });
+}
 </script>
 {% endblock %}

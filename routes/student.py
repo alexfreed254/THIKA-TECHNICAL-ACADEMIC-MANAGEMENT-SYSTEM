@@ -2028,29 +2028,23 @@ def industrial_attachment():
                               .eq("class_id", class_id)
                               .execute().data or [])
     
-    # Get student's current attachment
-    attachments_res = (db.table("industrial_attachments")
-                      .select("*, companies(name, address), units(name, code), mentors(user_profiles(full_name))")
-                      .eq("student_id", student_id)
-                      .in_("status", ["pending", "approved", "active"])
-                      .order("created_at", desc=True)
-                      .limit(1)
-                      .execute().data)
-    
+    # Get ALL student attachments (for history table)
+    all_attachments = (db.table("industrial_attachments")
+                       .select("*, companies(name, address, latitude, longitude, contact_person, contact_phone), units(name, code)")
+                       .eq("student_id", student_id)
+                       .order("created_at", desc=True)
+                       .execute().data or [])
+
+    # Current attachment = most recent active/pending/approved
     current_attachment = None
-    if attachments_res:
-        current_attachment = attachments_res[0]
-        mentors_obj = current_attachment.get("mentors") or {}
-        user_profiles_obj = mentors_obj.get("user_profiles") or {}
-        current_attachment["mentor_name"] = user_profiles_obj.get("full_name")
-    
-    # Get available companies
-    companies = (db.table("companies")
-                 .select("*")
-                 .eq("is_active", True)
-                 .gt("available_slots", 0)
-                 .execute().data or [])
-    
+    for att in all_attachments:
+        if att.get("status") in ("active", "pending", "approved"):
+            current_attachment = att
+            break
+    # Fall back to most recent of any status
+    if not current_attachment and all_attachments:
+        current_attachment = all_attachments[0]
+
     # Get today's check-in logs for active attachment
     today_logs = []
     if current_attachment and current_attachment.get("status") == "active":
@@ -2061,11 +2055,12 @@ def industrial_attachment():
                      .gte("check_in_time", datetime.now().strftime("%Y-%m-%d"))
                      .order("check_in_time", desc=True)
                      .execute().data or [])
-    
+
     return render_template("student/industrial_attachment.html",
                           current_attachment=current_attachment,
+                          all_attachments=all_attachments,
                           enrolled_units=enrolled_units,
-                          companies=companies,
+                          companies=[],  # no longer used — trainee types company
                           today_logs=today_logs)
 
 
@@ -2077,35 +2072,73 @@ def request_attachment():
     user = current_user()
     student_id = user["id"]
     
-    company_id = request.form.get("company_id")
-    unit_id = request.form.get("unit_id")
-    start_date = request.form.get("start_date")
-    end_date = request.form.get("end_date")
-    attachment_goals = request.form.get("attachment_goals", "")
-    learning_objectives = request.form.get("learning_objectives", "")
-    
-    if not all([company_id, unit_id, start_date, end_date]):
-        flash("Company, unit, start date, and end date are required.", "error")
-        return redirect(url_for("student.industrial_attachment"))
-    
+    # New free-form fields (trainee types their own company details)
+    company_name       = (request.form.get("company_name") or "").strip()
+    industry_type      = (request.form.get("industry_type") or "Other").strip()
+    company_address    = (request.form.get("company_address") or "").strip()
+    supervisor_name    = (request.form.get("supervisor_name") or "").strip()
+    supervisor_contact = (request.form.get("supervisor_contact") or "").strip()
+    unit_id            = (request.form.get("unit_id") or "").strip()
+    start_date         = (request.form.get("start_date") or "").strip()
+    end_date           = (request.form.get("end_date") or "").strip()
+    attachment_goals   = (request.form.get("attachment_goals") or "").strip()
+    learning_objectives= (request.form.get("learning_objectives") or "").strip()
+
+    lat_raw = request.form.get("latitude", "").strip()
+    lng_raw = request.form.get("longitude", "").strip()
     try:
-        db.table("industrial_attachments").insert({
-            "student_id": student_id,
-            "company_id": company_id,
-            "unit_id": unit_id,
-            "start_date": start_date,
-            "end_date": end_date,
-            "status": "pending",
-            "attachment_goals": attachment_goals,
+        latitude  = float(lat_raw)  if lat_raw  else None
+        longitude = float(lng_raw) if lng_raw else None
+    except ValueError:
+        latitude = longitude = None
+
+    if not all([company_name, company_address, supervisor_name, supervisor_contact, unit_id, start_date, end_date]):
+        flash("All required fields must be filled in.", "error")
+        return redirect(url_for("student.industrial_attachment"))
+
+    try:
+        # 1. Create (or reuse) company record from trainee-supplied info
+        company_payload = {
+            "name":                    company_name,
+            "industry_classification": industry_type if industry_type in (
+                'Electrical Engineering','Mechanical Engineering','Information Technology',
+                'Civil Engineering','Automotive Engineering','Hospitality',
+                'Business Management','Health Sciences','Agriculture',
+                'Construction','Manufacturing'
+            ) else 'Other',
+            "address":          company_address,
+            "contact_person":   supervisor_name,
+            "contact_phone":    supervisor_contact,
+            "is_active":        True,
+            "available_slots":  1,
+            "created_by":       student_id,
+        }
+        if latitude  is not None: company_payload["latitude"]  = latitude
+        if longitude is not None: company_payload["longitude"] = longitude
+
+        company_res = db.table("companies").insert(company_payload).execute()
+        company_id  = company_res.data[0]["id"]
+
+        # 2. Create attachment record
+        att_payload = {
+            "student_id":          student_id,
+            "company_id":          company_id,
+            "unit_id":             unit_id if unit_id else None,
+            "start_date":          start_date,
+            "end_date":            end_date,
+            "status":              "pending",
+            "attachment_goals":    attachment_goals,
             "learning_objectives": learning_objectives,
-            "created_by": user["id"]
-        }).execute()
-        
-        write_audit_log("request_attachment", target=f"company:{company_id}")
-        flash("Attachment request submitted successfully.", "success")
+            "created_by":          student_id,
+        }
+        db.table("industrial_attachments").insert(att_payload).execute()
+
+        write_audit_log("request_attachment", target=f"company:{company_id}",
+                        detail={"company": company_name, "supervisor": supervisor_name})
+        flash("Attachment request submitted successfully. Awaiting department approval.", "success")
     except Exception as e:
         flash(f"Error submitting attachment request: {e}", "error")
-    
+
     return redirect(url_for("student.industrial_attachment"))
 
 
