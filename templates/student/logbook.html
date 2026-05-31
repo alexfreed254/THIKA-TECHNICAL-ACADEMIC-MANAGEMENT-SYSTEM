@@ -67,19 +67,43 @@
 {% endblock %}
 
 {% block content %}
+
+{% if not attachment %}
+<div style="text-align:center;padding:60px 24px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;margin:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+  <i class="fas fa-industry" style="font-size:52px;color:#cbd5e1;display:block;margin-bottom:18px"></i>
+  <h3 style="font-size:18px;font-weight:700;color:#475569;margin-bottom:8px">No Industrial Attachment Found</h3>
+  <p style="font-size:14px;color:#94a3b8;margin-bottom:24px">
+    You do not have an active industrial attachment yet.<br>
+    Request one from the Industrial Attachment page.
+  </p>
+  <a href="/student/industrial-attachment"
+     style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;border-radius:10px;font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(15,44,84,.3)">
+    <i class="fas fa-arrow-right"></i> Go to Industrial Attachment
+  </a>
+</div>
+
+{% else %}
+
 <div class="info-card">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-    <h3 style="margin:0"><i class="fas fa-building"></i> {{ attachment.companies.name }}</h3>
-    <span class="status-badge status-{{ attachment.status }}">{{ attachment.status|capitalize }}</span>
+    <h3 style="margin:0"><i class="fas fa-building"></i>
+      {{ (attachment.get('companies') or {}).get('name', '—') }}
+    </h3>
+    <span class="status-badge status-{{ attachment.get('status','pending') }}">
+      {{ attachment.get('status','pending')|capitalize }}
+    </span>
   </div>
   <div class="info-grid" style="margin-top:15px">
     <div class="info-item">
       <div class="info-label">Unit</div>
-      <div class="info-value">{{ attachment.units.name }} ({{ attachment.units.code }})</div>
+      <div class="info-value">
+        {% set u = attachment.get('units') or {} %}
+        {{ u.get('name','—') }}{% if u.get('code') %} ({{ u.get('code') }}){% endif %}
+      </div>
     </div>
     <div class="info-item">
       <div class="info-label">Period</div>
-      <div class="info-value">{{ attachment.start_date }} to {{ attachment.end_date }}</div>
+      <div class="info-value">{{ attachment.get('start_date','—') }} to {{ attachment.get('end_date','—') }}</div>
     </div>
   </div>
 </div>
@@ -215,6 +239,9 @@
   </div>
   {% endfor %}
 </div>
+
+{% endif %}{# end if attachment #}
+
 {% endblock %}
 
 {% block extra_script %}

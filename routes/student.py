@@ -2267,26 +2267,36 @@ def logbook():
     user = current_user()
     student_id = user["id"]
     
-    # Get student's active attachment
-    active_attachment = (db.table("industrial_attachments")
+    # Get student's active attachment (use list query to avoid PGRST116 on 0 rows)
+    attachment_rows = (db.table("industrial_attachments")
                        .select("*, companies(name)")
                        .eq("student_id", student_id)
                        .eq("status", "active")
-                       .single()
-                       .execute().data)
-    
+                       .limit(1)
+                       .execute().data or [])
+
+    active_attachment = attachment_rows[0] if attachment_rows else None
+
+    # If no active attachment, also check for any attachment (pending/approved)
     if not active_attachment:
-        flash("You must have an active industrial attachment to access the digital logbook.", "error")
-        return redirect(url_for("student.industrial_attachment"))
-    
-    # Get logbook entries for this attachment
-    logbooks = (db.table("digital_logbook")
-               .select("*")
-               .eq("student_id", student_id)
-               .eq("attachment_id", active_attachment["id"])
-               .order("log_date", desc=True)
-               .execute().data or [])
-    
+        any_rows = (db.table("industrial_attachments")
+                    .select("*, companies(name)")
+                    .eq("student_id", student_id)
+                    .order("created_at", desc=True)
+                    .limit(1)
+                    .execute().data or [])
+        active_attachment = any_rows[0] if any_rows else None
+
+    # Get logbook entries — all entries for this student
+    logbooks = []
+    if active_attachment:
+        logbooks = (db.table("digital_logbook")
+                   .select("*")
+                   .eq("student_id", student_id)
+                   .eq("attachment_id", active_attachment["id"])
+                   .order("log_date", desc=True)
+                   .execute().data or [])
+
     return render_template("student/logbook.html",
                           attachment=active_attachment,
                           logbooks=logbooks)
