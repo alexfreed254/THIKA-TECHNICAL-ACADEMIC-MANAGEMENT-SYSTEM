@@ -2474,9 +2474,9 @@ def employment_status():
             return redirect(url_for("student.employment_status"))
 
         try:
-            # Check if employment record exists
+            # Check if employment record exists (table may not exist yet — run supabase_schema.sql)
             existing = (db.table("employment_tracking")
-                       .select("*")
+                       .select("id")
                        .eq("student_id", student_id)
                        .execute().data or [])
 
@@ -2504,20 +2504,26 @@ def employment_status():
 
         return redirect(url_for("student.employment_status"))
 
-    # Get current employment status
-    employment_record = (db.table("employment_tracking")
-                        .select("*")
-                        .eq("student_id", student_id)
-                        .execute().data or [])
+    # Get current employment status (graceful if tables not yet created in DB)
+    current_status = None
+    projects = []
+    try:
+        employment_record = (db.table("employment_tracking")
+                            .select("*")
+                            .eq("student_id", student_id)
+                            .execute().data or [])
+        current_status = employment_record[0] if employment_record else None
+    except Exception:
+        pass
 
-    current_status = employment_record[0] if employment_record else None
-
-    # Get project uploads
-    projects = (db.table("employment_projects")
-               .select("*")
-               .eq("student_id", student_id)
-               .order("created_at", desc=True)
-               .execute().data or [])
+    try:
+        projects = (db.table("employment_projects")
+                   .select("*")
+                   .eq("student_id", student_id)
+                   .order("created_at", desc=True)
+                   .execute().data or [])
+    except Exception:
+        pass
 
     return render_template("student/employment_status.html",
                           current_status=current_status,

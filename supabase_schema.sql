@@ -1931,3 +1931,69 @@ CREATE POLICY course_applications_update ON course_applications
 -- - assessment-scripts (for PDF uploads)
 -- - assessment-evidence (for photos/videos)
 -- - application-documents (for course application file uploads)
+
+
+-- ────────────────────────────────────────────────────────────
+-- EMPLOYMENT TRACKING (Post-Training Tracer Study)
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS employment_tracking (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    student_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    employment_status TEXT NOT NULL CHECK (employment_status IN ('employed','self_employed','unemployed','continuing_education','other')) DEFAULT 'unemployed',
+    company_name TEXT,
+    job_title TEXT,
+    start_date DATE,
+    location_address TEXT,
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(student_id)
+);
+
+DROP TRIGGER IF EXISTS trg_employment_tracking_updated_at ON employment_tracking;
+CREATE TRIGGER trg_employment_tracking_updated_at
+    BEFORE UPDATE ON employment_tracking
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE employment_tracking ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS employment_tracking_student ON employment_tracking;
+CREATE POLICY employment_tracking_student ON employment_tracking
+    FOR ALL TO authenticated
+    USING (student_id = auth.uid())
+    WITH CHECK (student_id = auth.uid());
+
+DROP POLICY IF EXISTS employment_tracking_staff_read ON employment_tracking;
+CREATE POLICY employment_tracking_staff_read ON employment_tracking
+    FOR SELECT TO authenticated
+    USING (current_user_role() IN ('super_admin','dept_admin','trainer','registrar'));
+
+-- ────────────────────────────────────────────────────────────
+-- EMPLOYMENT PROJECTS (Post-Training Evidence Uploads)
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS employment_projects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    student_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    file_path TEXT,
+    file_name TEXT,
+    file_size INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE employment_projects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS employment_projects_student ON employment_projects;
+CREATE POLICY employment_projects_student ON employment_projects
+    FOR ALL TO authenticated
+    USING (student_id = auth.uid())
+    WITH CHECK (student_id = auth.uid());
+
+DROP POLICY IF EXISTS employment_projects_staff_read ON employment_projects;
+CREATE POLICY employment_projects_staff_read ON employment_projects
+    FOR SELECT TO authenticated
+    USING (current_user_role() IN ('super_admin','dept_admin','trainer','registrar'));
