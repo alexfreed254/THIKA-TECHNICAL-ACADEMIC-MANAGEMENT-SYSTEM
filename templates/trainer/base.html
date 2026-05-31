@@ -3,142 +3,121 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Trainer{% endblock %} | THIKA TECHNICAL TRAINING INSTITUTE</title>
-  <link rel="stylesheet" href="/static/css/responsive.css">
+  <title>{% block title %}Trainer{% endblock %} | TTTI Trainer Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/base.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  {% block extra_head %}{% endblock %}
   <style>
-    .sidebar {
-      background: linear-gradient(180deg, #7b1fa2 0%, #4a148c 100%);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
+    /* ── Trainer: rich purple-violet ─────────────────────────── */
+    .sidebar { background: linear-gradient(180deg, #3b0764 0%, #6d28d9 55%, #4c1d95 100%); }
+    .sidebar-menu a:hover, .sidebar-menu a.active {
+      background: rgba(255,255,255,.14); border-left-color: #fbbf24; color: #fff;
     }
-    .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
-    .sidebar-header img { height: 58px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); margin-bottom: 10px; }
-    .sidebar-header h2 { font-size: 13px; font-weight: 700; opacity: .9; }
-    .role-badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: 3px 12px; font-size: 11px; margin-top: 6px; }
-    .sidebar-menu { flex: 1; padding: 12px 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.3) transparent; }
-    .sidebar-menu::-webkit-scrollbar { width: 5px; }
-    .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
-    .sidebar-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,.3); border-radius: 10px; }
-    .sidebar-menu::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.5); }
-    .sidebar-menu a { display: block; padding: 10px 22px 10px 36px; color: rgba(255,255,255,.78); text-decoration: none; transition: all .2s; font-size: 13px; border-left: 3px solid transparent; }
-    .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,.1); color: #fff; border-left-color: #ffd700; }
-    .menu-group-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 18px 10px 22px; cursor: pointer;
-      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-      color: rgba(255,255,255,.5); transition: color .2s;
-      user-select: none;
+    .topbar { border-bottom: 2px solid #ede9fe; }
+    .topbar-title { color: #3b0764; }
+
+    .flash-success, .flash-error, .flash-warning, .flash-info {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 22px; font-size: 13.5px; font-weight: 500;
+      border-left: 4px solid;
     }
-    .menu-group-header:hover { color: rgba(255,255,255,.8); }
-    .menu-group-header .arrow { transition: transform .3s ease; font-size: 10px; }
-    .menu-group-header .arrow.open { transform: rotate(90deg); }
-    .menu-group-content { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .25s ease; opacity: 0; }
-    .menu-group-content.open { max-height: 600px; opacity: 1; }
-    .menu-group-content a { padding-left: 44px; font-size: 12.5px; border-left-color: transparent; }
-    .menu-group-content a i { width: 18px; text-align: center; margin-right: 6px; font-size: 12px; }
-    .sidebar-menu .direct-link { padding: 10px 22px 10px 22px; }
-    .sidebar-menu .direct-link i { width: 20px; text-align: center; margin-right: 8px; }
-    .sidebar-footer { padding: 14px; border-top: 1px solid rgba(255,255,255,.1); display: flex; gap: 10px; flex-shrink: 0; }
-    .sidebar-footer a { display: flex; align-items: center; justify-content: center; padding: 9px; background: rgba(220,38,38,.25); color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px; flex: 1; }
-    .sidebar-footer a:hover { background: rgba(220,38,38,.45); }
-    .notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: background 0.3s ease; }
-    .notification-bell:hover { background: rgba(255,255,255,0.2); }
-    .notification-badge { position: absolute; top: -5px; right: -5px; background: #c62828; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 50%; min-width: 18px; text-align: center; }
+    .flash-success { background:#f0fdf4;color:#15803d;border-left-color:#16a34a; }
+    .flash-error   { background:#fef2f2;color:#991b1b;border-left-color:#dc2626; }
+    .flash-warning { background:#fffbeb;color:#92400e;border-left-color:#d97706; }
+    .flash-info    { background:#f0f9ff;color:#0e7490;border-left-color:#0891b2; }
+
     {% block extra_style %}{% endblock %}
   </style>
 </head>
 <body>
 
-<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">
-  <i class="fas fa-bars"></i>
-</button>
+<div id="toast-container"></div>
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="dashboard-container">
-  <div class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <img src="{{ LOGO_URL }}" alt="Logo">
-      <h2>THIKA TECHNICAL</h2>
-      <div class="role-badge"><i class="fas fa-chalkboard-teacher"></i> Trainer Portal</div>
+      <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+      <h2>THIKA TECHNICAL<br>TRAINING INSTITUTE</h2>
+      <div class="role-badge"><i class="fas fa-chalkboard-teacher"></i>&nbsp; Trainer Portal</div>
     </div>
+
     <div class="sidebar-menu">
 
-      <a href="/trainer/dashboard" class="direct-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="/trainer/dashboard" class="direct-link"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
 
-      <div class="menu-group" data-group="attendance">
-        <div class="menu-group-header"><span><i class="fas fa-clipboard-list" style="width:20px;text-align:center;margin-right:6px"></i> Attendance</span><span class="arrow">&#9654;</span></div>
+      <div class="menu-group">
+        <div class="menu-group-header"><span><i class="fas fa-calendar-check" style="width:18px;text-align:center;margin-right:8px"></i>Attendance</span><span class="arrow">&#9654;</span></div>
         <div class="menu-group-content">
           <a href="/trainer/attendance"><i class="fas fa-clipboard-list"></i> Mark Attendance</a>
-          <a href="/trainer/attendance-history"><i class="fas fa-eye"></i> View Attendance</a>
+          <a href="/trainer/attendance-history"><i class="fas fa-history"></i> View History</a>
         </div>
       </div>
 
-      <div class="menu-group" data-group="assessments">
-        <div class="menu-group-header"><span><i class="fas fa-file-certificate" style="width:20px;text-align:center;margin-right:6px"></i> Formative Assessment</span><span class="arrow">&#9654;</span></div>
+      <div class="menu-group">
+        <div class="menu-group-header"><span><i class="fas fa-file-alt" style="width:18px;text-align:center;margin-right:8px"></i>Assessment &amp; POE</span><span class="arrow">&#9654;</span></div>
         <div class="menu-group-content">
-          <a href="/trainer/assessments"><i class="fas fa-file-certificate"></i> Trainee POE</a>
+          <a href="/trainer/assessments"><i class="fas fa-tasks"></i> Trainee POE Review</a>
           <a href="/trainer/marks-entry"><i class="fas fa-edit"></i> Marks Entry</a>
           <a href="/trainer/marks-import"><i class="fas fa-file-excel"></i> Import Marks</a>
-          <a href="/trainer/portfolio"><i class="fas fa-folder-open"></i> Trainer POE</a>
+          <a href="/trainer/portfolio"><i class="fas fa-folder-open"></i> My Portfolio (POE)</a>
         </div>
       </div>
 
-      <div class="menu-group" data-group="clearance">
-        <div class="menu-group-header"><span><i class="fas fa-clipboard-check" style="width:20px;text-align:center;margin-right:6px"></i> Clearance</span><span class="arrow">&#9654;</span></div>
+      <div class="menu-group">
+        <div class="menu-group-header"><span><i class="fas fa-clipboard-check" style="width:18px;text-align:center;margin-right:8px"></i>Clearance</span><span class="arrow">&#9654;</span></div>
         <div class="menu-group-content">
           <a href="/clearance/approver"><i class="fas fa-clipboard-check"></i> Clearance Approvals</a>
         </div>
       </div>
 
-      <div class="menu-group" data-group="profile">
-        <div class="menu-group-header"><span><i class="fas fa-user-circle" style="width:20px;text-align:center;margin-right:6px"></i> Profile</span><span class="arrow">&#9654;</span></div>
+      <div class="menu-group">
+        <div class="menu-group-header"><span><i class="fas fa-user-circle" style="width:18px;text-align:center;margin-right:8px"></i>My Account</span><span class="arrow">&#9654;</span></div>
         <div class="menu-group-content">
-          <a href="/auth/profile"><i class="fas fa-user-circle"></i> My Profile</a>
-          <div class="menu-group" data-group="prefs" style="margin-left:6px">
-            <div class="menu-group-header" style="font-size:12px;padding:8px 18px 8px 22px"><span><i class="fas fa-cog" style="width:18px;text-align:center;margin-right:6px"></i> Preferences</span><span class="arrow">&#9654;</span></div>
-            <div class="menu-group-content">
-              <a href="#" onclick="toggleTheme();return false" style="padding-left:56px;font-size:12px"><i class="fas fa-adjust"></i> <span id="themeLabel">Light / Dark Mode</span></a>
-              <a href="#" onclick="toggleZoom();return false" style="padding-left:56px;font-size:12px"><i class="fas fa-search-plus"></i> Screen Zoom</a>
-            </div>
-          </div>
-          <a href="/auth/logout" style="color:rgba(255,100,100,.9)"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          <a href="/auth/profile"><i class="fas fa-user-edit"></i> My Profile</a>
+          <a href="/notifications"><i class="fas fa-bell"></i> Notifications</a>
+          <a href="#" onclick="toggleTheme();return false"><i class="fas fa-moon"></i> <span id="themeLabel">Dark Mode</span></a>
+          <a href="#" onclick="toggleZoom();return false"><i class="fas fa-search-plus"></i> Zoom: <span id="zoomLabel">100%</span></a>
         </div>
       </div>
 
     </div>
+
     <div class="sidebar-footer">
-      <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
     </div>
-  </div>
+  </aside>
 
   <div class="main-content">
-    <div class="topbar">
+    <header class="topbar">
       <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <a href="/notifications" class="notification-bell" style="width:36px;height:36px;background:rgba(0,0,0,.05);">
+      <div style="display:flex;align-items:center;gap:10px">
+        <a href="/notifications" class="notification-bell" title="Notifications">
           <i class="fas fa-bell"></i>
           {% if unread_notification_count > 0 %}
           <span class="notification-badge">{{ unread_notification_count }}</span>
           {% endif %}
         </a>
-        <span class="topbar-user"><i class="fas fa-chalkboard-teacher"></i>
+        <div class="topbar-user">
+          <i class="fas fa-chalkboard-teacher"></i>
           {{ current_user.full_name if current_user else '' }}
-        </span>
+        </div>
       </div>
-    </div>
+    </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}
-      <div class="flash-{{ 'success' if cat == 'success' else 'error' }}">
-        <i class="fas fa-{% if cat == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+      <div class="flash-{{ 'success' if cat == 'success' else 'error' if cat in ('error','danger') else 'warning' if cat == 'warning' else 'info' }}">
+        <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat in ('error','danger') %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
         {{ msg }}
       </div>
       {% endfor %}
     {% endwith %}
 
-    {% block content %}{% endblock %}
+    <main>{% block content %}{% endblock %}</main>
   </div>
 </div>
 
@@ -148,30 +127,26 @@
   const toggle  = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
-
   function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('open');    toggle.innerHTML = '<i class="fas fa-times"></i>'; }
-  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); toggle.innerHTML = '<i class="fas fa-bars"></i>';  }
-
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); toggle.innerHTML = '<i class="fas fa-bars"></i>'; }
   toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
   overlay.addEventListener('click', closeSidebar);
 
-  // ── Accordion expand/collapse ─────────────────────────────
   document.querySelectorAll('.menu-group-header').forEach(header => {
     header.addEventListener('click', function(e) {
       e.stopPropagation();
       const content = this.nextElementSibling;
-      const arrow = this.querySelector('.arrow');
-      const isOpen = content.classList.contains('open');
+      const arrow   = this.querySelector('.arrow');
       content.classList.toggle('open');
       if (arrow) arrow.classList.toggle('open');
     });
   });
 
-  // ── Active link highlighting + auto-open parent groups ──
   const path = window.location.pathname;
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
     const href = a.getAttribute('href');
-    if (href && href !== '#' && path.startsWith(href)) {
+    if (href && href !== '#' && path.startsWith(href) && href.length > 1) {
       a.classList.add('active');
       let parent = a.closest('.menu-group-content');
       while (parent) {
@@ -183,32 +158,40 @@
     }
   });
 
-  // Close sidebar on link click (mobile)
-  document.querySelectorAll('.sidebar-menu a').forEach(a => {
-    a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
-  });
-
-  // ── Theme toggle ───────────────────────────────────────────
   function toggleTheme() {
-    const label = document.getElementById('themeLabel');
     const isDark = document.body.classList.toggle('dark-mode');
-    label.textContent = isDark ? 'Dark Mode' : 'Light Mode';
-    localStorage.setItem('trainer_theme', isDark ? 'dark' : 'light');
+    document.getElementById('themeLabel').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    localStorage.setItem('ttti_theme', isDark ? 'dark' : 'light');
   }
-  if (localStorage.getItem('trainer_theme') === 'dark') {
+  if (localStorage.getItem('ttti_theme') === 'dark') {
     document.body.classList.add('dark-mode');
-    const label = document.getElementById('themeLabel');
-    if (label) label.textContent = 'Dark Mode';
+    const lbl = document.getElementById('themeLabel');
+    if (lbl) lbl.textContent = 'Light Mode';
   }
 
-  // ── Zoom toggle ────────────────────────────────────────────
-  let zoomLevel = parseFloat(localStorage.getItem('trainer_zoom') || '1');
-  document.body.style.zoom = zoomLevel;
-  function toggleZoom() {
-    zoomLevel = zoomLevel === 1 ? 1.15 : zoomLevel === 1.15 ? 1.3 : 1;
+  let zoomLevel = parseFloat(localStorage.getItem('ttti_zoom') || '1');
+  const zoomLevels = [1, 1.1, 1.2];
+  function applyZoom() {
     document.body.style.zoom = zoomLevel;
-    localStorage.setItem('trainer_zoom', zoomLevel);
+    const lbl = document.getElementById('zoomLabel');
+    if (lbl) lbl.textContent = Math.round(zoomLevel * 100) + '%';
   }
+  applyZoom();
+  function toggleZoom() {
+    const idx = zoomLevels.indexOf(zoomLevel);
+    zoomLevel = zoomLevels[(idx + 1) % zoomLevels.length];
+    localStorage.setItem('ttti_zoom', zoomLevel);
+    applyZoom();
+  }
+
+  window.showToast = function(msg, type = 'info', duration = 4000) {
+    const icons = { success:'check-circle', error:'exclamation-circle', warning:'exclamation-triangle', info:'info-circle' };
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<i class="fas fa-${icons[type]||icons.info}"></i><span class="toast-msg">${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+    document.getElementById('toast-container').appendChild(t);
+    setTimeout(() => { t.classList.add('toast-out'); setTimeout(() => t.remove(), 300); }, duration);
+  };
 </script>
 </body>
 </html>

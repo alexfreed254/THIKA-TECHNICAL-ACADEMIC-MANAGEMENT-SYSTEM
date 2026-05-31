@@ -3,123 +3,197 @@
 {% block page_title %}System Dashboard{% endblock %}
 
 {% block extra_style %}
-.page-wrap{padding:24px}
-.section-title{font-size:13px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.06em;margin:0 0 14px}
-/* ── Stat cards ── */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
-.stat-card{background:#fff;border-radius:14px;padding:18px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);transition:transform .15s}
-.stat-card:hover{transform:translateY(-2px)}
-.stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0}
-.stat-info h3{font-size:11px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
-.stat-info p{font-size:24px;font-weight:800;color:#1a1a2e;line-height:1}
-/* ── Section grid ── */
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
-@media(max-width:900px){.two-col{grid-template-columns:1fr}}
-.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px}
-@media(max-width:1100px){.three-col{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.three-col{grid-template-columns:1fr}}
-/* ── Cards ── */
-.card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden;margin-bottom:20px}
-.card-header{padding:14px 18px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f0f0}
-.card-header a{font-size:12px;color:#1565c0;text-decoration:none;font-weight:600}
-.card-header a:hover{text-decoration:underline}
-table{width:100%;border-collapse:collapse}
-th{background:#f8fafc;padding:9px 14px;text-align:left;font-size:11px;color:#666;border-bottom:1px solid #eee;text-transform:uppercase;letter-spacing:.04em}
-td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-/* ── Badges ── */
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-pending{background:#fff3e0;color:#e65100}
-.badge-approved{background:#e8f5e9;color:#2e7d32}
-.badge-rejected{background:#ffebee;color:#c62828}
-.badge-active{background:#e8f5e9;color:#2e7d32}
-.badge-completed{background:#e3f2fd;color:#1565c0}
-/* ── Mini stat row ── */
-.mini-stats{display:flex;gap:12px;padding:14px 18px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap}
-.mini-stat{text-align:center;flex:1;min-width:70px}
-.mini-stat p{font-size:20px;font-weight:800;color:#1a1a2e}
-.mini-stat span{font-size:11px;color:#888;text-transform:uppercase}
-/* ── Quick actions ── */
-.quick-actions{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:16px}
-.qa-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 10px;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;color:#333;background:#f8fafc;border:1px solid #eee;transition:all .2s;text-align:center}
-.qa-btn:hover{background:#e3f2fd;border-color:#90caf9;color:#1565c0}
-.qa-btn i{font-size:22px;color:#1565c0}
-/* ── Dept table ── */
-.dept-bar{height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden;margin-top:4px}
-.dept-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#1565c0,#42a5f5)}
+.page-wrap { padding: 24px; }
+
+/* Premium stat cards override for this page */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
+
+.s-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.07);
+  border: 1px solid #f1f5f9;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.s-card::after {
+  content:''; position:absolute; top:0;left:0;right:0;height:3px;
+  background: var(--accent, linear-gradient(90deg,#1e5a9f,#2e75b6));
+  opacity:0; transition:opacity .2s;
+}
+.s-card:hover { transform:translateY(-3px); box-shadow:0 8px 28px rgba(0,0,0,.12); }
+.s-card:hover::after { opacity:1; }
+
+.s-icon { width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;flex-shrink:0; }
+.s-info h3 { font-size:11px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600; }
+.s-info p  { font-size:28px;font-weight:900;color:#0f172a;line-height:1;font-family:'Poppins',sans-serif; }
+
+/* Layout grids */
+.two-col   { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px; }
+.three-col { display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px; }
+@media(max-width:1100px){ .three-col{grid-template-columns:1fr 1fr;} }
+@media(max-width:900px) { .two-col,.three-col{grid-template-columns:1fr;} }
+
+/* Section title */
+.section-title { font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin:0 0 14px;display:flex;align-items:center;gap:7px; }
+.section-title i { color:#1e5a9f; }
+
+/* Premium card overrides */
+.p-card { background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;margin-bottom:20px;border:1px solid #f1f5f9; }
+.p-card-header { padding:15px 20px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;color:#1e293b; }
+.p-card-header a { font-size:12px;color:#1e5a9f;font-weight:600;text-decoration:none; }
+.p-card-header a:hover { text-decoration:underline; }
+
+/* Mini stats row */
+.mini-stats { display:flex;gap:0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap; }
+.mini-stat { text-align:center;flex:1;min-width:80px;padding:14px 12px;border-right:1px solid #f1f5f9; }
+.mini-stat:last-child { border-right:none; }
+.mini-stat p { font-size:22px;font-weight:900;color:#0f172a;line-height:1;font-family:'Poppins',sans-serif; }
+.mini-stat span { font-size:10.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;font-weight:600; }
+
+/* Tables */
+.p-card table { width:100%;border-collapse:collapse; }
+.p-card thead { background:linear-gradient(135deg,#1e5a9f,#154070); }
+.p-card th { padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:rgba(255,255,255,.9);text-transform:uppercase;letter-spacing:.05em; }
+.p-card td { padding:11px 14px;border-bottom:1px solid #f8fafc;font-size:13px;vertical-align:middle;color:#334155; }
+.p-card tr:hover td { background:#f8fafc; }
+.p-card tr:last-child td { border-bottom:none; }
+
+/* Badges */
+.b { display:inline-flex;align-items:center;padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:700; }
+.b-pending  { background:#fff7ed;color:#c2410c;border:1px solid #fed7aa; }
+.b-approved { background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0; }
+.b-rejected { background:#fef2f2;color:#991b1b;border:1px solid #fecaca; }
+.b-active   { background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0; }
+.b-completed{ background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe; }
+.b-inactive { background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
+
+/* Quick actions */
+.quick-actions { display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;padding:16px; }
+.qa-btn {
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:16px 10px;border-radius:14px;text-decoration:none;
+  font-size:12px;font-weight:600;color:#475569;
+  background:#f8fafc;border:1.5px solid #e2e8f0;
+  transition:all .2s;text-align:center;
+}
+.qa-btn:hover { background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;transform:translateY(-2px);box-shadow:0 4px 12px rgba(30,90,159,.12); text-decoration:none; }
+.qa-btn i { font-size:24px;color:#1e5a9f; }
+.qa-btn:hover i { color:#1d4ed8; }
+.qa-btn.urgent { background:#fef2f2;border-color:#fecaca;color:#991b1b; }
+.qa-btn.urgent i { color:#dc2626; }
+.qa-btn.urgent:hover { background:#fee2e2;border-color:#fca5a5; }
+
+/* Dept bar */
+.dept-bar { height:6px;background:#e2e8f0;border-radius:9999px;overflow:hidden;margin-top:4px;min-width:80px; }
+.dept-bar-fill { height:100%;border-radius:9999px;background:linear-gradient(90deg,#1e5a9f,#60a5fa); }
+
+/* Alert pending */
+.alert-pending {
+  display:flex;align-items:center;gap:12px;
+  background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:12px;
+  padding:14px 18px;margin-bottom:20px;font-size:13.5px;font-weight:600;
+}
 {% endblock %}
 
 {% block content %}
 <div class="page-wrap">
 
-  <!-- ── System-wide stat cards ── -->
-  <p class="section-title"><i class="fas fa-chart-bar"></i> System Overview</p>
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#1565c0,#0d47a1)"><i class="fas fa-building"></i></div>
-      <div class="stat-info"><h3>Departments</h3><p>{{ stats.get('departments',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#7b1fa2,#4a148c)"><i class="fas fa-chalkboard-teacher"></i></div>
-      <div class="stat-info"><h3>Trainers</h3><p>{{ stats.get('trainers',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#2e7d32,#1b5e20)"><i class="fas fa-user-graduate"></i></div>
-      <div class="stat-info"><h3>Students</h3><p>{{ stats.get('students',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#e65100,#bf360c)"><i class="fas fa-door-open"></i></div>
-      <div class="stat-info"><h3>Classes</h3><p>{{ stats.get('classes',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#00838f,#006064)"><i class="fas fa-book"></i></div>
-      <div class="stat-info"><h3>Units</h3><p>{{ stats.get('units',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#f57f17,#e65100)"><i class="fas fa-clipboard-list"></i></div>
-      <div class="stat-info"><h3>Attendance</h3><p>{{ stats.get('attendance',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#c62828,#b71c1c)"><i class="fas fa-file-alt"></i></div>
-      <div class="stat-info"><h3>Assessments</h3><p>{{ stats.get('assessments',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#1b5e20,#2e7d32)"><i class="fas fa-briefcase"></i></div>
-      <div class="stat-info"><h3>Job Postings</h3><p>{{ stats.get('job_postings',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#4a148c,#7b1fa2)"><i class="fas fa-paper-plane"></i></div>
-      <div class="stat-info"><h3>Applications</h3><p>{{ stats.get('job_applications',0) }}</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#006064,#00838f)"><i class="fas fa-clipboard-check"></i></div>
-      <div class="stat-info"><h3>Clearances</h3><p>{{ stats.get('clearances',0) }}</p></div>
-    </div>
-    <div class="stat-card" style="{% if stats.get('pending_employers',0) > 0 %}border:2px solid #c62828;{% endif %}">
-      <div class="stat-icon" style="background:linear-gradient(135deg,#c62828,#b71c1c)"><i class="fas fa-building"></i></div>
-      <div class="stat-info">
-        <h3>Pending Employers</h3>
-        <p style="{% if stats.get('pending_employers',0) > 0 %}color:#c62828{% endif %}">{{ stats.get('pending_employers',0) }}</p>
-      </div>
+  <!-- ── Pending employer alert ─── -->
+  {% if stats.get('pending_employers',0) > 0 %}
+  <div class="alert-pending">
+    <i class="fas fa-exclamation-triangle fa-lg"></i>
+    <div>
+      <strong>{{ stats.get('pending_employers',0) }} Employer Account(s) Awaiting Verification</strong>
+      &nbsp;—&nbsp;
+      <a href="/super-admin/employers?status=pending" style="color:#92400e;font-weight:700;text-decoration:underline">Review Now &rarr;</a>
     </div>
   </div>
+  {% endif %}
 
-  <!-- ── Quick Actions ── -->
+  <!-- ── System Overview Stats ─── -->
+  <p class="section-title"><i class="fas fa-chart-bar"></i> System Overview</p>
+  <div class="stats-grid">
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#1565c0,#42a5f5)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#1565c0,#0d47a1)"><i class="fas fa-sitemap"></i></div>
+      <div class="s-info"><h3>Departments</h3><p>{{ stats.get('departments',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#6d28d9,#a78bfa)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#6d28d9,#4c1d95)"><i class="fas fa-chalkboard-teacher"></i></div>
+      <div class="s-info"><h3>Trainers</h3><p>{{ stats.get('trainers',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#16a34a,#4ade80)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="fas fa-user-graduate"></i></div>
+      <div class="s-info"><h3>Students</h3><p>{{ stats.get('students',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#ea580c,#fb923c)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#ea580c,#c2410c)"><i class="fas fa-door-open"></i></div>
+      <div class="s-info"><h3>Classes</h3><p>{{ stats.get('classes',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#0891b2,#22d3ee)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#0891b2,#0e7490)"><i class="fas fa-book"></i></div>
+      <div class="s-info"><h3>Units</h3><p>{{ stats.get('units',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#d97706,#fbbf24)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#d97706,#b45309)"><i class="fas fa-calendar-check"></i></div>
+      <div class="s-info"><h3>Attendance</h3><p>{{ stats.get('attendance',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#dc2626,#f87171)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fas fa-file-alt"></i></div>
+      <div class="s-info"><h3>Assessments</h3><p>{{ stats.get('assessments',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#059669,#34d399)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#059669,#047857)"><i class="fas fa-briefcase"></i></div>
+      <div class="s-info"><h3>Job Postings</h3><p>{{ stats.get('job_postings',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#7c3aed,#a78bfa)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)"><i class="fas fa-paper-plane"></i></div>
+      <div class="s-info"><h3>Applications</h3><p>{{ stats.get('job_applications',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#1d4ed8,#60a5fa)">
+      <div class="s-icon" style="background:linear-gradient(135deg,#1d4ed8,#1e5a9f)"><i class="fas fa-clipboard-check"></i></div>
+      <div class="s-info"><h3>Clearances</h3><p>{{ stats.get('clearances',0) }}</p></div>
+    </div>
+
+    <div class="s-card {% if stats.get('pending_employers',0) > 0 %}s-card--urgent{% endif %}" style="--accent:linear-gradient(90deg,#dc2626,#f87171);{% if stats.get('pending_employers',0) > 0 %}border:2px solid #fca5a5;{% endif %}">
+      <div class="s-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fas fa-building"></i></div>
+      <div class="s-info">
+        <h3>Pending Employers</h3>
+        <p style="{% if stats.get('pending_employers',0) > 0 %}color:#dc2626{% endif %}">{{ stats.get('pending_employers',0) }}</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Quick Actions ─── -->
   <p class="section-title"><i class="fas fa-bolt"></i> Quick Actions</p>
-  <div class="card" style="margin-bottom:24px">
+  <div class="p-card" style="margin-bottom:24px">
     <div class="quick-actions">
-      <a href="/super-admin/employers?status=pending" class="qa-btn" style="{% if stats.get('pending_employers',0) > 0 %}border-color:#c62828;background:#fff5f5;{% endif %}">
-        <i class="fas fa-building" style="{% if stats.get('pending_employers',0) > 0 %}color:#c62828{% endif %}"></i>
-        Verify Employers
-        {% if stats.get('pending_employers',0) > 0 %}<span style="background:#c62828;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px">{{ stats.get('pending_employers',0) }}</span>{% endif %}
+      <a href="/super-admin/employers?status=pending" class="qa-btn {% if stats.get('pending_employers',0) > 0 %}urgent{% endif %}">
+        <i class="fas fa-building"></i> Verify Employers
+        {% if stats.get('pending_employers',0) > 0 %}<span style="background:#dc2626;color:#fff;border-radius:9999px;padding:1px 8px;font-size:10px">{{ stats.get('pending_employers',0) }}</span>{% endif %}
       </a>
       <a href="/super-admin/users" class="qa-btn"><i class="fas fa-user-plus"></i> Add User</a>
       <a href="/super-admin/departments" class="qa-btn"><i class="fas fa-sitemap"></i> Departments</a>
       <a href="/super-admin/courses" class="qa-btn"><i class="fas fa-graduation-cap"></i> Courses</a>
       <a href="/super-admin/classes" class="qa-btn"><i class="fas fa-door-open"></i> Classes</a>
       <a href="/super-admin/units" class="qa-btn"><i class="fas fa-book"></i> Units</a>
-      <a href="/super-admin/assign-units" class="qa-btn"><i class="fas fa-link"></i> Assign Units</a>
-      <a href="/super-admin/assessments?status=pending" class="qa-btn"><i class="fas fa-clock"></i> Pending Assessments</a>
+      <a href="/super-admin/assessments?status=pending" class="qa-btn"><i class="fas fa-clock"></i> Pending POE</a>
       <a href="/super-admin/attendance" class="qa-btn"><i class="fas fa-clipboard-list"></i> Attendance</a>
       <a href="/super-admin/marks" class="qa-btn"><i class="fas fa-chart-line"></i> Marks</a>
       <a href="/super-admin/job-postings" class="qa-btn"><i class="fas fa-briefcase"></i> Job Postings</a>
@@ -130,42 +204,43 @@ tr:last-child td{border-bottom:none}
     </div>
   </div>
 
-  <!-- ── Assessment + Attendance row ── -->
+  <!-- ── Assessment + Job Portal ─── -->
   <div class="two-col">
-    <!-- Assessments breakdown -->
-    <div class="card">
-      <div class="card-header">
-        <span><i class="fas fa-file-alt" style="color:#c62828"></i> Assessments</span>
-        <a href="/super-admin/assessments">View All →</a>
+    <div class="p-card">
+      <div class="p-card-header">
+        <span><i class="fas fa-file-alt" style="color:#dc2626;margin-right:6px"></i>Assessments</span>
+        <a href="/super-admin/assessments">View All &rarr;</a>
       </div>
       <div class="mini-stats">
         <div class="mini-stat"><p>{{ stats.get('assessments',0) }}</p><span>Total</span></div>
-        <div class="mini-stat"><p style="color:#e65100">{{ stats.get('pending',0) }}</p><span>Pending</span></div>
-        <div class="mini-stat"><p style="color:#2e7d32">{{ stats.get('approved',0) }}</p><span>Approved</span></div>
-        <div class="mini-stat"><p style="color:#c62828">{{ stats.get('rejected',0) }}</p><span>Rejected</span></div>
+        <div class="mini-stat"><p style="color:#ea580c">{{ stats.get('pending',0) }}</p><span>Pending</span></div>
+        <div class="mini-stat"><p style="color:#16a34a">{{ stats.get('approved',0) }}</p><span>Approved</span></div>
+        <div class="mini-stat"><p style="color:#dc2626">{{ stats.get('rejected',0) }}</p><span>Rejected</span></div>
       </div>
       <table>
         <thead><tr><th>Student</th><th>Unit</th><th>Status</th><th>Date</th></tr></thead>
         <tbody>
           {% for a in recent_assessments[:6] %}
           <tr>
-            <td>{{ a.get('user_profiles',{}).get('full_name','—') }}<br><small style="color:#aaa">{{ a.get('user_profiles',{}).get('admission_no','') }}</small></td>
+            <td>
+              <div style="font-weight:600">{{ a.get('user_profiles',{}).get('full_name','—') }}</div>
+              <div style="font-size:11px;color:#94a3b8">{{ a.get('user_profiles',{}).get('admission_no','') }}</div>
+            </td>
             <td>{{ a.get('units',{}).get('name','—') }}</td>
-            <td><span class="badge badge-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
-            <td>{{ a.get('uploaded_at','')[:10] if a.get('uploaded_at') else '—' }}</td>
+            <td><span class="b b-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
+            <td style="color:#94a3b8;font-size:12px">{{ a.get('uploaded_at','')[:10] if a.get('uploaded_at') else '—' }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="4" style="text-align:center;color:#aaa;padding:20px">No assessments yet.</td></tr>
+          <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4"></i>No assessments yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <!-- Job portal breakdown -->
-    <div class="card">
-      <div class="card-header">
-        <span><i class="fas fa-briefcase" style="color:#2e7d32"></i> Job Portal</span>
-        <a href="/super-admin/job-postings">View All →</a>
+    <div class="p-card">
+      <div class="p-card-header">
+        <span><i class="fas fa-briefcase" style="color:#16a34a;margin-right:6px"></i>Job Portal</span>
+        <a href="/super-admin/job-postings">View All &rarr;</a>
       </div>
       <div class="mini-stats">
         <div class="mini-stat"><p>{{ stats.get('job_postings',0) }}</p><span>Postings</span></div>
@@ -179,29 +254,29 @@ tr:last-child td{border-bottom:none}
           {% for j in recent_jobs[:6] %}
           <tr>
             <td><strong>{{ j.get('title','—') }}</strong></td>
-            <td>{{ j.get('employers',{}).get('company_name','—') }}</td>
-            <td>{{ j.get('type','—')|title }}</td>
-            <td><span class="badge badge-{{ 'active' if j.get('is_active') else 'rejected' }}">{{ 'Active' if j.get('is_active') else 'Inactive' }}</span></td>
+            <td style="font-size:12px;color:#64748b">{{ j.get('employers',{}).get('company_name','—') }}</td>
+            <td style="font-size:12px">{{ j.get('type','—')|title }}</td>
+            <td><span class="b b-{{ 'active' if j.get('is_active') else 'inactive' }}">{{ 'Active' if j.get('is_active') else 'Inactive' }}</span></td>
           </tr>
           {% else %}
-          <tr><td colspan="4" style="text-align:center;color:#aaa;padding:20px">No job postings yet.</td></tr>
+          <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4"></i>No job postings yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ── Clearance + Admission row ── -->
+  <!-- ── Clearance + Admission ─── -->
   <div class="two-col">
-    <div class="card">
-      <div class="card-header">
-        <span><i class="fas fa-clipboard-check" style="color:#1565c0"></i> Clearance Requests</span>
-        <a href="/super-admin/clearances">View All →</a>
+    <div class="p-card">
+      <div class="p-card-header">
+        <span><i class="fas fa-clipboard-check" style="color:#1d4ed8;margin-right:6px"></i>Clearance Requests</span>
+        <a href="/super-admin/clearances">View All &rarr;</a>
       </div>
       <div class="mini-stats">
         <div class="mini-stat"><p>{{ stats.get('clearances',0) }}</p><span>Total</span></div>
-        <div class="mini-stat"><p style="color:#e65100">{{ stats.get('clearances_pending',0) }}</p><span>Pending</span></div>
-        <div class="mini-stat"><p style="color:#2e7d32">{{ stats.get('clearances_completed',0) }}</p><span>Completed</span></div>
+        <div class="mini-stat"><p style="color:#ea580c">{{ stats.get('clearances_pending',0) }}</p><span>Pending</span></div>
+        <div class="mini-stat"><p style="color:#16a34a">{{ stats.get('clearances_completed',0) }}</p><span>Completed</span></div>
       </div>
       <table>
         <thead><tr><th>Student</th><th>Course</th><th>Status</th></tr></thead>
@@ -209,25 +284,30 @@ tr:last-child td{border-bottom:none}
           {% for c in recent_clearances[:5] %}
           <tr>
             <td>{{ c.get('user_profiles',{}).get('full_name','—') }}</td>
-            <td>{{ c.get('courses',{}).get('name','—') }}</td>
-            <td><span class="badge badge-{{ 'approved' if c.get('status')=='completed' else 'pending' if c.get('status') in ('pending','in_progress') else 'rejected' }}">{{ c.get('status','—')|replace('_',' ')|title }}</span></td>
+            <td style="font-size:12px;color:#64748b">{{ c.get('courses',{}).get('name','—') }}</td>
+            <td>
+              {% set cs = c.get('status','pending') %}
+              <span class="b b-{{ 'approved' if cs=='completed' else 'pending' if cs in ('pending','in_progress') else 'rejected' }}">
+                {{ cs|replace('_',' ')|title }}
+              </span>
+            </td>
           </tr>
           {% else %}
-          <tr><td colspan="3" style="text-align:center;color:#aaa;padding:20px">No clearance requests.</td></tr>
+          <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px">No clearance requests.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <span><i class="fas fa-file-upload" style="color:#7b1fa2"></i> Admission Requests</span>
-        <a href="/super-admin/admissions">View All →</a>
+    <div class="p-card">
+      <div class="p-card-header">
+        <span><i class="fas fa-file-upload" style="color:#7c3aed;margin-right:6px"></i>Admission Requests</span>
+        <a href="/super-admin/admissions">View All &rarr;</a>
       </div>
       <div class="mini-stats">
         <div class="mini-stat"><p>{{ stats.get('admissions',0) }}</p><span>Total</span></div>
-        <div class="mini-stat"><p style="color:#e65100">{{ stats.get('admissions_pending',0) }}</p><span>Pending</span></div>
-        <div class="mini-stat"><p style="color:#2e7d32">{{ stats.get('admissions_approved',0) }}</p><span>Approved</span></div>
+        <div class="mini-stat"><p style="color:#ea580c">{{ stats.get('admissions_pending',0) }}</p><span>Pending</span></div>
+        <div class="mini-stat"><p style="color:#16a34a">{{ stats.get('admissions_approved',0) }}</p><span>Approved</span></div>
       </div>
       <table>
         <thead><tr><th>Student</th><th>Course</th><th>Status</th></tr></thead>
@@ -235,22 +315,22 @@ tr:last-child td{border-bottom:none}
           {% for a in recent_admissions[:5] %}
           <tr>
             <td>{{ a.get('user_profiles',{}).get('full_name','—') }}</td>
-            <td>{{ a.get('courses',{}).get('name','—') }}</td>
-            <td><span class="badge badge-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
+            <td style="font-size:12px;color:#64748b">{{ a.get('courses',{}).get('name','—') }}</td>
+            <td><span class="b b-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
           </tr>
           {% else %}
-          <tr><td colspan="3" style="text-align:center;color:#aaa;padding:20px">No admission requests.</td></tr>
+          <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px">No admission requests.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ── Department breakdown ── -->
-  <p class="section-title"><i class="fas fa-building"></i> Department Breakdown</p>
-  <div class="card" style="margin-bottom:24px">
+  <!-- ── Department Breakdown ─── -->
+  <p class="section-title"><i class="fas fa-sitemap"></i> Department Breakdown</p>
+  <div class="p-card" style="margin-bottom:24px">
     <table>
-      <thead><tr><th>Department</th><th>Classes</th><th>Trainers</th><th>Students</th><th>Student Load</th></tr></thead>
+      <thead><tr><th>Department</th><th>Classes</th><th>Trainers</th><th>Students</th><th style="min-width:140px">Student Load</th></tr></thead>
       <tbody>
         {% set max_students = dept_stats|map(attribute='student_count')|max if dept_stats else 1 %}
         {% for d in dept_stats %}
@@ -258,43 +338,54 @@ tr:last-child td{border-bottom:none}
           <td><strong>{{ d.name }}</strong></td>
           <td>{{ d.class_count }}</td>
           <td>{{ d.trainer_count }}</td>
-          <td>{{ d.student_count }}</td>
-          <td style="min-width:120px">
+          <td><span class="b b-primary" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">{{ d.student_count }}</span></td>
+          <td>
             <div class="dept-bar">
               <div class="dept-bar-fill" style="width:{{ ((d.student_count / (max_students or 1)) * 100)|round }}%"></div>
             </div>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;color:#aaa;padding:32px">No departments yet. <a href="/super-admin/departments">Add one</a>.</td></tr>
+        <tr>
+          <td colspan="5" style="text-align:center;color:#94a3b8;padding:32px">
+            <i class="fas fa-sitemap" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>
+            No departments yet. <a href="/super-admin/departments" style="color:#1d4ed8;font-weight:700">Add one &rarr;</a>
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <!-- ── Recent audit logs ── -->
+  <!-- ── Audit Logs ─── -->
   <p class="section-title"><i class="fas fa-history"></i> Recent Audit Logs</p>
-  <div class="card">
-    <div class="card-header">
-      <span>Last 10 Actions</span>
-      <a href="/super-admin/logs">Full Log →</a>
+  <div class="p-card">
+    <div class="p-card-header">
+      <span>Last 10 System Actions</span>
+      <a href="/super-admin/logs">Full Log &rarr;</a>
     </div>
     <table>
       <thead><tr><th>User</th><th>Role</th><th>Action</th><th>Target</th><th>Time</th></tr></thead>
       <tbody>
         {% for l in recent_logs[:10] %}
         <tr>
-          <td>{{ l.get('user_profiles',{}).get('full_name','System') if l.get('user_profiles') else 'System' }}</td>
-          <td>{{ l.get('actor_role','—') }}</td>
-          <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">{{ l.get('action','—') }}</code></td>
-          <td style="font-size:12px;color:#666">{{ l.get('target','—') or '—' }}</td>
-          <td style="font-size:12px;color:#aaa;white-space:nowrap">{{ l.get('created_at','')[:16].replace('T',' ') if l.get('created_at') else '—' }}</td>
+          <td><strong>{{ l.get('user_profiles',{}).get('full_name','System') if l.get('user_profiles') else 'System' }}</strong></td>
+          <td style="font-size:12px;color:#64748b">{{ l.get('actor_role','—') }}</td>
+          <td><code style="font-size:11px;background:#f1f5f9;color:#1e5a9f;padding:3px 8px;border-radius:6px;font-weight:600">{{ l.get('action','—') }}</code></td>
+          <td style="font-size:12px;color:#64748b">{{ l.get('target','—') or '—' }}</td>
+          <td style="font-size:11.5px;color:#94a3b8;white-space:nowrap">{{ l.get('created_at','')[:16].replace('T',' ') if l.get('created_at') else '—' }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">No logs yet.</td></tr>
+        <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px">No logs yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- ── Footer motto ─── -->
+  <div style="text-align:center;padding:24px 0 8px;color:#94a3b8;font-size:12px">
+    <i class="fas fa-shield-alt" style="color:#1e5a9f;margin-right:6px"></i>
+    <em>"Verified Learning. Mapped Progress. Empowered Futures."</em>
   </div>
 
 </div>

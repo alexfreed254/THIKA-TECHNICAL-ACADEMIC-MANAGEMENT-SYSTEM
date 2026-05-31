@@ -1694,7 +1694,7 @@ FROM clearance_departments cd WHERE cd.code = 'DEPT'
 ON CONFLICT (clearance_department_id, stage_order) DO NOTHING;
 
 INSERT INTO clearance_stages (clearance_department_id, stage_order, stage_name, approver_role)
-SELECT cd.id, 3, 'Lecturer Approval', 'trainer'
+SELECT cd.id, 3, 'Trainer Approval', 'trainer'
 FROM clearance_departments cd WHERE cd.code = 'DEPT'
 ON CONFLICT (clearance_department_id, stage_order) DO NOTHING;
 

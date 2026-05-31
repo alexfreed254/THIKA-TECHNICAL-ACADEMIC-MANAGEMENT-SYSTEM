@@ -128,6 +128,20 @@ def inject_globals():
             return ""
         return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
 
+    def get_file_icon_class(url):
+        if not url:
+            return ''
+        ext = str(url).split('.')[-1].lower()
+        if ext == 'pdf': return 'pdf'
+        if ext in {'mp4', 'mkv', 'avi', 'mov'}: return 'video'
+        if ext in {'jpg', 'jpeg', 'png', 'gif', 'webp'}: return 'image'
+        if ext in {'mp3', 'wav', 'ogg'}: return 'audio'
+        return ''
+
+    def get_filename_from_url(url):
+        if not url: return 'Unknown'
+        return str(url).split('/')[-1].split('?')[0]
+
     return {
         "LOGO_URL": "/static/assets/THIKATTILOGO.jpg",
         "current_user": user,
@@ -135,6 +149,8 @@ def inject_globals():
         "unread_notification_count": unread_count,
         "pending_employers_count": pending_employers,
         "get_alert_classes": get_alert_classes,
+        "get_file_icon_class": get_file_icon_class,
+        "get_filename_from_url": get_filename_from_url,
         "TAILWIND_CDN": "https://cdn.tailwindcss.com",
         "now": datetime.now,
         "storage_url": storage_url,

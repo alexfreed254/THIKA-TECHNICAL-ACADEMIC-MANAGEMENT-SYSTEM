@@ -45,9 +45,8 @@ def get_filename_from_url(url):
         return 'Unknown'
     return url.split('/').pop().split('?')[0]
 
-# Register template functions
-student_bp.jinja_env.globals.update(get_file_icon_class=get_file_icon_class)
-student_bp.jinja_env.globals.update(get_filename_from_url=get_filename_from_url)
+# Template helpers are passed via app context_processor in app.py
+# (Blueprint objects don't have jinja_env; registration happens on the app)
 
 
 def _validate_password(pwd: str) -> Optional[str]:

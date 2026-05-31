@@ -3,39 +3,52 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Super Admin{% endblock %} | TTTTI</title>
-  <link rel="stylesheet" href="/static/css/responsive.css">
+  <title>{% block title %}Super Admin{% endblock %} | TTTI Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/base.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  {% block extra_head %}{% endblock %}
   <style>
-    .sidebar { background: linear-gradient(180deg, #0d1b2a 0%, #1565c0 100%); color: #fff; }
-    .sidebar-header { padding: 18px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.1); }
-    .sidebar-header img { height: 56px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); margin-bottom: 8px; }
-    .sidebar-header h2 { font-size: 12px; font-weight: 700; opacity: .9; line-height: 1.4; }
-    .role-badge { display: inline-block; background: rgba(255,215,0,.25); border: 1px solid rgba(255,215,0,.4); border-radius: 20px; padding: 3px 12px; font-size: 11px; margin-top: 5px; color: #ffd700; }
-    .sidebar-menu { flex: 1; padding: 10px 0; overflow-y: auto; }
-    .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: rgba(255,255,255,.78); text-decoration: none; transition: all .2s; border-left: 3px solid transparent; font-size: 13px; }
-    .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,.1); color: #fff; border-left-color: #ffd700; }
-    .menu-section { padding: 12px 20px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,.35); font-weight: 700; }
-    .sidebar-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,.1); display: flex; gap: 8px; }
-    .sidebar-footer a { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; background: rgba(220,38,38,.25); color: #fff; text-decoration: none; border-radius: 6px; font-size: 12px; flex: 1; }
-    .sidebar-footer a:hover { background: rgba(220,38,38,.45); }
-    .notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.1); flex-shrink: 0; }
-    .notification-bell:hover { background: rgba(255,255,255,0.2); }
-    .notification-badge { position: absolute; top: -4px; right: -4px; background: #c62828; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 50%; min-width: 16px; text-align: center; }
+    /* ── Super Admin: deep navy-to-indigo ────────────────────── */
+    .sidebar {
+      background: linear-gradient(180deg, #0a0f1e 0%, #0f1f40 35%, #111827 100%);
+      border-right: 1px solid rgba(255,255,255,.04);
+    }
+    .sidebar-menu a:hover, .sidebar-menu a.active {
+      background: rgba(255,255,255,.09);
+      border-left-color: #fbbf24;
+      color: #fff;
+    }
+    .role-badge { background: rgba(251,191,36,.2); color: #fbbf24; border-color: rgba(251,191,36,.3); }
+    .topbar { border-bottom: 2px solid #fef3c7; }
+    .topbar-title { color: #111827; }
+
+    .flash-success, .flash-error, .flash-warning, .flash-info {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 22px; font-size: 13.5px; font-weight: 500;
+      border-left: 4px solid;
+    }
+    .flash-success { background:#f0fdf4;color:#15803d;border-left-color:#16a34a; }
+    .flash-error   { background:#fef2f2;color:#991b1b;border-left-color:#dc2626; }
+    .flash-warning { background:#fffbeb;color:#92400e;border-left-color:#d97706; }
+    .flash-info    { background:#f0f9ff;color:#0e7490;border-left-color:#0891b2; }
+
     {% block extra_style %}{% endblock %}
   </style>
 </head>
 <body>
 
+<div id="toast-container"></div>
 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="dashboard-container">
-  <div class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <img src="{{ LOGO_URL }}" alt="Logo">
+      <img src="{{ LOGO_URL }}" alt="TTTI Logo">
       <h2>THIKA TECHNICAL<br>TRAINING INSTITUTE</h2>
-      <div class="role-badge"><i class="fas fa-shield-alt"></i> Super Admin</div>
+      <div class="role-badge"><i class="fas fa-shield-alt"></i>&nbsp; Super Admin</div>
     </div>
 
     <div class="sidebar-menu">
@@ -58,9 +71,7 @@
       <a href="/super-admin/employers?status=pending" id="pendingEmployersLink">
         <i class="fas fa-building fa-fw"></i> Employer Accounts
         {% if pending_employers_count > 0 %}
-        <span style="margin-left:auto;background:#c62828;color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">
-          {{ pending_employers_count }}
-        </span>
+        <span style="margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;padding:1px 8px;font-size:10px;font-weight:700">{{ pending_employers_count }}</span>
         {% endif %}
       </a>
       <a href="/super-admin/job-postings"><i class="fas fa-briefcase fa-fw"></i> Job Postings</a>
@@ -72,15 +83,12 @@
       <a href="/super-admin/courses"><i class="fas fa-graduation-cap fa-fw"></i> Courses</a>
       <a href="/super-admin/classes"><i class="fas fa-door-open fa-fw"></i> Classes</a>
       <a href="/super-admin/units"><i class="fas fa-book fa-fw"></i> Units</a>
-      <a href="/super-admin/assign-units"><i class="fas fa-link fa-fw"></i> Assign Units</a>
 
-      <div class="menu-section">Attendance System</div>
-      <a href="/super-admin/attendance"><i class="fas fa-clipboard-list fa-fw"></i> Attendance Records</a>
-
-      <div class="menu-section">E-Portfolio System</div>
+      <div class="menu-section">Attendance &amp; Assessment</div>
+      <a href="/super-admin/attendance"><i class="fas fa-calendar-check fa-fw"></i> Attendance Records</a>
       <a href="/super-admin/assessments"><i class="fas fa-file-alt fa-fw"></i> All Assessments</a>
       <a href="/super-admin/assessments?status=pending"><i class="fas fa-clock fa-fw"></i> Pending Review</a>
-      <a href="/super-admin/marks"><i class="fas fa-chart-line fa-fw"></i> Marks &amp; Results</a>
+      <a href="/super-admin/marks"><i class="fas fa-chart-bar fa-fw"></i> Marks &amp; Results</a>
 
       <div class="menu-section">Clearance &amp; Admission</div>
       <a href="/super-admin/clearances"><i class="fas fa-clipboard-check fa-fw"></i> Clearance Requests</a>
@@ -100,37 +108,39 @@
     </div>
 
     <div class="sidebar-footer">
-      <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
     </div>
-  </div>
+  </aside>
 
   <div class="main-content">
-    <div class="topbar">
-      <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <a href="/notifications" class="notification-bell" title="Notifications" style="width:36px;height:36px;background:rgba(0,0,0,.05);">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <a href="/notifications" class="notification-bell" title="Notifications">
           <i class="fas fa-bell"></i>
           {% if unread_notification_count > 0 %}
           <span class="notification-badge">{{ unread_notification_count }}</span>
           {% endif %}
         </a>
-        <span class="topbar-user">
-          <i class="fas fa-user-shield"></i>
+        <div class="topbar-user">
+          <i class="fas fa-shield-alt"></i>
           {{ current_user.get('full_name', 'Super Admin') if current_user else 'Super Admin' }}
-        </span>
+        </div>
       </div>
-    </div>
+    </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}
-      <div class="flash-{{ 'success' if cat in ('success',) else 'error' if cat in ('error','danger') else 'info' }}">
-        <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat in ('error','danger') %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+      <div class="flash-{{ 'success' if cat == 'success' else 'error' if cat in ('error','danger') else 'warning' if cat == 'warning' else 'info' }}">
+        <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat in ('error','danger') %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
         {{ msg }}
       </div>
       {% endfor %}
     {% endwith %}
 
-    {% block content %}{% endblock %}
+    <main>{% block content %}{% endblock %}</main>
   </div>
 </div>
 
@@ -140,14 +150,24 @@
   const toggle  = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
-  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('open');    toggle.innerHTML='<i class="fas fa-times"></i>'; }
-  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); toggle.innerHTML='<i class="fas fa-bars"></i>';  }
+  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('open');    toggle.innerHTML = '<i class="fas fa-times"></i>'; }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); toggle.innerHTML = '<i class="fas fa-bars"></i>'; }
   toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
   overlay.addEventListener('click', closeSidebar);
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
     a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
-    if (a.getAttribute('href') === window.location.pathname) a.classList.add('active');
+    const href = a.getAttribute('href');
+    if (href && href !== '#' && window.location.pathname === href) a.classList.add('active');
   });
+
+  window.showToast = function(msg, type = 'info', duration = 4000) {
+    const icons = { success:'check-circle', error:'exclamation-circle', warning:'exclamation-triangle', info:'info-circle' };
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<i class="fas fa-${icons[type]||icons.info}"></i><span class="toast-msg">${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+    document.getElementById('toast-container').appendChild(t);
+    setTimeout(() => { t.classList.add('toast-out'); setTimeout(() => t.remove(), 300); }, duration);
+  };
 </script>
 </body>
 </html>
