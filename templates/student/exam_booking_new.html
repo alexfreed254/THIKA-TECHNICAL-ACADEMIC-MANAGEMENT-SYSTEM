@@ -1,425 +1,687 @@
 {% extends "student/base.html" %}
-
-{% block title %}Exam Booking Form{% endblock %}
-{% block page_title %}Exam Booking Form{% endblock %}
+{% block title %}Exam Registration Form 1A{% endblock %}
+{% block page_title %}Exam Booking — TTTI/EXAMS/CDACC/REG/1A{% endblock %}
 
 {% block extra_style %}
-<style>
-  .page-wrap { padding: 24px; max-width: 1000px; margin: 0 auto; }
-  .section-title { 
-    font-size: 16px; 
-    font-weight: 700; 
-    color: #1e293b; 
-    margin: 0 0 20px 0; 
-    padding-bottom: 10px; 
-    border-bottom: 2px solid #e2e8f0; 
-  }
-  .info-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-    gap: 16px; 
-    margin-bottom: 30px; 
-  }
-  .info-item { 
-    background: #f8fafc; 
-    padding: 14px 16px; 
-    border-radius: 8px; 
-    border: 1px solid #e2e8f0; 
-  }
-  .info-label { 
-    font-size: 11px; 
-    font-weight: 600; 
-    color: #64748b; 
-    margin-bottom: 4px; 
-    text-transform: uppercase; 
-    letter-spacing: 0.5px; 
-  }
-  .info-value { 
-    font-size: 14px; 
-    font-weight: 600; 
-    color: #1e293b; 
-  }
-  .doc-status-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-    gap: 16px; 
-    margin-bottom: 30px; 
-  }
-  .doc-status-card { 
-    background: #fff; 
-    padding: 16px; 
-    border-radius: 10px; 
-    border: 2px solid #e2e8f0; 
-    transition: all 0.2s; 
-  }
-  .doc-status-card.uploaded { border-color: #22c55e; background: #f0fdf4; }
-  .doc-status-card.missing { border-color: #ef4444; background: #fef2f2; }
-  .doc-status-label { 
-    font-size: 14px; 
-    font-weight: 600; 
-    color: #1e293b; 
-    margin-bottom: 8px; 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-  }
-  .doc-status-indicator { 
-    font-size: 12px; 
-    font-weight: 600; 
-    margin-bottom: 8px; 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-  }
-  .doc-status-indicator.uploaded { color: #22c55e; }
-  .doc-status-indicator.missing { color: #ef4444; }
-  .units-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
-    gap: 16px; 
-    margin-bottom: 30px; 
-  }
-  .unit-card { 
-    background: #fff; 
-    padding: 16px; 
-    border-radius: 10px; 
-    border: 2px solid #e2e8f0; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-  }
-  .unit-card:hover { 
-    border-color: #3b82f6; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-  }
-  .unit-card.selected { 
-    border-color: #3b82f6; 
-    background: #eff6ff; 
-  }
-  .unit-card input { 
-    display: none; 
-  }
-  .unit-label { 
-    font-size: 14px; 
-    font-weight: 600; 
-    color: #1e293b; 
-    margin-bottom: 4px; 
-  }
-  .unit-code { 
-    font-size: 12px; 
-    color: #64748b; 
-  }
-  .unit-type-select { 
-    margin-top: 10px; 
-  }
-  .unit-type-select label { 
-    font-size: 12px; 
-    color: #64748b; 
-    margin-right: 12px; 
-  }
-  .unit-type-select input { 
-    margin-right: 4px; 
-  }
-  .booking-status { 
-    background: #fff; 
-    padding: 20px; 
-    border-radius: 10px; 
-    border: 2px solid #e2e8f0; 
-    margin-bottom: 30px; 
-    text-align: center; 
-  }
-  .booking-status.ready { border-color: #22c55e; background: #f0fdf4; }
-  .booking-status.missing { border-color: #ef4444; background: #fef2f2; }
-  .booking-status.incomplete { border-color: #f59e0b; background: #fffbeb; }
-  .status-icon { 
-    font-size: 48px; 
-    margin-bottom: 12px; 
-  }
-  .status-title { 
-    font-size: 18px; 
-    font-weight: 700; 
-    margin-bottom: 8px; 
-  }
-  .status-message { 
-    font-size: 14px; 
-    color: #64748b; 
-  }
-  .btn-download { 
-    background: #22c55e; 
-    color: white; 
-    padding: 14px 32px; 
-    border: none; 
-    border-radius: 8px; 
-    font-size: 14px; 
-    font-weight: 700; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-    display: inline-flex; 
-    align-items: center; 
-    gap: 8px; 
-  }
-  .btn-download:hover { 
-    background: #16a34a; 
-    transform: translateY(-2px); 
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); 
-  }
-  .btn-download:disabled { 
-    background: #cbd5e1; 
-    cursor: not-allowed; 
-    transform: none; 
-    box-shadow: none; 
-  }
-  .btn-documents { 
-    background: #3b82f6; 
-    color: white; 
-    padding: 10px 20px; 
-    border: none; 
-    border-radius: 8px; 
-    font-size: 13px; 
-    font-weight: 600; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-    text-decoration: none; 
-    display: inline-flex; 
-    align-items: center; 
-    gap: 6px; 
-  }
-  .btn-documents:hover { 
-    background: #2563eb; 
-  }
-</style>
+/* ── Form page styles ─────────────────────────────────────── */
+.ebf-wrap { padding: 24px; max-width: 1000px; margin: 0 auto; }
+
+/* Progress stepper */
+.stepper {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 32px; background: #fff;
+  border-radius: 14px; padding: 20px 28px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+.step {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; flex: 1; position: relative;
+}
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute; top: 18px; left: 55%; right: -45%;
+  height: 2px; background: #e2e8f0; z-index: 0;
+}
+.step.done:not(:last-child)::after { background: #16a34a; }
+.step-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; z-index: 1;
+  background: #e2e8f0; color: #64748b;
+  border: 2px solid #e2e8f0;
+  transition: all .3s;
+}
+.step.active .step-num { background: #1e5a9f; color: #fff; border-color: #1e5a9f; }
+.step.done   .step-num { background: #16a34a; color: #fff; border-color: #16a34a; }
+.step-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-align: center; }
+.step.active .step-label { color: #1e5a9f; }
+.step.done   .step-label { color: #16a34a; }
+
+/* Form header (mimics physical form header) */
+.form-header {
+  background: #fff; border-radius: 14px; padding: 24px 28px;
+  border: 1px solid #e2e8f0; margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  display: flex; align-items: center; gap: 20px;
+}
+.form-header img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.form-header-text { flex: 1; text-align: center; }
+.form-header-text h1 { font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: .03em; }
+.form-header-text h2 { font-size: 13px; font-weight: 700; color: #334155; margin-top: 4px; text-transform: uppercase; }
+.form-header-text .ref { font-size: 11px; color: #94a3b8; margin-top: 6px; font-style: italic; }
+
+/* Section cards */
+.form-section {
+  background: #fff; border-radius: 14px;
+  border: 1px solid #e2e8f0; margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+.form-section-head {
+  background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  color: #fff; padding: 12px 22px;
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 8px;
+}
+.form-section-body { padding: 22px; }
+
+/* Field grid */
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.field-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+.field-grid.full  { grid-template-columns: 1fr; }
+@media(max-width:700px){ .field-grid, .field-grid.three { grid-template-columns: 1fr; } }
+
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-label {
+  font-size: 12px; font-weight: 700; color: #475569;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.form-label .req { color: #dc2626; margin-left: 2px; }
+
+.form-input {
+  padding: 10px 14px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; font-size: 13.5px;
+  font-family: 'Inter', sans-serif; color: #0f172a;
+  background: #fff; transition: border-color .18s, box-shadow .18s;
+  width: 100%;
+}
+.form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.form-input:read-only { background: #f8fafc; color: #64748b; cursor: default; }
+.form-input.prefilled { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
+
+.form-select {
+  padding: 10px 14px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; font-size: 13.5px;
+  font-family: 'Inter', sans-serif; color: #0f172a;
+  background: #fff; cursor: pointer; width: 100%;
+  transition: border-color .18s, box-shadow .18s;
+}
+.form-select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+
+.field-hint { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+/* Instructions box */
+.instructions-box {
+  background: #fffbeb; border: 1px solid #fde68a;
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;
+}
+.instructions-box h3 { font-size: 12.5px; font-weight: 700; color: #92400e; margin-bottom: 8px; text-transform: uppercase; }
+.instructions-box ul { margin: 0; padding-left: 18px; }
+.instructions-box li { font-size: 13px; color: #78350f; margin-bottom: 4px; line-height: 1.5; }
+
+/* Document verification */
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.doc-card {
+  border-radius: 12px; padding: 14px 16px;
+  border: 1.5px solid; display: flex;
+  align-items: center; gap: 10px;
+}
+.doc-card.ok     { border-color: #bbf7d0; background: #f0fdf4; }
+.doc-card.miss   { border-color: #fecaca; background: #fef2f2; }
+.doc-card.warn   { border-color: #fde68a; background: #fffbeb; }
+.doc-card .doc-icon { font-size: 20px; flex-shrink: 0; }
+.doc-card.ok   .doc-icon { color: #16a34a; }
+.doc-card.miss .doc-icon { color: #dc2626; }
+.doc-card.warn .doc-icon { color: #d97706; }
+.doc-card .doc-info .doc-name { font-size: 12.5px; font-weight: 700; color: #1e293b; }
+.doc-card .doc-info .doc-status { font-size: 11px; font-weight: 600; margin-top: 2px; }
+.doc-card.ok   .doc-status { color: #16a34a; }
+.doc-card.miss .doc-status { color: #dc2626; }
+.doc-card.warn .doc-status { color: #d97706; }
+
+/* Units table */
+.units-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.units-table th {
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: rgba(255,255,255,.9); padding: 11px 14px;
+  text-align: left; font-size: 11.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.units-table td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.units-table tbody tr:hover td { background: #f8fafc; }
+.units-table tbody tr:last-child td { border-bottom: none; }
+
+.unit-cb { width: 20px; height: 20px; accent-color: #1e5a9f; cursor: pointer; }
+.unit-name { font-weight: 600; color: #1e293b; }
+.unit-code-tag {
+  display: inline-flex; align-items: center;
+  background: #eff6ff; color: #1d4ed8;
+  border: 1px solid #bfdbfe; border-radius: 6px;
+  padding: 2px 8px; font-size: 11px; font-weight: 700;
+  margin-left: 6px;
+}
+.type-radio { display: flex; gap: 12px; }
+.type-radio label {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; cursor: pointer; color: #475569;
+}
+.type-radio input[type=radio] { accent-color: #1e5a9f; }
+.cost-input { width: 90px; padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; }
+
+/* Status banner */
+.status-banner {
+  border-radius: 14px; padding: 20px 24px;
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 20px; border: 2px solid;
+}
+.status-banner.ready   { background: #f0fdf4; border-color: #bbf7d0; }
+.status-banner.missing { background: #fef2f2; border-color: #fecaca; }
+.status-banner.warn    { background: #fffbeb; border-color: #fde68a; }
+.status-banner .sb-icon { font-size: 32px; flex-shrink: 0; }
+.status-banner.ready   .sb-icon { color: #16a34a; }
+.status-banner.missing .sb-icon { color: #dc2626; }
+.status-banner.warn    .sb-icon { color: #d97706; }
+.status-banner .sb-title { font-size: 15px; font-weight: 700; }
+.status-banner.ready   .sb-title { color: #15803d; }
+.status-banner.missing .sb-title { color: #991b1b; }
+.status-banner.warn    .sb-title { color: #92400e; }
+.status-banner .sb-msg { font-size: 13px; color: #475569; margin-top: 3px; }
+
+/* Submit buttons */
+.form-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-submit {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 14px 32px; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all .2s;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff; box-shadow: 0 6px 20px rgba(22,163,74,.3);
+}
+.btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(22,163,74,.4); }
+.btn-submit:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; transform: none; }
+.btn-preview {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 14px 24px; border: 2px solid #1e5a9f; border-radius: 12px;
+  font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all .2s; background: #fff; color: #1e5a9f;
+  text-decoration: none;
+}
+.btn-preview:hover { background: #eff6ff; color: #1e5a9f; }
+
+/* Missing docs warning */
+.missing-warning {
+  background: #fef2f2; border: 1.5px solid #fecaca;
+  border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 13px; font-weight: 600; color: #991b1b;
+}
 {% endblock %}
 
 {% block content %}
-<div class="page-wrap">
-  
-  <!-- STEP 1: STUDENT DETAILS (AUTO-FILLED) -->
-  <h2 class="section-title">STEP 1: STUDENT DETAILS (AUTO-FILLED)</h2>
-  <div class="info-grid">
-    <div class="info-item">
-      <div class="info-label">Full Name</div>
-      <div class="info-value">{{ student.full_name or '—' }}</div>
+<div class="ebf-wrap">
+
+  <!-- ── Progress stepper ─────────────────────────────────── -->
+  <div class="stepper">
+    <div class="step done">
+      <div class="step-num"><i class="fas fa-check"></i></div>
+      <div class="step-label">Profile<br>Verified</div>
     </div>
-    <div class="info-item">
-      <div class="info-label">Admission Number</div>
-      <div class="info-value">{{ student.admission_no or '—' }}</div>
+    <div class="step {{ 'done' if not missing_documents else 'active' }}">
+      <div class="step-num">{% if not missing_documents %}<i class="fas fa-check"></i>{% else %}2{% endif %}</div>
+      <div class="step-label">Documents<br>Check</div>
     </div>
-    <div class="info-item">
-      <div class="info-label">Course</div>
-      <div class="info-value">{{ course_name or '—' }}</div>
+    <div class="step active">
+      <div class="step-num">3</div>
+      <div class="step-label">Fill &amp;<br>Select Units</div>
     </div>
-    <div class="info-item">
-      <div class="info-label">Department</div>
-      <div class="info-value">{{ department_name or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Module / Level</div>
-      <div class="info-value">{{ student.level or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Phone Number</div>
-      <div class="info-value">{{ student.mobile_number or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Email</div>
-      <div class="info-value">{{ student.email or '—' }}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">PWD Status</div>
-      <div class="info-value">{{ student.pwd_status or 'N/A' }}</div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-label">Download<br>Form</div>
     </div>
   </div>
 
-  <!-- STEP 2: DOCUMENT VERIFICATION (AUTO CHECK FROM "MY DOCUMENTS") -->
-  <h2 class="section-title">STEP 2: DOCUMENT VERIFICATION (AUTO CHECK FROM "MY DOCUMENTS")</h2>
-  
-  <div class="doc-status-grid">
-    <div class="doc-status-card {{ 'uploaded' if documents.get('national_id') else 'missing' }}">
-      <div class="doc-status-label">
-        <i class="fas fa-id-card"></i> National ID
-      </div>
-      <div class="doc-status-indicator {{ 'uploaded' if documents.get('national_id') else 'missing' }}">
-        {% if documents.get('national_id') %}
-          <i class="fas fa-check-circle"></i> Uploaded
-        {% else %}
-          <i class="fas fa-times-circle"></i> Missing
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="doc-status-card {{ 'uploaded' if documents.get('birth_certificate') else 'missing' }}">
-      <div class="doc-status-label">
-        <i class="fas fa-baby"></i> Birth Certificate
-      </div>
-      <div class="doc-status-indicator {{ 'uploaded' if documents.get('birth_certificate') else 'missing' }}">
-        {% if documents.get('birth_certificate') %}
-          <i class="fas fa-check-circle"></i> Uploaded
-        {% else %}
-          <i class="fas fa-times-circle"></i> Missing
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="doc-status-card {{ 'uploaded' if documents.get('kcse_certificate') else 'missing' }}">
-      <div class="doc-status-label">
-        <i class="fas fa-certificate"></i> KCSE Certificate
-      </div>
-      <div class="doc-status-indicator {{ 'uploaded' if documents.get('kcse_certificate') else 'missing' }}">
-        {% if documents.get('kcse_certificate') %}
-          <i class="fas fa-check-circle"></i> Uploaded
-        {% else %}
-          <i class="fas fa-times-circle"></i> Missing
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="doc-status-card {{ 'uploaded' if documents.get('passport_photo') else 'missing' }}">
-      <div class="doc-status-label">
-        <i class="fas fa-camera"></i> Passport Photo
-      </div>
-      <div class="doc-status-indicator {{ 'uploaded' if documents.get('passport_photo') else 'missing' }}">
-        {% if documents.get('passport_photo') %}
-          <i class="fas fa-check-circle"></i> Uploaded
-        {% else %}
-          <i class="fas fa-times-circle"></i> Missing
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="doc-status-card {{ 'uploaded' if documents.get('fee_statement') else 'missing' }}">
-      <div class="doc-status-label">
-        <i class="fas fa-file-invoice-dollar"></i> Fee Statement
-      </div>
-      <div class="doc-status-indicator {{ 'uploaded' if documents.get('fee_statement') else 'missing' }}">
-        {% if documents.get('fee_statement') %}
-          <i class="fas fa-check-circle"></i> Uploaded
-        {% else %}
-          <i class="fas fa-times-circle"></i> Missing
-        {% endif %}
-      </div>
+  <!-- ── Form header (mimics physical form) ───────────────── -->
+  <div class="form-header">
+    <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+    <div class="form-header-text">
+      <h1>Thika Technical Training Institute</h1>
+      <h2>Regular Candidate Assessment Registration Form 1A</h2>
+      <div class="ref">Reference: TTTI/EXAMS/CDACC/REG/1A</div>
     </div>
   </div>
 
-  {% if missing_documents %}
-  <div style="text-align: center; margin-bottom: 30px; padding: 16px; background: #fef2f2; border-radius: 8px; border: 2px solid #ef4444;">
-    <p style="color: #dc2626; font-weight: 600; margin-bottom: 8px;">
-      <i class="fas fa-exclamation-triangle"></i> Missing Documents Warning
-    </p>
-    <p style="color: #64748b; margin-bottom: 12px;">You cannot download the exam booking form until all required documents are uploaded.</p>
-    <a href="/student/documents" class="btn-documents">
-      <i class="fas fa-folder-open"></i> View My Documents
-    </a>
+  <!-- ── Instructions ─────────────────────────────────────── -->
+  <div class="instructions-box">
+    <h3><i class="fas fa-info-circle" style="margin-right:6px"></i>Instructions</h3>
+    <ul>
+      <li>Ensure you are registered on the student portal and your profile is complete before filling this form.</li>
+      <li>All fields marked <strong style="color:#dc2626">*</strong> are required.</li>
+      <li>Select all units of competency you are registering for and specify the unit type.</li>
+      <li>Submit the form to your HOD for departmental clearance before the deadline.</li>
+    </ul>
   </div>
-  {% endif %}
 
-  <!-- STEP 3: UNIT REGISTRATION + VALIDATION -->
-  <h2 class="section-title">STEP 3: UNIT REGISTRATION + VALIDATION</h2>
-  
-  <form id="exam-booking-form" method="POST" action="/student/exam-booking-submit">
-    <div class="units-grid">
-      {% for unit in units %}
-      <div class="unit-card" onclick="this.querySelector('input').click()">
-        <input type="checkbox" name="selected_units" value="{{ unit.units.id }}" id="unit-{{ unit.units.id }}" onchange="updateSelection()">
-        <div class="unit-label">{{ unit.units.name }}</div>
-        <div class="unit-code">{{ unit.units.code }}</div>
-        <div class="unit-type-select">
-          <label><input type="radio" name="unit_type_{{ unit.units.id }}" value="core"> Core</label>
-          <label><input type="radio" name="unit_type_{{ unit.units.id }}" value="common"> Common</label>
-          <label><input type="radio" name="unit_type_{{ unit.units.id }}" value="basic"> Basic</label>
+  <form id="ebf" method="POST" action="/student/exam-booking-submit">
+
+    <!-- ── Section 1: Candidate Details ─────────────────────── -->
+    <div class="form-section">
+      <div class="form-section-head">
+        <i class="fas fa-user"></i> Section 1: Candidate Details
+      </div>
+      <div class="form-section-body">
+        <div class="field-grid" style="margin-bottom:16px">
+
+          <div class="form-field">
+            <label class="form-label">Full Name (as per ID)<span class="req">*</span></label>
+            <input class="form-input prefilled" type="text" name="full_name"
+                   value="{{ student.get('full_name','') }}" readonly>
+            <div class="field-hint">Auto-filled from your profile</div>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Admission Number<span class="req">*</span></label>
+            <input class="form-input prefilled" type="text" name="admission_no"
+                   value="{{ student.get('admission_no','') }}" readonly>
+            <div class="field-hint">Auto-filled from your profile</div>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Gender<span class="req">*</span></label>
+            <select class="form-select" name="gender" required>
+              <option value="">-- Select Gender --</option>
+              <option value="Male"   {% if student.get('gender') == 'Male'   %}selected{% endif %}>Male</option>
+              <option value="Female" {% if student.get('gender') == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Other"  {% if student.get('gender') == 'Other'  %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Date of Birth<span class="req">*</span></label>
+            <input class="form-input" type="date" name="date_of_birth"
+                   value="{{ student.get('date_of_birth','') }}" required>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Mobile Number<span class="req">*</span></label>
+            <input class="form-input" type="tel" name="mobile_number"
+                   value="{{ student.get('mobile_number','') }}"
+                   placeholder="e.g. 0712345678" required>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Email Address<span class="req">*</span></label>
+            <input class="form-input prefilled" type="email" name="email"
+                   value="{{ student.get('email','') }}" readonly>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">National ID / Birth Cert No.<span class="req">*</span></label>
+            <input class="form-input" type="text" name="national_id_no"
+                   value="{{ student.get('national_id_no','') }}"
+                   placeholder="Enter your ID or Birth Cert number" required>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">PWD Status</label>
+            <select class="form-select" name="pwd_status">
+              <option value="N/A" {% if not student.get('pwd_status') or student.get('pwd_status') == 'N/A' %}selected{% endif %}>N/A — Not Applicable</option>
+              <option value="Visual Impairment"      {% if student.get('pwd_status') == 'Visual Impairment' %}selected{% endif %}>Visual Impairment</option>
+              <option value="Hearing Impairment"     {% if student.get('pwd_status') == 'Hearing Impairment' %}selected{% endif %}>Hearing Impairment</option>
+              <option value="Physical Disability"    {% if student.get('pwd_status') == 'Physical Disability' %}selected{% endif %}>Physical Disability</option>
+              <option value="Learning Difficulty"    {% if student.get('pwd_status') == 'Learning Difficulty' %}selected{% endif %}>Learning Difficulty</option>
+              <option value="Other"                  {% if student.get('pwd_status') == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Course details row -->
+        <div class="field-grid three">
+          <div class="form-field">
+            <label class="form-label">Course Name<span class="req">*</span></label>
+            <input class="form-input prefilled" type="text" name="course_name"
+                   value="{{ course_name }}" readonly>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Department</label>
+            <input class="form-input prefilled" type="text" name="department_name"
+                   value="{{ department_name }}" readonly>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Module / Level / TEP<span class="req">*</span></label>
+            <input class="form-input" type="text" name="module_level"
+                   value="{{ student.get('level','') }}"
+                   placeholder="e.g. Module I, Level 3" required>
+          </div>
         </div>
       </div>
-      {% endfor %}
     </div>
 
-    <!-- BOOKING STATUS INDICATOR -->
-    <div class="booking-status {{ 'ready' if can_download else 'missing' if missing_documents else 'incomplete' }}">
-      {% if can_download %}
-        <div class="status-icon" style="color: #22c55e;">
+    <!-- ── Section 2: Examination Period ────────────────────── -->
+    <div class="form-section">
+      <div class="form-section-head">
+        <i class="fas fa-calendar-alt"></i> Section 2: Examination Period
+      </div>
+      <div class="form-section-body">
+        <div class="field-grid three">
+
+          <div class="form-field">
+            <label class="form-label">Exam Year<span class="req">*</span></label>
+            <select class="form-select" name="exam_year" required>
+              {% set cur_year = now().year %}
+              <option value="{{ cur_year }}" selected>{{ cur_year }}</option>
+              <option value="{{ cur_year + 1 }}">{{ cur_year + 1 }}</option>
+              <option value="{{ cur_year - 1 }}">{{ cur_year - 1 }}</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Exam Series<span class="req">*</span></label>
+            <select class="form-select" name="exam_series" required>
+              <option value="">-- Select Series --</option>
+              <option value="1">Series 1 (Jan – April)</option>
+              <option value="2">Series 2 (May – Aug)</option>
+              <option value="3">Series 3 (Sep – Dec)</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Term<span class="req">*</span></label>
+            <select class="form-select" name="term" required>
+              <option value="">-- Select Term --</option>
+              <option value="1">Term 1</option>
+              <option value="2">Term 2</option>
+              <option value="3">Term 3</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Section 3: Required Attachments ──────────────────── -->
+    <div class="form-section">
+      <div class="form-section-head">
+        <i class="fas fa-paperclip"></i> Section 3: Required Attachments Verification
+      </div>
+      <div class="form-section-body">
+        <div class="docs-grid">
+
+          <div class="doc-card {{ 'ok' if documents.get('national_id') else 'miss' }}">
+            <div class="doc-icon"><i class="fas fa-id-card"></i></div>
+            <div class="doc-info">
+              <div class="doc-name">National ID / Passport</div>
+              <div class="doc-status">
+                {% if documents.get('national_id') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-times-circle"></i> Missing{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-card {{ 'ok' if documents.get('birth_certificate') else 'miss' }}">
+            <div class="doc-icon"><i class="fas fa-certificate"></i></div>
+            <div class="doc-info">
+              <div class="doc-name">Birth Certificate</div>
+              <div class="doc-status">
+                {% if documents.get('birth_certificate') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-times-circle"></i> Missing{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-card {{ 'ok' if documents.get('kcse_certificate') else 'warn' }}">
+            <div class="doc-icon"><i class="fas fa-scroll"></i></div>
+            <div class="doc-info">
+              <div class="doc-name">KCSE Certificate</div>
+              <div class="doc-status">
+                {% if documents.get('kcse_certificate') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-exclamation-triangle"></i> Missing{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-card {{ 'ok' if documents.get('passport_photo') else 'miss' }}">
+            <div class="doc-icon"><i class="fas fa-camera"></i></div>
+            <div class="doc-info">
+              <div class="doc-name">Passport Photo</div>
+              <div class="doc-status">
+                {% if documents.get('passport_photo') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-times-circle"></i> Missing{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-card {{ 'ok' if documents.get('fee_statement') else 'warn' }}">
+            <div class="doc-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="doc-info">
+              <div class="doc-name">Fee Statement</div>
+              <div class="doc-status">
+                {% if documents.get('fee_statement') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-exclamation-triangle"></i> Missing{% endif %}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {% if missing_documents %}
+        <div class="missing-warning" style="margin-top:16px">
+          <i class="fas fa-exclamation-triangle fa-lg"></i>
+          <div>
+            Some required documents are missing.
+            <a href="/student/documents" style="color:#dc2626;font-weight:700;text-decoration:underline;margin-left:6px">
+              Upload Missing Documents &rarr;
+            </a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Section 4: Units of Competency ───────────────────── -->
+    <div class="form-section">
+      <div class="form-section-head">
+        <i class="fas fa-list-check"></i> Section 4: Units of Competency Registration
+        <span style="margin-left:auto;font-size:11px;opacity:.75;font-weight:500">Select all units you are registering for</span>
+      </div>
+      <div class="form-section-body" style="padding:0">
+        {% if units %}
+        <div style="overflow-x:auto">
+          <table class="units-table">
+            <thead>
+              <tr>
+                <th style="width:44px;text-align:center">Select</th>
+                <th style="width:40px;text-align:center">S/N</th>
+                <th>Unit of Competency</th>
+                <th style="width:260px">Unit Type</th>
+                <th style="width:110px">Unit Cost (Ksh)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in units %}
+              {% set unit = u.units %}
+              <tr class="unit-row" id="row-{{ unit.id }}">
+                <td style="text-align:center">
+                  <input class="unit-cb" type="checkbox"
+                         name="selected_units" value="{{ unit.id }}"
+                         id="cb-{{ unit.id }}"
+                         onchange="toggleRow('{{ unit.id }}', this.checked)">
+                </td>
+                <td style="text-align:center;color:#94a3b8;font-weight:700">{{ loop.index }}</td>
+                <td>
+                  <div class="unit-name">{{ unit.name }}</div>
+                  <span class="unit-code-tag">{{ unit.code }}</span>
+                </td>
+                <td>
+                  <div class="type-radio">
+                    <label>
+                      <input type="radio" name="unit_type_{{ unit.id }}" value="Core" checked>
+                      Core
+                    </label>
+                    <label>
+                      <input type="radio" name="unit_type_{{ unit.id }}" value="Common">
+                      Common
+                    </label>
+                    <label>
+                      <input type="radio" name="unit_type_{{ unit.id }}" value="Basic">
+                      Basic
+                    </label>
+                  </div>
+                </td>
+                <td>
+                  <input class="cost-input form-input" type="number"
+                         name="unit_cost_{{ unit.id }}"
+                         placeholder="0.00" min="0" step="0.01"
+                         value="{{ unit.get('unit_cost', '') if unit.get('unit_cost') else '' }}">
+                </td>
+              </tr>
+              {% endfor %}
+
+              <!-- Total row -->
+              <tr style="background:#f8fafc">
+                <td colspan="4" style="text-align:right;padding:12px 14px;font-weight:700;color:#1e293b;font-size:13.5px">
+                  Total Cost (Ksh):
+                </td>
+                <td style="padding:12px 14px">
+                  <input class="cost-input form-input" type="text" id="total-cost"
+                         readonly placeholder="—"
+                         style="font-weight:700;background:#f0f9ff;border-color:#bae6fd">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="no-units-msg" style="display:none;text-align:center;padding:20px;color:#dc2626;font-weight:600;font-size:13.5px">
+          <i class="fas fa-exclamation-triangle" style="margin-right:6px"></i>
+          Please select at least one unit of competency.
+        </div>
+
+        {% else %}
+        <div style="text-align:center;padding:32px;color:#94a3b8">
+          <i class="fas fa-book" style="font-size:40px;display:block;margin-bottom:12px;opacity:.35"></i>
+          <div style="font-size:15px;font-weight:700;color:#64748b;margin-bottom:6px">No Units Available</div>
+          <div style="font-size:13px">You are not enrolled in any class with assigned units. Contact your department administrator.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Status banner ─────────────────────────────────────── -->
+    <div class="status-banner {{ 'ready' if can_download else 'missing' if missing_documents else 'warn' }}" id="status-banner">
+      <div class="sb-icon">
+        {% if can_download %}
           <i class="fas fa-check-circle"></i>
-        </div>
-        <div class="status-title" style="color: #16a34a;">Ready to Download</div>
-        <div class="status-message">All documents verified and units selected. You can now download your exam booking form.</div>
-      {% elif missing_documents %}
-        <div class="status-icon" style="color: #ef4444;">
+        {% elif missing_documents %}
           <i class="fas fa-times-circle"></i>
-        </div>
-        <div class="status-title" style="color: #dc2626;">Missing Documents</div>
-        <div class="status-message">Please upload all required documents in My Documents before downloading the form.</div>
-      {% else %}
-        <div class="status-icon" style="color: #f59e0b;">
+        {% else %}
           <i class="fas fa-exclamation-circle"></i>
+        {% endif %}
+      </div>
+      <div>
+        <div class="sb-title" id="status-title">
+          {% if can_download %}Ready to Submit
+          {% elif missing_documents %}Missing Required Documents
+          {% else %}Select Units to Continue{% endif %}
         </div>
-        <div class="status-title" style="color: #d97706;">Incomplete Unit Selection</div>
-        <div class="status-message">Please select at least one unit to continue.</div>
-      {% endif %}
+        <div class="sb-msg" id="status-msg">
+          {% if can_download %}Complete the form and click Submit to generate your exam booking form PDF.
+          {% elif missing_documents %}Upload missing documents from My Documents before submitting.
+          {% else %}Select at least one unit of competency from the table above.{% endif %}
+        </div>
+      </div>
     </div>
 
-    <!-- DOWNLOAD BUTTON -->
-    <div style="text-align: center;">
-      <button type="submit" class="btn-download" id="download-btn" {% if not can_download %}disabled{% endif %}>
-        <i class="fas fa-download"></i> DOWNLOAD EXAM BOOKING FORM PDF
+    <!-- ── Action buttons ────────────────────────────────────── -->
+    <div class="form-actions">
+      <a href="/student/documents" class="btn-preview">
+        <i class="fas fa-folder-open"></i> My Documents
+      </a>
+      <button type="submit" class="btn-submit" id="submit-btn"
+              {% if not units %}disabled{% endif %}>
+        <i class="fas fa-paper-plane"></i> Submit &amp; Download Form PDF
       </button>
-      {% if not can_download %}
-      <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
-        {% if missing_documents %}Missing documents{% else %}Select units to enable download{% endif %}
-      </p>
-      {% endif %}
     </div>
-  </form>
 
+    <p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:14px">
+      <i class="fas fa-info-circle" style="margin-right:4px"></i>
+      After submitting, your booking will be sent to your HOD for departmental clearance.
+      You will be able to download the completed PDF once approved.
+    </p>
+
+  </form>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-function updateSelection() {
-  const checkboxes = document.querySelectorAll('input[name="selected_units"]:checked');
-  const downloadBtn = document.getElementById('download-btn');
-  const statusDiv = document.querySelector('.booking-status');
-  
-  if (checkboxes.length > 0 && !{{ 'true' if missing_documents else 'false' }}) {
-    downloadBtn.disabled = false;
-    statusDiv.className = 'booking-status ready';
-    statusDiv.innerHTML = `
-      <div class="status-icon" style="color: #22c55e;">
-        <i class="fas fa-check-circle"></i>
-      </div>
-      <div class="status-title" style="color: #16a34a;">Ready to Download</div>
-      <div class="status-message">All documents verified and ${checkboxes.length} unit(s) selected. You can now download your exam booking form.</div>
-    `;
-  } else {
-    downloadBtn.disabled = true;
-    if ({{ 'true' if missing_documents else 'false' }}) {
-      statusDiv.className = 'booking-status missing';
-      statusDiv.innerHTML = `
-        <div class="status-icon" style="color: #ef4444;">
-          <i class="fas fa-times-circle"></i>
-        </div>
-        <div class="status-title" style="color: #dc2626;">Missing Documents</div>
-        <div class="status-message">Please upload all required documents in My Documents before downloading the form.</div>
-      `;
+  /* ── Row highlight on checkbox ───────────────────────────── */
+  function toggleRow(unitId, checked) {
+    const row = document.getElementById('row-' + unitId);
+    row.style.background = checked ? '#eff6ff' : '';
+    updateTotal();
+    updateStatus();
+  }
+
+  /* ── Total cost calculation ──────────────────────────────── */
+  function updateTotal() {
+    let total = 0;
+    document.querySelectorAll('input[name="selected_units"]:checked').forEach(cb => {
+      const costInput = document.querySelector(`input[name="unit_cost_${cb.value}"]`);
+      if (costInput && costInput.value) total += parseFloat(costInput.value) || 0;
+    });
+    const totalEl = document.getElementById('total-cost');
+    if (totalEl) totalEl.value = total > 0 ? total.toFixed(2) : '';
+  }
+
+  /* Recalculate when cost inputs change */
+  document.querySelectorAll('[class*="cost-input"]').forEach(inp => {
+    inp.addEventListener('input', updateTotal);
+  });
+
+  /* ── Status banner update ────────────────────────────────── */
+  const missingDocs = {{ 'true' if missing_documents else 'false' }};
+
+  function updateStatus() {
+    const selected = document.querySelectorAll('input[name="selected_units"]:checked').length;
+    const banner   = document.getElementById('status-banner');
+    const title    = document.getElementById('status-title');
+    const msg      = document.getElementById('status-msg');
+    const btn      = document.getElementById('submit-btn');
+    const noUnits  = document.getElementById('no-units-msg');
+
+    if (missingDocs) {
+      banner.className = 'status-banner missing';
+      title.textContent = 'Missing Required Documents';
+      msg.textContent   = 'Upload missing documents from My Documents before submitting.';
+      btn.disabled = true;
+    } else if (selected === 0) {
+      banner.className = 'status-banner warn';
+      title.textContent = 'Select Units to Continue';
+      msg.textContent   = 'Select at least one unit of competency from the table above.';
+      btn.disabled = true;
+      if (noUnits) noUnits.style.display = 'none';
     } else {
-      statusDiv.className = 'booking-status incomplete';
-      statusDiv.innerHTML = `
-        <div class="status-icon" style="color: #f59e0b;">
-          <i class="fas fa-exclamation-circle"></i>
-        </div>
-        <div class="status-title" style="color: #d97706;">Incomplete Unit Selection</div>
-        <div class="status-message">Please select at least one unit to continue.</div>
-      `;
+      banner.className = 'status-banner ready';
+      title.textContent = `Ready — ${selected} unit(s) selected`;
+      msg.textContent   = 'Complete the form fields and click Submit to generate your exam booking form PDF.';
+      btn.disabled = false;
     }
   }
-}
 
-// Update card visual selection
-document.querySelectorAll('.unit-card').forEach(card => {
-  const checkbox = card.querySelector('input[type="checkbox"]');
-  checkbox.addEventListener('change', function() {
-    if (this.checked) {
-      card.classList.add('selected');
-    } else {
-      card.classList.remove('selected');
+  /* ── Form validation before submit ──────────────────────── */
+  document.getElementById('ebf').addEventListener('submit', function(e) {
+    const selected = document.querySelectorAll('input[name="selected_units"]:checked').length;
+    if (selected === 0) {
+      e.preventDefault();
+      document.getElementById('no-units-msg').style.display = 'block';
+      document.querySelector('.units-table').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
+    const btn = document.getElementById('submit-btn');
+    btn.innerHTML = '<span style="display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px"></span> Submitting…';
+    btn.disabled = true;
   });
-});
+
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { to { transform:rotate(360deg); } }';
+  document.head.appendChild(style);
+
+  updateStatus();
 </script>
 {% endblock %}

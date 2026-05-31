@@ -1307,11 +1307,25 @@ def exam_booking_submit():
 
     # Get selected units
     selected_units = request.form.getlist("selected_units")
-    
+
     if not selected_units:
-        flash('Please select at least one unit.', 'danger')
+        flash('Please select at least one unit of competency.', 'danger')
         return redirect(url_for("student.exam_booking_form"))
-    
+
+    # Collect extra fields from the new web form
+    form_data = {
+        "full_name":     request.form.get("full_name", "").strip(),
+        "gender":        request.form.get("gender", "").strip(),
+        "date_of_birth": request.form.get("date_of_birth", "").strip(),
+        "mobile_number": request.form.get("mobile_number", "").strip(),
+        "national_id_no":request.form.get("national_id_no", "").strip(),
+        "module_level":  request.form.get("module_level", "").strip(),
+        "pwd_status":    request.form.get("pwd_status", "N/A").strip(),
+        "exam_year":     request.form.get("exam_year", str(datetime.now().year)),
+        "exam_series":   request.form.get("exam_series", "1"),
+        "term":          request.form.get("term", "1"),
+    }
+
     # Get student data
     student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
     
@@ -1362,23 +1376,27 @@ def exam_booking_submit():
             course = db.table("courses").select("code").eq("id", course_id).single().execute().data or {}
             course_code = course.get("code", "GEN")
     
-    # Generate serial components
-    year = datetime.now().year
-    series = "1"  # Can be 1, 2, or 3 for different exam series in a year
-    unique_serial = str(uuid.uuid4().int)[:8]
-    
-    serial_number = f"EXAM/{dept_code}/{course_code}/{year}/{series}/{unique_serial}"
-    
-    # Create exam booking record with serial number
+    # Generate serial components from form data
+    year        = form_data.get("exam_year", str(datetime.now().year))
+    series      = form_data.get("exam_series", "1")
+    term        = form_data.get("term", "1")
+    unique_serial = str(uuid.uuid4().int)[:6].zfill(6)
+
+    serial_number = f"TTTI/{year}/EXAM/{unique_serial}"
+
+    # Create exam booking records for each selected unit
     for unit_data in units_data:
+        unit_cost_raw = request.form.get(f"unit_cost_{unit_data['unit']['id']}", "")
+        unit_cost = float(unit_cost_raw) if unit_cost_raw else None
         db.table("exam_bookings").insert({
-            "student_id": student_id,
-            "unit_id": unit_data["unit"]["id"],
-            "exam_date": datetime.now().date(),
-            "exam_session": "morning",
-            "purpose": f"Exam booking for {unit_data['unit']['name']} ({unit_data['type']})",
-            "status": "pending",
-            "serial_number": serial_number
+            "student_id":   student_id,
+            "unit_id":      unit_data["unit"]["id"],
+            "exam_date":    datetime.now().date(),
+            "exam_session": f"Series {series} — Term {term}",
+            "purpose":      f"{unit_data['type']} — {form_data.get('module_level','')}",
+            "status":       "pending",
+            "serial_number": serial_number,
+            "special_requirements": form_data.get("pwd_status", "N/A"),
         }).execute()
     
     write_audit_log("create_exam_booking", target=f"booking:{serial_number}", detail={"units": len(units_data)})
