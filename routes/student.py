@@ -1311,7 +1311,15 @@ def exam_booking_form():
     
     # Check if can download (all docs present + at least one unit selected)
     can_download = not missing_documents and len(units) > 0
-    
+
+    # Fetch existing exam bookings so they appear on the same page
+    existing_bookings = (db.table("exam_bookings")
+                         .select("*, units(name, code), user_profiles!exam_bookings_approved_by_fkey(full_name)")
+                         .eq("student_id", student_id)
+                         .order("created_at", desc=True)
+                         .limit(20)
+                         .execute().data or [])
+
     return render_template("student/exam_booking_new.html",
                           student=student,
                           course_name=course_name,
@@ -1319,7 +1327,8 @@ def exam_booking_form():
                           units=units,
                           documents=documents,
                           missing_documents=missing_documents,
-                          can_download=can_download)
+                          can_download=can_download,
+                          existing_bookings=existing_bookings)
 
 
 @student_bp.route("/exam-booking-submit", methods=["POST"])
