@@ -199,8 +199,8 @@ def dashboard():
                   .execute().data or [])
                   
         for att in recent_attendance:
-            student = att.get("user_profiles") or {}
-            enrolls = student.get("enrollments") or []
+            att_user = att.get("user_profiles") or {}
+            enrolls = att_user.get("enrollments") or []
             first_enroll = enrolls[0] if enrolls else {}
             cls = first_enroll.get("classes") or {}
             att["classes"] = cls

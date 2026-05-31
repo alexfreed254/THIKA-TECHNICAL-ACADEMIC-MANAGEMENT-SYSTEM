@@ -169,9 +169,9 @@
   <!-- ── Welcome Banner ─────────────────────────────────────── -->
   <div class="welcome-banner">
     <div>
-      <div class="welcome-name">Welcome back, {{ student.full_name.split()[0] }}! 👋</div>
+      <div class="welcome-name">Welcome back, {{ (student.get('full_name', '') or '').split()[0] or 'Student' }}! 👋</div>
       <div class="welcome-sub">
-        <i class="fas fa-id-badge" style="margin-right:5px"></i>{{ student.admission_no }}
+        <i class="fas fa-id-badge" style="margin-right:5px"></i>{{ student.get('admission_no', '') }}
         &nbsp;&bull;&nbsp;
         <i class="fas fa-calendar-alt" style="margin-right:5px"></i>{{ current_month }}
       </div>
