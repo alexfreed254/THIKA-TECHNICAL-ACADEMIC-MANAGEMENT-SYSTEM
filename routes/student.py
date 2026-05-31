@@ -2320,19 +2320,58 @@ def logbook():
                     .execute().data or [])
         active_attachment = any_rows[0] if any_rows else None
 
-    # Get logbook entries — all entries for this student
+    # Get logbook entries — grouped by ISO week for weekly approval display
+    from collections import defaultdict
+    from datetime import timedelta
+
     logbooks = []
+    weeks_grouped = {}  # week_start_str → { label, entries, week_status }
+
     if active_attachment:
         logbooks = (db.table("digital_logbook")
                    .select("*")
                    .eq("student_id", student_id)
                    .eq("attachment_id", active_attachment["id"])
                    .order("log_date", desc=True)
+                   .order("entry_time", desc=False)
                    .execute().data or [])
+
+        # Group by week (Monday–Sunday)
+        week_buckets = defaultdict(list)
+        for entry in logbooks:
+            try:
+                d = datetime.strptime(entry["log_date"], "%Y-%m-%d")
+            except Exception:
+                d = datetime.now()
+            monday = d - timedelta(days=d.weekday())
+            week_buckets[monday.strftime("%Y-%m-%d")].append(entry)
+
+        for week_start, entries in sorted(week_buckets.items(), reverse=True):
+            ws = datetime.strptime(week_start, "%Y-%m-%d")
+            we = ws + timedelta(days=6)
+            label = f"{ws.strftime('%d %b')} – {we.strftime('%d %b %Y')}"
+            statuses = [e.get("mentor_approval_status","pending") for e in entries]
+            if all(s == "approved" for s in statuses):
+                week_status = "approved"
+            elif any(s == "rejected" for s in statuses):
+                week_status = "rejected"
+            elif any(s == "approved" for s in statuses):
+                week_status = "partial"
+            else:
+                week_status = "pending"
+            weeks_grouped[week_start] = {
+                "label":   label,
+                "entries": entries,
+                "status":  week_status,
+            }
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
 
     return render_template("student/logbook.html",
                           attachment=active_attachment,
-                          logbooks=logbooks)
+                          logbooks=logbooks,
+                          weeks_grouped=weeks_grouped,
+                          today_str=today_str)
 
 
 @student_bp.route("/logbook/add", methods=["POST"])
@@ -2343,16 +2382,20 @@ def add_logbook():
     user = current_user()
     student_id = user["id"]
     
-    attachment_id = request.form.get("attachment_id")
-    log_date = request.form.get("log_date")
-    tasks_performed = request.form.get("tasks_performed")
-    skills_applied = request.form.get("skills_applied", "")
-    hours_worked = request.form.get("hours_worked")
-    challenges_encountered = request.form.get("challenges_encountered", "")
-    achievements = request.form.get("achievements", "")
-    
-    if not all([attachment_id, log_date, tasks_performed]):
-        flash("Attachment, date, and tasks performed are required.", "error")
+    attachment_id         = request.form.get("attachment_id", "").strip()
+    log_date              = request.form.get("log_date", "").strip()
+    entry_time            = request.form.get("entry_time", "").strip()  # e.g. "08:00-11:00"
+    tasks_performed       = request.form.get("tasks_performed", "").strip()
+    skills_applied        = request.form.get("skills_applied", "").strip()
+    challenges_encountered= request.form.get("challenges_encountered", "").strip()
+    achievements          = request.form.get("achievements", "").strip()
+
+    # Map time slot to hours_worked (start hour of 3-hr block)
+    slot_hours = {"08:00-11:00": 8, "11:00-14:00": 11, "14:00-17:00": 14, "17:00-20:00": 17}
+    hours_worked = slot_hours.get(entry_time)
+
+    if not all([attachment_id, log_date, entry_time, tasks_performed]):
+        flash("Date, time slot, and activity description are required.", "error")
         return redirect(url_for("student.logbook"))
 
     evidence_paths = []
@@ -2370,16 +2413,17 @@ def add_logbook():
 
     try:
         db.table("digital_logbook").insert({
-            "student_id": student_id,
-            "attachment_id": attachment_id,
-            "log_date": log_date,
-            "tasks_performed": tasks_performed,
-            "skills_applied": skills_applied,
-            "hours_worked": float(hours_worked) if hours_worked else None,
+            "student_id":           student_id,
+            "attachment_id":        attachment_id,
+            "log_date":             log_date,
+            "entry_time":           entry_time,
+            "tasks_performed":      tasks_performed,
+            "skills_applied":       skills_applied,
+            "hours_worked":         hours_worked,
             "challenges_encountered": challenges_encountered,
-            "achievements": achievements,
-            "evidence_urls": evidence_paths if evidence_paths else None,
-            "mentor_approval_status": "pending"
+            "achievements":         achievements,
+            "evidence_urls":        evidence_paths if evidence_paths else None,
+            "mentor_approval_status": "pending",
         }).execute()
 
         write_audit_log("add_logbook", target=f"attachment:{attachment_id}")

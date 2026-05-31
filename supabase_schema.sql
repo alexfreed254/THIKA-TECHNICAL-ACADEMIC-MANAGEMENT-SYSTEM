@@ -716,6 +716,7 @@ CREATE TABLE IF NOT EXISTS digital_logbook (
     student_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
     attachment_id UUID NOT NULL REFERENCES industrial_attachments(id) ON DELETE CASCADE,
     log_date DATE NOT NULL,
+    entry_time TEXT,           -- 3-hr slot label e.g. '08:00-11:00'
     tasks_performed TEXT NOT NULL,
     skills_applied TEXT,
     hours_worked DECIMAL(5, 2),
@@ -723,12 +724,17 @@ CREATE TABLE IF NOT EXISTS digital_logbook (
     achievements TEXT,
     evidence_urls TEXT[],
     mentor_comments TEXT,
+    trainer_comments TEXT,     -- trainer can also comment
     mentor_approval_status TEXT CHECK (mentor_approval_status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
     mentor_approved_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
     mentor_approved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Add columns idempotently for existing databases
+ALTER TABLE digital_logbook ADD COLUMN IF NOT EXISTS entry_time TEXT;
+ALTER TABLE digital_logbook ADD COLUMN IF NOT EXISTS trainer_comments TEXT;
 
 -- Trigger for digital_logbook updated_at
 DROP TRIGGER IF EXISTS trg_digital_logbook_updated_at ON digital_logbook;

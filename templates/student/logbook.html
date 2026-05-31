@@ -1,301 +1,639 @@
 {% extends "student/base.html" %}
-
-{% block title %}Workplace Task Evidence{% endblock %}
-{% block page_title %}Workplace Task Evidence{% endblock %}
+{% block title %}Digital Logbook{% endblock %}
+{% block page_title %}Digital Logbook{% endblock %}
 
 {% block extra_style %}
-<style>
-  .info-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-  .info-item { padding: 12px; background: #f8f9fa; border-radius: 6px; }
-  .info-label { font-size: 12px; color: #666; margin-bottom: 4px; }
-  .info-value { font-weight: 600; font-size: 14px; }
-  .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
-  .status-pending { background: #fff3cd; color: #856404; }
-  .status-approved { background: #d4edda; color: #155724; }
-  .status-rejected { background: #f8d7da; color: #721c24; }
+.lb-wrap { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
-  .logbook-form { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
-  .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-  .form-group textarea { height: 80px; resize: vertical; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+/* ── Section cards ───────────────────────────── */
+.lb-card {
+  background: #fff; border-radius: 16px;
+  border: 1px solid #e2e8f0; margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
+}
+.lb-card-head {
+  background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  color: #fff; padding: 14px 22px;
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+}
+.lb-card-head .head-right {
+  margin-left: auto; font-size: 12px; font-weight: 500; opacity: .8;
+}
+.lb-card-body { padding: 22px; }
 
-  .drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 30px; text-align: center; cursor: pointer; transition: all .3s; }
-  .drop-zone:hover, .drop-zone.dragover { border-color: #e67e22; background: #fff8f0; }
-  .drop-zone.has-files { border-color: #27ae60; background: #f0faf4; }
-  .drop-zone-icon { font-size: 36px; color: #bbb; margin-bottom: 10px; }
-  .drop-zone-text { color: #666; font-size: 14px; }
-  .drop-zone-hint { font-size: 12px; color: #999; margin-top: 5px; }
-  .file-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .file-tag { display: inline-flex; align-items: center; gap: 6px; background: #e8f5e9; padding: 4px 10px; border-radius: 16px; font-size: 12px; color: #2e7d32; }
-  .file-tag .remove { cursor: pointer; color: #c62828; font-weight: bold; }
+/* ── Attachment info bar ─────────────────────── */
+.attach-bar {
+  background: linear-gradient(135deg,#eff6ff,#f0f9ff);
+  border: 1.5px solid #bfdbfe; border-radius: 13px;
+  padding: 14px 20px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.attach-bar i { font-size: 22px; color: #2563eb; flex-shrink: 0; }
+.attach-name  { font-weight: 800; font-size: 15px; color: #1e293b; }
+.attach-meta  { font-size: 12.5px; color: #64748b; margin-top: 2px; }
 
-  .btn-submit { background: #e67e22; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  .btn-submit:hover { background: #d35400; }
+/* ── Time slot selector ──────────────────────── */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px; margin-bottom: 18px;
+}
+@media(max-width:600px){ .slot-grid { grid-template-columns: 1fr 1fr; } }
 
-  .entries-filter { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .filter-pill { padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: white; transition: all .2s; }
-  .filter-pill:hover, .filter-pill.active { background: #e67e22; color: white; border-color: #e67e22; }
+.slot-card {
+  position: relative; cursor: pointer;
+}
+.slot-card input[type=radio] {
+  position: absolute; opacity: 0; width: 100%; height: 100%;
+  top: 0; left: 0; cursor: pointer; z-index: 1;
+}
+.slot-label {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 14px 10px; border: 2px solid #e2e8f0; border-radius: 12px;
+  background: #f8fafc; transition: all .18s; text-align: center;
+  pointer-events: none;
+}
+.slot-card input:checked + .slot-label {
+  border-color: #2563eb; background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.slot-time { font-size: 13.5px; font-weight: 800; color: #0f172a; }
+.slot-name { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.slot-icon { font-size: 20px; }
 
-  .entry-card { background: white; border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
-  .entry-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #eee; }
-  .entry-date { font-weight: 600; font-size: 15px; }
-  .entry-body { padding: 15px 20px; }
-  .entry-field { margin-bottom: 12px; }
-  .entry-field-label { font-size: 12px; color: #666; margin-bottom: 3px; font-weight: 500; }
-  .entry-field-value { font-size: 14px; }
-  .entry-meta { display: flex; gap: 20px; font-size: 12px; color: #666; padding: 10px 20px; background: #fafafa; border-top: 1px solid #eee; }
+/* ── Form fields ─────────────────────────────── */
+.f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media(max-width:600px){ .f-grid { grid-template-columns: 1fr; } }
 
-  .evidence-gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .evidence-thumb { width: 80px; height: 80px; border-radius: 6px; object-fit: cover; border: 1px solid #eee; cursor: pointer; }
-  .evidence-file { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f0f0f0; border-radius: 6px; font-size: 12px; text-decoration: none; color: #333; }
-  .evidence-file:hover { background: #e0e0e0; }
+.f-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.f-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .05em; }
+.f-label .req { color: #dc2626; }
+.f-input, .f-select, .f-textarea {
+  padding: 10px 13px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; font-size: 13.5px; font-family: 'Inter',sans-serif;
+  color: #0f172a; background: #fff; width: 100%;
+  transition: border-color .18s, box-shadow .18s;
+}
+.f-input:focus,.f-select:focus,.f-textarea:focus {
+  outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.f-textarea { resize: vertical; min-height: 90px; }
 
-  .mentor-comments { background: #f0f4ff; padding: 12px 20px; border-top: 1px solid #d0d8f0; }
-  .mentor-comments-label { font-size: 12px; font-weight: 500; color: #444; margin-bottom: 4px; }
-  .mentor-comments-text { font-size: 13px; color: #555; }
+/* ── Evidence upload zone ────────────────────── */
+.drop-zone {
+  border: 2px dashed #cbd5e1; border-radius: 12px; padding: 28px 20px;
+  text-align: center; cursor: pointer; transition: all .2s;
+  background: #f8fafc;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: #2563eb; background: #eff6ff;
+}
+.drop-zone.has-files { border-color: #16a34a; background: #f0fdf4; }
+.drop-zone-icon { font-size: 36px; color: #94a3b8; margin-bottom: 10px; }
+.drop-zone-text { font-size: 13.5px; font-weight: 600; color: #475569; }
+.drop-zone-hint { font-size: 11.5px; color: #94a3b8; margin-top: 5px; }
+.file-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; justify-content: center; }
+.file-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #dcfce7; padding: 4px 11px; border-radius: 9999px;
+  font-size: 12px; color: #15803d; font-weight: 600; border: 1px solid #bbf7d0;
+}
+.file-tag.video-tag  { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+.file-tag .rm { cursor: pointer; color: #dc2626; font-weight: 900; margin-left: 2px; }
 
-  .no-entries { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px; color: #888; }
-  .no-entries i { font-size: 40px; margin-bottom: 10px; }
+/* ── Submit button ───────────────────────────── */
+.btn-submit {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 13px 32px; border: none; border-radius: 11px;
+  font-size: 14px; font-weight: 700; font-family: 'Inter',sans-serif;
+  cursor: pointer; transition: all .2s;
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: #fff; box-shadow: 0 4px 16px rgba(15,44,84,.3);
+}
+.btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(15,44,84,.4); }
 
-  @media (max-width: 600px) {
-    .form-row { grid-template-columns: 1fr; }
-  }
-</style>
+/* ── Week section ────────────────────────────── */
+.week-section { margin-bottom: 24px; }
+
+.week-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; border-radius: 12px 12px 0 0;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  border: 1px solid #e2e8f0; border-bottom: none;
+  user-select: none;
+}
+.week-header.w-pending  { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.week-header.w-approved { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.week-header.w-rejected { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.week-header.w-partial  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.week-pill {
+  padding: 3px 11px; border-radius: 9999px;
+  font-size: 11.5px; font-weight: 700;
+}
+.week-pill.pending  { background: #fde68a; color: #92400e; }
+.week-pill.approved { background: #bbf7d0; color: #15803d; }
+.week-pill.rejected { background: #fecaca; color: #991b1b; }
+.week-pill.partial  { background: #bfdbfe; color: #1d4ed8; }
+.week-arrow { transition: transform .3s; }
+.week-arrow.open { transform: rotate(180deg); }
+
+.week-body {
+  border: 1px solid #e2e8f0; border-top: none;
+  border-radius: 0 0 12px 12px; overflow: hidden;
+}
+
+/* ── Entry rows ──────────────────────────────── */
+.entry-row {
+  padding: 16px 20px; border-bottom: 1px solid #f1f5f9;
+  transition: background .15s;
+}
+.entry-row:last-child { border-bottom: none; }
+.entry-row:hover { background: #fafafa; }
+
+.entry-top {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-bottom: 10px; flex-wrap: wrap;
+}
+.entry-slot {
+  display: flex; flex-direction: column; align-items: center;
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: #fff; border-radius: 10px; padding: 8px 14px;
+  min-width: 110px; text-align: center; flex-shrink: 0;
+}
+.entry-slot .slot-t { font-size: 13px; font-weight: 800; }
+.entry-slot .slot-d { font-size: 10px; opacity: .75; margin-top: 2px; text-transform: uppercase; }
+
+.entry-date-tag {
+  font-size: 11.5px; font-weight: 700; color: #64748b;
+  background: #f1f5f9; border-radius: 6px; padding: 3px 9px;
+  align-self: center;
+}
+.entry-status {
+  margin-left: auto; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 9999px;
+  font-size: 11.5px; font-weight: 700;
+}
+.status-pending  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.status-approved { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.status-rejected { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+.entry-tasks { font-size: 13.5px; color: #334155; line-height: 1.6; margin-bottom: 8px; }
+
+.entry-meta {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-size: 12px; color: #94a3b8; margin-bottom: 8px;
+}
+.entry-meta span { display: flex; align-items: center; gap: 5px; }
+
+/* ── Evidence gallery ────────────────────────── */
+.evidence-gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ev-thumb {
+  width: 72px; height: 72px; border-radius: 8px; object-fit: cover;
+  border: 1px solid #e2e8f0; cursor: pointer;
+  transition: transform .2s; flex-shrink: 0;
+}
+.ev-thumb:hover { transform: scale(1.07); }
+.ev-video-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe;
+  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  text-decoration: none;
+}
+.ev-video-badge:hover { background: #6d28d9; color: #fff; }
+.ev-pdf-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  text-decoration: none;
+}
+
+/* ── Supervisor comments ─────────────────────── */
+.sup-comment {
+  margin-top: 10px; padding: 11px 14px;
+  background: #f0f9ff; border-radius: 10px;
+  border-left: 4px solid #0891b2; font-size: 13px; color: #0e7490;
+}
+.sup-comment-label {
+  font-size: 11px; font-weight: 700; color: #0891b2;
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px;
+}
+
+/* ── Empty state ─────────────────────────────── */
+.empty-state {
+  text-align: center; padding: 48px 24px; color: #94a3b8;
+}
+.empty-state i { font-size: 52px; display: block; margin-bottom: 14px; opacity: .3; }
+.empty-state h3 { font-size: 16px; font-weight: 700; color: #64748b; margin-bottom: 7px; }
+.empty-state p  { font-size: 13px; }
 {% endblock %}
 
 {% block content %}
+<div class="lb-wrap">
 
 {% if not attachment %}
-<div style="text-align:center;padding:60px 24px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;margin:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)">
-  <i class="fas fa-industry" style="font-size:52px;color:#cbd5e1;display:block;margin-bottom:18px"></i>
-  <h3 style="font-size:18px;font-weight:700;color:#475569;margin-bottom:8px">No Industrial Attachment Found</h3>
-  <p style="font-size:14px;color:#94a3b8;margin-bottom:24px">
-    You do not have an active industrial attachment yet.<br>
-    Request one from the Industrial Attachment page.
-  </p>
+<!-- ── No attachment ──────────────────────────── -->
+<div class="empty-state" style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+  <i class="fas fa-industry"></i>
+  <h3>No Industrial Attachment Found</h3>
+  <p>You need an active industrial attachment to use the logbook.</p>
   <a href="/student/industrial-attachment"
-     style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;border-radius:10px;font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(15,44,84,.3)">
+     style="display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:12px 26px;background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;border-radius:11px;font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(15,44,84,.3)">
     <i class="fas fa-arrow-right"></i> Go to Industrial Attachment
   </a>
 </div>
 
 {% else %}
 
-<div class="info-card">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-    <h3 style="margin:0"><i class="fas fa-building"></i>
-      {{ (attachment.get('companies') or {}).get('name', '—') }}
-    </h3>
-    <span class="status-badge status-{{ attachment.get('status','pending') }}">
-      {{ attachment.get('status','pending')|capitalize }}
-    </span>
-  </div>
-  <div class="info-grid" style="margin-top:15px">
-    <div class="info-item">
-      <div class="info-label">Unit</div>
-      <div class="info-value">
-        {% set u = attachment.get('units') or {} %}
-        {{ u.get('name','—') }}{% if u.get('code') %} ({{ u.get('code') }}){% endif %}
-      </div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Period</div>
-      <div class="info-value">{{ attachment.get('start_date','—') }} to {{ attachment.get('end_date','—') }}</div>
-    </div>
-  </div>
-</div>
-
-<div class="logbook-form">
-  <h3 style="margin-top:0">New Task Entry</h3>
-  <form method="POST" action="/student/logbook/add" enctype="multipart/form-data">
-    <input type="hidden" name="attachment_id" value="{{ attachment.id }}">
-    <div class="form-row">
-      <div class="form-group">
-        <label>Date *</label>
-        <input type="date" name="log_date" required>
-      </div>
-      <div class="form-group">
-        <label>Hours Worked</label>
-        <input type="number" name="hours_worked" step="0.5" placeholder="e.g., 8">
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Tasks Performed *</label>
-      <textarea name="tasks_performed" required placeholder="Describe the tasks you completed today"></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Skills / Competencies Applied</label>
-        <textarea name="skills_applied" placeholder="What skills did you use or develop?"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Challenges Encountered</label>
-        <textarea name="challenges_encountered" placeholder="Any difficulties you faced"></textarea>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Achievements / Outcomes</label>
-      <textarea name="achievements" placeholder="What did you accomplish?"></textarea>
-    </div>
-    <div class="form-group">
-      <label>Evidence Files (images, PDFs, videos, audio)</label>
-      <div class="drop-zone" id="dropZone">
-        <div class="drop-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-        <div class="drop-zone-text">Drag & drop files here or click to browse</div>
-        <div class="drop-zone-hint">Supported: JPG, PNG, WebP, PDF, MP4, MP3, WAV</div>
-        <input type="file" name="evidence" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a" style="display:none" id="fileInput">
-      </div>
-      <div class="file-tags" id="fileTags"></div>
-    </div>
-    <button type="submit" class="btn-submit"><i class="fas fa-plus-circle"></i> Submit Entry</button>
-  </form>
-</div>
-
-<h3 style="display:flex;align-items:center;gap:10px">
-  <i class="fas fa-list"></i> Task Log
-  <span class="status-badge status-pending">{{ logbooks|length }} entries</span>
-</h3>
-
-<div class="entries-filter" id="filterPills">
-  <span class="filter-pill active" data-filter="all">All</span>
-  <span class="filter-pill" data-filter="pending">Pending</span>
-  <span class="filter-pill" data-filter="approved">Approved</span>
-  <span class="filter-pill" data-filter="rejected">Rejected</span>
-</div>
-
-<div class="logbook-entries" id="entriesContainer">
-  {% for log in logbooks %}
-  <div class="entry-card" data-status="{{ log.mentor_approval_status }}">
-    <div class="entry-header">
-      <div class="entry-date"><i class="far fa-calendar-alt"></i> {{ log.log_date }}</div>
-      <span class="status-badge status-{{ log.mentor_approval_status }}">
-        {{ log.mentor_approval_status|capitalize }}
+<!-- ── Attachment info bar ────────────────────── -->
+{% set co = attachment.get('companies') or {} %}
+<div class="attach-bar">
+  <i class="fas fa-industry"></i>
+  <div>
+    <div class="attach-name">{{ co.get('name', attachment.get('company_name','—')) }}</div>
+    <div class="attach-meta">
+      <i class="fas fa-calendar-alt" style="margin-right:5px"></i>
+      {{ attachment.get('start_date','—') }} &mdash; {{ attachment.get('end_date','—') }}
+      &nbsp;&bull;&nbsp;
+      <span class="pill pill-{{ attachment.get('status','pending') }}"
+            style="display:inline;padding:2px 9px;border-radius:9999px;font-size:11px;font-weight:700;
+              background:{% if attachment.get('status')=='active' %}#eff6ff{% elif attachment.get('status')=='approved' %}#f0fdf4{% else %}#fffbeb{% endif %};
+              color:{% if attachment.get('status')=='active' %}#1d4ed8{% elif attachment.get('status')=='approved' %}#15803d{% else %}#92400e{% endif %}">
+        {{ attachment.get('status','pending')|title }}
       </span>
     </div>
-    <div class="entry-body">
-      <div class="entry-field">
-        <div class="entry-field-label">Tasks Performed</div>
-        <div class="entry-field-value">{{ log.tasks_performed }}</div>
-      </div>
-      {% if log.skills_applied %}
-      <div class="entry-field">
-        <div class="entry-field-label">Skills / Competencies Applied</div>
-        <div class="entry-field-value">{{ log.skills_applied }}</div>
-      </div>
-      {% endif %}
-      {% if log.challenges_encountered %}
-      <div class="entry-field">
-        <div class="entry-field-label">Challenges Encountered</div>
-        <div class="entry-field-value">{{ log.challenges_encountered }}</div>
-      </div>
-      {% endif %}
-      {% if log.achievements %}
-      <div class="entry-field">
-        <div class="entry-field-label">Achievements</div>
-        <div class="entry-field-value">{{ log.achievements }}</div>
-      </div>
-      {% endif %}
-      {% if log.evidence_urls %}
-      <div class="entry-field">
-        <div class="entry-field-label">Evidence Files</div>
-        <div class="evidence-gallery">
-          {% for url in log.evidence_urls %}
-            {% set ext = url.rsplit('.', 1)[1].lower() if '.' in url else '' %}
-            {% if ext in ('jpg', 'jpeg', 'png', 'webp') %}
-            <a href="{{ storage_url('assessment-evidence', url) }}" target="_blank">
-              <img src="{{ storage_url('assessment-evidence', url) }}" class="evidence-thumb" alt="evidence">
-            </a>
-            {% else %}
-            <a href="{{ storage_url('assessment-evidence', url) }}" target="_blank" class="evidence-file">
-              <i class="fas fa-{% if ext == 'pdf' %}file-pdf{% elif ext in ('mp4','mov','avi','webm') %}video{% elif ext in ('mp3','wav','ogg','m4a') %}music{% else %}file{% endif %}"></i>
-              {{ ext|upper }}
-            </a>
-            {% endif %}
-          {% endfor %}
+  </div>
+  <a href="/student/industrial-attachment"
+     style="margin-left:auto;font-size:12.5px;color:#1e5a9f;font-weight:700;text-decoration:none">
+    <i class="fas fa-arrow-left"></i> Back to Attachment
+  </a>
+</div>
+
+<!-- ── NEW ENTRY FORM ─────────────────────────── -->
+<div class="lb-card">
+  <div class="lb-card-head">
+    <i class="fas fa-plus-circle"></i> Log Today's Activity
+    <span class="head-right">Every 3 hours — submit one entry per time slot</span>
+  </div>
+  <div class="lb-card-body">
+    <form method="POST" action="/student/logbook/add" enctype="multipart/form-data" id="logForm">
+      <input type="hidden" name="attachment_id" value="{{ attachment.get('id') }}">
+
+      <!-- Date -->
+      <div class="f-grid">
+        <div class="f-field">
+          <label class="f-label">Activity Date <span class="req">*</span></label>
+          <input class="f-input" type="date" name="log_date"
+                 value="{{ today_str }}" required max="{{ today_str }}">
         </div>
       </div>
-      {% endif %}
+
+      <!-- 3-Hour Time Slots -->
+      <div class="f-field">
+        <label class="f-label">Time Slot <span class="req">*</span>
+          <span style="font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px">Select the 3-hour period this entry covers</span>
+        </label>
+        <div class="slot-grid">
+          <label class="slot-card">
+            <input type="radio" name="entry_time" value="08:00-11:00" required>
+            <div class="slot-label">
+              <span class="slot-icon">🌅</span>
+              <span class="slot-time">08:00 – 11:00</span>
+              <span class="slot-name">Morning</span>
+            </div>
+          </label>
+          <label class="slot-card">
+            <input type="radio" name="entry_time" value="11:00-14:00">
+            <div class="slot-label">
+              <span class="slot-icon">☀️</span>
+              <span class="slot-time">11:00 – 14:00</span>
+              <span class="slot-name">Late Morning</span>
+            </div>
+          </label>
+          <label class="slot-card">
+            <input type="radio" name="entry_time" value="14:00-17:00">
+            <div class="slot-label">
+              <span class="slot-icon">🌤️</span>
+              <span class="slot-time">14:00 – 17:00</span>
+              <span class="slot-name">Afternoon</span>
+            </div>
+          </label>
+          <label class="slot-card">
+            <input type="radio" name="entry_time" value="17:00-20:00">
+            <div class="slot-label">
+              <span class="slot-icon">🌆</span>
+              <span class="slot-time">17:00 – 20:00</span>
+              <span class="slot-name">Late Afternoon</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Activity description -->
+      <div class="f-field">
+        <label class="f-label">Tasks / Activities Performed <span class="req">*</span></label>
+        <textarea class="f-textarea" name="tasks_performed" required rows="4"
+                  placeholder="Describe in detail what you did during this 3-hour period. Include specific tasks, tools used, and processes followed."></textarea>
+      </div>
+
+      <div class="f-grid">
+        <div class="f-field">
+          <label class="f-label">Skills &amp; Competencies Applied</label>
+          <textarea class="f-textarea" name="skills_applied" rows="3"
+                    placeholder="What technical skills did you apply or develop?"></textarea>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Challenges Encountered</label>
+          <textarea class="f-textarea" name="challenges_encountered" rows="3"
+                    placeholder="Any difficulties, problems, or learnings from this period?"></textarea>
+        </div>
+      </div>
+
+      <div class="f-field">
+        <label class="f-label">Achievements / Outcomes</label>
+        <textarea class="f-textarea" name="achievements" rows="2"
+                  placeholder="What did you complete or accomplish during this period?"></textarea>
+      </div>
+
+      <!-- Evidence upload -->
+      <div class="f-field">
+        <label class="f-label">Evidence (Photos / Videos) <span class="req">*</span>
+          <span style="font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px">Upload photos or videos showing your work</span>
+        </label>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="drop-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+          <div class="drop-zone-text">Click to upload or drag &amp; drop files here</div>
+          <div class="drop-zone-hint">Photos (JPG, PNG, WEBP) &bull; Videos (MP4, MOV) &bull; Max 50MB per file</div>
+          <div class="file-tags" id="fileTags"></div>
+        </div>
+        <input type="file" id="fileInput" name="evidence" multiple hidden
+               accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/avi,video/webm,application/pdf">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:14px;margin-top:4px">
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <i class="fas fa-paper-plane"></i> Submit Entry
+        </button>
+        <span style="font-size:12px;color:#94a3b8">
+          <i class="fas fa-info-circle" style="color:#0891b2;margin-right:4px"></i>
+          Your supervisor will review and approve entries at the end of each week.
+        </span>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ── WEEKLY LOGBOOK ENTRIES ────────────────── -->
+<div class="lb-card">
+  <div class="lb-card-head">
+    <i class="fas fa-calendar-week"></i> Weekly Activity Log
+    <span class="head-right">{{ logbooks|length }} total entries</span>
+  </div>
+  <div class="lb-card-body" style="padding:0">
+
+    {% if weeks_grouped %}
+
+    {% for week_start, week in weeks_grouped.items() %}
+    <div class="week-section" style="margin-bottom:0">
+
+      <!-- Week header (collapsible) -->
+      <div class="week-header w-{{ week.status }}" onclick="toggleWeek('week-{{ loop.index }}')"
+           style="margin:0;border-radius:0;{% if loop.first %}border-radius:0;{% endif %}">
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="fas fa-{% if week.status == 'approved' %}check-circle{% elif week.status == 'rejected' %}times-circle{% elif week.status == 'partial' %}adjust{% else %}clock{% endif %}"></i>
+          <strong>{{ week.label }}</strong>
+          <span class="week-pill {{ week.status }}">
+            {% if week.status == 'approved' %}All Approved
+            {% elif week.status == 'rejected' %}Has Rejections
+            {% elif week.status == 'partial' %}Partially Approved
+            {% else %}Pending Supervisor Review{% endif %}
+          </span>
+          <span style="font-size:12px;opacity:.7">{{ week.entries|length }} entr{{ 'y' if week.entries|length == 1 else 'ies' }}</span>
+        </div>
+        <i class="fas fa-chevron-down week-arrow {% if loop.first %}open{% endif %}" id="arrow-week-{{ loop.index }}"></i>
+      </div>
+
+      <!-- Week body -->
+      <div id="week-{{ loop.index }}" class="week-body" style="{% if not loop.first %}display:none;{% endif %}border-radius:0;border-left:none;border-right:none;{% if loop.last %}border-radius:0 0 12px 12px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;{% endif %}">
+
+        {% for entry in week.entries %}
+        {% set slot = entry.get('entry_time','') %}
+        {% set slot_icons = {'08:00-11:00':'🌅','11:00-14:00':'☀️','14:00-17:00':'🌤️','17:00-20:00':'🌆'} %}
+        {% set slot_names = {'08:00-11:00':'Morning','11:00-14:00':'Late Morning','14:00-17:00':'Afternoon','17:00-20:00':'Late Afternoon'} %}
+
+        <div class="entry-row">
+          <div class="entry-top">
+            <div class="entry-slot">
+              <span style="font-size:18px">{{ slot_icons.get(slot,'🕐') }}</span>
+              <span class="slot-t">{{ slot or 'N/A' }}</span>
+              <span class="slot-d">{{ slot_names.get(slot,'Entry') }}</span>
+            </div>
+            <div>
+              <span class="entry-date-tag">
+                <i class="fas fa-calendar" style="margin-right:4px"></i>
+                {{ entry.get('log_date','—') }}
+              </span>
+            </div>
+            <span class="entry-status status-{{ entry.get('mentor_approval_status','pending') }}">
+              <i class="fas fa-{% if entry.get('mentor_approval_status') == 'approved' %}check-circle{% elif entry.get('mentor_approval_status') == 'rejected' %}times-circle{% else %}clock{% endif %}"></i>
+              {{ entry.get('mentor_approval_status','pending')|title }}
+            </span>
+          </div>
+
+          <!-- Tasks -->
+          <div class="entry-tasks">{{ entry.get('tasks_performed','') }}</div>
+
+          <!-- Meta chips -->
+          <div class="entry-meta">
+            {% if entry.get('skills_applied') %}
+            <span><i class="fas fa-tools"></i> {{ entry.get('skills_applied','') }}</span>
+            {% endif %}
+            {% if entry.get('challenges_encountered') %}
+            <span><i class="fas fa-exclamation-circle"></i> {{ entry.get('challenges_encountered','') }}</span>
+            {% endif %}
+            {% if entry.get('achievements') %}
+            <span><i class="fas fa-star"></i> {{ entry.get('achievements','') }}</span>
+            {% endif %}
+            <span style="margin-left:auto;font-size:11px;color:#cbd5e1">
+              {{ entry.get('created_at','')[:16].replace('T',' ') }}
+            </span>
+          </div>
+
+          <!-- Evidence -->
+          {% set ev = entry.get('evidence_urls') or [] %}
+          {% if ev %}
+          <div class="evidence-gallery">
+            {% for path in ev %}
+            {% set ext = path.split('.')[-1].lower() %}
+            {% if ext in ('jpg','jpeg','png','webp') %}
+              <img class="ev-thumb"
+                   src="{{ SUPABASE_URL }}/storage/v1/object/public/assessment-evidence/{{ path }}"
+                   alt="Evidence photo"
+                   onclick="window.open(this.src,'_blank')">
+            {% elif ext in ('mp4','mov','avi','webm') %}
+              <a href="{{ SUPABASE_URL }}/storage/v1/object/public/assessment-evidence/{{ path }}"
+                 target="_blank" class="ev-video-badge">
+                <i class="fas fa-play-circle"></i> Video {{ loop.index }}
+              </a>
+            {% else %}
+              <a href="{{ SUPABASE_URL }}/storage/v1/object/public/assessment-evidence/{{ path }}"
+                 target="_blank" class="ev-pdf-badge">
+                <i class="fas fa-file-alt"></i> File {{ loop.index }}
+              </a>
+            {% endif %}
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="font-size:12px;color:#f59e0b;margin-top:8px">
+            <i class="fas fa-exclamation-triangle" style="margin-right:4px"></i>
+            No evidence uploaded for this entry
+          </div>
+          {% endif %}
+
+          <!-- Supervisor / Trainer comments -->
+          {% if entry.get('mentor_comments') %}
+          <div class="sup-comment">
+            <div class="sup-comment-label"><i class="fas fa-hard-hat" style="margin-right:4px"></i>Supervisor Comment</div>
+            {{ entry.get('mentor_comments') }}
+          </div>
+          {% endif %}
+          {% if entry.get('trainer_comments') %}
+          <div class="sup-comment" style="border-left-color:#7c3aed;background:#faf5ff;color:#6d28d9">
+            <div class="sup-comment-label" style="color:#7c3aed"><i class="fas fa-chalkboard-teacher" style="margin-right:4px"></i>Trainer Comment</div>
+            {{ entry.get('trainer_comments') }}
+          </div>
+          {% endif %}
+
+        </div>
+        {% endfor %}
+
+        <!-- Week approval summary bar -->
+        {% if week.status == 'approved' %}
+        <div style="padding:13px 20px;background:#f0fdf4;border-top:1px solid #bbf7d0;font-size:13px;color:#15803d;font-weight:600">
+          <i class="fas fa-check-circle" style="margin-right:7px"></i>
+          This week has been fully approved by your industry supervisor.
+        </div>
+        {% elif week.status == 'pending' %}
+        <div style="padding:13px 20px;background:#fffbeb;border-top:1px solid #fde68a;font-size:13px;color:#92400e">
+          <i class="fas fa-clock" style="margin-right:7px"></i>
+          Pending — your supervisor will review and approve this week's entries.
+        </div>
+        {% endif %}
+
+      </div>
     </div>
-    {% if log.hours_worked or log.mentor_approved_at %}
-    <div class="entry-meta">
-      {% if log.hours_worked %}<span><i class="fas fa-clock"></i> {{ log.hours_worked }} hours</span>{% endif %}
-      {% if log.mentor_approved_at %}<span><i class="fas fa-check-circle"></i> Reviewed {{ log.mentor_approved_at[:10] }}</span>{% endif %}
+    {% endfor %}
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-book-open"></i>
+      <h3>No Logbook Entries Yet</h3>
+      <p>Submit your first daily activity entry using the form above.<br>
+         Remember to submit one entry every 3 hours throughout your working day.</p>
     </div>
     {% endif %}
-    {% if log.mentor_comments %}
-    <div class="mentor-comments">
-      <div class="mentor-comments-label"><i class="fas fa-comment"></i> Mentor Feedback</div>
-      <div class="mentor-comments-text">{{ log.mentor_comments }}</div>
-    </div>
-    {% endif %}
+
   </div>
-  {% else %}
-  <div class="no-entries">
-    <i class="fas fa-book-open"></i>
-    <p>No task entries yet. Submit your first workplace task above.</p>
+</div>
+
+<!-- ── GUIDELINES ────────────────────────────── -->
+<div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:14px;padding:18px 22px;margin-top:4px">
+  <div style="font-size:13px;font-weight:700;color:#0e7490;margin-bottom:10px">
+    <i class="fas fa-info-circle" style="margin-right:6px"></i>Logbook Guidelines
   </div>
-  {% endfor %}
+  <ul style="font-size:13px;color:#0e7490;padding-left:20px;line-height:2">
+    <li>Submit <strong>one entry per 3-hour block</strong> throughout your working day (up to 4 entries per day)</li>
+    <li>Attach <strong>photos or videos</strong> as evidence of your work for each entry</li>
+    <li>Be specific — describe actual tasks, tools, processes, and skills used</li>
+    <li>Your supervisor reviews and approves all entries at the <strong>end of each week</strong></li>
+    <li>Once approved, your supervisor may add comments or feedback to each entry</li>
+  </ul>
 </div>
 
 {% endif %}{# end if attachment #}
-
+</div>
 {% endblock %}
 
 {% block extra_script %}
 <script>
-  // Drag-and-drop file upload
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('fileInput');
-  const fileTags = document.getElementById('fileTags');
+/* ── Week accordion ──────────────────────────── */
+function toggleWeek(id) {
+  const body  = document.getElementById(id);
+  const idx   = id.replace('week-','');
+  const arrow = document.getElementById('arrow-' + id);
+  const open  = body.style.display !== 'none';
+  body.style.display  = open ? 'none' : 'block';
+  if (arrow) arrow.classList.toggle('open', !open);
+}
 
-  dropZone.addEventListener('click', () => fileInput.click());
+/* ── File drag-drop & tags ───────────────────── */
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileTags  = document.getElementById('fileTags');
 
-  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+if (dropZone) {
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length) {
-      fileInput.files = e.dataTransfer.files;
-      updateFileTags();
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    mergeFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', () => mergeFiles(fileInput.files));
+}
+
+let allFiles = [];
+
+function mergeFiles(incoming) {
+  Array.from(incoming).forEach(f => {
+    if (!allFiles.find(x => x.name === f.name && x.size === f.size)) allFiles.push(f);
+  });
+  renderTags();
+  syncInput();
+}
+
+function removeFile(idx) {
+  allFiles.splice(idx, 1);
+  renderTags();
+  syncInput();
+}
+
+function renderTags() {
+  if (!fileTags) return;
+  fileTags.innerHTML = '';
+  allFiles.forEach((f, i) => {
+    const isVideo = f.type.startsWith('video/');
+    const tag = document.createElement('span');
+    tag.className = 'file-tag' + (isVideo ? ' video-tag' : '');
+    tag.innerHTML = `<i class="fas fa-${isVideo ? 'video' : 'image'}"></i> ${f.name.length > 20 ? f.name.slice(0,18)+'…' : f.name} <span class="rm" onclick="removeFile(${i})">&times;</span>`;
+    fileTags.appendChild(tag);
+  });
+  if (dropZone) dropZone.classList.toggle('has-files', allFiles.length > 0);
+}
+
+function syncInput() {
+  if (!fileInput) return;
+  const dt = new DataTransfer();
+  allFiles.forEach(f => dt.items.add(f));
+  fileInput.files = dt.files;
+}
+
+/* ── Form submit spinner ─────────────────────── */
+const logForm = document.getElementById('logForm');
+if (logForm) {
+  logForm.addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    if (btn) {
+      btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px"></span> Uploading…';
+      btn.disabled = true;
     }
   });
+}
 
-  fileInput.addEventListener('change', updateFileTags);
-
-  function updateFileTags() {
-    fileTags.innerHTML = '';
-    const files = fileInput.files;
-    if (files.length === 0) { dropZone.classList.remove('has-files'); return; }
-    dropZone.classList.add('has-files');
-    Array.from(files).forEach((f, i) => {
-      const tag = document.createElement('span');
-      tag.className = 'file-tag';
-      tag.innerHTML = `<i class="fas fa-paperclip"></i> ${f.name} <span class="remove" data-index="${i}">&times;</span>`;
-      tag.querySelector('.remove').addEventListener('click', (e) => {
-        e.stopPropagation();
-        const dt = new DataTransfer();
-        Array.from(fileInput.files).forEach((ff, j) => { if (j !== i) dt.items.add(ff); });
-        fileInput.files = dt.files;
-        updateFileTags();
-      });
-      fileTags.appendChild(tag);
-    });
-  }
-
-  // Filter pills
-  document.querySelectorAll('.filter-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      const filter = pill.dataset.filter;
-      document.querySelectorAll('.entry-card').forEach(card => {
-        card.style.display = (filter === 'all' || card.dataset.status === filter) ? '' : 'none';
-      });
-    });
-  });
+/* ── Spin keyframe ───────────────────────────── */
+const s = document.createElement('style');
+s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(s);
 </script>
 {% endblock %}
