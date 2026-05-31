@@ -2012,15 +2012,21 @@ def industrial_attachment():
     user = current_user()
     student_id = user["id"]
     
-    # Check if student is enrolled in any units (dual training eligibility)
-    enrolled_units = (db.table("enrollments")
-                     .select("*, units(name, code)")
-                     .eq("student_id", student_id)
-                     .execute().data or [])
-    
-    if not enrolled_units:
-        flash("You must be enrolled in at least one unit to access dual training.", "error")
-        return redirect(url_for("student.dashboard"))
+    # Get student's class via enrollments, then fetch class_units for that class
+    enrollment = (db.table("enrollments")
+                  .select("class_id, classes(name)")
+                  .eq("student_id", student_id)
+                  .limit(1)
+                  .execute().data or [])
+
+    enrolled_units = []
+    if enrollment:
+        class_id = enrollment[0].get("class_id")
+        if class_id:
+            enrolled_units = (db.table("class_units")
+                              .select("*, units(name, code)")
+                              .eq("class_id", class_id)
+                              .execute().data or [])
     
     # Get student's current attachment
     attachments_res = (db.table("industrial_attachments")
