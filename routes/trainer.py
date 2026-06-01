@@ -544,25 +544,113 @@ def delete_assessment(assessment_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# ── Attendance History ───────────────────────────────────────────────────────
+# ── View & Download Attendance ───────────────────────────────────────────────
 
 @trainer_bp.route("/attendance-history")
 @trainer_required
 def attendance_history():
-    db = get_service_client()
+    """View and download attendance — summary or per-session detail."""
+    db   = get_service_client()
     user = current_user()
-    
-    attendance_list = db.table("attendance").select("*, user_profiles:student_id(full_name, admission_no, enrollments(classes(name))), units(name, code)").eq("trainer_id", user["id"]).order("attendance_date", desc=True).limit(200).execute().data or []
-    
-    for att in attendance_list:
-        student = att.get("user_profiles") or {}
-        enrolls = student.get("enrollments") or []
-        first_enroll = enrolls[0] if enrolls else {}
-        cls = first_enroll.get("classes") or {}
-        att["classes"] = cls
-        
+
+    cu_rows, class_list = _marks_class_unit_data(db, user)
+
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    week     = request.args.get("week", 0, type=int)
+    lesson   = request.args.get("lesson", "")
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    units_list   = []
+    sessions     = []   # list of {week, lesson, present, absent, total, date, event}
+    records      = []   # per-student rows for one specific session
+    active_event = None
+    cls_obj      = {}
+    unit_obj     = {}
+
+    if class_id:
+        units_list = [r for r in cu_rows
+                      if (r.get("classes") or {}).get("id") == class_id]
+
+    if class_id and unit_id:
+        cls_obj  = (db.table("classes").select("name")
+                      .eq("id", class_id).single().execute().data or {})
+        unit_obj = (db.table("units").select("code, name")
+                      .eq("id", unit_id).single().execute().data or {})
+
+        if week and lesson:
+            # ── Detail view: one session ──────────────────────────────────
+            records = (db.table("attendance")
+                         .select("*, user_profiles:student_id(full_name, admission_no)")
+                         .eq("unit_id", unit_id)
+                         .eq("trainer_id", user["id"])
+                         .eq("week", week)
+                         .eq("lesson", lesson)
+                         .eq("year", year)
+                         .eq("term", term)
+                         .order("attendance_date")
+                         .execute().data or [])
+
+            event_row = (db.table("class_events").select("*")
+                           .eq("class_id", class_id)
+                           .eq("week", week)
+                           .eq("lesson", lesson)
+                           .eq("year", year)
+                           .eq("term", term)
+                           .execute().data or [])
+            active_event = event_row[0] if event_row else None
+
+        else:
+            # ── Summary view: all sessions for class/unit/year/term ───────
+            att_rows = (db.table("attendance")
+                          .select("week, lesson, status, attendance_date")
+                          .eq("unit_id", unit_id)
+                          .eq("trainer_id", user["id"])
+                          .eq("year", year)
+                          .eq("term", term)
+                          .execute().data or [])
+
+            from collections import defaultdict
+            session_map = defaultdict(lambda: {"present": 0, "absent": 0, "date": ""})
+            for r in att_rows:
+                key = (r["week"], r["lesson"])
+                session_map[key][r["status"]] = session_map[key].get(r["status"], 0) + 1
+                if r.get("attendance_date") and not session_map[key]["date"]:
+                    session_map[key]["date"] = r["attendance_date"][:10]
+
+            # Events for this class/unit/year/term
+            event_rows = (db.table("class_events")
+                            .select("week, lesson, event_type, note")
+                            .eq("class_id", class_id)
+                            .eq("year", year)
+                            .eq("term", term)
+                            .execute().data or [])
+            event_map = {(e["week"], e["lesson"]): e for e in event_rows}
+
+            for (wk, les), counts in sorted(session_map.items()):
+                p = counts.get("present", 0)
+                a = counts.get("absent", 0)
+                sessions.append({
+                    "week":    wk,
+                    "lesson":  les,
+                    "present": p,
+                    "absent":  a,
+                    "total":   p + a,
+                    "date":    counts["date"],
+                    "event":   event_map.get((wk, les)),
+                })
+
     return render_template("trainer/attendance_history.html",
-                          attendance=attendance_list)
+                           class_list=class_list,
+                           units_list=units_list,
+                           cls=cls_obj, unit=unit_obj,
+                           sessions=sessions,
+                           records=records,
+                           active_event=active_event,
+                           class_id=class_id, unit_id=unit_id,
+                           week=week, lesson=lesson,
+                           year=year, term=term)
 
 
 # ── Session View (filtered attendance for one session) ───────────────────────

@@ -1,40 +1,326 @@
 {% extends "trainer/base.html" %}
-{% block title %}Attendance History{% endblock %}
-{% block page_title %}Attendance History{% endblock %}
+{% block title %}View &amp; Download Attendance{% endblock %}
+{% block page_title %}View &amp; Download Attendance{% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.card-header{background:#7b1fa2;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-present{background:#e8f5e9;color:#2e7d32}
-.badge-absent{background:#ffebee;color:#c62828}
+.ah-wrap { padding:20px; max-width:1100px; margin:0 auto; }
+
+/* ── Filter card ── */
+.ah-filters { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:20px; margin-bottom:18px; }
+.ah-filters h3 { color:var(--primary); font-size:14px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #eee; }
+
+/* ── Summary sessions table ── */
+.ah-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); overflow:hidden; margin-bottom:18px; }
+.ah-card-header { padding:13px 20px; background:#fff; border-bottom:1px solid #e8eef6; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.ah-card-header h3 { font-size:15px; font-weight:700; color:#1e5a9f; margin:0; }
+
+table { width:100%; border-collapse:collapse; }
+thead th { background:#2c5f8a; color:#fff; padding:11px 14px; font-size:12px; font-weight:700; text-align:left; }
+tbody tr { border-bottom:1px solid #f0f0f0; transition:background .12s; }
+tbody tr:hover { background:#f5f8ff; }
+tbody td { padding:10px 14px; font-size:13px; }
+
+/* ── Status badges ── */
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-present { background:#dcfce7; color:#15803d; }
+.badge-absent  { background:#fee2e2; color:#b91c1c; }
+.badge-holiday       { background:#fff8e1; color:#b45309; }
+.badge-academic_trip { background:#e8f5e9; color:#166534; }
+
+/* ── Stat chips ── */
+.stat-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:8px; font-size:12px; font-weight:700; }
+
+/* ── Event banner ── */
+.event-banner { border-radius:8px; padding:12px 18px; margin:0 18px 14px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:10px; }
+.event-banner.holiday       { background:#fff8e1; color:#b45309; border-left:4px solid #f9a825; }
+.event-banner.academic_trip { background:#e8f5e9; color:#166534; border-left:4px solid #43a047; }
+
+/* ── Empty state ── */
+.ah-empty { text-align:center; padding:48px 20px; color:#bbb; }
+.ah-empty i { font-size:40px; display:block; margin-bottom:14px; opacity:0.3; }
+
+/* ── Row link cells ── */
+.row-link { color:#1e5a9f; font-weight:700; cursor:pointer; text-decoration:none; }
+.row-link:hover { text-decoration:underline; }
 {% endblock %}
+
 {% block content %}
-<div class="page-wrap">
-  <div class="card">
-    <div class="card-header"><i class="fas fa-history"></i> Attendance History (last 200 records)</div>
-    <table>
-      <thead><tr><th>Student</th><th>Unit</th><th>Class</th><th>Week</th><th>Lesson</th><th>Term</th><th>Status</th><th>Date</th></tr></thead>
-      <tbody>
-        {% for a in attendance %}
-        <tr>
-          <td>{{ a.get('user_profiles',{}).get('full_name','—') }}<br><small style="color:#aaa">{{ a.get('user_profiles',{}).get('admission_no','') }}</small></td>
-          <td>{{ a.get('units',{}).get('name','—') }}</td>
-          <td>{{ a.get('classes',{}).get('name','—') }}</td>
-          <td>{{ a.get('week','—') }}</td>
-          <td>{{ a.get('lesson','—') }}</td>
-          <td>{{ a.get('term','—') }}</td>
-          <td><span class="badge badge-{{ a.get('status','absent') }}">{{ a.get('status','absent')|title }}</span></td>
-          <td>{{ a.get('attendance_date','—')[:10] if a.get('attendance_date') else '—' }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="8" style="text-align:center;color:#aaa;padding:32px">No attendance records found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="ah-wrap">
+
+  <!-- ── Filters ── -->
+  <div class="ah-filters">
+    <h3><i class="fas fa-filter"></i> Select Class, Unit &amp; Period</h3>
+    <div class="filter-grid">
+      <div class="form-group">
+        <label>Class</label>
+        <select id="cls" class="form-control" onchange="filterChange()">
+          <option value="">-- Choose Class --</option>
+          {% for c in class_list %}
+          <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select id="unt" class="form-control" onchange="filterChange()">
+          <option value="">-- Choose Unit --</option>
+          {% for u in units_list %}
+          <option value="{{ u.units.id }}" {% if unit_id == u.units.id %}selected{% endif %}>
+            {{ u.units.code }} &ndash; {{ u.units.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Year</label>
+        <select id="yr" class="form-control" onchange="filterChange()">
+          {% for y in range(2024, 2036) %}
+          <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Term</label>
+        <select id="tm" class="form-control" onchange="filterChange()">
+          <option value="1" {% if term==1 %}selected{% endif %}>Term 1 (Jan–Apr)</option>
+          <option value="2" {% if term==2 %}selected{% endif %}>Term 2 (May–Aug)</option>
+          <option value="3" {% if term==3 %}selected{% endif %}>Term 3 (Sep–Dec)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Week <span style="color:#aaa;font-size:11px;">(optional — drill into a session)</span></label>
+        <select id="wk" class="form-control" onchange="filterChange()">
+          <option value="">-- All Weeks --</option>
+          {% for w in range(1, 53) %}
+          <option value="{{ w }}" {% if week == w %}selected{% endif %}>Week {{ w }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Lesson <span style="color:#aaa;font-size:11px;">(optional)</span></label>
+        <select id="les" class="form-control" onchange="filterChange()">
+          <option value="">-- All Lessons --</option>
+          {% for l in ['L1','L2','L3','L4'] %}
+          <option value="{{ l }}" {% if lesson == l %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
   </div>
+
+  {% if not class_id or not unit_id %}
+  <!-- Prompt -->
+  <div class="ah-card">
+    <div class="ah-empty">
+      <i class="fas fa-filter"></i>
+      <p style="font-size:14px;color:#666;font-weight:600;">Select a Class and Unit above to view attendance.</p>
+    </div>
+  </div>
+
+  {% elif week and lesson %}
+  <!-- ══ DETAIL VIEW: one session ══ -->
+  <div class="ah-card">
+    <div class="ah-card-header">
+      <div>
+        <h3>
+          <i class="fas fa-clipboard-list"></i>
+          {{ cls.name if cls else '—' }} &mdash; {{ unit.code if unit else '—' }} {{ unit.name if unit else '' }}
+          &nbsp;&bull;&nbsp; Week {{ week }}, {{ lesson }}
+        </h3>
+        <div style="font-size:12px;color:#888;margin-top:3px;">Year {{ year }} &nbsp;&bull;&nbsp; Term {{ term }}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        {% if records %}
+        {% set present_cnt = records | selectattr('status','equalto','present') | list | length %}
+        {% set absent_cnt  = records | selectattr('status','equalto','absent')  | list | length %}
+        <span class="stat-chip" style="background:#dcfce7;color:#15803d;">
+          <i class="fas fa-check"></i> {{ present_cnt }} Present
+        </span>
+        <span class="stat-chip" style="background:#fee2e2;color:#b91c1c;">
+          <i class="fas fa-times"></i> {{ absent_cnt }} Absent
+        </span>
+        {% endif %}
+        <a href="/trainer/session-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&week={{ week }}&lesson={{ lesson }}&year={{ year }}&term={{ term }}"
+           target="_blank" class="btn btn-danger btn-sm">
+          <i class="fas fa-file-pdf"></i> Download PDF
+        </a>
+        <a href="/trainer/attendance-history?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}"
+           class="btn btn-sm" style="background:#e3f2fd;color:#1e5a9f;">
+          <i class="fas fa-list"></i> All Sessions
+        </a>
+      </div>
+    </div>
+
+    {% if active_event %}
+    <div class="event-banner {{ active_event.event_type }}" style="margin-top:14px;">
+      <i class="fas fa-{% if active_event.event_type == 'holiday' %}umbrella-beach{% else %}bus{% endif %} fa-lg"></i>
+      <div>
+        <strong>{% if active_event.event_type == 'holiday' %}Holiday{% else %}Academic Trip{% endif %}</strong>
+        &mdash; Week {{ active_event.week }}, {{ active_event.lesson }}
+        {% if active_event.note %} &mdash; {{ active_event.note }}{% endif %}
+        <div style="font-size:12px;font-weight:400;margin-top:2px;opacity:0.8;">
+          All students recorded as absent due to this event.
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if records %}
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>Adm No.</th>
+            <th>Student Name</th>
+            <th style="text-align:center;">Status</th>
+            {% if active_event %}<th>Event Note</th>{% endif %}
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          {% set p = r.get('user_profiles') or {} %}
+          <tr>
+            <td style="color:#aaa;">{{ loop.index }}</td>
+            <td style="font-weight:700;">{{ p.get('admission_no','—') }}</td>
+            <td><strong>{{ p.get('full_name','—') }}</strong></td>
+            <td style="text-align:center;">
+              <span class="badge badge-{{ r.status }}">
+                {{ 'Present' if r.status == 'present' else 'Absent' }}
+              </span>
+            </td>
+            {% if active_event %}
+            <td style="font-size:12px;color:#888;">
+              {% if active_event.event_type == 'holiday' %}Holiday{% else %}Academic Trip{% endif %}
+              {% if active_event.note %} &mdash; {{ active_event.note }}{% endif %}
+            </td>
+            {% endif %}
+            <td style="font-size:12px;color:#888;white-space:nowrap;">
+              {{ r.attendance_date | to_eat('%d %b %Y') if r.attendance_date else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="ah-empty">
+      <i class="fas fa-clipboard-list"></i>
+      <p>No attendance records found for this session.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {% elif sessions %}
+  <!-- ══ SUMMARY VIEW: all sessions for this class/unit ══ -->
+  <div class="ah-card">
+    <div class="ah-card-header">
+      <h3>
+        <i class="fas fa-table"></i>
+        Sessions Summary &mdash; {{ cls.name if cls else '—' }} / {{ unit.code if unit else '—' }}
+        <span style="font-size:12px;font-weight:400;color:#888;margin-left:8px;">
+          Year {{ year }}, Term {{ term }}
+        </span>
+      </h3>
+      <span style="background:#e3f2fd;color:#1e5a9f;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;">
+        {{ sessions|length }} session(s)
+      </span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Week</th>
+            <th>Lesson</th>
+            <th style="text-align:center;">Present</th>
+            <th style="text-align:center;">Absent</th>
+            <th style="text-align:center;">Total</th>
+            <th style="text-align:center;">Attendance %</th>
+            <th>Event</th>
+            <th>Date</th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          {% set pct = ((s.present / s.total * 100) | round(1)) if s.total > 0 else 0 %}
+          <tr>
+            <td style="color:#aaa;">{{ loop.index }}</td>
+            <td style="font-weight:700;">Week {{ s.week }}</td>
+            <td style="font-weight:700;">{{ s.lesson }}</td>
+            <td style="text-align:center;font-weight:700;color:#15803d;">{{ s.present }}</td>
+            <td style="text-align:center;font-weight:700;color:#b91c1c;">{{ s.absent }}</td>
+            <td style="text-align:center;color:#888;">{{ s.total }}</td>
+            <td style="text-align:center;">
+              {% if s.total > 0 %}
+              <span style="font-weight:700;color:{{ '#15803d' if pct >= 75 else ('#f57c00' if pct >= 50 else '#b91c1c') }}">
+                {{ pct }}%
+              </span>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if s.event %}
+              <span class="badge badge-{{ s.event.event_type }}" style="font-size:10px;">
+                {% if s.event.event_type == 'holiday' %}
+                <i class="fas fa-umbrella-beach"></i> Holiday
+                {% else %}
+                <i class="fas fa-bus"></i> Trip
+                {% endif %}
+              </span>
+              {% else %}
+              <span style="color:#ccc;font-size:12px;">—</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12px;color:#888;white-space:nowrap;">{{ s.date or '—' }}</td>
+            <td style="text-align:center;white-space:nowrap;">
+              <a href="/trainer/attendance-history?class_id={{ class_id }}&unit_id={{ unit_id }}&week={{ s.week }}&lesson={{ s.lesson }}&year={{ year }}&term={{ term }}"
+                 class="btn btn-sm" style="background:#e3f2fd;color:#1e5a9f;padding:5px 10px;">
+                <i class="fas fa-eye"></i> View
+              </a>
+              <a href="/trainer/session-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&week={{ s.week }}&lesson={{ s.lesson }}&year={{ year }}&term={{ term }}"
+                 target="_blank" class="btn btn-sm btn-danger" style="padding:5px 10px;">
+                <i class="fas fa-file-pdf"></i> PDF
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- No sessions yet -->
+  <div class="ah-card">
+    <div class="ah-empty">
+      <i class="fas fa-clipboard-list"></i>
+      <p>No attendance records found for this class and unit.</p>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterChange() {
+  var params = new URLSearchParams();
+  var c  = document.getElementById('cls').value;
+  var u  = document.getElementById('unt').value;
+  var y  = document.getElementById('yr').value;
+  var t  = document.getElementById('tm').value;
+  var wk = document.getElementById('wk').value;
+  var l  = document.getElementById('les').value;
+  if (c)  params.set('class_id', c);
+  if (u)  params.set('unit_id',  u);
+  if (y)  params.set('year',     y);
+  if (t)  params.set('term',     t);
+  if (wk) params.set('week',     wk);
+  if (l)  params.set('lesson',   l);
+  window.location = '/trainer/attendance-history?' + params.toString();
+}
+</script>
 {% endblock %}
