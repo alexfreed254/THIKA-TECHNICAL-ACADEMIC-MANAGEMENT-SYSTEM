@@ -1,188 +1,280 @@
 {% extends "trainer/base.html" %}
-{% block title %}Trainee POE{% endblock %}
-{% block page_title %}Trainee POE{% endblock %}
-{% block extra_style %}
-.page-wrap{padding:24px}
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
-.stat-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform .15s,box-shadow .15s;border:2px solid transparent}
-.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
-.stat-card.active{border-color:#7b1fa2}
-.stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.stat-info h3{font-size:22px;font-weight:800;margin:0;line-height:1.2}
-.stat-info p{font-size:11px;color:#888;margin:0;text-transform:uppercase;letter-spacing:.3px}
-.step-panel{display:none}
-.step-panel.active{display:block}
-.breadcrumb{display:flex;align-items:center;gap:8px;margin-bottom:18px;font-size:13px;flex-wrap:wrap}
-.breadcrumb a{color:#7b1fa2;text-decoration:none;cursor:pointer}
-.breadcrumb a:hover{text-decoration:underline}
-.breadcrumb .sep{color:#bbb;font-size:10px}
-.breadcrumb .current{color:#555;font-weight:600}
-.class-accordion{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.class-item{border-bottom:1px solid #f0f0f0}
-.class-item:last-child{border-bottom:none}
-.class-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background .15s}
-.class-header:hover{background:#faf5ff}
-.class-header .name{font-size:14px;font-weight:600;color:#333;display:flex;align-items:center;gap:10px}
-.class-header .meta{font-size:12px;color:#888;display:flex;align-items:center;gap:12px}
-.class-body{max-height:0;overflow:hidden;transition:max-height .35s ease;background:#fafafa}
-.class-body.open{max-height:2000px}
-.class-body-inner{padding:12px 20px 20px}
-.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-.unit-card{background:#fff;border:1px solid #eee;border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:space-between}
-.unit-card:hover{border-color:#7b1fa2;box-shadow:0 2px 12px rgba(123,31,162,.12);transform:translateY(-1px)}
-.unit-card .u-name{font-size:13px;font-weight:600;color:#333}
-.unit-card .u-code{font-size:11px;color:#999;margin-top:2px}
-.unit-card .u-stats{display:flex;gap:8px;align-items:center}
-.unit-card .u-stats .pill{font-size:10px;padding:2px 8px;border-radius:12px;font-weight:600}
-.browse-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
-.browse-header h2{font-size:18px;font-weight:700;color:#333;margin:0}
-.browse-actions{display:flex;gap:8px;flex-wrap:wrap}
-.search-box{display:flex;align-items:center;background:#fff;border:1px solid #ddd;border-radius:8px;padding:0 12px}
-.search-box input{border:none;outline:none;padding:9px 8px;font-size:13px;min-width:200px;background:transparent}
-.search-box i{color:#aaa;font-size:14px}
-.filter-pills{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-.filter-pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #ddd;background:#fff;color:#666;transition:all .15s}
-.filter-pill:hover{border-color:#7b1fa2;color:#7b1fa2}
-.filter-pill.active{background:#7b1fa2;color:#fff;border-color:#7b1fa2}
-.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.file-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;transition:transform .15s,box-shadow .15s}
-.file-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
-.file-preview{height:140px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.file-preview img{width:100%;height:100%;object-fit:cover}
-.file-preview .file-type-badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.65);color:#fff;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px}
-.file-preview .play-btn{position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(123,31,162,.85);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
-.file-info{padding:14px 16px 12px}
-.file-info .fi-name{font-size:13px;font-weight:600;color:#333;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.file-info .fi-meta{font-size:11px;color:#999;display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.file-info .fi-meta span{display:flex;align-items:center;gap:4px}
-.file-actions{display:flex;gap:6px;padding:0 16px 14px;flex-wrap:wrap}
-.btn{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;text-decoration:none;transition:opacity .15s}
-.btn:hover{opacity:.85}
-.btn-approve{background:#2e7d32;color:#fff}
-.btn-reject{background:#c62828;color:#fff}
-.btn-delete{background:#ef5350;color:#fff}
-.btn-review{background:#7b1fa2;color:#fff}
-.btn-sm{padding:5px 10px;font-size:11px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-pending{background:#fff3e0;color:#e65100}
-.badge-approved{background:#e8f5e9;color:#2e7d32}
-.badge-rejected{background:#ffebee;color:#c62828}
-.empty-state{text-align:center;padding:48px 20px;color:#aaa}
-.empty-state i{font-size:48px;margin-bottom:12px;color:#ddd}
-.empty-state p{font-size:14px;margin:0}
-.review-note-box{display:none;margin-top:8px}
-.review-note-box textarea{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;resize:vertical;min-height:50px;box-sizing:border-box}
-.review-note-box .note-actions{display:flex;gap:6px;margin-top:6px}
-.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.open{display:flex}
-.modal-content{background:#fff;border-radius:12px;max-width:90vw;max-height:90vh;overflow:auto;position:relative}
-.modal-content img{max-width:100%;max-height:85vh;display:block}
-.modal-close{position:absolute;top:10px;right:14px;font-size:24px;color:#fff;cursor:pointer;background:rgba(0,0,0,.4);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none}
-@media(max-width:600px){
-  .stats-row{grid-template-columns:repeat(2,1fr)}
-  .file-grid{grid-template-columns:1fr}
-  .browse-header{flex-direction:column;align-items:stretch}
-  .search-box input{min-width:auto;width:100%}
-}
+{% block title %}Trainee POE Review{% endblock %}
+{% block page_title %}Trainee POE Review{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
 {% endblock %}
+
+{% block extra_style %}
+/* Plus Jakarta Sans is already loaded via base */
+body { background-color: #f0f4f8; }
+
+.tab-active  { background: #4f46e5 !important; color: white !important; }
+.tab-default { color: #64748b; }
+.tab-default:hover { background: #f1f5f9; }
+
+.glass-panel {
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(12px);
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px -4px rgba(0,0,0,0.06);
+  border: 1px solid rgba(255,255,255,0.7);
+}
+
+.browse-card {
+  background: #fff;
+  border: 1.5px solid #e8eaf0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: border-color .18s, box-shadow .18s, transform .15s;
+}
+.browse-card:hover {
+  border-color: #4f46e5;
+  box-shadow: 0 6px 20px -4px rgba(79,70,229,0.15);
+  transform: translateY(-1px);
+}
+
+.pill          { display:inline-flex; align-items:center; gap:5px; padding:3px 11px; border-radius:999px; font-size:.7rem; font-weight:700; }
+.pill-approved { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+.pill-pending  { background:#fef9c3; color:#854d0e; border:1px solid #fde047; }
+.pill-rejected { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+.pill-all      { background:#ede9fe; color:#4f46e5; border:1.5px solid #4f46e5; }
+
+.filter-active { outline: 2.5px solid #4f46e5 !important; outline-offset: 2px; }
+
+.bc-link { color:#4f46e5; font-weight:700; font-size:.78rem; cursor:pointer; }
+.bc-link:hover { text-decoration:underline; }
+.bc-sep  { color:#cbd5e1; font-size:.7rem; }
+
+.file-row { background:#fff; border:1.5px solid #f1f5f9; border-radius:14px; transition:background .15s; }
+.file-row:hover { background:#f8fafc; }
+
+.reject-panel { display:none; }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:9999; align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.open { display:flex; }
+.modal-content { background:#fff; border-radius:12px; max-width:90vw; max-height:90vh; overflow:auto; position:relative; }
+.modal-content img { max-width:100%; max-height:85vh; display:block; }
+.modal-close { position:absolute; top:10px; right:14px; font-size:22px; color:#fff; cursor:pointer; background:rgba(0,0,0,.45); width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:none; }
+
+.fade-in { animation:fadeIn .25s ease-in; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+{% endblock %}
+
 {% block content %}
-<div class="page-wrap">
+<div class="max-w-7xl mx-auto" style="padding:20px 16px;">
 
-  <!-- Stat Cards -->
-  <div class="stats-row" id="statCards">
-    <div class="stat-card active" data-filter="all" onclick="filterStatus('all',this)">
-      <div class="stat-icon" style="background:#ede7f6;color:#7b1fa2"><i class="fas fa-file-alt"></i></div>
-      <div class="stat-info"><h3>{{ status_counts.total }}</h3><p>Total</p></div>
-    </div>
-    <div class="stat-card" data-filter="pending" onclick="filterStatus('pending',this)">
-      <div class="stat-icon" style="background:#fff3e0;color:#e65100"><i class="fas fa-clock"></i></div>
-      <div class="stat-info"><h3>{{ status_counts.pending }}</h3><p>Pending</p></div>
-    </div>
-    <div class="stat-card" data-filter="approved" onclick="filterStatus('approved',this)">
-      <div class="stat-icon" style="background:#e8f5e9;color:#2e7d32"><i class="fas fa-check-circle"></i></div>
-      <div class="stat-info"><h3>{{ status_counts.approved }}</h3><p>Approved</p></div>
-    </div>
-    <div class="stat-card" data-filter="rejected" onclick="filterStatus('rejected',this)">
-      <div class="stat-icon" style="background:#ffebee;color:#c62828"><i class="fas fa-times-circle"></i></div>
-      <div class="stat-info"><h3>{{ status_counts.rejected }}</h3><p>Rejected</p></div>
-    </div>
-  </div>
+  <!-- ═══ TAB NAV ═══ -->
+  <nav class="flex p-1.5 bg-white rounded-2xl shadow-sm border border-slate-200 mb-8 w-fit">
+    <button id="tab-dashboard" onclick="switchTab('dashboard')"
+      class="tab-active px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+      <i class="fas fa-th-large"></i> Dashboard
+    </button>
+    <button id="tab-browse" onclick="switchTab('browse')"
+      class="tab-default px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all">
+      <i class="fas fa-folder-tree"></i> Browse
+    </button>
+    <button id="tab-search" onclick="switchTab('search')"
+      class="tab-default px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all">
+      <i class="fas fa-search"></i> Search
+    </button>
+  </nav>
 
-  <!-- Breadcrumb -->
-  <div class="breadcrumb" id="breadcrumb">
-    <a onclick="showStep('classes')"><i class="fas fa-home"></i> Classes</a>
-  </div>
+  <!-- ═══ DASHBOARD ═══ -->
+  <section id="tab-dashboard-panel" class="fade-in space-y-8">
 
-  <!-- Step 1: Classes -->
-  <div class="step-panel active" id="step-classes">
-    <div class="browse-header">
-      <h2><i class="fas fa-school"></i> Select Class</h2>
-    </div>
-    <div class="class-accordion">
-      {% for c in classes %}
-      <div class="class-item">
-        <div class="class-header" onclick="toggleClass(this)">
-          <span class="name"><i class="fas fa-users" style="color:#7b1fa2"></i> {{ c.name }}</span>
-          <span class="meta">
-            <span><i class="fas fa-book"></i> {{ c.unit_count }} unit{{ 's' if c.unit_count != 1 }}</span>
-            {% if c.pending > 0 %}
-            <span class="badge badge-pending">{{ c.pending }} pending</span>
-            {% endif %}
-            <i class="fas fa-chevron-down" style="font-size:11px;color:#bbb;transition:transform .3s"></i>
-          </span>
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="glass-panel p-5 border-l-4 border-indigo-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold text-slate-500 uppercase">Total POE</p>
+            <h3 class="text-3xl font-black mt-1">{{ status_counts.total }}</h3>
+          </div>
+          <i class="fas fa-file-signature text-indigo-200 text-3xl"></i>
         </div>
-        <div class="class-body">
-          <div class="class-body-inner">
-            <div class="unit-grid">
-              {% for u in c.units %}
-              <div class="unit-card" onclick="selectUnit('{{ c.id }}','{{ u.id }}','{{ c.name|e }}','{{ u.name|e }}')">
-                <div>
-                  <div class="u-name">{{ u.name }}</div>
-                  <div class="u-code">{{ u.code }}</div>
-                </div>
-                <div class="u-stats">
-                  <span class="pill" style="background:#fff3e0;color:#e65100">{{ u.pending }}</span>
-                  <span class="pill" style="background:#e8f5e9;color:#2e7d32">{{ u.approved }}</span>
-                </div>
+      </div>
+      <div class="glass-panel p-5 border-l-4 border-amber-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold text-slate-500 uppercase">Pending</p>
+            <h3 class="text-3xl font-black mt-1 text-amber-600">{{ status_counts.pending }}</h3>
+          </div>
+          <i class="fas fa-clock text-amber-200 text-3xl"></i>
+        </div>
+      </div>
+      <div class="glass-panel p-5 border-l-4 border-emerald-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold text-slate-500 uppercase">Approved</p>
+            <h3 class="text-3xl font-black mt-1 text-emerald-600">{{ status_counts.approved }}</h3>
+          </div>
+          <i class="fas fa-check-circle text-emerald-200 text-3xl"></i>
+        </div>
+      </div>
+      <div class="glass-panel p-5 border-l-4 border-rose-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold text-slate-500 uppercase">Rejected</p>
+            <h3 class="text-3xl font-black mt-1 text-rose-600">{{ status_counts.rejected }}</h3>
+          </div>
+          <i class="fas fa-times-circle text-rose-200 text-3xl"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- All Folders -->
+    <div class="glass-panel p-7">
+      <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-slate-800">
+        <i class="fas fa-network-wired text-indigo-500"></i> ALL CLASSES &amp; UNITS
+      </h3>
+      {% if classes %}
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {% for c in classes %}
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+          <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-folder-tree text-indigo-500 text-lg"></i>
+            <h4 class="font-bold text-slate-800 truncate text-sm">{{ c.name }}</h4>
+            {% if c.pending > 0 %}
+            <span class="pill pill-pending ml-auto">{{ c.pending }}</span>
+            {% endif %}
+          </div>
+          <div class="space-y-1">
+            {% for u in c.units %}
+            <div class="flex items-center justify-between py-1 border-b border-slate-50 last:border-0 cursor-pointer hover:bg-slate-50 rounded px-1"
+                 onclick="switchTab('browse');setTimeout(()=>selectUnit('{{ c.id }}','{{ u.id }}','{{ c.name|e }}','{{ u.name|e }}'),50)">
+              <span class="text-slate-600 text-sm truncate">{{ u.name }}</span>
+              <div class="flex gap-1.5 ml-2 flex-shrink-0">
+                {% if u.pending > 0 %}
+                <span class="pill pill-pending" style="font-size:0.65rem;padding:2px 7px;">{{ u.pending }}</span>
+                {% endif %}
+                {% if u.approved > 0 %}
+                <span class="pill pill-approved" style="font-size:0.65rem;padding:2px 7px;">{{ u.approved }}</span>
+                {% endif %}
               </div>
-              {% endfor %}
             </div>
+            {% endfor %}
           </div>
         </div>
+        {% endfor %}
       </div>
       {% else %}
-      <div class="empty-state">
-        <i class="fas fa-inbox"></i>
+      <div class="text-center py-12 text-slate-400">
+        <i class="fas fa-inbox text-4xl mb-3 block opacity-30"></i>
         <p>No assessments found for your assigned units.</p>
       </div>
-      {% endfor %}
+      {% endif %}
     </div>
-  </div>
 
-  <!-- Step 2: Files view (loaded dynamically) -->
-  <div class="step-panel" id="step-files">
-    <div class="browse-header">
-      <h2 id="filesTitle"><i class="fas fa-file-certificate"></i> Assessments</h2>
-      <div class="browse-actions">
-        <div class="search-box">
-          <i class="fas fa-search"></i>
-          <input type="text" id="searchInput" placeholder="Search student..." oninput="filterFiles()">
+  </section>
+
+  <!-- ═══ BROWSE ═══ -->
+  <section id="tab-browse-panel" class="hidden fade-in">
+    <div class="glass-panel p-6 md:p-8">
+
+      <!-- Breadcrumb -->
+      <div id="bc" class="flex items-center gap-2 flex-wrap mb-6 text-xs"></div>
+
+      <!-- VIEW 1: Class grid -->
+      <div id="bv-classes">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-layer-group text-indigo-600"></i> Select a Class
+          </h2>
         </div>
-        <button class="btn btn-review" onclick="showStep('classes')"><i class="fas fa-arrow-left"></i> Back</button>
+        <div id="class-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
       </div>
+
+      <!-- VIEW 2: Unit list -->
+      <div id="bv-units" class="hidden">
+        <div class="flex items-center justify-between mb-5">
+          <h2 id="bv-class-title" class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-book-open text-indigo-600"></i>
+          </h2>
+          <span id="bv-unit-stats" class="text-xs text-slate-400 font-semibold"></span>
+        </div>
+        <div id="unit-list" class="space-y-2"></div>
+      </div>
+
+      <!-- VIEW 3: File list -->
+      <div id="bv-files" class="hidden">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <h2 id="bv-unit-title" class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-file-certificate text-indigo-600"></i>
+          </h2>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center bg-white border border-slate-200 rounded-xl px-3">
+              <i class="fas fa-search text-slate-400 text-sm"></i>
+              <input type="text" id="browseSearch" placeholder="Search student…"
+                class="border-none outline-none px-2 py-2 text-sm bg-transparent" oninput="bRenderFiles()">
+            </div>
+            <span id="bv-file-stats" class="text-xs text-slate-400 font-semibold whitespace-nowrap"></span>
+          </div>
+        </div>
+        <!-- Status filter pills -->
+        <div class="flex gap-2 flex-wrap mb-5">
+          <button onclick="bFilter('all')"      id="fp-all"      class="pill pill-all filter-active">All</button>
+          <button onclick="bFilter('approved')" id="fp-approved" class="pill pill-approved"><i class="fas fa-check-circle"></i> Approved</button>
+          <button onclick="bFilter('pending')"  id="fp-pending"  class="pill pill-pending"><i class="fas fa-clock"></i> Pending</button>
+          <button onclick="bFilter('rejected')" id="fp-rejected" class="pill pill-rejected"><i class="fas fa-times-circle"></i> Rejected</button>
+        </div>
+        <div id="file-list" class="space-y-2"></div>
+      </div>
+
     </div>
-    <div class="filter-pills" id="filterPills">
-      <span class="filter-pill active" data-filter="all" onclick="filterStatus('all',this)">All</span>
-      <span class="filter-pill" data-filter="pending" onclick="filterStatus('pending',this)">Pending</span>
-      <span class="filter-pill" data-filter="approved" onclick="filterStatus('approved',this)">Approved</span>
-      <span class="filter-pill" data-filter="rejected" onclick="filterStatus('rejected',this)">Rejected</span>
+  </section>
+
+  <!-- ═══ SEARCH ═══ -->
+  <section id="tab-search-panel" class="hidden fade-in space-y-6">
+    <div class="glass-panel p-7">
+      <h2 class="text-xl font-bold text-slate-800 mb-6">Advanced Search</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Student / Adm No</label>
+          <input id="sq-name" type="text" placeholder="Name or admission…"
+            class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Class</label>
+          <select id="sq-class" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Assessment Type</label>
+          <select id="sq-type" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+            <option value="">All Types</option>
+            <option value="PRACTICAL">Practical</option>
+            <option value="THEORY">Theory</option>
+            <option value="ORAL">Oral</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
+          <select id="sq-status" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 outline-none">
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="runSearch()"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition-all flex items-center gap-2">
+        <i class="fas fa-magnifying-glass"></i> Search
+      </button>
     </div>
-    <div class="file-grid" id="fileGrid"></div>
-  </div>
+    <div id="search-results" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </section>
 
 </div>
 
-<!-- File Preview Modal -->
+<!-- Preview Modal -->
 <div class="modal-overlay" id="previewModal" onclick="if(event.target===this)closePreview()">
   <div class="modal-content">
     <button class="modal-close" onclick="closePreview()">&times;</button>
@@ -194,240 +286,392 @@
 
 {% block scripts %}
 <script>
-// ── Data ────────────────────────────────────────────────────
+/* ── All assessment data ── */
 const classesData = {{ classes|tojson|safe }};
-let currentClassId = null;
-let currentUnitId = null;
-let currentFilter = 'all';
-let currentClassData = null;
 
-// ── Step Navigation ─────────────────────────────────────────
-function showStep(step) {
-  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
-  if (step === 'classes') {
-    document.getElementById('step-classes').classList.add('active');
-    document.getElementById('breadcrumb').innerHTML = '<a onclick="showStep(\'classes\')"><i class="fas fa-home"></i> Classes</a>';
-  } else if (step === 'files') {
-    document.getElementById('step-files').classList.add('active');
-  }
-}
-
-// ── Class Accordion ─────────────────────────────────────────
-function toggleClass(header) {
-  const body = header.nextElementSibling;
-  const arrow = header.querySelector('.fa-chevron-down');
-  body.classList.toggle('open');
-  arrow.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
-}
-
-// ── Select Unit → Show Files ────────────────────────────────
-function selectUnit(classId, unitId, className, unitName) {
-  currentClassId = classId;
-  currentUnitId = unitId;
-  currentFilter = 'all';
-
-  // Find class data
-  const cls = classesData.find(c => c.id === classId);
-  currentClassData = cls ? cls.units.find(u => u.id === unitId) : null;
-
-  // Update breadcrumb
-  document.getElementById('breadcrumb').innerHTML =
-    '<a onclick="showStep(\'classes\')"><i class="fas fa-home"></i> Classes</a>' +
-    '<span class="sep">›</span>' +
-    '<span class="current">' + className + ' — ' + unitName + '</span>';
-
-  document.getElementById('filesTitle').innerHTML = '<i class="fas fa-file-certificate"></i> ' + unitName;
-
-  // Reset filter pills
-  document.querySelectorAll('#filterPills .filter-pill').forEach(p => p.classList.remove('active'));
-  document.querySelector('#filterPills .filter-pill[data-filter="all"]').classList.add('active');
-
-  renderFiles();
-  showStep('files');
-}
-
-// ── Render Files ────────────────────────────────────────────
-function renderFiles() {
-  const grid = document.getElementById('fileGrid');
-  const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-
-  if (!currentClassData || !currentClassData.assessments) {
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No assessments found.</p></div>';
-    return;
-  }
-
-  let files = currentClassData.assessments;
-
-  // Filter by status
-  if (currentFilter !== 'all') {
-    files = files.filter(f => f.status === currentFilter);
-  }
-
-  // Search
-  if (search) {
-    files = files.filter(f => {
-      const name = (f.user_profiles && f.user_profiles.full_name || '').toLowerCase();
-      const adm = (f.user_profiles && f.user_profiles.admission_no || '').toLowerCase();
-      return name.includes(search) || adm.includes(search);
+/* Flatten all assessments */
+function allAssessments() {
+  const out = [];
+  classesData.forEach(function(c) {
+    c.units.forEach(function(u) {
+      (u.assessments || []).forEach(function(a) {
+        a._className = c.name;
+        a._classId   = c.id;
+        a._unitName  = u.name;
+        a._unitCode  = u.code;
+        out.push(a);
+      });
     });
-  }
+  });
+  return out;
+}
 
-  if (files.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>No matching assessments.</p></div>';
+/* ── Tab switching ── */
+function switchTab(tab) {
+  ['dashboard','browse','search'].forEach(function(t) {
+    document.getElementById('tab-' + t + '-panel').classList.add('hidden');
+    var btn = document.getElementById('tab-' + t);
+    btn.className = (t === tab)
+      ? 'tab-active px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all'
+      : 'tab-default px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all';
+  });
+  document.getElementById('tab-' + tab + '-panel').classList.remove('hidden');
+  if (tab === 'browse' && !_bInitialized) bInit();
+}
+
+/* ── BROWSE ── */
+var _bInitialized = false;
+var _bCurrentClass = null;
+var _bCurrentUnit  = null;
+var _bAllFiles     = [];
+var _bFilter       = 'all';
+
+function bInit() {
+  _bInitialized = true;
+  bShowView('classes');
+  bLoadClasses();
+}
+
+function bShowView(v) {
+  ['classes','units','files'].forEach(function(n) {
+    document.getElementById('bv-' + n).classList.toggle('hidden', n !== v);
+  });
+}
+
+function bSetBreadcrumb(parts) {
+  var html = '';
+  parts.forEach(function(p, i) {
+    if (i > 0) html += '<span class="bc-sep"><i class="fas fa-chevron-right"></i></span>';
+    if (p.fn) {
+      html += '<span class="bc-link" onclick="' + p.fn + '">' + p.label + '</span>';
+    } else {
+      html += '<span class="font-bold text-slate-700 text-xs">' + p.label + '</span>';
+    }
+  });
+  document.getElementById('bc').innerHTML = html;
+}
+
+/* Level 1 — Classes grid */
+function bLoadClasses() {
+  _bCurrentClass = null;
+  _bCurrentUnit  = null;
+  bShowView('classes');
+  bSetBreadcrumb([{ label: '<i class="fas fa-home mr-1"></i>All Classes' }]);
+
+  var grid = document.getElementById('class-grid');
+  if (classesData.length === 0) {
+    grid.innerHTML = '<div class="col-span-2 p-6 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-center text-sm font-semibold">No classes found.</div>';
     return;
   }
 
-  grid.innerHTML = files.map(f => {
-    const status = f.status || 'pending';
-    const student = f.user_profiles || {};
-    const name = student.full_name || '—';
-    const adm = student.admission_no || '';
-    const uploaded = f.uploaded_at ? f.uploaded_at.slice(0,10) : '—';
-    const type = f.assessment_type || '—';
-    const no = f.assessment_no || '—';
-
-    const scriptPath = f.script_file_path || '';
-    const ext = scriptPath.split('.').pop().toLowerCase();
-    const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
-    const isPdf = ext === 'pdf';
-    const isVideo = ['mp4','webm','ogg','mov'].includes(ext);
-
-    return `
-    <div class="file-card" data-status="${status}">
-      <div class="file-preview">
-        ${isImage
-          ? `<img src="${scriptPath}" alt="${name}" onclick="openPreview('${scriptPath}')" style="cursor:pointer">`
-          : isPdf
-            ? `<div style="text-align:center"><i class="fas fa-file-pdf" style="font-size:48px;color:#c62828"></i><br><span style="font-size:11px;color:#888">PDF</span></div>`
-            : isVideo
-              ? `<video src="${scriptPath}" style="width:100%;height:100%;object-fit:cover" controls></video>`
-              : `<div style="text-align:center"><i class="fas fa-file" style="font-size:48px;color:#7b1fa2"></i><br><span style="font-size:11px;color:#888">${ext.toUpperCase()}</span></div>`
-        }
-        <span class="file-type-badge"><i class="fas ${isImage ? 'fa-image' : isPdf ? 'fa-file-pdf' : isVideo ? 'fa-video' : 'fa-file'}"></i> ${ext.toUpperCase()}</span>
-      </div>
-      <div class="file-info">
-        <div class="fi-name"><i class="fas fa-user-graduate" style="color:#7b1fa2;margin-right:4px"></i>${name}</div>
-        <div class="fi-meta">
-          <span><i class="fas fa-id-card"></i> ${adm}</span>
-          <span><i class="fas fa-tag"></i> ${type} #${no}</span>
-          <span><i class="fas fa-calendar"></i> ${uploaded}</span>
-        </div>
-      </div>
-      <div class="file-actions">
-        <span class="badge badge-${status}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>
-        <a href="/trainer/assessment/${f.id}/review" class="btn btn-review btn-sm"><i class="fas fa-eye"></i> Review</a>
-        ${status === 'pending' ? `
-          <button class="btn btn-approve btn-sm" onclick="reviewAssessment('${f.id}','approve')"><i class="fas fa-check"></i> Approve</button>
-          <button class="btn btn-reject btn-sm" onclick="showRejectNote('${f.id}')"><i class="fas fa-times"></i> Reject</button>
-        ` : ''}
-        <button class="btn btn-delete btn-sm" onclick="deleteAssessment('${f.id}')"><i class="fas fa-trash"></i></button>
-      </div>
-      ${status !== 'pending' && f.reviewed_at ? (() => {
-        const reviewer = f.reviewer && f.reviewer.full_name ? f.reviewer.full_name : 'Trainer';
-        const reviewedDate = f.reviewed_at ? f.reviewed_at.slice(0,16).replace('T',' ') : '';
-        const color = status === 'approved' ? '#2e7d32' : '#c62828';
-        const bg = status === 'approved' ? '#f0fdf4' : '#fff5f5';
-        const icon = status === 'approved' ? 'fa-check-circle' : 'fa-times-circle';
-        const note = f.review_note ? `<div style="font-size:11px;color:#555;margin-top:3px;font-style:italic">"${f.review_note}"</div>` : '';
-        return `<div style="padding:8px 16px 12px;background:${bg};border-top:1px solid #eee;font-size:12px;color:${color}">
-          <i class="fas ${icon}"></i> <strong>${status.charAt(0).toUpperCase()+status.slice(1)}</strong> by ${reviewer}
-          <span style="color:#aaa;margin-left:6px">${reviewedDate}</span>${note}
-        </div>`;
-      })() : ''}
-      <div class="review-note-box" id="rejectNote-${f.id}" style="padding:0 16px 14px">
-        <textarea placeholder="Reason for rejection (required)..." id="rejectText-${f.id}"></textarea>
-        <div class="note-actions">
-          <button class="btn btn-reject btn-sm" onclick="submitReject('${f.id}')"><i class="fas fa-check"></i> Confirm Reject</button>
-          <button class="btn btn-sm" style="background:#f5f5f5;color:#333" onclick="hideRejectNote('${f.id}')">Cancel</button>
-        </div>
-      </div>
-    </div>`;
+  grid.innerHTML = classesData.map(function(cls) {
+    var safeName = cls.name.replace(/'/g, "\\'");
+    var totalPending = cls.units.reduce(function(s,u){ return s + (u.pending||0); }, 0);
+    return '<div class="browse-card p-4 flex items-center gap-4" onclick="bSelectClass(\'' + safeName + '\')">' +
+      '<div class="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">' +
+        '<i class="fas fa-graduation-cap text-indigo-600 text-lg"></i>' +
+      '</div>' +
+      '<div class="flex-1 overflow-hidden">' +
+        '<p class="font-extrabold text-slate-800 text-sm leading-tight truncate">' + escHtml(cls.name) + '</p>' +
+        '<p class="text-xs text-slate-400 mt-0.5">' + cls.units.length + ' unit(s)' +
+          (totalPending > 0 ? ' &bull; <span style="color:#854d0e">' + totalPending + ' pending</span>' : '') +
+        '</p>' +
+      '</div>' +
+      '<i class="fas fa-chevron-right text-slate-300 flex-shrink-0"></i>' +
+    '</div>';
   }).join('');
 }
 
-// ── Filtering ───────────────────────────────────────────────
-function filterStatus(status, el) {
-  currentFilter = status;
-  if (el) {
-    document.querySelectorAll('#statCards .stat-card, #filterPills .filter-pill').forEach(p => p.classList.remove('active'));
-    el.classList.add('active');
-  }
-  if (currentUnitId) {
-    renderFiles();
-  }
-}
+/* Level 2 — Units */
+function bSelectClass(className) {
+  _bCurrentClass = classesData.find(function(c){ return c.name === className; });
+  _bCurrentUnit  = null;
+  if (!_bCurrentClass) return;
+  bShowView('units');
+  bSetBreadcrumb([
+    { label: '<i class="fas fa-home mr-1"></i>All Classes', fn: 'bLoadClasses()' },
+    { label: escHtml(className) }
+  ]);
+  document.getElementById('bv-class-title').innerHTML =
+    '<i class="fas fa-book-open text-indigo-600"></i> ' + escHtml(className);
+  var totalFiles = _bCurrentClass.units.reduce(function(s,u){ return s+(u.assessments||[]).length; }, 0);
+  document.getElementById('bv-unit-stats').textContent = totalFiles + ' assessment(s) total';
 
-function filterFiles() {
-  if (currentUnitId) renderFiles();
-}
-
-// ── Approve / Reject (AJAX) ─────────────────────────────────
-function reviewAssessment(id, action) {
-  if (action === 'approve' && !confirm('Approve this assessment?')) return;
-  const note = action === 'reject' ? document.getElementById('rejectText-' + id).value : '';
-  if (action === 'reject' && !note.trim()) {
-    alert('Please provide a reason for rejection.');
+  var list = document.getElementById('unit-list');
+  if (!_bCurrentClass.units.length) {
+    list.innerHTML = '<div class="p-5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm text-center font-semibold">No units in this class.</div>';
     return;
   }
 
+  list.innerHTML = _bCurrentClass.units.map(function(u) {
+    var safeName = u.name.replace(/'/g, "\\'");
+    var pills = '';
+    if (u.approved) pills += '<span class="pill pill-approved"><i class="fas fa-check-circle"></i> ' + u.approved + '</span>';
+    if (u.pending)  pills += '<span class="pill pill-pending"><i class="fas fa-clock"></i> ' + u.pending + '</span>';
+    if (u.rejected) pills += '<span class="pill pill-rejected"><i class="fas fa-times-circle"></i> ' + u.rejected + '</span>';
+    if (!pills) pills = '<span class="text-xs text-slate-400">No files</span>';
+    return '<div class="browse-card p-4 flex items-center gap-4" onclick="selectUnit(\'' +
+      _bCurrentClass.id + '\',\'' + u.id + '\',\'' + _bCurrentClass.name.replace(/'/g,"\\'") + '\',\'' + safeName + '\')">' +
+      '<div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">' +
+        '<i class="fas fa-folder text-violet-600"></i>' +
+      '</div>' +
+      '<div class="flex-1 overflow-hidden">' +
+        '<p class="font-bold text-slate-800 text-sm truncate">' + escHtml(u.name) + '</p>' +
+        '<p class="text-xs text-slate-400">' + escHtml(u.code) + '</p>' +
+        '<div class="flex gap-1.5 mt-1.5 flex-wrap">' + pills + '</div>' +
+      '</div>' +
+      '<i class="fas fa-chevron-right text-slate-300 flex-shrink-0"></i>' +
+    '</div>';
+  }).join('');
+}
+
+/* Level 3 — Files */
+function selectUnit(classId, unitId, className, unitName) {
+  if (!_bCurrentClass || _bCurrentClass.id !== classId) {
+    _bCurrentClass = classesData.find(function(c){ return c.id === classId; });
+  }
+  _bCurrentUnit = (_bCurrentClass.units||[]).find(function(u){ return u.id === unitId; });
+  if (!_bCurrentUnit) return;
+
+  _bFilter = 'all';
+  bShowView('files');
+  bSetBreadcrumb([
+    { label: '<i class="fas fa-home mr-1"></i>All Classes', fn: 'bLoadClasses()' },
+    { label: escHtml(className), fn: 'bSelectClass(\'' + className.replace(/'/g,"\\'") + '\')' },
+    { label: escHtml(unitName) }
+  ]);
+  document.getElementById('bv-unit-title').innerHTML =
+    '<i class="fas fa-file-certificate text-indigo-600"></i> ' + escHtml(unitName);
+  bSetFilterActive('all');
+  _bAllFiles = _bCurrentUnit.assessments || [];
+  bRenderFiles();
+}
+
+function bFilter(status) {
+  _bFilter = status;
+  bSetFilterActive(status);
+  bRenderFiles();
+}
+
+function bSetFilterActive(status) {
+  ['all','approved','pending','rejected'].forEach(function(s) {
+    var btn = document.getElementById('fp-' + s);
+    if (btn) btn.classList.toggle('filter-active', s === status);
+  });
+}
+
+function bRenderFiles() {
+  var search = (document.getElementById('browseSearch').value || '').toLowerCase().trim();
+  var list   = document.getElementById('file-list');
+  var files  = _bAllFiles;
+
+  if (_bFilter !== 'all') files = files.filter(function(f){ return f.status === _bFilter; });
+  if (search) {
+    files = files.filter(function(f) {
+      var p = f.user_profiles || {};
+      return (p.full_name || '').toLowerCase().includes(search) ||
+             (p.admission_no || '').toLowerCase().includes(search);
+    });
+  }
+
+  document.getElementById('bv-file-stats').textContent = files.length + ' result(s)';
+
+  if (!files.length) {
+    list.innerHTML = '<div class="p-6 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-center text-sm font-semibold">' +
+      '<i class="fas fa-folder-open text-2xl mb-2 block"></i>No files match this filter.</div>';
+    return;
+  }
+
+  list.innerHTML = files.map(function(f) { return fileRow(f); }).join('');
+}
+
+/* ── Search ── */
+function runSearch() {
+  var nameQ   = (document.getElementById('sq-name').value   || '').toLowerCase().trim();
+  var classId = document.getElementById('sq-class').value;
+  var typeQ   = (document.getElementById('sq-type').value   || '').toLowerCase();
+  var statusQ = document.getElementById('sq-status').value;
+
+  var all = allAssessments();
+  var res = all.filter(function(a) {
+    var p = a.user_profiles || {};
+    if (nameQ && !(p.full_name||'').toLowerCase().includes(nameQ) && !(p.admission_no||'').toLowerCase().includes(nameQ)) return false;
+    if (classId && a._classId !== classId) return false;
+    if (typeQ && !(a.assessment_type||'').toLowerCase().includes(typeQ)) return false;
+    if (statusQ && (a.status||'pending') !== statusQ) return false;
+    return true;
+  });
+
+  var div = document.getElementById('search-results');
+  if (!res.length) {
+    div.innerHTML = '<div class="col-span-2 p-12 text-center text-slate-400 col-span-full">No records found.</div>';
+    return;
+  }
+  div.innerHTML = res.map(function(f) { return fileCard(f); }).join('');
+}
+
+/* ── File row (Browse) ── */
+function fileRow(f) {
+  var status  = f.status || 'pending';
+  var p       = f.user_profiles || {};
+  var pillCls = status === 'approved' ? 'pill-approved' : status === 'rejected' ? 'pill-rejected' : 'pill-pending';
+  var pillIco = status === 'approved' ? 'fa-check-circle' : status === 'rejected' ? 'fa-times-circle' : 'fa-clock';
+
+  var reviewerHtml = '';
+  if (status !== 'pending' && f.reviewed_at) {
+    var reviewerName = (f.reviewer && f.reviewer.full_name) ? f.reviewer.full_name : 'Trainer';
+    var reviewedDate = (f.reviewed_at || '').slice(0,10);
+    var col  = status === 'approved' ? '#065f46' : '#991b1b';
+    var bg   = status === 'approved' ? '#d1fae5'  : '#fee2e2';
+    var ico2 = status === 'approved' ? 'fa-check-circle' : 'fa-times-circle';
+    var noteHtml = f.review_note ? '<div style="font-size:11px;color:#555;margin-top:3px;font-style:italic">&#8220;' + escHtml(f.review_note) + '&#8221;</div>' : '';
+    reviewerHtml = '<div style="padding:8px 14px 10px;background:' + bg + ';border-top:1px solid rgba(0,0,0,.07);border-radius:0 0 12px 12px;font-size:12px;color:' + col + '">' +
+      '<i class="fas ' + ico2 + '"></i> <strong>' + cap(status) + '</strong> by ' + escHtml(reviewerName) +
+      ' <span style="color:#aaa;margin-left:5px">' + reviewedDate + '</span>' + noteHtml +
+    '</div>';
+  }
+
+  var actionBtns = '';
+  if (status === 'pending') {
+    actionBtns =
+      '<button onclick="reviewAssessment(\'' + f.id + '\',\'approve\')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors">Approve</button>' +
+      '<button onclick="showRejectNote(\'' + f.id + '\')" class="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors">Reject</button>';
+  }
+  actionBtns +=
+    '<a href="/trainer/assessment/' + f.id + '/review" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition-colors flex items-center gap-1"><i class="fas fa-eye"></i> Review</a>' +
+    '<button onclick="deleteAssessment(\'' + f.id + '\')" class="bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-900 transition-colors"><i class="fas fa-trash-alt"></i></button>';
+
+  var rejectPanel = status === 'pending' ? (
+    '<div class="reject-panel" id="rp-' + f.id + '" style="padding:8px 14px 12px">' +
+    '<textarea id="rt-' + f.id + '" rows="2" placeholder="Reason for rejection (required)…" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;resize:vertical;outline:none;"></textarea>' +
+    '<div style="display:flex;gap:6px;margin-top:6px">' +
+      '<button onclick="submitReject(\'' + f.id + '\')" class="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-700"><i class="fas fa-check"></i> Confirm Reject</button>' +
+      '<button onclick="hideRejectNote(\'' + f.id + '\')" style="background:#f5f5f5;color:#333;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;">Cancel</button>' +
+    '</div></div>'
+  ) : '';
+
+  return '<div class="file-row fade-in" style="overflow:hidden;margin-bottom:2px;">' +
+    '<div style="padding:12px 14px;display:flex;align-items:center;gap:12px;">' +
+      '<div style="width:38px;height:38px;border-radius:10px;background:#f0f0ff;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+        '<i class="fas fa-file-certificate" style="color:#4f46e5;font-size:16px;"></i>' +
+      '</div>' +
+      '<div style="flex:1;overflow:hidden;">' +
+        '<p style="font-weight:700;font-size:13px;color:#1e293b;">' + escHtml(p.full_name || '—') + '</p>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px;">' +
+          '<span class="pill ' + pillCls + '"><i class="fas ' + pillIco + '"></i> ' + cap(status) + '</span>' +
+          '<span style="font-size:11px;color:#94a3b8"><i class="fas fa-id-card" style="margin-right:3px"></i>' + escHtml(p.admission_no || '') + '</span>' +
+          '<span style="font-size:11px;color:#94a3b8"><i class="fas fa-tag" style="margin-right:3px"></i>' + escHtml((f.assessment_type || '—') + ' #' + (f.assessment_no || '—')) + '</span>' +
+          '<span style="font-size:11px;color:#94a3b8"><i class="fas fa-calendar" style="margin-right:3px"></i>' + (f.uploaded_at ? f.uploaded_at.slice(0,10) : '—') + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;">' + actionBtns + '</div>' +
+    '</div>' +
+    rejectPanel +
+    reviewerHtml +
+  '</div>';
+}
+
+/* ── File card (Search) ── */
+function fileCard(f) {
+  var status  = f.status || 'pending';
+  var p       = f.user_profiles || {};
+  var pillCls = status === 'approved' ? 'pill-approved' : status === 'rejected' ? 'pill-rejected' : 'pill-pending';
+  var pillIco = status === 'approved' ? 'fa-check-circle' : status === 'rejected' ? 'fa-times-circle' : 'fa-clock';
+
+  var actionBtns = '';
+  if (status === 'pending') {
+    actionBtns =
+      '<button onclick="reviewAssessment(\'' + f.id + '\',\'approve\')" class="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors">Approve</button>' +
+      '<button onclick="showRejectNote(\'' + f.id + '\')" class="bg-rose-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors">Reject</button>';
+  }
+  actionBtns += '<button onclick="deleteAssessment(\'' + f.id + '\')" class="bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-900 transition-colors"><i class="fas fa-trash-alt"></i></button>';
+
+  var rejectPanel = status === 'pending' ? (
+    '<div class="reject-panel" id="rp-' + f.id + '" style="padding:8px 14px 12px">' +
+    '<textarea id="rt-' + f.id + '" rows="2" placeholder="Reason for rejection…" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;resize:vertical;outline:none;"></textarea>' +
+    '<div style="display:flex;gap:6px;margin-top:6px">' +
+      '<button onclick="submitReject(\'' + f.id + '\')" class="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-700"><i class="fas fa-check"></i> Confirm</button>' +
+      '<button onclick="hideRejectNote(\'' + f.id + '\')" style="background:#f5f5f5;color:#333;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;">Cancel</button>' +
+    '</div></div>'
+  ) : '';
+
+  return '<div class="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-3 fade-in overflow-hidden">' +
+    '<div class="flex justify-between items-start gap-3">' +
+      '<div class="overflow-hidden">' +
+        '<h4 class="font-bold text-slate-800 text-sm">' + escHtml(p.full_name || '—') + '</h4>' +
+        '<p class="text-xs text-slate-500 mt-1">ADM: ' + escHtml(p.admission_no || 'N/A') +
+          ' &bull; ' + escHtml(f._className || '') + ' &bull; ' + escHtml(f._unitName || '') + '</p>' +
+        '<p class="text-xs text-slate-400 mt-0.5">' + escHtml((f.assessment_type||'—') + ' #' + (f.assessment_no||'—')) +
+          ' &bull; ' + (f.uploaded_at ? f.uploaded_at.slice(0,10) : '—') + '</p>' +
+      '</div>' +
+      '<span class="pill ' + pillCls + ' flex-shrink-0"><i class="fas ' + pillIco + '"></i> ' + cap(status) + '</span>' +
+    '</div>' +
+    '<div class="flex items-center justify-between gap-2">' +
+      '<a href="/trainer/assessment/' + f.id + '/review" class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-600 hover:text-white transition-colors">' +
+        'Review <i class="fas fa-external-link-alt text-xs ml-1"></i>' +
+      '</a>' +
+      '<div class="flex gap-2">' + actionBtns + '</div>' +
+    '</div>' +
+    rejectPanel +
+  '</div>';
+}
+
+/* ── Actions ── */
+function reviewAssessment(id, action) {
+  if (action === 'approve' && !confirm('Approve this assessment?')) return;
   fetch('/trainer/assessment/' + id + '/review', {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: 'action=' + action + '&review_note=' + encodeURIComponent(note)
-  }).then(() => {
-    // Always reload to get fresh data with reviewer name + timestamp
-    location.reload();
-  }).catch(() => location.reload());
-}
-
-function deleteAssessment(id) {
-  if (!confirm('Delete this assessment permanently? This cannot be undone.')) return;
-  fetch('/trainer/assessment/' + id + '/delete', { method: 'POST' })
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) {
-        if (currentClassData && currentClassData.assessments) {
-          currentClassData.assessments = currentClassData.assessments.filter(a => a.id !== id);
-        }
-        renderFiles();
-      } else {
-        alert('Error: ' + d.message);
-      }
-    });
-}
-
-function showRejectNote(id) {
-  document.getElementById('rejectNote-' + id).style.display = 'block';
-}
-
-function hideRejectNote(id) {
-  document.getElementById('rejectNote-' + id).style.display = 'none';
+    body: 'action=' + action + '&review_note='
+  }).then(function() { location.reload(); })
+    .catch(function() { location.reload(); });
 }
 
 function submitReject(id) {
-  const note = document.getElementById('rejectText-' + id).value;
+  var note = (document.getElementById('rt-' + id) || {}).value || '';
   if (!note.trim()) { alert('Please provide a reason for rejection.'); return; }
   fetch('/trainer/assessment/' + id + '/review', {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: 'action=reject&review_note=' + encodeURIComponent(note)
-  }).then(r => {
-    if (r.redirected) window.location.href = r.url;
-    else if (r.ok) {
-      alert('Assessment rejected successfully.');
-      renderFiles();
-    }
-  }).catch(() => location.reload());
+  }).then(function() { location.reload(); })
+    .catch(function() { location.reload(); });
 }
 
-// ── File Preview Modal ──────────────────────────────────────
+function deleteAssessment(id) {
+  if (!confirm('Delete this assessment permanently?')) return;
+  fetch('/trainer/assessment/' + id + '/delete', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { location.reload(); }
+      else { alert('Error: ' + d.message); }
+    });
+}
+
+function showRejectNote(id) {
+  var el = document.getElementById('rp-' + id);
+  if (el) el.style.display = 'block';
+}
+function hideRejectNote(id) {
+  var el = document.getElementById('rp-' + id);
+  if (el) el.style.display = 'none';
+}
+
+/* ── Preview ── */
 function openPreview(src) {
   document.getElementById('previewImage').src = src;
   document.getElementById('previewModal').classList.add('open');
 }
-
 function closePreview() {
   document.getElementById('previewModal').classList.remove('open');
+}
+
+/* ── Helpers ── */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function cap(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 </script>
 {% endblock %}
