@@ -1,207 +1,226 @@
 {% extends "trainer/base.html" %}
-
-{% block page_title %}Import Marks from Excel{% endblock %}
+{% block title %}Import Marks{% endblock %}
+{% block page_title %}Import Formative Marks{% endblock %}
 
 {% block extra_style %}
-<style>
-  .import-container {
-    background: white;
-    border-radius: 8px;
-    padding: 30px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    max-width: 800px;
-  }
-  .form-group {
-    margin-bottom: 20px;
-  }
-  .form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #333;
-  }
-  .form-group input,
-  .form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .file-upload {
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    padding: 40px;
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  .file-upload:hover {
-    border-color: #7b1fa2;
-    background: #f5f5f5;
-  }
-  .btn-upload {
-    background: #7b1fa2;
-    color: white;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-  }
-  .btn-upload:hover { background: #4a148c; }
-  .btn-download-template {
-    background: #1565c0;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    text-decoration: none;
-  }
-  .btn-download-template:hover { background: #0d47a1; }
-  .instructions {
-    background: #e3f2fd;
-    border-left: 4px solid #1565c0;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-  }
-  .instructions h4 {
-    margin: 0 0 10px 0;
-    color: #1565c0;
-  }
-  .instructions ul {
-    margin: 0;
-    padding-left: 20px;
-  }
-  .instructions li {
-    margin-bottom: 5px;
-    color: #333;
-  }
-</style>
+.imp-wrap { padding:20px; max-width:900px; margin:0 auto; }
+.step-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); margin-bottom:18px; overflow:hidden; }
+.step-header { padding:13px 20px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.step-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; flex-shrink:0; }
+.step-body { padding:18px 20px; }
+.info-box { background:#e3f2fd; border-left:4px solid #1e5a9f; border-radius:4px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#1e5a9f; }
+.info-box ul { margin:6px 0 0 18px; }
+.info-box li { margin-bottom:3px; }
+.file-zone { border:2px dashed #ccc; border-radius:10px; padding:36px 20px; text-align:center; cursor:pointer; transition:border-color .2s,background .2s; }
+.file-zone:hover, .file-zone.drag { border-color:#1e5a9f; background:#f0f7ff; }
+.file-zone i { font-size:40px; color:#1e5a9f; display:block; margin-bottom:10px; }
+.file-name { margin-top:8px; font-size:13px; color:#1e5a9f; font-weight:700; }
 {% endblock %}
 
 {% block content %}
-<div class="import-container">
-  <h2 style="margin: 0 0 20px 0;">Import Marks from Excel</h2>
-  
-  <div class="instructions">
-    <h4><i class="fas fa-info-circle"></i> Instructions</h4>
-    <ul>
-      <li>Download the Excel template below</li>
-      <li>Fill in the Excel file with student admission numbers and marks</li>
-      <li>Required columns: <strong>admission_no</strong>, <strong>marks</strong></li>
-      <li>Optional column: <strong>remarks</strong></li>
-      <li>Upload the filled Excel file to import marks</li>
-    </ul>
-  </div>
-  
-  <div style="margin-bottom: 20px;">
-    <a href="#" class="btn-download-template" onclick="downloadTemplate()">
-      <i class="fas fa-download"></i> Download Excel Template
-    </a>
-  </div>
-  
-  <form method="POST" action="{{ url_for('trainer.upload_marks') }}" enctype="multipart/form-data">
-    <div class="form-group">
-      <label for="class_id">Class *</label>
-      <select id="class_id" name="class_id" required>
-        <option value="">Select Class</option>
-        {% for item in units_with_classes %}
-        <option value="{{ item.classes.id }}">{{ item.classes.name }}</option>
-        {% endfor %}
-      </select>
+<div class="imp-wrap">
+
+  <!-- Step 1: Select Filter -->
+  <div class="step-card">
+    <div class="step-header" style="background:#1e5a9f;color:#fff;">
+      <div class="step-num" style="background:#fff;color:#1e5a9f;">1</div>
+      Select Class, Unit &amp; Period
     </div>
-    
-    <div class="form-group">
-      <label for="unit_id">Unit *</label>
-      <select id="unit_id" name="unit_id" required>
-        <option value="">Select Unit</option>
-        {% for item in units_with_classes %}
-        <option value="{{ item.units.id }}">{{ item.units.name }} ({{ item.units.code }})</option>
-        {% endfor %}
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label for="term">Term *</label>
-      <select id="term" name="term" required>
-        <option value="">Select Term</option>
-        <option value="1">Term 1</option>
-        <option value="2">Term 2</option>
-        <option value="3">Term 3</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label for="cycle">Cycle</label>
-      <input type="text" id="cycle" name="cycle" placeholder="e.g., Cycle 1">
-    </div>
-    
-    <div class="form-group">
-      <label for="year">Year *</label>
-      <input type="number" id="year" name="year" value="{{ 'now' | date('Y') }}" min="2020" max="2030" required>
-    </div>
-    
-    <div class="form-group">
-      <label for="assessment_type">Assessment Type *</label>
-      <select id="assessment_type" name="assessment_type" required>
-        <option value="">Select Type</option>
-        <option value="oral">Oral</option>
-        <option value="practical">Practical</option>
-        <option value="theory">Theory</option>
-        <option value="written">Written</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label for="assessment_name">Assessment Name *</label>
-      <input type="text" id="assessment_name" name="assessment_name" required placeholder="e.g., CAT 1, Mid-term Exam">
-    </div>
-    
-    <div class="form-group">
-      <label for="marks_file">Excel File *</label>
-      <div class="file-upload">
-        <input type="file" id="marks_file" name="marks_file" accept=".xlsx,.xls" required style="display: none;" onchange="updateFileName(this)">
-        <label for="marks_file" style="cursor: pointer;">
-          <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #7b1fa2;"></i>
-          <p style="margin: 10px 0 0 0; color: #666;">Click to upload Excel file</p>
-          <p id="file-name" style="margin: 5px 0 0 0; color: #7b1fa2; font-weight: 600;"></p>
-        </label>
+    <div class="step-body">
+      <div class="filter-grid">
+        <div class="form-group">
+          <label>Class</label>
+          <select id="cls" class="form-control" onchange="filterChange()">
+            <option value="">-- Choose Class --</option>
+            {% for c in class_list %}
+            <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <select id="unt" class="form-control" onchange="filterChange()">
+            <option value="">-- Choose Unit --</option>
+            {% for u in units_list %}
+            <option value="{{ u.units.id }}" {% if unit_id == u.units.id %}selected{% endif %}>
+              {{ u.units.code }} &ndash; {{ u.units.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Year</label>
+          <select id="yr" class="form-control" onchange="filterChange()">
+            {% for y in range(2024, 2036) %}
+            <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Term</label>
+          <select id="tm" class="form-control" onchange="filterChange()">
+            <option value="1" {% if term==1 %}selected{% endif %}>Term 1 (Jan–Apr)</option>
+            <option value="2" {% if term==2 %}selected{% endif %}>Term 2 (May–Aug)</option>
+            <option value="3" {% if term==3 %}selected{% endif %}>Term 3 (Sep–Dec)</option>
+          </select>
+        </div>
       </div>
     </div>
-    
-    <button type="submit" class="btn-upload">
-      <i class="fas fa-upload"></i> Import Marks
-    </button>
-  </form>
-</div>
+  </div>
 
+  {% if class_id and unit_id %}
+
+  <!-- Step 2: Assessments check -->
+  <div class="step-card">
+    <div class="step-header" style="background:#2e7d32;color:#fff;">
+      <div class="step-num" style="background:#fff;color:#2e7d32;">2</div>
+      Current Assessments for This Unit
+    </div>
+    <div class="step-body">
+      {% if assessments %}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        {% for a in assessments %}
+        <span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;
+          {% if a.assessment_type=='Oral' %}background:#e8f5e9;color:#1b5e20;
+          {% elif a.assessment_type=='Practical' %}background:#fff3e0;color:#e65100;
+          {% else %}background:#ede7f6;color:#4527a0;{% endif %}">
+          {{ a.assessment_type }}: {{ a.assessment_name }} /{{ a.max_marks|int }}
+        </span>
+        {% endfor %}
+      </div>
+      <div class="info-box">
+        <strong><i class="fas fa-info-circle"></i> The import template will contain columns for each of the above assessments.</strong><br>
+        If you need more assessments, add them first on the
+        <a href="/trainer/marks-entry?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}">Marks Entry page</a>.
+      </div>
+      {% else %}
+      <div style="background:#fff3e0;border-left:4px solid #f57c00;border-radius:4px;padding:12px 16px;font-size:13px;color:#e65100;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>No assessments found.</strong> Please
+        <a href="/trainer/marks-entry?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}" style="color:#e65100;">
+          create assessments first
+        </a>
+        on the Marks Entry page, then come back to download the template.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Step 3: Download template -->
+  <div class="step-card">
+    <div class="step-header" style="background:#1565c0;color:#fff;">
+      <div class="step-num" style="background:#fff;color:#1565c0;">3</div>
+      Download Template
+    </div>
+    <div class="step-body">
+      <p style="font-size:13px;color:#555;margin-bottom:14px;">
+        Download the Excel template pre-filled with your student list
+        {% if assessments %}and assessment columns{% endif %}.
+        Fill in the marks and upload below.
+      </p>
+      <a href="/trainer/marks-import/template?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}"
+         class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;">
+        <i class="fas fa-download"></i> Download Excel Template
+      </a>
+      <div style="margin-top:12px;font-size:12px;color:#888;">
+        Template includes: {{ students_list|length }} student(s)
+        {% if assessments %}, {{ assessments|length }} assessment column(s){% endif %}.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Upload -->
+  {% if assessments %}
+  <div class="step-card">
+    <div class="step-header" style="background:#6a1b9a;color:#fff;">
+      <div class="step-num" style="background:#fff;color:#6a1b9a;">4</div>
+      Upload Filled Template
+    </div>
+    <div class="step-body">
+      <div class="info-box">
+        <ul>
+          <li>Use the template downloaded in Step 3 (do not change column headers or admission numbers).</li>
+          <li>Marks must be between 0 and the maximum shown in the header.</li>
+          <li>Leave cells blank for students not yet assessed.</li>
+          <li>Existing marks will be <strong>overwritten</strong> if the cell is filled.</li>
+        </ul>
+      </div>
+      <form method="post" action="/trainer/marks-import/upload" enctype="multipart/form-data" id="uploadForm">
+        <input type="hidden" name="class_id" value="{{ class_id }}">
+        <input type="hidden" name="unit_id"  value="{{ unit_id }}">
+        <input type="hidden" name="year"     value="{{ year }}">
+        <input type="hidden" name="term"     value="{{ term }}">
+
+        <div class="file-zone" id="fileZone" onclick="document.getElementById('mFile').click()"
+             ondragover="event.preventDefault();this.classList.add('drag');"
+             ondragleave="this.classList.remove('drag');"
+             ondrop="handleDrop(event)">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p style="color:#555;font-size:14px;">Click or drag &amp; drop your Excel file here</p>
+          <p style="color:#aaa;font-size:12px;">.xlsx files only</p>
+          <p class="file-name" id="fName"></p>
+        </div>
+        <input type="file" id="mFile" name="marks_file" accept=".xlsx" style="display:none;" onchange="showFileName(this)">
+
+        <div style="margin-top:16px;">
+          <button type="submit" class="btn btn-primary" id="upBtn" disabled>
+            <i class="fas fa-upload"></i> Import Marks
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <!-- No filter selected -->
+  <div class="step-card">
+    <div class="step-body" style="text-align:center;padding:48px 20px;color:#bbb;">
+      <i class="fas fa-filter" style="font-size:40px;display:block;margin-bottom:14px;opacity:0.3;"></i>
+      Select a Class and Unit above to continue.
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="margin-top:16px;">
+    <a href="/trainer/marks-entry{% if class_id %}?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}{% endif %}"
+       class="btn" style="background:#e3f2fd;color:#1e5a9f;font-weight:600;">
+      <i class="fas fa-arrow-left"></i> Back to Marks Entry
+    </a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-function updateFileName(input) {
-  const fileName = input.files[0] ? input.files[0].name : '';
-  document.getElementById('file-name').textContent = fileName;
+function filterChange() {
+  var p = new URLSearchParams();
+  var c = document.getElementById('cls').value;
+  var u = document.getElementById('unt').value;
+  var y = document.getElementById('yr').value;
+  var t = document.getElementById('tm').value;
+  if (c) p.set('class_id', c);
+  if (u) p.set('unit_id', u);
+  if (y) p.set('year', y);
+  if (t) p.set('term', t);
+  window.location = '/trainer/marks-import?' + p.toString();
 }
 
-function downloadTemplate() {
-  // Create a simple Excel template
-  const data = [
-    ['admission_no', 'marks', 'remarks'],
-    ['STU001', '75', 'Good performance'],
-    ['STU002', '82', 'Excellent'],
-    ['STU003', '68', 'Needs improvement']
-  ];
-  
-  let csvContent = data.map(row => row.join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'marks_template.csv';
-  a.click();
-  window.URL.revokeObjectURL(url);
+function showFileName(input) {
+  var name = input.files[0] ? input.files[0].name : '';
+  document.getElementById('fName').textContent = name;
+  document.getElementById('upBtn').disabled = !name;
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('fileZone').classList.remove('drag');
+  var dt = e.dataTransfer;
+  if (dt.files && dt.files[0]) {
+    document.getElementById('mFile').files = dt.files;
+    showFileName(document.getElementById('mFile'));
+  }
 }
 </script>
 {% endblock %}

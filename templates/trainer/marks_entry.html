@@ -1,220 +1,572 @@
 {% extends "trainer/base.html" %}
-
-{% block page_title %}Marks Entry{% endblock %}
+{% block title %}Marks Entry{% endblock %}
+{% block page_title %}Formative Assessment Marks{% endblock %}
 
 {% block extra_style %}
-<style>
-  .filter-section {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 15px;
-  }
-  .filter-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    color: #333;
-    font-size: 14px;
-  }
-  .filter-group input,
-  .filter-group select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .btn-filter {
-    background: #7b1fa2;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .btn-filter:hover { background: #4a148c; }
-  .marks-table {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .marks-table table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .marks-table th,
-  .marks-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-  }
-  .marks-table th {
-    background: #f5f5f5;
-    font-weight: 600;
-    color: #333;
-  }
-  .marks-input {
-    width: 80px;
-    padding: 6px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .remarks-input {
-    width: 100%;
-    padding: 6px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .btn-submit {
-    background: #2e7d32;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .btn-submit:hover { background: #1b5e20; }
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #999;
-  }
-  .empty-state i {
-    font-size: 48px;
-    margin-bottom: 16px;
-  }
-</style>
+/* ── Layout ── */
+.me-wrap { padding:20px; max-width:1400px; margin:0 auto; }
+
+/* ── Filter card ── */
+.me-filters { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:20px; margin-bottom:18px; }
+.me-filters h3 { color:var(--primary); font-size:14px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #eee; }
+
+/* ── Assessment chips ── */
+.assessment-bar { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:16px 20px; margin-bottom:18px; }
+.assessment-bar h4 { font-size:13px; color:#555; margin-bottom:10px; }
+.chip-group { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; cursor:default; }
+.chip.oral      { background:#e8f5e9; color:#1b5e20; }
+.chip.practical { background:#fff3e0; color:#e65100; }
+.chip.theory    { background:#ede7f6; color:#4527a0; }
+.chip-del { background:none; border:none; cursor:pointer; font-size:11px; color:inherit; opacity:0.6; padding:0; line-height:1; }
+.chip-del:hover { opacity:1; }
+.btn-add-assess { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:20px; background:#1e5a9f; color:#fff; font-size:12px; font-weight:700; border:none; cursor:pointer; }
+.btn-add-assess:hover { background:#154070; }
+
+/* ── Marks grid card ── */
+.marks-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); overflow:hidden; }
+.marks-card-header { padding:14px 20px; background:#fff; border-bottom:1px solid #e8eef6; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.marks-card-header h3 { font-size:15px; font-weight:700; color:#1e5a9f; }
+.action-btns { display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ── Grid table ── */
+.grid-wrap { overflow-x:auto; }
+.grid-table { width:100%; border-collapse:collapse; min-width:500px; font-size:13px; }
+.grid-table th { padding:10px 8px; font-size:11px; font-weight:700; text-align:center; border-bottom:2px solid #e0e0e0; white-space:nowrap; }
+.grid-table th.col-name { text-align:left; padding-left:14px; }
+.grid-table td { padding:7px 8px; border-bottom:1px solid #f0f0f0; text-align:center; vertical-align:middle; }
+.grid-table td.col-name { text-align:left; padding-left:14px; }
+.grid-table tbody tr:hover { background:#f5f8ff; }
+.th-oral      { background:#e8f5e9; color:#1b5e20; }
+.th-practical { background:#fff3e0; color:#e65100; }
+.th-theory    { background:#ede7f6; color:#4527a0; }
+.th-summary   { background:#e3f2fd; color:#1e5a9f; }
+.th-fixed     { background:#f5f5f5; color:#555; }
+
+/* ── Mark input ── */
+.mark-inp {
+  width:68px; padding:5px 6px; border:1px solid #ddd; border-radius:6px;
+  font-size:13px; text-align:center; transition:border-color .15s;
+}
+.mark-inp:focus { outline:none; border-color:var(--primary); background:#f0f7ff; }
+.mark-inp.saved   { border-color:#27ae60; background:#f0fff4; }
+.mark-inp.error   { border-color:#e74c3c; background:#fff5f5; }
+.mark-inp.saving  { opacity:0.6; }
+
+/* ── Total / Avg cells ── */
+.td-total { font-weight:700; color:#1e5a9f; }
+.td-avg   { font-weight:700; }
+.avg-high { color:#2e7d32; } .avg-med { color:#f57c00; } .avg-low { color:#c62828; }
+
+/* ── Empty states ── */
+.empty-prompt { text-align:center; padding:48px 20px; color:#bbb; }
+.empty-prompt i { font-size:40px; display:block; margin-bottom:14px; opacity:0.3; }
+
+/* ── Toast notification ── */
+.mark-toast { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.toast-item { background:#1e5a9f; color:#fff; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:600; opacity:0; transition:opacity .3s; box-shadow:0 4px 16px rgba(0,0,0,.2); }
+.toast-item.show { opacity:1; }
+.toast-item.err  { background:#c62828; }
+
+/* ── Modal ── */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:12px; padding:28px; width:100%; max-width:440px; box-shadow:0 8px 32px rgba(0,0,0,.2); }
+.modal-box h3 { font-size:16px; margin-bottom:18px; color:var(--primary); }
+.modal-box label { font-size:13px; font-weight:600; display:block; margin-bottom:5px; color:#444; }
+.modal-box select, .modal-box input { width:100%; padding:9px 12px; border:1px solid #ccc; border-radius:6px; font-size:14px; margin-bottom:14px; }
+.modal-box select:focus, .modal-box input:focus { outline:none; border-color:var(--primary); }
+.modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
+.btn-type { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.btn-type button { flex:1; padding:9px; border:2px solid #ddd; border-radius:8px; background:#fff; cursor:pointer; font-size:13px; font-weight:600; transition:all .15s; }
+.btn-type button.selected.oral      { border-color:#27ae60; background:#e8f5e9; color:#1b5e20; }
+.btn-type button.selected.practical { border-color:#f57c00; background:#fff3e0; color:#e65100; }
+.btn-type button.selected.theory    { border-color:#7b1fa2; background:#ede7f6; color:#4527a0; }
+
+@media(max-width:768px) { .me-wrap { padding:10px; } .mark-inp { width:54px; } }
 {% endblock %}
 
 {% block content %}
-<div class="filter-section">
-  <h3 style="margin: 0 0 15px 0;">Select Class and Unit</h3>
-  <form method="GET">
-    <div class="filter-row">
-      <div class="filter-group">
-        <label for="class_id">Class</label>
-        <select id="class_id" name="class_id" onchange="this.form.submit()">
-          <option value="">Select Class</option>
-          {% for item in units_with_classes %}
-          <option value="{{ item.classes.id }}" {% if item.classes.id == class_id %}selected{% endif %}>{{ item.classes.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="unit_id">Unit</label>
-        <select id="unit_id" name="unit_id" onchange="this.form.submit()">
-          <option value="">Select Unit</option>
-          {% for item in units_with_classes %}
-          <option value="{{ item.units.id }}" {% if item.units.id == unit_id %}selected{% endif %}>{{ item.units.name }} ({{ item.units.code }})</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="term">Term</label>
-        <select id="term" name="term" onchange="this.form.submit()">
-          <option value="">All Terms</option>
-          <option value="1" {% if term == '1' %}selected{% endif %}>Term 1</option>
-          <option value="2" {% if term == '2' %}selected{% endif %}>Term 2</option>
-          <option value="3" {% if term == '3' %}selected{% endif %}>Term 3</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="cycle">Cycle</label>
-        <input type="text" id="cycle" name="cycle" value="{{ cycle }}" placeholder="e.g., Cycle 1">
-      </div>
-      <div class="filter-group">
-        <label for="year">Year</label>
-        <input type="number" id="year" name="year" value="{{ year }}" min="2020" max="2030">
-      </div>
-    </div>
-  </form>
-</div>
+<div class="me-wrap">
 
-{% if class_id and unit_id %}
-<div class="marks-table">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h3 style="margin: 0;">Enter Marks</h3>
-    <a href="{{ url_for('trainer.download_marks_pdf', class_id=class_id, unit_id=unit_id, term=term, cycle=cycle, year=year) }}" class="btn-download" target="_blank">
-      <i class="fas fa-download"></i> Download PDF
-    </a>
-  </div>
-  <form method="POST" action="{{ url_for('trainer.submit_marks') }}">
-    <input type="hidden" name="class_id" value="{{ class_id }}">
-    <input type="hidden" name="unit_id" value="{{ unit_id }}">
-    <input type="hidden" name="term" value="{{ term }}">
-    <input type="hidden" name="cycle" value="{{ cycle }}">
-    <input type="hidden" name="year" value="{{ year }}">
-    
-    <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
-      <div class="filter-row">
-        <div class="filter-group">
-          <label for="assessment_type">Assessment Type *</label>
-          <select id="assessment_type" name="assessment_type" required>
-            <option value="">Select Type</option>
-            <option value="oral">Oral</option>
-            <option value="practical">Practical</option>
-            <option value="theory">Theory</option>
-            <option value="written">Written</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="assessment_name">Assessment Name *</label>
-          <input type="text" id="assessment_name" name="assessment_name" required placeholder="e.g., CAT 1, Mid-term Exam">
-        </div>
+  <!-- ── Filters ── -->
+  <div class="me-filters">
+    <h3><i class="fas fa-filter"></i> Select Class, Unit &amp; Period</h3>
+    <div class="filter-grid">
+      <div class="form-group">
+        <label>Class</label>
+        <select id="cls" class="form-control" onchange="filterChange()">
+          <option value="">-- Choose Class --</option>
+          {% for c in class_list %}
+          <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select id="unt" class="form-control" onchange="filterChange()">
+          <option value="">-- Choose Unit --</option>
+          {% for u in units_list %}
+          <option value="{{ u.units.id }}" {% if unit_id == u.units.id %}selected{% endif %}>
+            {{ u.units.code }} &ndash; {{ u.units.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Year</label>
+        <select id="yr" class="form-control" onchange="filterChange()">
+          {% for y in range(2024, 2036) %}
+          <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Term</label>
+        <select id="tm" class="form-control" onchange="filterChange()">
+          <option value="1" {% if term==1 %}selected{% endif %}>Term 1 (Jan&ndash;Apr)</option>
+          <option value="2" {% if term==2 %}selected{% endif %}>Term 2 (May&ndash;Aug)</option>
+          <option value="3" {% if term==3 %}selected{% endif %}>Term 3 (Sep&ndash;Dec)</option>
+        </select>
       </div>
     </div>
-    
-    {% if not students_list %}
-    <div class="empty-state">
-      <i class="fas fa-users"></i>
-      <p>No students found in this class.</p>
-    </div>
-    {% else %}
-    <table>
-      <thead>
-        <tr>
-          <th>Admission No</th>
-          <th>Student Name</th>
-          <th>Marks (0-100)</th>
-          <th>Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for student in students_list %}
-        <tr>
-          <td>{{ student.user_profiles.admission_no }}</td>
-          <td>{{ student.user_profiles.full_name }}</td>
-          <td>
-            <input type="number" name="marks_{{ student.student_id }}" class="marks-input" min="0" max="100" step="0.5" placeholder="0-100">
-          </td>
-          <td>
-            <input type="text" name="remarks_{{ student.student_id }}" class="remarks-input" placeholder="Optional remarks">
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    
-    <div style="margin-top: 20px;">
-      <button type="submit" class="btn-submit">
-        <i class="fas fa-save"></i> Submit Marks
+  </div>
+
+  {% if class_id and unit_id %}
+
+  <!-- ── Assessment management bar ── -->
+  <div class="assessment-bar">
+    <h4><i class="fas fa-list-check"></i> Assessments for this unit / term</h4>
+    <div class="chip-group" id="chipGroup">
+      {% for a in oral_list %}
+      <span class="chip oral" title="Max: {{ a.max_marks }}">
+        <i class="fas fa-microphone" style="font-size:10px;"></i> {{ a.assessment_name }}
+        <form method="post" action="/trainer/marks-entry/delete-assessment" style="display:inline;"
+              onsubmit="return confirm('Delete {{ a.assessment_name | e }} and all its marks?');">
+          <input type="hidden" name="assessment_id" value="{{ a.id }}">
+          <input type="hidden" name="class_id" value="{{ class_id }}">
+          <input type="hidden" name="unit_id"  value="{{ unit_id }}">
+          <input type="hidden" name="year"     value="{{ year }}">
+          <input type="hidden" name="term"     value="{{ term }}">
+          <button type="submit" class="chip-del" title="Delete">&#10005;</button>
+        </form>
+      </span>
+      {% endfor %}
+      {% for a in practical_list %}
+      <span class="chip practical" title="Max: {{ a.max_marks }}">
+        <i class="fas fa-flask" style="font-size:10px;"></i> {{ a.assessment_name }}
+        <form method="post" action="/trainer/marks-entry/delete-assessment" style="display:inline;"
+              onsubmit="return confirm('Delete {{ a.assessment_name | e }} and all its marks?');">
+          <input type="hidden" name="assessment_id" value="{{ a.id }}">
+          <input type="hidden" name="class_id" value="{{ class_id }}">
+          <input type="hidden" name="unit_id"  value="{{ unit_id }}">
+          <input type="hidden" name="year"     value="{{ year }}">
+          <input type="hidden" name="term"     value="{{ term }}">
+          <button type="submit" class="chip-del" title="Delete">&#10005;</button>
+        </form>
+      </span>
+      {% endfor %}
+      {% for a in theory_list %}
+      <span class="chip theory" title="Max: {{ a.max_marks }}">
+        <i class="fas fa-book" style="font-size:10px;"></i> {{ a.assessment_name }}
+        <form method="post" action="/trainer/marks-entry/delete-assessment" style="display:inline;"
+              onsubmit="return confirm('Delete {{ a.assessment_name | e }} and all its marks?');">
+          <input type="hidden" name="assessment_id" value="{{ a.id }}">
+          <input type="hidden" name="class_id" value="{{ class_id }}">
+          <input type="hidden" name="unit_id"  value="{{ unit_id }}">
+          <input type="hidden" name="year"     value="{{ year }}">
+          <input type="hidden" name="term"     value="{{ term }}">
+          <button type="submit" class="chip-del" title="Delete">&#10005;</button>
+        </form>
+      </span>
+      {% endfor %}
+
+      {% if not assessments %}
+      <span style="color:#aaa;font-size:13px;">No assessments yet &mdash; add one to start entering marks.</span>
+      {% endif %}
+
+      <button class="btn-add-assess" onclick="openAddModal()">
+        <i class="fas fa-plus"></i> Add Assessment
       </button>
     </div>
+  </div>
+
+  <!-- ── Marks grid ── -->
+  <div class="marks-card">
+    <div class="marks-card-header">
+      <h3><i class="fas fa-table" style="margin-right:7px;"></i>
+        Marks Grid
+        {% if students_list %}
+        <span style="background:#e3f2fd;color:#1e5a9f;padding:3px 12px;border-radius:20px;font-size:12px;margin-left:8px;">
+          {{ students_list|length }} student(s)
+        </span>
+        {% endif %}
+      </h3>
+      {% if assessments and students_list %}
+      <div class="action-btns">
+        <a href="/trainer/marks-entry/marks-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}"
+           target="_blank" class="btn btn-danger btn-sm">
+          <i class="fas fa-file-pdf"></i> PDF Report
+        </a>
+        <a href="/trainer/marks-entry/export-excel?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}"
+           class="btn btn-success btn-sm">
+          <i class="fas fa-file-excel"></i> Export Excel
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if not students_list %}
+    <div class="empty-prompt">
+      <i class="fas fa-users"></i>
+      No students enrolled in this class.
+    </div>
+
+    {% elif not assessments %}
+    <div class="empty-prompt">
+      <i class="fas fa-plus-circle"></i>
+      No assessments created yet.<br>
+      <small style="font-size:13px;">Click <strong>+ Add Assessment</strong> above to create Oral, Practical or Theory assessments.</small>
+    </div>
+
+    {% else %}
+    <div class="grid-wrap">
+      <table class="grid-table" id="marksTable">
+        <thead>
+          <!-- Row 1: type group headers -->
+          <tr>
+            <th colspan="2" class="th-fixed col-name" style="text-align:left;padding-left:14px;">Student</th>
+            {% if oral_list %}
+            <th colspan="{{ oral_list|length }}" class="th-oral">
+              <i class="fas fa-microphone" style="font-size:10px;"></i> Oral
+            </th>
+            {% endif %}
+            {% if practical_list %}
+            <th colspan="{{ practical_list|length }}" class="th-practical">
+              <i class="fas fa-flask" style="font-size:10px;"></i> Practical
+            </th>
+            {% endif %}
+            {% if theory_list %}
+            <th colspan="{{ theory_list|length }}" class="th-theory">
+              <i class="fas fa-book" style="font-size:10px;"></i> Theory / Written
+            </th>
+            {% endif %}
+            <th colspan="2" class="th-summary">Summary</th>
+          </tr>
+          <!-- Row 2: individual assessment names -->
+          <tr>
+            <th class="th-fixed" style="width:40px;">#</th>
+            <th class="th-fixed col-name">Adm No &nbsp;&bull;&nbsp; Name</th>
+            {% for a in oral_list %}
+            <th class="th-oral" title="Max: {{ a.max_marks }}">
+              {{ a.assessment_name }}<br>
+              <span style="font-size:10px;font-weight:400;">/{{ a.max_marks|int }}</span>
+            </th>
+            {% endfor %}
+            {% for a in practical_list %}
+            <th class="th-practical" title="Max: {{ a.max_marks }}">
+              {{ a.assessment_name }}<br>
+              <span style="font-size:10px;font-weight:400;">/{{ a.max_marks|int }}</span>
+            </th>
+            {% endfor %}
+            {% for a in theory_list %}
+            <th class="th-theory" title="Max: {{ a.max_marks }}">
+              {{ a.assessment_name }}<br>
+              <span style="font-size:10px;font-weight:400;">/{{ a.max_marks|int }}</span>
+            </th>
+            {% endfor %}
+            <th class="th-summary">Total</th>
+            <th class="th-summary">Avg %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students_list %}
+          {% set p  = s.get('user_profiles') or {} %}
+          {% set sm = marks_map.get(s.student_id, {}) %}
+          <tr data-sid="{{ s.student_id }}">
+            <td style="color:#aaa;font-size:12px;">{{ loop.index }}</td>
+            <td class="col-name">
+              <strong style="font-size:12px;color:#555;">{{ p.get('admission_no','—') }}</strong><br>
+              <span style="font-size:13px;">{{ p.get('full_name','—') }}</span>
+            </td>
+            {# All assessments in order: oral, practical, theory #}
+            {% for a in oral_list + practical_list + theory_list %}
+            {% set mv = sm.get(a.id) %}
+            <td>
+              <input type="number"
+                     class="mark-inp"
+                     min="0" max="{{ a.max_marks|int }}" step="0.5"
+                     placeholder="—"
+                     data-aid="{{ a.id }}"
+                     data-sid="{{ s.student_id }}"
+                     data-max="{{ a.max_marks }}"
+                     value="{{ mv if mv is not none else '' }}"
+                     oninput="recalcRow(this)"
+                     onblur="autoSave(this)">
+            </td>
+            {% endfor %}
+            <td class="td-total" id="tot_{{ s.student_id }}">
+              {% set tot = namespace(v=0, n=0) %}
+              {% for a in oral_list + practical_list + theory_list %}
+              {% set mv = sm.get(a.id) %}
+              {% if mv is not none %}
+              {% set tot.v = tot.v + mv %}
+              {% set tot.n = tot.n + 1 %}
+              {% endif %}
+              {% endfor %}
+              {{ tot.v|round(1) if tot.n > 0 else '—' }}
+            </td>
+            <td id="avg_{{ s.student_id }}">
+              {% if tot.n > 0 %}
+              {% set avg = (tot.v / tot.n)|round(1) %}
+              <span class="{{ 'avg-high' if avg >= 75 else ('avg-med' if avg >= 50 else 'avg-low') }}">
+                {{ avg }}%
+              </span>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="padding:10px 18px;background:#fafafa;border-top:1px solid #eee;font-size:12px;color:#888;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-info-circle"></i>
+      Marks save automatically when you click away from a cell (auto-save). Green border = saved. Red = error.
+    </div>
     {% endif %}
-  </form>
+  </div>
+
+  {% else %}
+  <!-- No class+unit selected yet -->
+  <div class="marks-card">
+    <div class="empty-prompt">
+      <i class="fas fa-edit"></i>
+      Select a Class and Unit above to load the marks entry grid.
+    </div>
+  </div>
+  {% endif %}
+
 </div>
-{% endif %}
+
+<!-- ── Add Assessment Modal ── -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-box">
+    <h3><i class="fas fa-plus-circle"></i> Add New Assessment</h3>
+
+    <label>Assessment Type</label>
+    <div class="btn-type">
+      <button type="button" id="tOral"      onclick="selectType('Oral')"      class="oral">Oral</button>
+      <button type="button" id="tPractical" onclick="selectType('Practical')" class="practical">Practical</button>
+      <button type="button" id="tTheory"    onclick="selectType('Theory')"    class="theory">Theory / Written</button>
+    </div>
+    <input type="hidden" id="selType" value="">
+
+    <label>Assessment Name</label>
+    <input type="text" id="asmName" placeholder="e.g. Oral 1, Practical 3, Written Assessment 2"
+           oninput="suggestName()">
+
+    <label>Maximum Marks (default 100)</label>
+    <input type="number" id="asmMax" value="100" min="1" max="200">
+
+    <div id="modalErr" style="color:#c62828;font-size:12px;margin-bottom:8px;display:none;"></div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn" style="background:#eee;color:#333;" onclick="closeAddModal()">Cancel</button>
+      <button type="button" id="addBtn" class="btn btn-primary" onclick="submitAddAssessment()">
+        <i class="fas fa-plus"></i> Add
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast container ── -->
+<div class="mark-toast" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CLASS_ID = "{{ class_id }}";
+const UNIT_ID  = "{{ unit_id }}";
+const YEAR     = {{ year }};
+const TERM     = {{ term }};
+
+/* ── Filter change ── */
+function filterChange() {
+  var p = new URLSearchParams();
+  var c = document.getElementById('cls').value;
+  var u = document.getElementById('unt').value;
+  var y = document.getElementById('yr').value;
+  var t = document.getElementById('tm').value;
+  if (c) p.set('class_id', c);
+  if (u) p.set('unit_id', u);
+  if (y) p.set('year', y);
+  if (t) p.set('term', t);
+  window.location = '/trainer/marks-entry?' + p.toString();
+}
+
+/* ── Toast ── */
+function toast(msg, err) {
+  var el = document.createElement('div');
+  el.className = 'toast-item' + (err ? ' err' : '');
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  requestAnimationFrame(() => { el.classList.add('show'); });
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 2500);
+}
+
+/* ── Auto-save on blur ── */
+function autoSave(inp) {
+  var aid  = inp.dataset.aid;
+  var sid  = inp.dataset.sid;
+  var val  = inp.value.trim();
+  var max  = parseFloat(inp.dataset.max) || 100;
+
+  if (val !== '' && (isNaN(parseFloat(val)) || parseFloat(val) < 0 || parseFloat(val) > max)) {
+    inp.classList.add('error');
+    toast('Marks must be 0–' + max, true);
+    return;
+  }
+
+  inp.classList.add('saving');
+  inp.classList.remove('saved','error');
+
+  fetch('/trainer/marks-entry/save-mark', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assessment_id: aid, student_id: sid, marks: val })
+  })
+  .then(r => r.json())
+  .then(resp => {
+    inp.classList.remove('saving');
+    if (resp.success) {
+      inp.classList.add('saved');
+      setTimeout(() => inp.classList.remove('saved'), 2000);
+      recalcRow(inp);
+    } else {
+      inp.classList.add('error');
+      toast(resp.message || 'Save failed', true);
+    }
+  })
+  .catch(() => {
+    inp.classList.remove('saving');
+    inp.classList.add('error');
+    toast('Network error', true);
+  });
+}
+
+/* ── Recalculate total & avg for a row ── */
+function recalcRow(inp) {
+  var sid  = inp.dataset.sid;
+  var row  = document.querySelector('tr[data-sid="' + sid + '"]');
+  if (!row) return;
+  var inputs = row.querySelectorAll('.mark-inp');
+  var total  = 0, count = 0;
+  inputs.forEach(function(i) {
+    var v = parseFloat(i.value);
+    if (!isNaN(v)) { total += v; count++; }
+  });
+  var totEl = document.getElementById('tot_' + sid);
+  var avgEl = document.getElementById('avg_' + sid);
+  if (!totEl || !avgEl) return;
+  if (count === 0) {
+    totEl.textContent = '—';
+    avgEl.innerHTML   = '—';
+  } else {
+    var avg = (total / count);
+    totEl.textContent = total.toFixed(1);
+    var cls = avg >= 75 ? 'avg-high' : (avg >= 50 ? 'avg-med' : 'avg-low');
+    avgEl.innerHTML   = '<span class="' + cls + '">' + avg.toFixed(1) + '%</span>';
+  }
+}
+
+/* ── Add Assessment Modal ── */
+var selectedType = '';
+
+function openAddModal() {
+  selectedType = '';
+  document.getElementById('asmName').value = '';
+  document.getElementById('asmMax').value  = '100';
+  document.getElementById('modalErr').style.display = 'none';
+  ['tOral','tPractical','tTheory'].forEach(function(id) {
+    document.getElementById(id).classList.remove('selected');
+  });
+  document.getElementById('addModal').classList.add('open');
+  document.getElementById('asmName').focus();
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('open');
+}
+
+function selectType(t) {
+  selectedType = t;
+  document.getElementById('tOral').classList.remove('selected');
+  document.getElementById('tPractical').classList.remove('selected');
+  document.getElementById('tTheory').classList.remove('selected');
+  var map = { Oral:'tOral', Practical:'tPractical', Theory:'tTheory' };
+  if (map[t]) document.getElementById(map[t]).classList.add('selected');
+  suggestName();
+}
+
+/* Auto-suggest name based on type and existing assessments */
+var existingNames = [{% for a in assessments %}"{{ a.assessment_name }}"{% if not loop.last %},{% endif %}{% endfor %}];
+
+function suggestName() {
+  if (!selectedType || document.getElementById('asmName').value.trim()) return;
+  var prefix = selectedType === 'Oral' ? 'Oral' : (selectedType === 'Practical' ? 'Practical' : 'Written Assessment');
+  var count = existingNames.filter(function(n) {
+    return n.toLowerCase().startsWith(prefix.toLowerCase());
+  }).length;
+  document.getElementById('asmName').value = prefix + ' ' + (count + 1);
+}
+
+function submitAddAssessment() {
+  var errEl = document.getElementById('modalErr');
+  errEl.style.display = 'none';
+
+  if (!selectedType) { errEl.textContent = 'Please select an assessment type.'; errEl.style.display='block'; return; }
+  var name = document.getElementById('asmName').value.trim();
+  if (!name) { errEl.textContent = 'Please enter an assessment name.'; errEl.style.display='block'; return; }
+  var max  = parseFloat(document.getElementById('asmMax').value) || 100;
+
+  var btn = document.getElementById('addBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+
+  fetch('/trainer/marks-entry/add-assessment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      unit_id: UNIT_ID, class_id: CLASS_ID,
+      assessment_type: selectedType, assessment_name: name,
+      max_marks: max, year: YEAR, term: TERM
+    })
+  })
+  .then(r => r.json())
+  .then(resp => {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Add';
+    if (resp.success) {
+      closeAddModal();
+      // Reload page to show new column
+      var p = new URLSearchParams({class_id:CLASS_ID, unit_id:UNIT_ID, year:YEAR, term:TERM});
+      window.location = '/trainer/marks-entry?' + p.toString();
+    } else {
+      errEl.textContent = resp.message || 'Error adding assessment.';
+      errEl.style.display = 'block';
+    }
+  })
+  .catch(() => {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Add';
+    errEl.textContent = 'Network error.'; errEl.style.display = 'block';
+  });
+}
+
+document.getElementById('addModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAddModal();
+});
+</script>
 {% endblock %}

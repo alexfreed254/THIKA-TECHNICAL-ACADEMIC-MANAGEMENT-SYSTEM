@@ -192,7 +192,49 @@ CREATE TABLE IF NOT EXISTS class_events (
 );
 
 -- ────────────────────────────────────────────────────────────
--- 8. ASSESSMENTS (from E-Portfolio System)
+-- 8. FORMATIVE ASSESSMENT DEFINITIONS
+--    One row per assessment (e.g. "Oral 1", "Practical 2").
+--    Trainer creates these before entering marks.
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS formative_assessments (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    unit_id         UUID NOT NULL REFERENCES units(id)          ON DELETE CASCADE,
+    class_id        UUID NOT NULL REFERENCES classes(id)        ON DELETE CASCADE,
+    trainer_id      UUID NOT NULL REFERENCES user_profiles(id)  ON DELETE CASCADE,
+    assessment_type TEXT NOT NULL CHECK (assessment_type IN ('Oral','Practical','Theory')),
+    assessment_name TEXT NOT NULL,
+    max_marks       NUMERIC(6,1) NOT NULL DEFAULT 100,
+    year            INT  NOT NULL,
+    term            INT  NOT NULL CHECK (term IN (1,2,3)),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (unit_id, class_id, trainer_id, assessment_name, year, term)
+);
+
+-- ────────────────────────────────────────────────────────────
+-- 9. FORMATIVE ASSESSMENT MARKS
+--    One row per (assessment, student).
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS formative_marks (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    assessment_id   UUID NOT NULL REFERENCES formative_assessments(id) ON DELETE CASCADE,
+    student_id      UUID NOT NULL REFERENCES user_profiles(id)         ON DELETE CASCADE,
+    marks_obtained  NUMERIC(6,1) CHECK (marks_obtained >= 0),
+    uploaded_by     UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (assessment_id, student_id)
+);
+
+-- Trigger to keep updated_at current on formative_marks
+DROP TRIGGER IF EXISTS trg_formative_marks_updated_at ON formative_marks;
+CREATE TRIGGER trg_formative_marks_updated_at
+    BEFORE UPDATE ON formative_marks
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ────────────────────────────────────────────────────────────
+-- 10. ASSESSMENTS (from E-Portfolio System)
 -- ────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS assessments (

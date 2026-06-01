@@ -1,182 +1,212 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Marks Report - THIKA TECHNICAL TRAINING INSTITUTE</title>
+  <title>Formative Assessment Report | TTTI</title>
   <style>
-    @page {
-      size: A4 landscape;
-      margin: 20mm;
-    }
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-      border-bottom: 3px solid #7b1fa2;
-      padding-bottom: 15px;
-    }
-    .header img {
-      height: 60px;
-      margin-bottom: 10px;
-    }
-    .header h1 {
-      font-size: 20px;
-      margin: 0 0 5px 0;
-      color: #7b1fa2;
-    }
-    .header h2 {
-      font-size: 14px;
-      margin: 0;
-      font-weight: normal;
-      color: #333;
-    }
-    .info-section {
-      margin-bottom: 20px;
-      padding: 10px;
-      background: #f5f5f5;
-      border-radius: 4px;
-    }
-    .info-section table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .info-section td {
-      padding: 5px 10px;
-    }
-    .info-section td:first-child {
-      font-weight: bold;
-      width: 150px;
-    }
-    table.marks-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    table.marks-table th {
-      background: #7b1fa2;
-      color: white;
-      padding: 10px;
-      text-align: left;
-      font-weight: bold;
-      border: 1px solid #7b1fa2;
-    }
-    table.marks-table td {
-      padding: 8px 10px;
-      border: 1px solid #ddd;
-    }
-    table.marks-table tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    .grade-M { color: #2e7d32; font-weight: bold; }
-    .grade-P { color: #1565c0; font-weight: bold; }
-    .grade-C { color: #f57c00; font-weight: bold; }
-    .grade-NYC { color: #c62828; font-weight: bold; }
-    .footer {
-      text-align: center;
-      margin-top: 30px;
-      padding-top: 15px;
-      border-top: 1px solid #ddd;
-      color: #666;
-      font-size: 10px;
-    }
-    .signature-section {
-      margin-top: 40px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .signature-line {
-      width: 200px;
-      border-top: 1px solid #333;
-      padding-top: 10px;
-      text-align: center;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial,sans-serif; font-size:11px; color:#111; background:#fff; padding:24px 32px; }
+
+    /* ── Header ── */
+    .header { text-align:center; margin-bottom:10px; }
+    .header img { height:68px; margin-bottom:6px; }
+    .header h1 { font-size:16px; font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+    .header h2 { font-size:12px; font-weight:700; color:#333; margin-bottom:3px; }
+    .header h3 { font-size:12px; font-weight:700; color:#1a5fa8; text-decoration:underline; text-transform:uppercase; }
+    .divider { border:none; border-top:2px solid #111; margin:10px 0 14px; }
+
+    /* ── Info box ── */
+    .info-box { background:#f0f0f0; border-radius:4px; padding:12px 16px; margin-bottom:14px; display:flex; gap:0; }
+    .info-col { flex:1; }
+    .info-col p { margin-bottom:4px; font-size:11px; line-height:1.6; }
+    .info-col strong { font-weight:700; }
+
+    /* ── Summary chips ── */
+    .summary-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .sum-chip { padding:6px 12px; border-radius:4px; font-size:11px; font-weight:700; border:1px solid #ccc; }
+    .sum-oral      { background:#e8f5e9; color:#1b5e20; border-color:#a5d6a7; }
+    .sum-practical { background:#fff3e0; color:#e65100; border-color:#ffcc80; }
+    .sum-theory    { background:#ede7f6; color:#4527a0; border-color:#ce93d8; }
+
+    /* ── Table ── */
+    table { width:100%; border-collapse:collapse; margin-bottom:20px; font-size:10.5px; }
+    thead th { padding:7px 6px; text-align:center; border:1px solid #ccc; font-weight:700; white-space:nowrap; }
+    .th-fixed { background:#f5f5f5; color:#333; }
+    .th-oral       { background:#e8f5e9; color:#1b5e20; }
+    .th-practical  { background:#fff3e0; color:#e65100; }
+    .th-theory     { background:#ede7f6; color:#4527a0; }
+    .th-summary    { background:#1a5fa8; color:#fff; }
+    tbody td { padding:6px 6px; border:1px solid #ddd; text-align:center; }
+    tbody td.col-name { text-align:left; }
+    tbody tr:nth-child(even) td { background:#f9f9f9; }
+    .pct-high { color:#1a7a1a; font-weight:700; }
+    .pct-med  { color:#e07000; font-weight:700; }
+    .pct-low  { color:#c00; font-weight:700; }
+
+    /* ── Signature ── */
+    .sig-section { margin-top:36px; display:flex; justify-content:space-between; gap:20px; }
+    .sig-block { flex:1; text-align:center; }
+    .sig-line  { border-top:1.5px solid #333; margin-bottom:6px; }
+    .sig-role  { font-weight:700; font-size:11px; text-transform:uppercase; margin-bottom:3px; }
+    .sig-name  { font-size:10px; color:#333; margin-bottom:2px; }
+    .sig-label { font-size:10px; color:#555; }
+
+    /* ── Footer ── */
+    .footer { text-align:center; margin-top:20px; font-size:9px; color:#888; border-top:1px solid #ddd; padding-top:6px; }
+
+    .no-print { text-align:center; margin-top:20px; }
+    @media print { .no-print { display:none; } body { padding:12px 18px; } }
   </style>
 </head>
 <body>
-  <div class="header">
-    <img src="{{ LOGO_URL }}" alt="Logo">
-    <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
-    <h2>MARKS REPORT</h2>
+
+<!-- Letterhead -->
+<div class="header">
+  <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo">
+  <h1>Thika Technical Training Institute</h1>
+  <h2>Department of {{ dept.name if dept else '——————' }}</h2>
+  <h3>Formative Assessment Marks Report</h3>
+</div>
+<hr class="divider">
+
+<!-- Info box -->
+<div class="info-box">
+  <div class="info-col">
+    <p><strong>CLASS:</strong> {{ cls.name if cls else '—' }}</p>
+    <p><strong>YEAR:</strong> {{ year }}</p>
+    <p><strong>TERM:</strong> Term {{ term }} ({% if term==1 %}Jan–Apr{% elif term==2 %}May–Aug{% else %}Sep–Dec{% endif %})</p>
   </div>
-  
-  <div class="info-section">
-    <table>
-      <tr>
-        <td>Unit:</td>
-        <td>{{ unit.name }} ({{ unit.code }})</td>
-        <td>Class:</td>
-        <td>{{ cls.name }}</td>
-      </tr>
-      <tr>
-        <td>Term:</td>
-        <td>{% if term %}Term {{ term }}{% else %}All Terms{% endif %}</td>
-        <td>Cycle:</td>
-        <td>{{ cycle or 'N/A' }}</td>
-      </tr>
-      <tr>
-        <td>Year:</td>
-        <td>{{ year }}</td>
-        <td>Trainer:</td>
-        <td>{{ trainer.full_name }}</td>
-      </tr>
-      <tr>
-        <td>Date:</td>
-        <td colspan="3">{{ 'now' | to_eat('%d %B %Y') }}</td>
-      </tr>
-    </table>
+  <div class="info-col">
+    <p><strong>UNIT:</strong> {{ unit.code if unit else '—' }} — {{ unit.name if unit else '—' }}</p>
+    <p><strong>TRAINER:</strong> {{ trainer.name }}</p>
+    <p><strong>DATE GENERATED:</strong> {{ generated }}</p>
   </div>
-  
-  {% if marks %}
-  <table class="marks-table">
-    <thead>
-      <tr>
-        <th>Admission No</th>
-        <th>Student Name</th>
-        <th>Assessment Name</th>
-        <th>Type</th>
-        <th>Marks</th>
-        <th>Grade</th>
-        <th>Remarks</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for mark in marks %}
-      <tr>
-        <td>{{ mark.user_profiles.admission_no }}</td>
-        <td>{{ mark.user_profiles.full_name }}</td>
-        <td>{{ mark.assessment_name }}</td>
-        <td>{{ mark.assessment_type|title }}</td>
-        <td>{{ mark.marks_obtained }} / {{ mark.max_marks }}</td>
-        <td class="grade-{{ mark.grade }}">{{ mark.grade }}</td>
-        <td>{{ mark.remarks or '-' }}</td>
-      </tr>
+  <div class="info-col">
+    <p><strong>TOTAL STUDENTS:</strong> {{ students_list|length }}</p>
+    <p><strong>ORAL ASSESSMENTS:</strong> {{ oral_list|length }}</p>
+    <p><strong>PRACTICAL ASSESSMENTS:</strong> {{ practical_list|length }}</p>
+    <p><strong>THEORY ASSESSMENTS:</strong> {{ theory_list|length }}</p>
+  </div>
+</div>
+
+<!-- Assessment type summary -->
+{% if assessments %}
+<div class="summary-row">
+  {% for a in oral_list %}
+  <span class="sum-chip sum-oral">Oral: {{ a.assessment_name }} /{{ a.max_marks|int }}</span>
+  {% endfor %}
+  {% for a in practical_list %}
+  <span class="sum-chip sum-practical">Practical: {{ a.assessment_name }} /{{ a.max_marks|int }}</span>
+  {% endfor %}
+  {% for a in theory_list %}
+  <span class="sum-chip sum-theory">Theory: {{ a.assessment_name }} /{{ a.max_marks|int }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Marks table -->
+{% if assessments and students_list %}
+<table>
+  <thead>
+    <!-- Type group row -->
+    <tr>
+      <th rowspan="2" class="th-fixed" style="width:22px;">#</th>
+      <th rowspan="2" class="th-fixed" style="width:60px;">Adm No</th>
+      <th rowspan="2" class="th-fixed" style="text-align:left;width:120px;">Student Name</th>
+      {% if oral_list %}
+      <th colspan="{{ oral_list|length }}" class="th-oral">Oral Assessment</th>
+      {% endif %}
+      {% if practical_list %}
+      <th colspan="{{ practical_list|length }}" class="th-practical">Practical Assessment</th>
+      {% endif %}
+      {% if theory_list %}
+      <th colspan="{{ theory_list|length }}" class="th-theory">Theory / Written</th>
+      {% endif %}
+      <th colspan="2" class="th-summary">Summary</th>
+    </tr>
+    <!-- Assessment name row -->
+    <tr>
+      {% for a in oral_list %}
+      <th class="th-oral">{{ a.assessment_name }}<br><span style="font-size:9px;font-weight:400;">/{{ a.max_marks|int }}</span></th>
       {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p style="text-align: center; color: #999;">No marks found for the selected criteria.</p>
-  {% endif %}
-  
-  <div class="signature-section">
-    <div class="signature-line">Trainer Signature</div>
-    <div class="signature-line">Date</div>
+      {% for a in practical_list %}
+      <th class="th-practical">{{ a.assessment_name }}<br><span style="font-size:9px;font-weight:400;">/{{ a.max_marks|int }}</span></th>
+      {% endfor %}
+      {% for a in theory_list %}
+      <th class="th-theory">{{ a.assessment_name }}<br><span style="font-size:9px;font-weight:400;">/{{ a.max_marks|int }}</span></th>
+      {% endfor %}
+      <th class="th-summary">Total</th>
+      <th class="th-summary">Avg %</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in students_list %}
+    {% set p  = s.get('user_profiles') or {} %}
+    {% set sm = marks_map.get(s.student_id, {}) %}
+    {% set tot = namespace(v=0, n=0) %}
+    {% for a in oral_list + practical_list + theory_list %}
+      {% set mv = sm.get(a.id) %}
+      {% if mv is not none %}
+        {% set tot.v = tot.v + mv %}
+        {% set tot.n = tot.n + 1 %}
+      {% endif %}
+    {% endfor %}
+    {% set avg = (tot.v / tot.n)|round(1) if tot.n > 0 else none %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ p.get('admission_no','—') }}</td>
+      <td class="col-name"><strong>{{ p.get('full_name','—') }}</strong></td>
+      {% for a in oral_list + practical_list + theory_list %}
+      {% set mv = sm.get(a.id) %}
+      <td>{{ mv if mv is not none else '—' }}</td>
+      {% endfor %}
+      <td style="font-weight:700;color:#1a5fa8;">{{ tot.v|round(1) if tot.n > 0 else '—' }}</td>
+      <td>
+        {% if avg is not none %}
+        <span class="{{ 'pct-high' if avg >= 75 else ('pct-med' if avg >= 50 else 'pct-low') }}">
+          {{ avg }}%
+        </span>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% else %}
+<p style="text-align:center;color:#aaa;padding:24px;">No assessment data found for this selection.</p>
+{% endif %}
+
+<!-- Signature block -->
+<div class="sig-section">
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-role">Trainer</div>
+    <div class="sig-name">Name: {{ trainer.name }}</div>
+    <div class="sig-label">Signature &amp; Date</div>
   </div>
-  
-  <div class="footer">
-    <p>THIKA TECHNICAL TRAINING INSTITUTE - Academic Management System</p>
-    <p>This document is an official record of student assessment marks.</p>
-    <p>Generated on: {{ 'now' | to_eat('%d %B %Y at %H:%M') }}</p>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-role">Dept. Monitoring</div>
+    <div class="sig-name">Name: _______________</div>
+    <div class="sig-label">Signature &amp; Date</div>
   </div>
-  
-  <script>
-    window.onload = function() {
-      window.print();
-    };
-  </script>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-role">Head of Department</div>
+    <div class="sig-name">Name: _______________</div>
+    <div class="sig-label">Signature &amp; Date</div>
+  </div>
+</div>
+
+<div class="footer">&copy; {{ year }} Thika Technical Training Institute. All rights reserved.</div>
+
+<div class="no-print">
+  <button onclick="window.print()"
+    style="padding:10px 32px;background:#1a5fa8;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:600;">
+    🖨 Print / Save as PDF
+  </button>
+</div>
+
 </body>
 </html>

@@ -679,312 +679,620 @@ def session_pdf():
                            generated=generated)
 
 
-# ── Marks Entry ─────────────────────────────────────────────────────────────
+# ── Formative Assessment Marks ───────────────────────────────────────────────
+
+def _marks_class_unit_data(db, user):
+    """Return cu_rows, class_list for this trainer."""
+    cu_rows = (db.table("class_units")
+                 .select("class_id, unit_id, units(id,code,name), classes(id,name)")
+                 .eq("trainer_id", user["id"])
+                 .execute().data or [])
+    class_map = {}
+    for r in cu_rows:
+        c = r.get("classes") or {}
+        if c.get("id"):
+            class_map[c["id"]] = c["name"]
+    class_list = sorted([{"id": k, "name": v} for k, v in class_map.items()],
+                        key=lambda x: x["name"])
+    return cu_rows, class_list
+
+
+def _load_assessments_and_marks(db, unit_id, class_id, trainer_id, year, term):
+    """Return (assessments, marks_map {sid: {aid: marks}})."""
+    assessments = (db.table("formative_assessments")
+                    .select("*")
+                    .eq("unit_id",    unit_id)
+                    .eq("class_id",   class_id)
+                    .eq("trainer_id", trainer_id)
+                    .eq("year",       year)
+                    .eq("term",       term)
+                    .order("assessment_type")
+                    .order("created_at")
+                    .execute().data or [])
+    marks_map = {}
+    if assessments:
+        a_ids = [a["id"] for a in assessments]
+        for m in (db.table("formative_marks")
+                    .select("assessment_id, student_id, marks_obtained")
+                    .in_("assessment_id", a_ids)
+                    .execute().data or []):
+            sid = m["student_id"]
+            aid = m["assessment_id"]
+            if sid not in marks_map:
+                marks_map[sid] = {}
+            marks_map[sid][aid] = m["marks_obtained"]
+    return assessments, marks_map
+
 
 @trainer_bp.route("/marks-entry")
 @trainer_required
 def marks_entry():
-    """Marks entry page with class and unit selection."""
-    db = get_service_client()
+    """Formative assessment marks entry — dynamic grid view."""
+    db   = get_service_client()
     user = current_user()
-    
-    # Get trainer's assigned units
-    assigned_units = _trainer_assigned_unit_ids(db)
-    
-    # Get classes for these units
-    units_with_classes = []
-    for unit_id in assigned_units:
-        unit_data = db.table("trainer_units").select("*, units(name, code), classes(name)").eq("unit_id", unit_id).execute().data or []
-        units_with_classes.extend(unit_data)
-    
-    # Get filter parameters
-    class_id = request.args.get("class_id", "").strip()
-    unit_id = request.args.get("unit_id", "").strip()
-    term = request.args.get("term", "").strip()
-    cycle = request.args.get("cycle", "").strip()
-    year = request.args.get("year", str(datetime.now().year))
-    
+    cu_rows, class_list = _marks_class_unit_data(db, user)
+
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    year     = request.args.get("year",  datetime.now().year, type=int)
+    term     = request.args.get("term",  1, type=int)
+
+    units_list    = []
     students_list = []
-    existing_marks = []
-    
+    assessments   = []
+    marks_map     = {}
+
+    if class_id:
+        units_list = [r for r in cu_rows if (r.get("classes") or {}).get("id") == class_id]
+
     if class_id and unit_id:
-        # Get students in the class
-        students_list = (db.table("enrollments")
-                        .select("*, user_profiles(full_name, admission_no)")
-                        .eq("class_id", class_id)
-                        .execute().data or [])
-        
-        # Get existing marks for this unit, term, cycle, year
-        existing_marks = (db.table("marks")
-                         .select("*")
-                         .eq("unit_id", unit_id)
-                         .eq("class_id", class_id)
-                         .eq("term", term)
-                         .eq("cycle", cycle)
-                         .eq("year", year)
-                         .execute().data or [])
-    
+        raw = (db.table("enrollments")
+                 .select("student_id, user_profiles(full_name, admission_no)")
+                 .eq("class_id", class_id).execute().data or [])
+        students_list = sorted(raw, key=lambda s: (s.get("user_profiles") or {}).get("full_name", ""))
+        assessments, marks_map = _load_assessments_and_marks(db, unit_id, class_id, user["id"], year, term)
+
+    oral_list      = [a for a in assessments if a["assessment_type"] == "Oral"]
+    practical_list = [a for a in assessments if a["assessment_type"] == "Practical"]
+    theory_list    = [a for a in assessments if a["assessment_type"] == "Theory"]
+
     return render_template("trainer/marks_entry.html",
-                          units_with_classes=units_with_classes,
-                          class_id=class_id,
-                          unit_id=unit_id,
-                          term=term,
-                          cycle=cycle,
-                          year=year,
-                          students_list=students_list,
-                          existing_marks=existing_marks)
+                           class_list=class_list,
+                           units_list=units_list,
+                           students_list=students_list,
+                           assessments=assessments,
+                           oral_list=oral_list,
+                           practical_list=practical_list,
+                           theory_list=theory_list,
+                           marks_map=marks_map,
+                           class_id=class_id,
+                           unit_id=unit_id,
+                           year=year, term=term)
 
 
-@trainer_bp.route("/marks-entry/submit", methods=["POST"])
+@trainer_bp.route("/marks-entry/add-assessment", methods=["POST"])
 @trainer_required
-def submit_marks():
-    """Submit marks for students."""
-    db = get_service_client()
+def add_assessment():
+    """AJAX — create a new formative assessment definition."""
+    db   = get_service_client()
     user = current_user()
-    
-    class_id = request.form.get("class_id")
-    unit_id = request.form.get("unit_id")
-    term = request.form.get("term")
-    cycle = request.form.get("cycle")
-    year = request.form.get("year")
-    assessment_type = request.form.get("assessment_type")
-    assessment_name = request.form.get("assessment_name")
-    
-    if not all([class_id, unit_id, term, year, assessment_type, assessment_name]):
-        flash("Missing required fields.", "error")
-        return redirect(url_for("trainer.marks_entry"))
-    
+    data = request.get_json() or {}
+
+    unit_id         = data.get("unit_id", "").strip()
+    class_id        = data.get("class_id", "").strip()
+    assessment_type = data.get("assessment_type", "").strip()
+    assessment_name = data.get("assessment_name", "").strip()
+    max_marks       = data.get("max_marks", 100)
+    year            = int(data.get("year", datetime.now().year))
+    term            = int(data.get("term", 1))
+
+    if not all([unit_id, class_id, assessment_type, assessment_name]):
+        return jsonify({"success": False, "message": "All fields are required."}), 400
+    if assessment_type not in ("Oral", "Practical", "Theory"):
+        return jsonify({"success": False, "message": "Invalid type."}), 400
+
+    dup = (db.table("formative_assessments").select("id")
+             .eq("unit_id", unit_id).eq("class_id", class_id)
+             .eq("trainer_id", user["id"])
+             .eq("assessment_name", assessment_name)
+             .eq("year", year).eq("term", term)
+             .execute().data or [])
+    if dup:
+        return jsonify({"success": False, "message": f"'{assessment_name}' already exists."}), 400
+
     try:
-        # Get students in the class
-        students_list = (db.table("enrollments")
-                        .select("student_id")
-                        .eq("class_id", class_id)
-                        .execute().data or [])
-        
-        for student in students_list:
-            marks_obtained = request.form.get(f"marks_{student['student_id']}")
-            remarks = request.form.get(f"remarks_{student['student_id']}", "")
-            
-            if marks_obtained is not None and marks_obtained.strip():
-                # Check if marks already exist
-                existing = (db.table("marks")
-                           .select("id")
-                           .eq("student_id", student["student_id"])
-                           .eq("unit_id", unit_id)
-                           .eq("assessment_name", assessment_name)
-                           .eq("term", term)
-                           .eq("cycle", cycle)
-                           .eq("year", year)
-                           .execute().data)
-                
-                mark_data = {
-                    "student_id": student["student_id"],
-                    "unit_id": unit_id,
-                    "trainer_id": user["id"],
-                    "class_id": class_id,
-                    "assessment_type": assessment_type,
-                    "assessment_name": assessment_name,
-                    "term": term,
-                    "cycle": cycle,
-                    "year": int(year),
-                    "marks_obtained": float(marks_obtained),
-                    "max_marks": 100,
-                    "remarks": remarks
-                }
-                
-                if existing:
-                    # Update existing marks
-                    db.table("marks").update(mark_data).eq("id", existing[0]["id"]).execute()
-                else:
-                    # Insert new marks
-                    db.table("marks").insert(mark_data).execute()
-        
-        write_audit_log("submit_marks", target=f"class:{class_id},unit:{unit_id}")
-        flash("Marks submitted successfully.", "success")
+        result = db.table("formative_assessments").insert({
+            "unit_id": unit_id, "class_id": class_id,
+            "trainer_id": user["id"],
+            "assessment_type": assessment_type,
+            "assessment_name": assessment_name,
+            "max_marks": float(max_marks),
+            "year": year, "term": term
+        }).execute()
+        write_audit_log("add_formative_assessment",
+                        target=f"unit:{unit_id},{assessment_type}:{assessment_name}")
+        return jsonify({"success": True, "assessment": result.data[0] if result.data else {}})
     except Exception as e:
-        flash(f"Error submitting marks: {e}", "error")
-    
-    return redirect(url_for("trainer.marks_entry", class_id=class_id, unit_id=unit_id, term=term, cycle=cycle, year=year))
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@trainer_bp.route("/marks-entry/delete-assessment", methods=["POST"])
+@trainer_required
+def delete_assessment():
+    """Delete a formative assessment and all its marks."""
+    db   = get_service_client()
+    user = current_user()
+    assessment_id = request.form.get("assessment_id", "")
+    class_id = request.form.get("class_id", "")
+    unit_id  = request.form.get("unit_id", "")
+    year     = request.form.get("year", "")
+    term     = request.form.get("term", "")
+    try:
+        rec = (db.table("formative_assessments")
+                 .select("trainer_id, assessment_name")
+                 .eq("id", assessment_id).single().execute().data)
+        if not rec or rec["trainer_id"] != user["id"]:
+            flash("Access denied.", "error")
+        else:
+            db.table("formative_assessments").delete().eq("id", assessment_id).execute()
+            write_audit_log("delete_formative_assessment", target=f"assessment:{assessment_id}")
+            flash(f"'{rec['assessment_name']}' deleted.", "success")
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("trainer.marks_entry",
+                            class_id=class_id, unit_id=unit_id, year=year, term=term))
+
+
+@trainer_bp.route("/marks-entry/save-mark", methods=["POST"])
+@trainer_required
+def save_mark():
+    """AJAX — upsert a single mark."""
+    db   = get_service_client()
+    user = current_user()
+    data = request.get_json() or {}
+
+    assessment_id = data.get("assessment_id", "")
+    student_id    = data.get("student_id", "")
+    marks_str     = data.get("marks", "")
+
+    if not assessment_id or not student_id:
+        return jsonify({"success": False, "message": "Missing fields."}), 400
+
+    rec = (db.table("formative_assessments")
+             .select("trainer_id, max_marks")
+             .eq("id", assessment_id).single().execute().data)
+    if not rec or rec["trainer_id"] != user["id"]:
+        return jsonify({"success": False, "message": "Access denied."}), 403
+
+    # Empty → delete record
+    if marks_str == "" or marks_str is None:
+        try:
+            (db.table("formative_marks").delete()
+               .eq("assessment_id", assessment_id)
+               .eq("student_id", student_id).execute())
+            return jsonify({"success": True, "cleared": True})
+        except Exception as e:
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    try:
+        marks_val = float(marks_str)
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "Marks must be a number."}), 400
+
+    max_m = float(rec.get("max_marks", 100))
+    if marks_val < 0:
+        return jsonify({"success": False, "message": "Marks cannot be negative."}), 400
+    if marks_val > max_m:
+        return jsonify({"success": False, "message": f"Cannot exceed {int(max_m)}."}), 400
+
+    try:
+        existing = (db.table("formative_marks").select("id")
+                      .eq("assessment_id", assessment_id)
+                      .eq("student_id", student_id).execute().data or [])
+        if existing:
+            db.table("formative_marks").update({
+                "marks_obtained": marks_val,
+                "uploaded_by":    user["id"],
+                "updated_at":     datetime.now().isoformat()
+            }).eq("id", existing[0]["id"]).execute()
+        else:
+            db.table("formative_marks").insert({
+                "assessment_id": assessment_id,
+                "student_id":    student_id,
+                "marks_obtained": marks_val,
+                "uploaded_by":   user["id"]
+            }).execute()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@trainer_bp.route("/marks-entry/marks-pdf")
+@trainer_required
+def marks_pdf():
+    """Print-ready formative marks report."""
+    db   = get_service_client()
+    user = current_user()
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    if not (class_id and unit_id):
+        flash("Select class and unit.", "error")
+        return redirect(url_for("trainer.marks_entry"))
+
+    cls  = (db.table("classes").select("name").eq("id", class_id).single().execute().data or {})
+    unit = (db.table("units").select("code,name").eq("id", unit_id).single().execute().data or {})
+    dept = {}
+    if user.get("department_id"):
+        dept = (db.table("departments").select("name")
+                  .eq("id", user["department_id"]).single().execute().data or {})
+
+    raw = (db.table("enrollments")
+             .select("student_id, user_profiles(full_name, admission_no)")
+             .eq("class_id", class_id).execute().data or [])
+    students_list = sorted(raw, key=lambda s: (s.get("user_profiles") or {}).get("full_name", ""))
+
+    assessments, marks_map = _load_assessments_and_marks(db, unit_id, class_id, user["id"], year, term)
+    oral_list      = [a for a in assessments if a["assessment_type"] == "Oral"]
+    practical_list = [a for a in assessments if a["assessment_type"] == "Practical"]
+    theory_list    = [a for a in assessments if a["assessment_type"] == "Theory"]
+
+    return render_template("trainer/marks_pdf.html",
+                           cls=cls, unit=unit, dept=dept,
+                           students_list=students_list,
+                           assessments=assessments,
+                           oral_list=oral_list,
+                           practical_list=practical_list,
+                           theory_list=theory_list,
+                           marks_map=marks_map,
+                           year=year, term=term,
+                           trainer={"name": user.get("full_name", "")},
+                           generated=datetime.now().strftime("%d %b %Y %H:%M"))
+
+
+@trainer_bp.route("/marks-entry/export-excel")
+@trainer_required
+def export_marks_excel():
+    """Download formative marks as Excel."""
+    import io, openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    db   = get_service_client()
+    user = current_user()
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    if not (class_id and unit_id):
+        flash("Select class and unit.", "error")
+        return redirect(url_for("trainer.marks_entry"))
+
+    cls  = (db.table("classes").select("name").eq("id", class_id).single().execute().data or {})
+    unit = (db.table("units").select("code,name").eq("id", unit_id).single().execute().data or {})
+
+    raw = (db.table("enrollments")
+             .select("student_id, user_profiles(full_name, admission_no)")
+             .eq("class_id", class_id).execute().data or [])
+    students_list = sorted(raw, key=lambda s: (s.get("user_profiles") or {}).get("full_name", ""))
+    assessments, marks_map = _load_assessments_and_marks(db, unit_id, class_id, user["id"], year, term)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Formative Marks"
+
+    hdr_font = Font(bold=True, color="FFFFFF", size=11)
+    hdr_fill = PatternFill("solid", fgColor="1E5A9F")
+    center   = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    thin     = Side(style="thin")
+    bdr      = Border(left=thin, right=thin, top=thin, bottom=thin)
+    type_color = {"Oral": "E8F5E9", "Practical": "FFF3E0", "Theory": "EDE7F6"}
+
+    total_cols = 3 + len(assessments) + 2
+    last_col   = get_column_letter(total_cols)
+
+    # Title
+    ws.merge_cells(f"A1:{last_col}1")
+    ws["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE — Formative Assessment Marks"
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.merge_cells(f"A2:{last_col}2")
+    ws["A2"] = (f"Class: {cls.get('name','')}  |  Unit: {unit.get('code','')} – "
+                f"{unit.get('name','')}  |  Year: {year}  |  Term: {term}")
+    ws["A2"].font = Font(size=11)
+    ws.row_dimensions[3].height = 16
+    ws.row_dimensions[4].height = 40
+
+    # Type sub-header (row 3)
+    for col_idx, a in enumerate(assessments, start=4):
+        c = ws.cell(row=3, column=col_idx, value=a["assessment_type"])
+        c.fill = PatternFill("solid", fgColor=type_color.get(a["assessment_type"], "E0E0E0"))
+        c.font = Font(bold=True, size=9); c.alignment = center; c.border = bdr
+
+    # Column headers (row 4)
+    for col_idx, h in enumerate(
+        ["#", "Adm No", "Student Name"] +
+        [f"{a['assessment_name']}\n(/{int(a['max_marks'])})" for a in assessments] +
+        ["Total", "Average"],
+        start=1
+    ):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.font = hdr_font; c.fill = hdr_fill; c.alignment = center; c.border = bdr
+
+    # Data
+    for ri, student in enumerate(students_list, start=1):
+        p   = student.get("user_profiles") or {}
+        sid = student["student_id"]
+        row = ri + 4
+        ws.cell(row=row, column=1, value=ri).alignment = center
+        ws.cell(row=row, column=2, value=p.get("admission_no", "")).alignment = center
+        ws.cell(row=row, column=3, value=p.get("full_name", ""))
+        sm = marks_map.get(sid, {})
+        total, count = 0.0, 0
+        for ci, a in enumerate(assessments, start=4):
+            m = sm.get(a["id"])
+            c = ws.cell(row=row, column=ci, value=float(m) if m is not None else None)
+            c.alignment = center; c.border = bdr
+            if m is not None:
+                total += float(m); count += 1
+        tc = 4 + len(assessments)
+        if count:
+            ws.cell(row=row, column=tc,     value=round(total, 1)).alignment = center
+            ws.cell(row=row, column=tc + 1, value=round(total / count, 1)).alignment = center
+
+    ws.column_dimensions["A"].width = 5
+    ws.column_dimensions["B"].width = 14
+    ws.column_dimensions["C"].width = 28
+    for i in range(len(assessments) + 2):
+        ws.column_dimensions[get_column_letter(4 + i)].width = 13
+
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    fname = f"formative_marks_{cls.get('name','').replace(' ','_')}_T{term}_{year}.xlsx"
+    resp = make_response(buf.getvalue())
+    resp.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    resp.headers["Content-Disposition"] = f"attachment; filename={fname}"
+    return resp
 
 
 @trainer_bp.route("/marks-import")
 @trainer_required
 def marks_import():
-    """Excel import page for marks."""
-    db = get_service_client()
+    """Formative marks Excel import page."""
+    db   = get_service_client()
     user = current_user()
-    
-    # Get trainer's assigned units
-    assigned_units = _trainer_assigned_unit_ids(db)
-    
-    # Get classes for these units
-    units_with_classes = []
-    for unit_id in assigned_units:
-        unit_data = db.table("trainer_units").select("*, units(name, code), classes(name)").eq("unit_id", unit_id).execute().data or []
-        units_with_classes.extend(unit_data)
-    
-    return render_template("trainer/marks_import.html", units_with_classes=units_with_classes)
+    cu_rows, class_list = _marks_class_unit_data(db, user)
+
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    units_list    = []
+    assessments   = []
+    students_list = []
+
+    if class_id:
+        units_list = [r for r in cu_rows if (r.get("classes") or {}).get("id") == class_id]
+    if class_id and unit_id:
+        assessments, _ = _load_assessments_and_marks(db, unit_id, class_id, user["id"], year, term)
+        raw = (db.table("enrollments")
+                 .select("student_id, user_profiles(full_name, admission_no)")
+                 .eq("class_id", class_id).execute().data or [])
+        students_list = sorted(raw, key=lambda s: (s.get("user_profiles") or {}).get("full_name", ""))
+
+    return render_template("trainer/marks_import.html",
+                           class_list=class_list, units_list=units_list,
+                           assessments=assessments, students_list=students_list,
+                           class_id=class_id, unit_id=unit_id, year=year, term=term)
+
+
+@trainer_bp.route("/marks-import/template")
+@trainer_required
+def marks_import_template():
+    """Download Excel template pre-filled with students and assessment columns."""
+    import io, openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+
+    db   = get_service_client()
+    user = current_user()
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    students_list = []
+    assessments   = []
+    if class_id and unit_id:
+        raw = (db.table("enrollments")
+                 .select("student_id, user_profiles(full_name, admission_no)")
+                 .eq("class_id", class_id).execute().data or [])
+        students_list = sorted(raw, key=lambda s: (s.get("user_profiles") or {}).get("full_name", ""))
+        assessments, _ = _load_assessments_and_marks(db, unit_id, class_id, user["id"], year, term)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Marks Import"
+
+    hdr_fill = PatternFill("solid", fgColor="1E5A9F")
+    hdr_font = Font(bold=True, color="FFFFFF", size=11)
+    center   = Alignment(horizontal="center")
+    type_color = {"Oral": "E8F5E9", "Practical": "FFF3E0", "Theory": "EDE7F6"}
+
+    if assessments:
+        headers = ["Admission No", "Trainee Name"] + \
+                  [f"{a['assessment_name']} ({a['assessment_type']}) /{int(a['max_marks'])}"
+                   for a in assessments]
+    else:
+        headers = ["Admission No", "Trainee Name",
+                   "Assessment Name (e.g. Oral 1)",
+                   "Assessment Type (Oral/Practical/Theory)", "Marks (0-100)"]
+
+    # Type color sub-header row
+    if assessments:
+        for ci, a in enumerate(assessments, start=3):
+            c = ws.cell(row=1, column=ci, value=a["assessment_type"])
+            c.fill = PatternFill("solid", fgColor=type_color.get(a["assessment_type"], "E0E0E0"))
+            c.font = Font(bold=True, size=9); c.alignment = center
+
+    hdr_row = 2 if assessments else 1
+    for ci, h in enumerate(headers, start=1):
+        c = ws.cell(row=hdr_row, column=ci, value=h)
+        c.font = hdr_font; c.fill = hdr_fill; c.alignment = center
+
+    start_row = hdr_row + 1
+    for ri, s in enumerate(students_list, start=start_row):
+        p = s.get("user_profiles") or {}
+        ws.cell(row=ri, column=1, value=p.get("admission_no", ""))
+        ws.cell(row=ri, column=2, value=p.get("full_name", ""))
+
+    ws.column_dimensions["A"].width = 16
+    ws.column_dimensions["B"].width = 28
+    for i in range(max(len(assessments), 3)):
+        ws.column_dimensions[get_column_letter(3 + i)].width = 22
+
+    # Instructions sheet
+    instr = wb.create_sheet("Instructions")
+    instr["A1"] = "TTTI Formative Marks Import Template — Instructions"
+    instr["A1"].font = Font(bold=True, size=13)
+    for r, txt in enumerate([
+        "1. Do NOT change column headers or Admission No values.",
+        "2. Enter marks in the correct column for each assessment.",
+        "3. Marks must be between 0 and the maximum shown in the header.",
+        "4. Leave blank if a student was not assessed.",
+        "5. Save as .xlsx and upload using the Import page.",
+        "6. If no assessments exist yet, create them first on the Marks Entry page.",
+    ], start=3):
+        instr[f"A{r}"] = txt
+
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    resp = make_response(buf.getvalue())
+    resp.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    resp.headers["Content-Disposition"] = "attachment; filename=marks_import_template.xlsx"
+    return resp
 
 
 @trainer_bp.route("/marks-import/upload", methods=["POST"])
 @trainer_required
 def upload_marks():
-    """Upload and process Excel file for marks."""
-    db = get_service_client()
+    """Process uploaded Excel marks file into formative_marks."""
+    import openpyxl
+
+    db   = get_service_client()
     user = current_user()
-    
-    class_id = request.form.get("class_id")
-    unit_id = request.form.get("unit_id")
-    term = request.form.get("term")
-    cycle = request.form.get("cycle")
-    year = request.form.get("year")
-    assessment_type = request.form.get("assessment_type")
-    assessment_name = request.form.get("assessment_name")
-    
-    if not all([class_id, unit_id, term, year, assessment_type, assessment_name]):
-        flash("Missing required fields.", "error")
-        return redirect(url_for("trainer.marks_import"))
-    
-    if 'marks_file' not in request.files:
-        flash("No file uploaded.", "error")
-        return redirect(url_for("trainer.marks_import"))
-    
-    file = request.files['marks_file']
-    if file.filename == '':
+    class_id = request.form.get("class_id", "")
+    unit_id  = request.form.get("unit_id", "")
+    year     = request.form.get("year", str(datetime.now().year))
+    term     = request.form.get("term", "1")
+
+    redirect_url = url_for("trainer.marks_import",
+                           class_id=class_id, unit_id=unit_id, year=year, term=term)
+
+    if not all([class_id, unit_id, year, term]):
+        flash("Class, Unit, Year and Term are required.", "error")
+        return redirect(redirect_url)
+    if "marks_file" not in request.files or request.files["marks_file"].filename == "":
         flash("No file selected.", "error")
-        return redirect(url_for("trainer.marks_import"))
-    
+        return redirect(redirect_url)
+
     try:
-        import openpyxl
-        
-        # Read Excel file using openpyxl (no pandas needed)
-        wb = openpyxl.load_workbook(file, read_only=True, data_only=True)
-        ws = wb.active
-        
-        # Read header row to find column positions
-        headers = [str(cell.value).strip().lower() if cell.value else "" for cell in next(ws.iter_rows(min_row=1, max_row=1))]
-        
-        if "admission_no" not in headers:
-            flash("Missing required column: admission_no", "error")
-            return redirect(url_for("trainer.marks_import"))
-        if "marks" not in headers:
-            flash("Missing required column: marks", "error")
-            return redirect(url_for("trainer.marks_import"))
-        
-        adm_idx   = headers.index("admission_no")
-        marks_idx = headers.index("marks")
-        rem_idx   = headers.index("remarks") if "remarks" in headers else None
-        
-        processed = 0
-        # Process data rows (skip header row 1)
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or row[adm_idx] is None:
+        wb = openpyxl.load_workbook(request.files["marks_file"], read_only=True, data_only=True)
+        ws = wb["Marks Import"] if "Marks Import" in wb.sheetnames else wb.active
+
+        rows_iter = ws.iter_rows(values_only=True)
+        row1 = next(rows_iter, None)
+        if row1 is None:
+            flash("Empty file.", "error")
+            return redirect(redirect_url)
+
+        headers = [str(h).strip() if h else "" for h in row1]
+
+        # If first row is the type sub-header, skip it and read real headers
+        if headers and headers[0].lower() in ("oral", "practical", "theory", ""):
+            row1 = next(rows_iter, None)
+            if row1 is None:
+                flash("Empty file.", "error")
+                return redirect(redirect_url)
+            headers = [str(h).strip() if h else "" for h in row1]
+
+        if "Admission No" not in headers:
+            flash("Invalid template: 'Admission No' column not found.", "error")
+            return redirect(redirect_url)
+
+        adm_idx = headers.index("Admission No")
+
+        # Load this trainer's assessments for this filter
+        assessments, _ = _load_assessments_and_marks(db, unit_id, class_id, user["id"],
+                                                     int(year), int(term))
+        # Map column index → assessment (match by name prefix)
+        col_to_assessment = {}
+        for ci, h in enumerate(headers):
+            for a in assessments:
+                if h.startswith(a["assessment_name"]):
+                    col_to_assessment[ci] = a
+                    break
+
+        processed, errors = 0, []
+        for row_vals in rows_iter:
+            if not row_vals or row_vals[adm_idx] is None:
                 continue
-            
-            admission_no   = str(row[adm_idx]).strip()
-            marks_obtained = row[marks_idx]
-            remarks        = str(row[rem_idx]).strip() if rem_idx is not None and row[rem_idx] else ""
-            
-            if not admission_no or marks_obtained is None:
+            adm_no = str(row_vals[adm_idx]).strip()
+            if not adm_no:
                 continue
-            
-            try:
-                marks_obtained = float(marks_obtained)
-            except (ValueError, TypeError):
+
+            stu = (db.table("user_profiles").select("id")
+                     .eq("admission_no", adm_no).eq("role", "student")
+                     .execute().data or [])
+            if not stu:
+                errors.append(f"'{adm_no}' not found.")
                 continue
-            
-            # Get student by admission number
-            student = (db.table("user_profiles")
-                      .select("id")
-                      .eq("admission_no", admission_no)
-                      .eq("role", "student")
-                      .single()
-                      .execute().data)
-            
-            if student:
-                # Check if marks already exist
-                existing = (db.table("marks")
-                           .select("id")
-                           .eq("student_id", student["id"])
-                           .eq("unit_id", unit_id)
-                           .eq("assessment_name", assessment_name)
-                           .eq("term", term)
-                           .eq("cycle", cycle)
-                           .eq("year", year)
-                           .execute().data)
-                
-                mark_data = {
-                    "student_id": student["id"],
-                    "unit_id": unit_id,
-                    "trainer_id": user["id"],
-                    "class_id": class_id,
-                    "assessment_type": assessment_type,
-                    "assessment_name": assessment_name,
-                    "term": term,
-                    "cycle": cycle,
-                    "year": int(year),
-                    "marks_obtained": marks_obtained,
-                    "max_marks": 100,
-                    "remarks": remarks
-                }
-                
-                if existing:
-                    db.table("marks").update(mark_data).eq("id", existing[0]["id"]).execute()
+            sid = stu[0]["id"]
+
+            for ci, assessment in col_to_assessment.items():
+                cell_val = row_vals[ci] if ci < len(row_vals) else None
+                if cell_val is None or str(cell_val).strip() == "":
+                    continue
+                try:
+                    mv = float(str(cell_val).strip())
+                except (ValueError, TypeError):
+                    errors.append(f"{adm_no}: bad value '{cell_val}' in {assessment['assessment_name']}.")
+                    continue
+                mm = float(assessment.get("max_marks", 100))
+                if mv < 0 or mv > mm:
+                    errors.append(f"{adm_no}: {assessment['assessment_name']} {mv} out of range (0-{mm}).")
+                    continue
+                ex = (db.table("formative_marks").select("id")
+                        .eq("assessment_id", assessment["id"])
+                        .eq("student_id", sid).execute().data or [])
+                if ex:
+                    db.table("formative_marks").update({
+                        "marks_obtained": mv, "uploaded_by": user["id"],
+                        "updated_at": datetime.now().isoformat()
+                    }).eq("id", ex[0]["id"]).execute()
                 else:
-                    db.table("marks").insert(mark_data).execute()
-                
+                    db.table("formative_marks").insert({
+                        "assessment_id": assessment["id"],
+                        "student_id": sid, "marks_obtained": mv,
+                        "uploaded_by": user["id"]
+                    }).execute()
                 processed += 1
-        
+
         wb.close()
-        write_audit_log("import_marks", target=f"class:{class_id},unit:{unit_id}")
-        flash(f"Marks imported successfully. Processed {processed} records.", "success")
+        write_audit_log("import_formative_marks", target=f"class:{class_id},unit:{unit_id}")
+        msg = f"Imported {processed} mark(s) successfully."
+        if errors:
+            msg += f" Errors ({len(errors)}): " + "; ".join(errors[:3])
+            flash(msg, "warning")
+        else:
+            flash(msg, "success")
     except Exception as e:
-        flash(f"Error importing marks: {e}", "error")
-    
-    return redirect(url_for("trainer.marks_import"))
+        flash(f"Error processing file: {e}", "error")
 
-
-# ── Marks PDF Download ─────────────────────────────────────────────────────────
-
-@trainer_bp.route("/marks-entry/download-pdf")
-@trainer_required
-def download_marks_pdf():
-    """Download marks as PDF."""
-    db = get_service_client()
-    user = current_user()
-    
-    class_id = request.args.get("class_id")
-    unit_id = request.args.get("unit_id")
-    term = request.args.get("term")
-    cycle = request.args.get("cycle")
-    year = request.args.get("year")
-    
-    if not all([class_id, unit_id, year]):
-        flash("Missing required parameters.", "error")
-        return redirect(url_for("trainer.marks_entry"))
-    
-    # Get marks for this unit, class, term, cycle, year
-    marks_list = (db.table("marks")
-                 .select("*, units(name, code), user_profiles!marks_student_id_fkey(full_name, admission_no), classes(name)")
-                 .eq("unit_id", unit_id)
-                 .eq("class_id", class_id)
-                 .eq("term", term)
-                 .eq("cycle", cycle)
-                 .eq("year", int(year))
-                 .execute().data or [])
-    
-    # Get unit and class details
-    unit = db.table("units").select("*").eq("id", unit_id).single().execute().data
-    cls = db.table("classes").select("*").eq("id", class_id).single().execute().data
-    
-    return render_template("trainer/marks_pdf.html",
-                          marks=marks_list,
-                          unit=unit,
-                          cls=cls,
-                          term=term,
-                          cycle=cycle,
-                          year=year,
-                          trainer=user)
+    return redirect(redirect_url)
 
 
 # ── Portfolio / Documents ───────────────────────────────────────────────────
