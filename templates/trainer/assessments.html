@@ -322,6 +322,18 @@ function renderFiles() {
         ` : ''}
         <button class="btn btn-delete btn-sm" onclick="deleteAssessment('${f.id}')"><i class="fas fa-trash"></i></button>
       </div>
+      ${status !== 'pending' && f.reviewed_at ? (() => {
+        const reviewer = f.reviewer && f.reviewer.full_name ? f.reviewer.full_name : 'Trainer';
+        const reviewedDate = f.reviewed_at ? f.reviewed_at.slice(0,16).replace('T',' ') : '';
+        const color = status === 'approved' ? '#2e7d32' : '#c62828';
+        const bg = status === 'approved' ? '#f0fdf4' : '#fff5f5';
+        const icon = status === 'approved' ? 'fa-check-circle' : 'fa-times-circle';
+        const note = f.review_note ? `<div style="font-size:11px;color:#555;margin-top:3px;font-style:italic">"${f.review_note}"</div>` : '';
+        return `<div style="padding:8px 16px 12px;background:${bg};border-top:1px solid #eee;font-size:12px;color:${color}">
+          <i class="fas ${icon}"></i> <strong>${status.charAt(0).toUpperCase()+status.slice(1)}</strong> by ${reviewer}
+          <span style="color:#aaa;margin-left:6px">${reviewedDate}</span>${note}
+        </div>`;
+      })() : ''}
       <div class="review-note-box" id="rejectNote-${f.id}" style="padding:0 16px 14px">
         <textarea placeholder="Reason for rejection (required)..." id="rejectText-${f.id}"></textarea>
         <div class="note-actions">
@@ -362,12 +374,9 @@ function reviewAssessment(id, action) {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: 'action=' + action + '&review_note=' + encodeURIComponent(note)
-  }).then(r => {
-    if (r.redirected) window.location.href = r.url;
-    else if (r.ok) {
-      alert('Assessment ' + action + 'd successfully.');
-      renderFiles();
-    }
+  }).then(() => {
+    // Always reload to get fresh data with reviewer name + timestamp
+    location.reload();
   }).catch(() => location.reload());
 }
 

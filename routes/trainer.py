@@ -313,8 +313,14 @@ def assessments():
     user = current_user()
     assigned_unit_ids = _trainer_assigned_unit_ids(db)
 
-    # Get all assessments with joins
-    q = db.table("assessments").select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no), units(name, code), classes(id, name)").order("uploaded_at", desc=True)
+    # Get all assessments — include reviewer info via FK alias
+    q = db.table("assessments").select(
+        "*, "
+        "user_profiles!assessments_student_id_fkey(full_name, admission_no), "
+        "reviewer:user_profiles!assessments_reviewed_by_fkey(full_name), "
+        "units(name, code), "
+        "classes(id, name)"
+    ).order("uploaded_at", desc=True)
     if assigned_unit_ids:
         q = q.in_("unit_id", assigned_unit_ids)
     assessments_list = q.execute().data or []
@@ -387,30 +393,54 @@ def review_assessment(assessment_id):
     
     if request.method == "POST":
         action = request.form.get("action")
-        review_note = request.form.get("review_note", "")
-        
+        review_note = request.form.get("review_note", "").strip()
+
         if action in ["approve", "reject"]:
+            new_status = "approved" if action == "approve" else "rejected"
+            trainer_name = user.get("full_name", "Trainer")
+
+            # ── Critical DB update (always attempt redirect after) ──────────
             try:
-                update_data = {
-                    "status": action + "d" if action == "approve" else "rejected",
+                db.table("assessments").update({
+                    "status":      new_status,
                     "reviewed_by": user["id"],
                     "reviewed_at": datetime.now().isoformat(),
-                    "review_note": review_note
-                }
-                db.table("assessments").update(update_data).eq("id", assessment_id).execute()
-                
-                # Rename file
-                _rename_script_file(db, assessment_id, action + "d" if action == "approve" else "rejected", user["full_name"])
-                
-                write_audit_log(f"review_assessment_{action}", target=f"assessment:{assessment_id}")
-                flash(f"Assessment {action}d successfully.", "success")
-                return redirect(url_for("trainer.assessments"))
+                    "review_note": review_note,
+                }).eq("id", assessment_id).execute()
+                flash(f"Assessment {new_status} by {trainer_name}.", "success")
             except Exception as e:
-                flash(f"Error reviewing assessment: {e}", "error")
-    
+                flash(f"Error updating assessment: {e}", "error")
+
+            # ── Non-critical: cosmetic file rename & audit (never block redirect)
+            try:
+                _rename_script_file(db, assessment_id, new_status, trainer_name)
+            except Exception:
+                pass
+            try:
+                write_audit_log(f"review_assessment_{action}", target=f"assessment:{assessment_id}")
+            except Exception:
+                pass
+
+            # Always redirect — even if something failed
+            return redirect(url_for("trainer.assessments"))
+
+    # ── Fetch reviewer profile for display ────────────────────────────────────
+    reviewer = None
+    if assessment.get("reviewed_by"):
+        try:
+            reviewer_rows = (db.table("user_profiles")
+                             .select("full_name")
+                             .eq("id", assessment["reviewed_by"])
+                             .limit(1)
+                             .execute().data or [])
+            reviewer = reviewer_rows[0] if reviewer_rows else None
+        except Exception:
+            pass
+
     return render_template("trainer/review_assessment.html",
                           assessment=assessment,
-                          evidence=evidence)
+                          evidence=evidence,
+                          reviewer=reviewer)
 
 
 @trainer_bp.route("/assessment/<assessment_id>/delete", methods=["POST"])

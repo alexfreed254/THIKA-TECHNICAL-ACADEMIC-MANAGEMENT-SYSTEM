@@ -63,10 +63,32 @@
         <div class="info-item"><label>Term / Cycle</label><p>Term {{ assessment.get('term','—') }}, Cycle {{ assessment.get('cycle','—') }}</p></div>
         <div class="info-item"><label>Year</label><p>{{ assessment.get('year','—') }}</p></div>
         <div class="info-item"><label>Uploaded</label><p>{{ assessment.get('uploaded_at','—')[:10] if assessment.get('uploaded_at') else '—' }}</p></div>
-        {% if assessment.get('reviewed_at') %}
-        <div class="info-item"><label>Reviewed</label><p>{{ assessment.get('reviewed_at','—')[:10] if assessment.get('reviewed_at') else '—' }}</p></div>
-        {% endif %}
       </div>
+
+      {% if assessment.get('status') != 'pending' and assessment.get('reviewed_at') %}
+      <div style="margin-top:14px;padding:14px 18px;border-radius:10px;border-left:4px solid;
+                  {% if assessment.get('status') == 'approved' %}background:#f0fdf4;border-left-color:#16a34a;
+                  {% else %}background:#fef2f2;border-left-color:#dc2626;{% endif %}
+                  display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <i class="fas fa-{% if assessment.get('status') == 'approved' %}check-circle{% else %}times-circle{% endif %}"
+           style="font-size:22px;flex-shrink:0;color:{% if assessment.get('status') == 'approved' %}#16a34a{% else %}#dc2626{% endif %}"></i>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:{% if assessment.get('status') == 'approved' %}#15803d{% else %}#991b1b{% endif %}">
+            {{ assessment.get('status','pending')|title }}
+            by {{ reviewer.get('full_name', 'Trainer') if reviewer else 'Trainer' }}
+          </div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">
+            <i class="fas fa-clock" style="margin-right:4px"></i>
+            {{ assessment.get('reviewed_at','')[:16].replace('T',' ') }} UTC
+          </div>
+          {% if assessment.get('review_note') %}
+          <div style="font-size:13px;color:#334155;margin-top:6px;font-style:italic">
+            &ldquo;{{ assessment.get('review_note') }}&rdquo;
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
 
       {% if assessment.get('script_file_path') %}
       <div style="margin-bottom:16px">
