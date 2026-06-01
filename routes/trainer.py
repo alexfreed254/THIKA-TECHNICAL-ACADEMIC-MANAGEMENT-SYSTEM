@@ -380,7 +380,11 @@ def review_assessment(assessment_id):
     user = current_user()
     
     # Fetch assessment first so we can check unit access with the correct unit_id
-    assessment = db.table("assessments").select("*, user_profiles(full_name, admission_no, mobile_number), units(name, code), classes(name)").eq("id", assessment_id).single().execute().data
+    assessment = (db.table("assessments")
+                  .select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no, mobile_number), units(name, code), classes(name)")
+                  .eq("id", assessment_id)
+                  .limit(1)
+                  .execute().data or [None])[0]
     
     if not assessment:
         abort(404)
