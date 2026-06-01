@@ -170,11 +170,22 @@ def approver_dashboard():
         a["user_profiles"]        = req.get("user_profiles") or {}
         a["clearance_departments"] = stage.get("clearance_departments") or {}
 
-    # Keep only approvals whose stage targets this user's role
-    my_approvals = [
-        a for a in pending_approvals
-        if (a.get("clearance_stages") or {}).get("approver_role") == user_role
-    ]
+    # Keep only approvals whose stage targets this user's role.
+    # For trainers: also exclude any stage whose name contains "technician"
+    # (those belong exclusively to the Workshop Technician dashboard).
+    TECHNICIAN_KEYWORDS = ("technician", "workshop technician", "workshop")
+
+    def is_trainer_stage(approval):
+        stage = approval.get("clearance_stages") or {}
+        if stage.get("approver_role") != user_role:
+            return False
+        if user_role == "trainer":
+            stage_name = (stage.get("stage_name") or "").lower()
+            if any(kw in stage_name for kw in TECHNICIAN_KEYWORDS):
+                return False
+        return True
+
+    my_approvals = [a for a in pending_approvals if is_trainer_stage(a)]
 
     # ── Trainer-specific filtering ──────────────────────────────────────────
     # A trainer should only see clearance requests from trainees they have
