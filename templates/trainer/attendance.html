@@ -1,192 +1,277 @@
 {% extends "trainer/base.html" %}
 {% block title %}Mark Attendance{% endblock %}
 {% block page_title %}Mark Attendance{% endblock %}
-{% block extra_style %}
-.page-wrap{padding:24px;max-width:1200px;margin:0 auto}
-.att-card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:24px 28px}
 
-.controls-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-.controls-row select{border:2px solid #000;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:500;width:100%;background:#fff;-webkit-appearance:none;-moz-appearance:none;appearance:none;cursor:pointer}
-.controls-row select:focus{outline:none;border-color:#7b1fa2;box-shadow:0 0 0 3px rgba(123,31,162,.12)}
-.controls-row label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#1e293b}
-#studentContainer{background:#f8fafc;border-radius:12px;padding:16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.04);margin-bottom:20px}
-.std-table{width:100%;border-collapse:collapse;font-size:14px}
-.std-table th{border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;font-weight:700;color:#475569;background:#f1f5f9;text-transform:uppercase;letter-spacing:.3px}
-.std-table td{border:1px solid #e2e8f0;padding:8px 12px;vertical-align:middle}
-.std-table tr:hover td{background:#faf5ff}
-.pill-checkbox{-webkit-appearance:none;-moz-appearance:none;appearance:none;width:32px;height:32px;border:3px solid #1e293b;border-radius:6px;display:inline-flex;cursor:pointer;position:relative;background:transparent;transition:all .15s;vertical-align:middle}
-.pill-checkbox:checked.present{border-color:#15803d;background:#dcfce7}
-.pill-checkbox:checked.present::after{content:'\2713';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#15803d;line-height:1}
-.pill-checkbox:checked.absent{border-color:#b91c1c;background:#fee2e2}
-.pill-checkbox:checked.absent::after{content:'\2717';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#b91c1c;line-height:1}
-.status-label{font-size:11px;font-weight:600;margin-left:6px;color:#64748b;vertical-align:middle}
-.btn-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px}
-.att-btn{padding:12px 28px;border:none;border-radius:8px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:opacity .18s;justify-content:center}
-.att-btn:hover{opacity:.85}
-.att-btn:disabled{opacity:.4;cursor:not-allowed}
-.att-btn.green{background:#16a34a}
-.att-btn.orange{background:#ea580c}
-.att-btn.purple{background:#9333ea}
-.att-btn.blue{background:#2563eb}
-.att-btn.sm{padding:8px 18px;font-size:12px}
-.msg-box{text-align:center;margin-bottom:16px;font-size:15px;font-weight:700;padding:10px;border-radius:8px;display:none}
-.msg-box.success{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;display:block}
-.msg-box.error{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;display:block}
-.spinner{display:none;width:28px;height:28px;border:4px solid #e2e8f0;border-top-color:#7b1fa2;border-radius:50%;animation:spin .7s linear infinite;margin:12px auto}
-@keyframes spin{to{transform:rotate(360deg)}}
-.alert-banner{background:#fef3c7;border:1px solid #fcd34d;color:#92400e;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px}
-@media(max-width:600px){
-  .controls-row{grid-template-columns:1fr 1fr}
-  .std-table{font-size:12px}
-  .pill-checkbox{width:26px;height:26px}
-  .att-btn{padding:10px 18px;font-size:12px}
+{% block extra_style %}
+.loading-spinner {
+  border:4px solid #f3f3f3; border-top:4px solid var(--primary);
+  border-radius:50%; width:26px; height:26px;
+  animation:spin 0.8s linear infinite; display:none;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.att-msg { text-align:center; font-weight:700; font-size:14px; padding:10px; border-radius:6px; display:none; margin:12px 18px 0; }
+.att-msg.success { background:#e8f5e9; color:#2e7d32; display:block; }
+.att-msg.error   { background:#ffebee; color:#c62828; display:block; }
+
+.action-bar { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; padding:16px 0 4px; }
+
+.event-banner { border-radius:8px; padding:12px 18px; margin:12px 18px 0; font-size:14px; font-weight:600; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.event-banner.holiday       { background:#fff8e1; color:#f57f17; border-left:4px solid #f9a825; }
+.event-banner.academic_trip { background:#e8f5e9; color:#2e7d32; border-left:4px solid #43a047; }
+
+/* Custom attendance checkboxes */
+.att-checkbox-wrap { display:flex; align-items:center; justify-content:center; }
+.att-checkbox-wrap input[type="checkbox"] { display:none; }
+.att-checkbox-label {
+  width:28px; height:28px;
+  border:2px solid #ccc;
+  border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition:all .18s;
+  background:#fff;
+}
+.att-checkbox-label i { font-size:15px; opacity:0; transition:opacity .18s; }
+
+.att-checkbox-wrap.present input:checked + .att-checkbox-label {
+  border-color:#27ae60; background:#e8f5e9;
+}
+.att-checkbox-wrap.present input:checked + .att-checkbox-label i {
+  opacity:1; color:#27ae60;
+}
+.att-checkbox-wrap.absent input:checked + .att-checkbox-label {
+  border-color:#e74c3c; background:#ffebee;
+}
+.att-checkbox-wrap.absent input:checked + .att-checkbox-label i {
+  opacity:1; color:#e74c3c;
+}
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:12px; padding:28px 28px 22px; width:100%; max-width:420px; box-shadow:0 8px 32px rgba(0,0,0,0.2); }
+.modal-box h3 { font-size:17px; margin-bottom:16px; color:var(--primary); }
+.modal-box label { font-size:13px; font-weight:600; display:block; margin-bottom:5px; color:#444; }
+.modal-box textarea { width:100%; padding:9px 12px; border:1px solid #ccc; border-radius:6px; font-size:14px; resize:vertical; min-height:80px; }
+.modal-box textarea:focus { outline:none; border-color:var(--primary); }
+.modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+
+@media (max-width:768px) {
+  .att-checkbox-label { width:26px; height:26px; border-radius:5px; }
+  .att-checkbox-label i { font-size:13px; }
 }
 {% endblock %}
-{% block content %}
-<div class="page-wrap">
-  <div class="att-card">
 
-    <!-- Header -->
-    <div class="text-center" style="margin-bottom:20px">
-      <h2 style="font-size:15px;font-weight:700;color:#334155;text-transform:uppercase;margin:0">{{ dept_name }}</h2>
+{% block content %}
+<div class="dash-wrap">
+
+  <!-- Filters -->
+  <div class="section-card" style="margin-bottom:20px;">
+    <h3 style="color:var(--primary);font-size:15px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee;">
+      <i class="fas fa-filter"></i> Select Class, Unit &amp; Session
+    </h3>
+    <div class="filter-grid">
+      <div class="form-group">
+        <label>Class</label>
+        <select id="classSelect" class="form-control" onchange="onFilterChange()">
+          <option value="">-- Choose Class --</option>
+          {% for c in class_list %}
+            <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select id="unitSelect" class="form-control" onchange="onFilterChange()">
+          <option value="">-- Choose Unit --</option>
+          {% for u in units_list %}
+            <option value="{{ u.units.id }}" {% if unit_id == u.units.id %}selected{% endif %}>{{ u.units.code }} &ndash; {{ u.units.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Week</label>
+        <select id="weekSelect" class="form-control" onchange="onFilterChange()">
+          <option value="">-- Week --</option>
+          {% for w in range(1, 53) %}
+            <option value="{{ w }}" {% if week == w %}selected{% endif %}>Week {{ w }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Lesson</label>
+        <select id="lessonSelect" class="form-control" onchange="onFilterChange()">
+          <option value="">-- Lesson --</option>
+          {% for l in ['L1','L2','L3','L4'] %}
+            <option value="{{ l }}" {% if lesson == l %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Year</label>
+        <select id="yearSelect" class="form-control" onchange="onFilterChange()">
+          {% for y in range(2024, 2036) %}
+            <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Term</label>
+        <select id="termSelect" class="form-control" onchange="onFilterChange()">
+          <option value="1" {% if term == 1 %}selected{% endif %}>Term 1 (Jan&ndash;Apr)</option>
+          <option value="2" {% if term == 2 %}selected{% endif %}>Term 2 (May&ndash;Aug)</option>
+          <option value="3" {% if term == 3 %}selected{% endif %}>Term 3 (Sep&ndash;Dec)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student list card -->
+  <div class="card" style="border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+
+    <!-- Card title row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#fff;border-bottom:1px solid #e8eef6;">
+      <span style="font-size:15px;font-weight:700;color:#1e5a9f;">
+        <i class="fas fa-users" style="margin-right:7px;"></i>Student List
+      </span>
+      {% if students_list %}
+      <span style="background:#e3f2fd;color:#1e5a9f;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;">
+        {{ students_list|length }} student(s)
+      </span>
+      {% endif %}
     </div>
 
-    <!-- Message -->
-    <div id="message" class="msg-box"></div>
+    <div id="attMsg" class="att-msg"></div>
 
     {% if active_event %}
-    <div class="alert-banner">
-      <i class="fas fa-{% if active_event.event_type == 'holiday' %}sun{% else %}bus{% endif %}"></i>
-      This session was marked as <strong>{{ active_event.event_type|replace('_',' ')|title }}</strong>: {{ active_event.note or '' }}
+    <div class="event-banner {{ active_event.event_type }}">
+      <span>
+        <i class="fas fa-{% if active_event.event_type == 'holiday' %}umbrella-beach{% else %}bus{% endif %}"></i>
+        &nbsp;
+        <strong>{% if active_event.event_type == 'holiday' %}Holiday{% else %}Academic Trip{% endif %}</strong>
+        &ndash; Week {{ active_event.week }} {{ active_event.lesson }}
+        {% if active_event.note %} &mdash; {{ active_event.note }}{% endif %}
+      </span>
+      <form method="post" style="display:inline;" onsubmit="return confirm('Remove this event record?');">
+        <input type="hidden" name="action"   value="delete_event">
+        <input type="hidden" name="event_id" value="{{ active_event.id }}">
+        <button type="submit" class="btn btn-sm" style="background:rgba(0,0,0,0.12);color:inherit;">
+          <i class="fas fa-times"></i> Remove
+        </button>
+      </form>
     </div>
     {% endif %}
 
     {% if attendance_submitted %}
-    <div class="alert-banner" style="background:#dbeafe;border-color:#93c5fd;color:#1e40af">
+    <div style="background:#dbeafe;border-left:4px solid #2563eb;color:#1e40af;padding:12px 18px;margin:12px 18px 0;border-radius:8px;font-size:13px;font-weight:600;">
       <i class="fas fa-check-circle"></i> Attendance already submitted for this session.
     </div>
     {% endif %}
 
-    <!-- Controls -->
-    <form id="attendanceForm" method="get">
-      <div class="controls-row">
-        <div>
-          <label>Class</label>
-          <select name="class_id" id="className" onchange="this.form.submit()">
-            <option value="">— Select Class —</option>
-            {% for c in class_list %}
-            <option value="{{ c.id }}" {% if c.id == class_id %}selected{% endif %}>{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label>Unit</label>
-          <select name="unit_id" id="unitSelect" {% if not class_id %}disabled{% endif %} onchange="this.form.submit()">
-            <option value="">— Select Unit —</option>
-            {% for cu in units_list %}
-            <option value="{{ cu.units.id }}" {% if cu.units.id == unit_id %}selected{% endif %}>{{ cu.units.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label>Week</label>
-          <select name="week" id="weekSelect" onchange="this.form.submit()">
-            <option value="">— Select Week —</option>
-            {% for w in range(1,16) %}
-            <option value="{{ w }}" {% if w == week %}selected{% endif %}>Week {{ w }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label>Lesson</label>
-          <select name="lesson" id="lessonSelect" onchange="this.form.submit()">
-            <option value="">— Select Lesson —</option>
-            {% for l in ['L1','L2','L3','L4'] %}
-            <option value="{{ l }}" {% if l == lesson %}selected{% endif %}>{{ l }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <input type="hidden" name="term" value="{{ term }}">
-        <input type="hidden" name="year" value="{{ year }}">
-      </div>
-    </form>
+    {% if not students_list %}
+    <div style="text-align:center;padding:48px 20px;color:#bbb;">
+      <i class="fas fa-users" style="font-size:40px;margin-bottom:14px;display:block;opacity:0.3;"></i>
+      Select a class above to load students.
+    </div>
+    {% else %}
 
-    <!-- Student List -->
-    <div id="studentContainer">
-      <div id="studentList">
-        {% if students_list and unit_id and not attendance_submitted %}
-        <form method="post" id="submitForm">
-          <input type="hidden" name="class_id" value="{{ class_id }}">
-          <input type="hidden" name="unit_id" value="{{ unit_id }}">
-          <input type="hidden" name="week" value="{{ week }}">
-          <input type="hidden" name="lesson" value="{{ lesson }}">
-          <input type="hidden" name="term" value="{{ term }}">
-          <input type="hidden" name="year" value="{{ year }}">
-          <table class="std-table">
-            <thead>
-              <tr><th>#</th><th>Adm No</th><th>Name</th><th style="text-align:center">Present</th><th style="text-align:center">Absent</th></tr>
-            </thead>
-            <tbody>
-              {% for s in students_list %}
-              {% set p = s.get('user_profiles',{}) %}
-              <tr>
-                <td class="text-center">{{ loop.index }}</td>
-                <td>{{ p.get('admission_no','—') }}</td>
-                <td class="uppercase">{{ p.get('full_name','—') }}</td>
-                <td class="text-center">
-                  <input type="radio" name="status_{{ s.student_id }}" value="present" class="pill-checkbox present" id="p_{{ s.student_id }}" checked>
-                  <label for="p_{{ s.student_id }}" class="status-label">&#10003;</label>
-                </td>
-                <td class="text-center">
-                  <input type="radio" name="status_{{ s.student_id }}" value="absent" class="pill-checkbox absent" id="a_{{ s.student_id }}">
-                  <label for="a_{{ s.student_id }}" class="status-label">&#10007;</label>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </form>
-        {% elif students_list and unit_id and attendance_submitted %}
-        <table class="std-table">
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <form id="attendanceForm" method="post">
+        <input type="hidden" name="action"   value="submit_attendance">
+        <input type="hidden" name="class_id" value="{{ class_id }}">
+        <input type="hidden" name="unit_id"  value="{{ unit_id }}">
+        <input type="hidden" name="week"     value="{{ week }}">
+        <input type="hidden" name="lesson"   value="{{ lesson }}">
+        <input type="hidden" name="year"     value="{{ year }}">
+        <input type="hidden" name="term"     value="{{ term }}">
+        <table style="width:100%;border-collapse:collapse;min-width:480px;">
           <thead>
-            <tr><th>#</th><th>Adm No</th><th>Name</th><th style="text-align:center">Present</th><th style="text-align:center">Absent</th></tr>
+            <tr style="background:#2c5f8a;">
+              <th style="width:40px;padding:12px 10px 12px 16px;color:#fff;font-size:13px;font-weight:700;text-align:left;">#</th>
+              <th style="width:130px;padding:12px 10px;color:#fff;font-size:13px;font-weight:700;text-align:left;">Adm No.</th>
+              <th style="padding:12px 10px;color:#fff;font-size:13px;font-weight:700;text-align:left;">Student Name</th>
+              <th style="width:90px;padding:12px 10px;color:#fff;font-size:13px;font-weight:700;text-align:center;">Present</th>
+              <th style="width:90px;padding:12px 10px;color:#fff;font-size:13px;font-weight:700;text-align:center;">Absent</th>
+            </tr>
           </thead>
           <tbody>
             {% for s in students_list %}
-            {% set p = s.get('user_profiles',{}) %}
-            <tr>
-              <td class="text-center">{{ loop.index }}</td>
-              <td>{{ p.get('admission_no','—') }}</td>
-              <td class="uppercase">{{ p.get('full_name','—') }}</td>
-              <td class="text-center"><span style="color:#16a34a;font-size:18px">&#10003;</span></td>
-              <td class="text-center"><span style="color:#b91c1c;font-size:18px">&#10007;</span></td>
+            {% set p = s.get('user_profiles', {}) %}
+            <tr style="border-bottom:1px solid #eef0f4;background:#fff;transition:background .12s;"
+                onmouseover="this.style.background='#f5f8ff'" onmouseout="this.style.background='#fff'">
+
+              <td style="padding:11px 10px 11px 16px;font-size:13px;color:#aaa;">{{ loop.index }}</td>
+              <td style="padding:11px 10px;font-size:13px;font-weight:700;color:#333;">{{ p.get('admission_no', '&mdash;') }}</td>
+              <td style="padding:11px 10px;font-size:13px;color:#333;">{{ p.get('full_name', '&mdash;') }}</td>
+
+              <!-- Present checkbox -->
+              <td style="padding:8px 10px;text-align:center;cursor:pointer;" onclick="toggleCheckbox({{ s.student_id }}, 'present')">
+                <div class="att-checkbox-wrap present" style="justify-content:center;">
+                  <input type="checkbox" id="present_{{ s.student_id }}">
+                  <label class="att-checkbox-label" for="present_{{ s.student_id }}">
+                    <i class="fas fa-check"></i>
+                  </label>
+                </div>
+              </td>
+
+              <!-- Absent checkbox (default checked) -->
+              <td style="padding:8px 10px;text-align:center;cursor:pointer;" onclick="toggleCheckbox({{ s.student_id }}, 'absent')">
+                <div class="att-checkbox-wrap absent" style="justify-content:center;">
+                  <input type="checkbox" id="absent_{{ s.student_id }}" checked>
+                  <label class="att-checkbox-label" for="absent_{{ s.student_id }}">
+                    <i class="fas fa-times"></i>
+                  </label>
+                </div>
+              </td>
+
             </tr>
             {% endfor %}
           </tbody>
         </table>
-        {% elif class_id and not unit_id %}
-        <p class="text-center" style="color:#94a3b8;padding:40px 0;margin:0;font-size:15px">Select a unit to display students.</p>
-        {% elif not class_id %}
-        <p class="text-center" style="color:#94a3b8;padding:40px 0;margin:0;font-size:15px">Select a class to display students.</p>
-        {% else %}
-        <p class="text-center" style="color:#94a3b8;padding:40px 0;margin:0;font-size:15px">No students found.</p>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Buttons -->
-    {% if students_list and unit_id and not attendance_submitted %}
-    <div class="btn-row">
-      <button type="button" class="att-btn green" onclick="submitAttendance()"><i class="fas fa-check"></i> SUBMIT ATTENDANCE</button>
-      <button type="button" class="att-btn orange" onclick="markHoliday()"><i class="fas fa-sun"></i> MARK AS HOLIDAY</button>
-      <button type="button" class="att-btn purple" onclick="markAcademicTrip()"><i class="fas fa-bus"></i> MARK AS ACADEMIC TRIP</button>
+      </form>
     </div>
     {% endif %}
-    <div class="btn-row">
-      <button type="button" class="att-btn blue sm" onclick="viewAttendance()"><i class="fas fa-eye"></i> VIEW ATTENDANCE</button>
-    </div>
-    <div id="spinner" class="spinner"></div>
 
+    <div class="action-bar">
+      <button type="button" onclick="viewAttendance()" class="btn btn-primary">
+        <i class="fas fa-eye"></i> View Attendance
+      </button>
+      <button id="submitBtn" type="button" onclick="submitAttendance()"
+        class="btn btn-success"
+        {% if attendance_submitted %}disabled style="opacity:0.5;cursor:not-allowed;"{% endif %}>
+        <i class="fas fa-{% if attendance_submitted %}check{% else %}paper-plane{% endif %}"></i>
+        {% if attendance_submitted %}Already Submitted{% else %}Submit Attendance{% endif %}
+      </button>
+      <button type="button" class="btn" style="background:#f9a825;color:#fff;" onclick="openEventModal('holiday')">
+        <i class="fas fa-umbrella-beach"></i> Mark Holiday
+      </button>
+      <button type="button" class="btn" style="background:#43a047;color:#fff;" onclick="openEventModal('academic_trip')">
+        <i class="fas fa-bus"></i> Mark Academic Trip
+      </button>
+      <div id="loadingSpinner" class="loading-spinner"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Event Modal -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal-box">
+    <h3 id="modalTitle"><i class="fas fa-umbrella-beach"></i> Mark Holiday</h3>
+    <form id="eventForm" method="post">
+      <input type="hidden" name="action"     value="add_event">
+      <input type="hidden" id="evEventType" name="event_type" value="holiday">
+      <div style="margin-bottom:14px;">
+        <label>Note <span style="font-weight:400;color:#888;">(optional)</span></label>
+        <textarea name="note" placeholder="e.g. Mid-term holiday, Science museum trip..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" style="background:#eee;color:#333;" onclick="closeEventModal()">Cancel</button>
+        <button type="submit" id="evSubmitBtn" class="btn btn-primary">Save</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -194,77 +279,105 @@
 
 {% block scripts %}
 <script>
-function showLoading(show) {
-  document.getElementById('spinner').style.display = show ? 'block' : 'none';
+var studentIds = [{% for s in students_list %}{{ s.student_id }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+function toggleCheckbox(id, type) {
+  var p = document.getElementById('present_' + id);
+  var a = document.getElementById('absent_' + id);
+  if (type === 'present') { p.checked = true;  a.checked = false; }
+  else                    { a.checked = true;  p.checked = false; }
 }
 
-function showMsg(text, success) {
-  var msg = document.getElementById('message');
-  msg.textContent = text;
-  msg.className = 'msg-box ' + (success ? 'success' : 'error');
-}
-
-function getFormData() {
-  var cls = document.getElementById('className').value;
-  var uid = document.getElementById('unitSelect').value;
-  var wk  = document.getElementById('weekSelect').value;
-  var les = document.getElementById('lessonSelect').value;
-  return { class_id: cls, unit_id: uid, week: wk, lesson: les };
-}
-
-function submitAttendance() {
-  var fd = getFormData();
-  if (!fd.class_id || !fd.unit_id || !fd.week || !fd.lesson) {
-    alert('Please select class, unit, week, and lesson.'); return;
-  }
-  if (!confirm('Submit attendance for this session?')) return;
-
-  var form = document.getElementById('submitForm');
-  if (!form) return;
-  var input = document.createElement('input');
-  input.type = 'hidden';
-  input.name = 'action';
-  input.value = 'submit_attendance';
-  form.appendChild(input);
-  form.submit();
-}
-
-function markHoliday() {
-  var fd = getFormData();
-  if (!fd.class_id || !fd.unit_id || !fd.week || !fd.lesson) {
-    alert('Please select class, unit, week, and lesson.'); return;
-  }
-  if (!confirm('Mark ALL students as Holiday for this session?')) return;
-  submitSpecial('mark_holiday');
-}
-
-function markAcademicTrip() {
-  var fd = getFormData();
-  if (!fd.class_id || !fd.unit_id || !fd.week || !fd.lesson) {
-    alert('Please select class, unit, week, and lesson.'); return;
-  }
-  if (!confirm('Mark ALL students as Academic Trip for this session?')) return;
-  submitSpecial('mark_academic_trip');
-}
-
-function submitSpecial(action) {
-  showLoading(true);
-  var form = document.getElementById('submitForm');
-  if (!form) { showLoading(false); return; }
-  var input = document.createElement('input');
-  input.type = 'hidden';
-  input.name = 'action';
-  input.value = action;
-  form.appendChild(input);
-  form.submit();
+function currentParams() {
+  return {
+    class_id: document.getElementById('classSelect').value,
+    unit_id:  document.getElementById('unitSelect').value,
+    week:     document.getElementById('weekSelect').value,
+    lesson:   document.getElementById('lessonSelect').value,
+    year:     document.getElementById('yearSelect').value,
+    term:     document.getElementById('termSelect').value
+  };
 }
 
 function viewAttendance() {
-  var cls = document.getElementById('className').value;
-  if (!cls) { alert('Please select a class first.'); return; }
-  window.open('/trainer/attendance-history?class_id=' + cls, '_blank');
+  var p = currentParams();
+  if (!p.class_id) { alert('Please select a class first.'); return; }
+  var url = '/trainer/attendance-history?class_id=' + p.class_id;
+  if (p.unit_id) url += '&unit_id=' + p.unit_id;
+  if (p.week)    url += '&week=' + p.week;
+  if (p.lesson)  url += '&lesson=' + encodeURIComponent(p.lesson);
+  window.location = url;
 }
 
+function submitAttendance() {
+  var p = currentParams();
+  if (!p.class_id || !p.unit_id || !p.week || !p.lesson) {
+    alert('Please select Class, Unit, Week and Lesson first.'); return;
+  }
+  if (!confirm('Submit attendance for this session?')) return;
 
+  var form = document.getElementById('attendanceForm');
+  form.querySelector('[name="class_id"]').value = p.class_id;
+  form.querySelector('[name="unit_id"]').value  = p.unit_id;
+  form.querySelector('[name="week"]').value     = p.week;
+  form.querySelector('[name="lesson"]').value   = p.lesson;
+  form.querySelector('[name="year"]').value     = p.year;
+  form.querySelector('[name="term"]').value     = p.term;
+
+  // Inject status fields from checkbox state
+  studentIds.forEach(function(sid) {
+    var present = document.getElementById('present_' + sid);
+    var old = form.querySelector('[name="status_' + sid + '"]');
+    if (old) old.remove();
+    var inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'status_' + sid;
+    inp.value = (present && present.checked) ? 'present' : 'absent';
+    form.appendChild(inp);
+  });
+
+  document.getElementById('loadingSpinner').style.display = 'block';
+  form.submit();
+}
+
+// Event modal
+function openEventModal(type) {
+  var p = currentParams();
+  if (!p.class_id || !p.week || !p.lesson) {
+    alert('Please select Class, Week and Lesson first.'); return;
+  }
+  document.getElementById('evEventType').value = type;
+
+  // Build action URL with current filter params so request.args has them
+  var qs = new URLSearchParams(p).toString();
+  document.getElementById('eventForm').action = '/trainer/attendance?' + qs;
+
+  var isHoliday = type === 'holiday';
+  document.getElementById('modalTitle').innerHTML =
+    '<i class="fas fa-' + (isHoliday ? 'umbrella-beach' : 'bus') + '"></i> ' +
+    (isHoliday ? 'Mark Holiday' : 'Mark Academic Trip');
+  document.getElementById('evSubmitBtn').style.background = isHoliday ? '#f9a825' : '#43a047';
+  document.getElementById('eventModal').classList.add('open');
+}
+
+function closeEventModal() {
+  document.getElementById('eventModal').classList.remove('open');
+}
+
+document.getElementById('eventModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEventModal();
+});
+
+function onFilterChange() {
+  var params = new URLSearchParams();
+  var p = currentParams();
+  if (p.class_id) params.set('class_id', p.class_id);
+  if (p.unit_id)  params.set('unit_id',  p.unit_id);
+  if (p.week)     params.set('week',     p.week);
+  if (p.lesson)   params.set('lesson',   p.lesson);
+  if (p.year)     params.set('year',     p.year);
+  if (p.term)     params.set('term',     p.term);
+  window.location = '/trainer/attendance?' + params.toString();
+}
 </script>
 {% endblock %}

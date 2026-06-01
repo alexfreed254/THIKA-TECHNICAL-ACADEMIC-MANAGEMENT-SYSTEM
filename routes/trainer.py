@@ -289,6 +289,16 @@ def attendance():
             except Exception as e:
                 flash(f"Error adding event: {e}", "error")
 
+        elif action == "delete_event":
+            event_id = request.form.get("event_id")
+            try:
+                db.table("class_events").delete().eq("id", event_id).execute()
+                write_audit_log("delete_class_event", target=f"event:{event_id}")
+                flash("Event removed.", "success")
+                return redirect(url_for("trainer.attendance", class_id=class_id, unit_id=unit_id, week=week, lesson=lesson, year=year, term=term))
+            except Exception as e:
+                flash(f"Error removing event: {e}", "error")
+
     return render_template("trainer/attendance.html",
                           class_list=class_list,
                           class_id=class_id,
