@@ -1304,9 +1304,18 @@ def portfolio():
     db = get_service_client()
     user = current_user()
     
-    # Get trainer's assigned units
-    assigned_units = _trainer_assigned_unit_ids(db)
-    
+    # Get trainer's assigned units with full unit details for the upload form
+    assigned_unit_ids = _trainer_assigned_unit_ids(db)
+    assigned_units = []
+    if assigned_unit_ids:
+        unit_rows = (db.table("units")
+                      .select("id, name, code")
+                      .in_("id", assigned_unit_ids)
+                      .order("name")
+                      .execute().data or [])
+        # Wrap each row to match the template's {{ unit.units.id }} pattern
+        assigned_units = [{"units": u} for u in unit_rows]
+
     # Get all documents uploaded by trainer
     documents = (db.table("trainer_documents")
                 .select("*, units(name, code), classes(name)")
