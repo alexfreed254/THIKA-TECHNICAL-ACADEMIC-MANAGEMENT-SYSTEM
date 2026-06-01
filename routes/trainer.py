@@ -153,11 +153,11 @@ def attendance():
                         .execute().data or [])
 
     class_id = request.args.get("class_id", "")
-    unit_id = request.args.get("unit_id", "")
-    week = request.args.get("week", 1, type=int)
-    lesson = request.args.get("lesson", "L1")
-    year = request.args.get("year", datetime.now().year, type=int)
-    term = request.args.get("term", 1, type=int)
+    unit_id  = request.args.get("unit_id", "")
+    week     = request.args.get("week", 0, type=int)   # 0 = not yet selected
+    lesson   = request.args.get("lesson", "")           # "" = not yet selected
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
 
     units_list = []
     students_list = []
@@ -269,25 +269,58 @@ def attendance():
                     flash(f"Error marking {label}: {e}", "error")
 
         elif action == "add_event":
-            event_type = request.form.get("event_type")
-            note = request.form.get("note", "")
-            try:
-                db.table("class_events").insert({
-                    "class_id": class_id,
-                    "unit_id": unit_id if unit_id else None,
-                    "trainer_id": user["id"],
-                    "event_type": event_type,
-                    "week": week,
-                    "lesson": lesson,
-                    "year": year,
-                    "term": term,
-                    "note": note
-                }).execute()
-                write_audit_log("add_class_event", target=f"class:{class_id}")
-                flash("Event added successfully.", "success")
-                return redirect(url_for("trainer.attendance", class_id=class_id, unit_id=unit_id, week=week, lesson=lesson, year=year, term=term))
-            except Exception as e:
-                flash(f"Error adding event: {e}", "error")
+            event_type = request.form.get("event_type", "holiday")
+            note       = request.form.get("note", "")
+            label      = "Holiday" if event_type == "holiday" else "Academic Trip"
+            if not class_id or not unit_id or not week or not lesson:
+                flash("Class, Unit, Week and Lesson are required.", "error")
+            else:
+                # Guard against duplicate event for this session
+                dup = (db.table("class_events").select("id")
+                         .eq("class_id", class_id).eq("unit_id", unit_id)
+                         .eq("trainer_id", user["id"]).eq("week", week)
+                         .eq("lesson", lesson).eq("year", year).eq("term", term)
+                         .execute().data or [])
+                if dup:
+                    flash(f"An event is already recorded for this session.", "warning")
+                else:
+                    try:
+                        db.table("class_events").insert({
+                            "class_id":   class_id,
+                            "unit_id":    unit_id,
+                            "trainer_id": user["id"],
+                            "event_type": event_type,
+                            "week":       week,
+                            "lesson":     lesson,
+                            "year":       year,
+                            "term":       term,
+                            "note":       note or f"Marked as {label}"
+                        }).execute()
+                        # Mark every enrolled student absent for this session
+                        for student in students_list:
+                            already = (db.table("attendance").select("id")
+                                         .eq("student_id", student["student_id"])
+                                         .eq("unit_id", unit_id)
+                                         .eq("week", week).eq("lesson", lesson)
+                                         .eq("year", year).eq("term", term)
+                                         .execute().data or [])
+                            if not already:
+                                db.table("attendance").insert({
+                                    "student_id": student["student_id"],
+                                    "unit_id":    unit_id,
+                                    "unit_code":  "",
+                                    "trainer_id": user["id"],
+                                    "lesson":     lesson,
+                                    "week":       week,
+                                    "year":       year,
+                                    "term":       term,
+                                    "status":     "absent"
+                                }).execute()
+                        write_audit_log("add_class_event", target=f"class:{class_id},type:{event_type}")
+                        flash(f"Marked as {label} successfully.", "success")
+                        return redirect(url_for("trainer.attendance", class_id=class_id, unit_id=unit_id, week=week, lesson=lesson, year=year, term=term))
+                    except Exception as e:
+                        flash(f"Error marking {label}: {e}", "error")
 
         elif action == "delete_event":
             event_id = request.form.get("event_id")
@@ -530,6 +563,120 @@ def attendance_history():
         
     return render_template("trainer/attendance_history.html",
                           attendance=attendance_list)
+
+
+# ── Session View (filtered attendance for one session) ───────────────────────
+
+@trainer_bp.route("/view-session")
+@trainer_required
+def view_session():
+    db   = get_service_client()
+    user = current_user()
+
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    week     = request.args.get("week", 0, type=int)
+    lesson   = request.args.get("lesson", "")
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    if not (class_id and unit_id and week and lesson):
+        flash("Please select Class, Unit, Week and Lesson first.", "error")
+        return redirect(url_for("trainer.attendance"))
+
+    cls  = (db.table("classes").select("name")
+              .eq("id", class_id).single().execute().data or {})
+    unit = (db.table("units").select("code, name")
+              .eq("id", unit_id).single().execute().data or {})
+    dept = {}
+    if user.get("department_id"):
+        dept = (db.table("departments").select("name")
+                  .eq("id", user["department_id"]).single().execute().data or {})
+
+    records = (db.table("attendance")
+                 .select("*, user_profiles:student_id(full_name, admission_no)")
+                 .eq("unit_id", unit_id)
+                 .eq("trainer_id", user["id"])
+                 .eq("week", week)
+                 .eq("lesson", lesson)
+                 .eq("year", year)
+                 .eq("term", term)
+                 .order("attendance_date")
+                 .execute().data or [])
+
+    event_row = (db.table("class_events").select("*")
+                   .eq("class_id", class_id)
+                   .eq("week", week)
+                   .eq("lesson", lesson)
+                   .eq("year", year)
+                   .eq("term", term)
+                   .execute().data or [])
+    active_event = event_row[0] if event_row else None
+
+    return render_template("trainer/view_session.html",
+                           cls=cls, unit=unit, dept=dept,
+                           records=records, active_event=active_event,
+                           class_id=class_id, unit_id=unit_id,
+                           week=week, lesson=lesson, year=year, term=term,
+                           trainer={"name": user.get("full_name", "")})
+
+
+# ── Session PDF (print-ready attendance for one session) ─────────────────────
+
+@trainer_bp.route("/session-pdf")
+@trainer_required
+def session_pdf():
+    db   = get_service_client()
+    user = current_user()
+
+    class_id = request.args.get("class_id", "")
+    unit_id  = request.args.get("unit_id", "")
+    week     = request.args.get("week", 0, type=int)
+    lesson   = request.args.get("lesson", "")
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    if not (class_id and unit_id and week and lesson):
+        flash("Select a complete session to download.", "error")
+        return redirect(url_for("trainer.attendance"))
+
+    cls  = (db.table("classes").select("name")
+              .eq("id", class_id).single().execute().data or {})
+    unit = (db.table("units").select("code, name")
+              .eq("id", unit_id).single().execute().data or {})
+    dept = {}
+    if user.get("department_id"):
+        dept = (db.table("departments").select("name")
+                  .eq("id", user["department_id"]).single().execute().data or {})
+
+    records = (db.table("attendance")
+                 .select("*, user_profiles:student_id(full_name, admission_no)")
+                 .eq("unit_id", unit_id)
+                 .eq("trainer_id", user["id"])
+                 .eq("week", week)
+                 .eq("lesson", lesson)
+                 .eq("year", year)
+                 .eq("term", term)
+                 .order("attendance_date")
+                 .execute().data or [])
+
+    event_row = (db.table("class_events").select("*")
+                   .eq("class_id", class_id)
+                   .eq("week", week)
+                   .eq("lesson", lesson)
+                   .eq("year", year)
+                   .eq("term", term)
+                   .execute().data or [])
+    active_event = event_row[0] if event_row else None
+
+    generated = datetime.now().strftime("%d %b %Y %H:%M")
+
+    return render_template("trainer/session_pdf.html",
+                           cls=cls, unit=unit, dept=dept,
+                           records=records, active_event=active_event,
+                           week=week, lesson=lesson, year=year, term=term,
+                           trainer={"name": user.get("full_name", "")},
+                           generated=generated)
 
 
 # ── Marks Entry ─────────────────────────────────────────────────────────────

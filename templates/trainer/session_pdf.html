@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Attendance Register — Week {{ week }} {{ lesson }} | TTTI</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial, sans-serif; font-size:12px; color:#111; background:#fff; padding:30px 40px; }
+
+    /* ── Header ── */
+    .header { text-align:center; margin-bottom:10px; }
+    .header img { height:70px; margin-bottom:8px; }
+    .header h1 { font-size:17px; font-weight:900; text-transform:uppercase; letter-spacing:1px; color:#000; margin-bottom:4px; }
+    .header h2 { font-size:13px; font-weight:700; color:#333; margin-bottom:4px; }
+    .header h3 { font-size:13px; font-weight:700; color:#1a5fa8; text-decoration:underline; text-transform:uppercase; letter-spacing:0.5px; }
+    .divider { border:none; border-top:2px solid #111; margin:12px 0 18px; }
+
+    /* ── Info box ── */
+    .info-box { background:#f0f0f0; border-radius:4px; padding:14px 18px; margin-bottom:16px; display:flex; gap:0; }
+    .info-col { flex:1; }
+    .info-col p { margin-bottom:5px; font-size:12px; line-height:1.6; }
+    .info-col p strong { font-weight:700; }
+
+    /* ── Event notice ── */
+    .event-notice { margin-bottom:16px; padding:12px 16px; border-radius:4px; font-size:12px; font-weight:700; }
+    .event-notice.holiday       { background:#fff8e1; color:#b45309; border-left:4px solid #f9a825; }
+    .event-notice.academic_trip { background:#e8f5e9; color:#166534; border-left:4px solid #43a047; }
+    .event-notice p { font-weight:400; margin-top:4px; }
+
+    /* ── Table ── */
+    table { width:100%; border-collapse:collapse; margin-bottom:30px; }
+    thead th { background:#1a5fa8; color:#fff; padding:8px 10px; font-size:11px; text-align:left; border:1px solid #1a5fa8; }
+    tbody td { padding:7px 10px; border:1px solid #ccc; font-size:11px; }
+    tbody tr:nth-child(even) td { background:#f7f7f7; }
+    .present { color:#166534; font-weight:700; }
+    .absent  { color:#c00;    font-weight:700; }
+
+    /* ── Signature block ── */
+    .sig-section { margin-top:40px; display:flex; justify-content:space-between; gap:20px; }
+    .sig-block { flex:1; text-align:center; }
+    .sig-line { border-top:1.5px solid #333; margin-bottom:8px; }
+    .sig-role  { font-weight:700; font-size:12px; text-transform:uppercase; margin-bottom:4px; }
+    .sig-name  { font-size:11px; color:#333; margin-bottom:2px; }
+    .sig-label { font-size:11px; color:#555; }
+
+    /* ── Footer ── */
+    .footer { text-align:center; margin-top:24px; font-size:10px; color:#888; border-top:1px solid #ddd; padding-top:8px; }
+
+    .no-print { text-align:center; margin-top:24px; }
+    @media print { .no-print { display:none; } body { padding:15px 20px; } }
+  </style>
+</head>
+<body>
+
+<!-- Letterhead -->
+<div class="header">
+  <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo">
+  <h1>Thika Technical Training Institute</h1>
+  <h2>Department of {{ dept.name if dept else '——————' }}</h2>
+  <h3>Unit Attendance Register</h3>
+</div>
+<hr class="divider">
+
+<!-- Info box -->
+<div class="info-box">
+  <div class="info-col">
+    <p><strong>CLASS:</strong> {{ cls.name if cls else '—' }}</p>
+    <p><strong>YEAR:</strong> {{ year }}</p>
+    <p><strong>TERM:</strong> Term {{ term }} ({% if term==1 %}Jan–Apr{% elif term==2 %}May–Aug{% else %}Sep–Dec{% endif %})</p>
+    <p><strong>WEEK:</strong> Week {{ week }}</p>
+    <p><strong>LESSON:</strong> {{ lesson }}</p>
+  </div>
+  <div class="info-col">
+    <p><strong>UNIT:</strong> {{ unit.code if unit else '—' }} — {{ unit.name if unit else '—' }}</p>
+    <p><strong>TRAINER:</strong> {{ trainer.name }}</p>
+    <p><strong>DATE GENERATED:</strong> {{ generated }}</p>
+    <p><strong>TOTAL STUDENTS:</strong> {{ records|length }}</p>
+  </div>
+</div>
+
+<!-- Event notice -->
+{% if active_event %}
+<div class="event-notice {{ active_event.event_type }}">
+  <strong>
+    &#9888;
+    {% if active_event.event_type == 'holiday' %}HOLIDAY{% else %}ACADEMIC TRIP{% endif %}
+    — Week {{ active_event.week }}, {{ active_event.lesson }}
+  </strong>
+  {% if active_event.note %}
+  <p>{{ active_event.note }}</p>
+  {% endif %}
+  <p style="margin-top:4px;">All students were recorded absent due to this event.</p>
+</div>
+{% endif %}
+
+<!-- Attendance table -->
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Adm No.</th>
+      <th>Student Name</th>
+      <th>Status</th>
+      {% if active_event %}<th>Event</th>{% endif %}
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in records %}
+    {% set p = r.get('user_profiles') or {} %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ p.get('admission_no','—') }}</td>
+      <td><strong>{{ p.get('full_name','—') }}</strong></td>
+      <td class="{{ r.status }}">
+        {{ '✔ Present' if r.status == 'present' else '✘ Absent' }}
+      </td>
+      {% if active_event %}
+      <td style="color:#555;">
+        {% if active_event.event_type == 'holiday' %}Holiday{% else %}Academic Trip{% endif %}
+        {% if active_event.note %} — {{ active_event.note }}{% endif %}
+      </td>
+      {% endif %}
+      <td>{{ r.attendance_date | to_eat('%d %b %Y') if r.attendance_date else '—' }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="{{ 6 if active_event else 5 }}" style="text-align:center;color:#aaa;padding:20px;">
+        No attendance records found for this session.
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Signature block -->
+<div class="sig-section">
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-role">Trainer</div>
+    <div class="sig-name">Name: {{ trainer.name }}</div>
+    <div class="sig-label">Signature &amp; Date</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-role">Dept. Monitoring</div>
+    <div class="sig-name">Name: _______________</div>
+    <div class="sig-label">Signature &amp; Date</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-role">Head of Department</div>
+    <div class="sig-name">Name: _______________</div>
+    <div class="sig-label">Signature &amp; Date</div>
+  </div>
+</div>
+
+<div class="footer">
+  &copy; {{ year }} Thika Technical Training Institute. All rights reserved.
+</div>
+
+<div class="no-print">
+  <button onclick="window.print()"
+    style="padding:10px 32px;background:#1a5fa8;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:600;">
+    🖨 Print / Save as PDF
+  </button>
+</div>
+
+</body>
+</html>
