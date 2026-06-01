@@ -818,7 +818,7 @@ def add_assessment():
 
 @trainer_bp.route("/marks-entry/delete-assessment", methods=["POST"])
 @trainer_required
-def delete_assessment():
+def delete_formative_assessment():
     """Delete a formative assessment and all its marks."""
     db   = get_service_client()
     user = current_user()
