@@ -758,12 +758,7 @@ TRAINEE_DOC_TYPES = [
 
 def _resolve_doc_url(doc, supabase_url):
     """Return a public URL for a trainee_document record."""
-    if doc.get("file_url"):
-        return doc["file_url"]
-    fp = doc.get("file_path") or ""
-    if fp:
-        return f"{supabase_url}/storage/v1/object/public/assessment-evidence/{fp}"
-    return ""
+    return doc.get("file_url") or ""
 
 
 @dept_admin_bp.route("/trainees-documents")
@@ -808,7 +803,7 @@ def trainees_documents():
     doc_map = {}   # {student_id: {doc_type: doc_record}}
     if student_ids:
         td_rows = (db.table("trainee_documents")
-                   .select("id, student_id, document_type, file_name, file_path, "
+                   .select("id, student_id, document_type, file_name, "
                            "file_url, file_size, status, uploaded_at, description")
                    .in_("student_id", student_ids)
                    .execute().data or [])
@@ -872,7 +867,7 @@ def trainee_document_detail(student_id):
 
     # Fetch all 12 docs for this student
     td_rows = (db.table("trainee_documents")
-               .select("id, document_type, file_name, file_path, file_url, "
+               .select("id, document_type, file_name, file_url, "
                        "file_size, status, uploaded_at, description")
                .eq("student_id", student_id)
                .execute().data or [])
