@@ -638,6 +638,14 @@ def upload_assessment():
                     "status": "pending"
                 }).execute()
                 write_audit_log("upload_assessment", target=f"assessment:{result.data[0]['id']}")
+                # Notify the assigned trainer for this unit/class
+                try:
+                    cu = db.table("class_units").select("trainer_id").eq("class_id", class_id).eq("unit_id", unit_id).execute().data
+                    if cu and cu[0].get("trainer_id"):
+                        from notifications import notify_assessment_submitted
+                        notify_assessment_submitted(student_id, f"{assessment_type} #{assessment_no}", cu[0]["trainer_id"])
+                except Exception:
+                    pass
                 uploaded += 1
             except Exception as e:
                 errors.append(f"Error uploading '{file.filename}': {e}")

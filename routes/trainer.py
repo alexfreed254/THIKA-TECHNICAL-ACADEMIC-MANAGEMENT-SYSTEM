@@ -12,6 +12,7 @@ from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, abort, jsonify, make_response)
 from auth_utils import (trainer_required, write_audit_log, current_user)
 from db import get_service_client
+from notifications import get_user_notifications
 from datetime import datetime
 import re
 import os
@@ -116,10 +117,13 @@ def dashboard():
         pending_assessments = []
         units_list = []
 
+    unread_notifications = get_user_notifications(user["id"], unread_only=True, limit=5)
+
     return render_template("trainer/dashboard_enhanced.html",
                           stats=stats,
                           pending_assessments=pending_assessments,
-                          units_list=units_list)
+                          units_list=units_list,
+                          unread_notifications=unread_notifications)
 
 
 # ── Attendance Capture ─────────────────────────────────────────────────────────

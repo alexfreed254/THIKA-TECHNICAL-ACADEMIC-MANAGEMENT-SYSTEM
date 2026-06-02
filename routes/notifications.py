@@ -80,6 +80,19 @@ def count():
     """API endpoint to get unread notification count."""
     from auth_utils import current_user
     user = current_user()
-    
+
     count = get_unread_count(user["id"])
     return jsonify({"count": count})
+
+
+@notifications_bp.route("/recent")
+@login_required
+def recent():
+    """API endpoint returning the 7 most recent notifications for the dropdown panel."""
+    from auth_utils import current_user
+    user = current_user()
+
+    notifications = get_user_notifications(user["id"], limit=7)
+    unread_count = get_unread_count(user["id"])
+
+    return jsonify({"notifications": notifications, "unread_count": unread_count})

@@ -130,6 +130,25 @@ def initiate_clearance():
                 "status": "pending"
             }).execute()
         
+        # Notify trainers who taught this student that clearance needs their approval
+        try:
+            student_profile = db.table("user_profiles").select("full_name").eq("id", student_id).single().execute().data
+            student_name = student_profile["full_name"] if student_profile else "A student"
+            trainer_stages = [s for s in stages if s.get("approver_role") == "trainer"]
+            if trainer_stages:
+                att = db.table("attendance").select("trainer_id").eq("student_id", student_id).execute().data or []
+                trainer_ids = list({r["trainer_id"] for r in att if r.get("trainer_id")})
+                for tid in trainer_ids:
+                    create_notification(
+                        user_id=tid,
+                        title="Clearance Approval Required",
+                        message=f"{student_name} has initiated a clearance request awaiting your approval.",
+                        notification_type="info",
+                        action_url="/clearance/approver"
+                    )
+        except Exception:
+            pass
+
         write_audit_log("initiate_clearance", target=f"request:{request_id}")
         flash("Clearance request initiated successfully.", "success")
     except Exception as e:
