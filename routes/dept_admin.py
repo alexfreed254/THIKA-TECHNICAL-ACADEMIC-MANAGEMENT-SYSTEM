@@ -674,48 +674,146 @@ def reject_exam_booking(booking_id):
 
 # ── Marks ─────────────────────────────────────────────────────────────────────
 
+def _compute_grade(obtained, max_m):
+    """Return grade letter and percentage for a marks record."""
+    try:
+        pct = round(float(obtained) / float(max_m) * 100, 1) if max_m else 0
+    except (TypeError, ZeroDivisionError):
+        pct = 0
+    if pct >= 70:   grade = "M"
+    elif pct >= 50: grade = "P"
+    elif pct >= 40: grade = "C"
+    else:           grade = "NYC"
+    return pct, grade
+
+
+def _fetch_marks(db, dept_id, year, term, class_id, unit_id, trainer_id):
+    """
+    Fetch formative marks for all classes/units in the department.
+    Returns a flat list of dicts ready for the template.
+    """
+    # Unit IDs belonging to this department
+    dept_units = db.table("units").select("id").eq("department_id", dept_id).execute().data or []
+    unit_ids = [u["id"] for u in dept_units]
+    if not unit_ids:
+        return []
+
+    # Assessment definitions
+    fa_q = (db.table("formative_assessments")
+            .select("id, unit_id, class_id, trainer_id, assessment_type, "
+                    "assessment_name, max_marks, year, term, created_at, "
+                    "units(name, code), classes(name), "
+                    "trainer:user_profiles!formative_assessments_trainer_id_fkey(full_name)")
+            .in_("unit_id", unit_ids)
+            .eq("year", int(year)))
+    if term:       fa_q = fa_q.eq("term",       int(term))
+    if class_id:   fa_q = fa_q.eq("class_id",   class_id)
+    if unit_id:    fa_q = fa_q.eq("unit_id",    unit_id)
+    if trainer_id: fa_q = fa_q.eq("trainer_id", trainer_id)
+
+    try:
+        formative_assessments = fa_q.order("created_at", desc=True).execute().data or []
+    except Exception as e:
+        print(f"[marks] formative_assessments error: {e}")
+        return []
+
+    if not formative_assessments:
+        return []
+
+    fa_map = {a["id"]: a for a in formative_assessments}
+    a_ids  = list(fa_map.keys())
+
+    # Student marks for those assessments
+    try:
+        fm_rows = (db.table("formative_marks")
+                   .select("assessment_id, student_id, marks_obtained, "
+                           "student:user_profiles!formative_marks_student_id_fkey"
+                           "(full_name, admission_no)")
+                   .in_("assessment_id", a_ids)
+                   .execute().data or [])
+    except Exception as e:
+        print(f"[marks] formative_marks error: {e}")
+        return []
+
+    rows = []
+    for m in fm_rows:
+        fa  = fa_map.get(m["assessment_id"], {})
+        pct, grade = _compute_grade(m.get("marks_obtained"), fa.get("max_marks", 100))
+        rows.append({
+            "student":         m.get("student") or {},
+            "unit":            fa.get("units")   or {},
+            "class_":          fa.get("classes") or {},
+            "trainer":         fa.get("trainer") or {},
+            "assessment_name": fa.get("assessment_name", ""),
+            "assessment_type": fa.get("assessment_type", ""),
+            "max_marks":       fa.get("max_marks", 100),
+            "marks_obtained":  m.get("marks_obtained"),
+            "percentage":      pct,
+            "grade":           grade,
+            "year":            fa.get("year"),
+            "term":            fa.get("term"),
+        })
+
+    rows.sort(key=lambda r: (
+        r["class_"].get("name", ""),
+        r["student"].get("full_name", ""),
+        r["unit"].get("name", ""),
+        r["assessment_name"],
+    ))
+    return rows
+
+
 @dept_admin_bp.route("/marks")
 @dept_admin_required
 def marks():
     db = get_service_client()
-    dept_id = _dept_id()
-    year     = request.args.get("year", str(datetime.now().year))
-    term     = request.args.get("term", "")
-    class_id = request.args.get("class_id", "")
-    unit_id  = request.args.get("unit_id", "")
-    query = (db.table("marks")
-        .select("*, student:user_profiles!marks_student_id_fkey(full_name, admission_no), trainer:user_profiles!marks_trainer_id_fkey(full_name), units(name, code, department_id), classes(name, departments(name))")
-        .eq("year", int(year)))
-    if term:     query = query.eq("term", term)
-    if class_id: query = query.eq("class_id", class_id)
-    if unit_id:  query = query.eq("unit_id", unit_id)
-    marks_list = query.order("created_at", desc=True).execute().data or []
-    marks_list = [m for m in marks_list if m.get("units", {}).get("department_id") == dept_id]
-    classes = db.table("classes").select("id, name").eq("department_id", dept_id).execute().data or []
-    units   = db.table("units").select("id, name, code").eq("department_id", dept_id).execute().data or []
-    return render_template("dept_admin/marks.html", marks=marks_list, classes=classes, units=units,
-                           year=year, term=term, class_id=class_id, unit_id=unit_id)
+    dept_id    = _dept_id()
+    year       = request.args.get("year",       str(datetime.now().year))
+    term       = request.args.get("term",       "")
+    class_id   = request.args.get("class_id",   "")
+    unit_id    = request.args.get("unit_id",    "")
+    trainer_id = request.args.get("trainer_id", "")
+
+    classes  = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
+    units    = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
+    trainers = (db.table("user_profiles").select("id, full_name")
+                .eq("role", "trainer").eq("department_id", dept_id)
+                .order("full_name").execute().data or [])
+
+    marks_list = _fetch_marks(db, dept_id, year, term, class_id, unit_id, trainer_id)
+
+    # Summary stats
+    distinct_students = len({r["student"].get("admission_no") for r in marks_list if r["student"].get("admission_no")})
+    pass_count  = sum(1 for r in marks_list if r["grade"] in ("M", "P"))
+    pass_rate   = round(pass_count / len(marks_list) * 100) if marks_list else 0
+
+    return render_template(
+        "dept_admin/marks.html",
+        marks=marks_list,
+        classes=classes, units=units, trainers=trainers,
+        year=year, term=term, class_id=class_id, unit_id=unit_id, trainer_id=trainer_id,
+        distinct_students=distinct_students,
+        pass_rate=pass_rate,
+    )
 
 
 @dept_admin_bp.route("/marks/download-pdf")
 @dept_admin_required
 def download_marks_pdf():
     db = get_service_client()
-    dept_id = _dept_id()
-    year     = request.args.get("year", str(datetime.now().year))
-    term     = request.args.get("term", "")
-    class_id = request.args.get("class_id", "")
-    unit_id  = request.args.get("unit_id", "")
-    query = (db.table("marks")
-        .select("*, student:user_profiles!marks_student_id_fkey(full_name, admission_no), trainer:user_profiles!marks_trainer_id_fkey(full_name), units(name, code, department_id), classes(name, departments(name))")
-        .eq("year", int(year)))
-    if term:     query = query.eq("term", term)
-    if class_id: query = query.eq("class_id", class_id)
-    if unit_id:  query = query.eq("unit_id", unit_id)
-    marks_list = query.execute().data or []
-    marks_list = [m for m in marks_list if m.get("units", {}).get("department_id") == dept_id]
-    return render_template("dept_admin/marks_pdf.html", marks=marks_list,
-                           year=year, term=term, class_id=class_id, unit_id=unit_id)
+    dept_id    = _dept_id()
+    year       = request.args.get("year",       str(datetime.now().year))
+    term       = request.args.get("term",       "")
+    class_id   = request.args.get("class_id",   "")
+    unit_id    = request.args.get("unit_id",    "")
+    trainer_id = request.args.get("trainer_id", "")
+
+    marks_list = _fetch_marks(db, dept_id, year, term, class_id, unit_id, trainer_id)
+    return render_template(
+        "dept_admin/marks_pdf.html",
+        marks=marks_list,
+        year=year, term=term, class_id=class_id, unit_id=unit_id,
+    )
 
 
 # ── Trainer Documents ─────────────────────────────────────────────────────────
