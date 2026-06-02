@@ -738,6 +738,98 @@ def trainee_poe():
     )
 
 
+# ── Trainees Documents ────────────────────────────────────────────────────────
+
+@dept_admin_bp.route("/trainees-documents")
+@dept_admin_required
+def trainees_documents():
+    import os
+    db = get_service_client()
+    dept_id = _dept_id()
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+
+    q        = request.args.get("q", "").strip()
+    doc_type = request.args.get("type", "")   # "assessment" | "portfolio" | ""
+
+    # ── 1. Assessment scripts for this department ────────────────────────────
+    assessments = []
+    try:
+        a_rows = (db.table("assessments")
+            .select("id, student_id, class_id, unit_id, assessment_type, assessment_no, "
+                    "term, cycle, year, script_file_path, script_file_name, script_file_size, "
+                    "status, uploaded_at, "
+                    "student:user_profiles!assessments_student_id_fkey(full_name, admission_no), "
+                    "units!inner(name, code, department_id), "
+                    "classes(name)")
+            .eq("units.department_id", dept_id)
+            .order("uploaded_at", desc=True)
+            .execute().data or [])
+
+        for a in a_rows:
+            path = a.get("script_file_path") or ""
+            a["file_url"] = (f"{supabase_url}/storage/v1/object/public/assessment-scripts/{path}"
+                             if path else "")
+            a["_source"] = "assessment"
+        assessments = a_rows
+    except Exception as e:
+        print(f"[trainees_documents] assessments error: {e}")
+
+    # ── 2. Student IDs enrolled in this department ───────────────────────────
+    portfolio_docs = []
+    try:
+        enr = (db.table("enrollments")
+               .select("student_id, classes!inner(department_id)")
+               .eq("classes.department_id", dept_id)
+               .execute().data or [])
+        student_ids = list({r["student_id"] for r in enr})
+
+        if student_ids:
+            td_rows = (db.table("trainee_documents")
+                .select("id, student_id, document_type, document_name, file_name, "
+                        "file_path, file_url, file_size, file_type, description, "
+                        "academic_year, term, status, uploaded_at, "
+                        "student:user_profiles!trainee_documents_student_id_fkey(full_name, admission_no)")
+                .in_("student_id", student_ids)
+                .order("uploaded_at", desc=True)
+                .execute().data or [])
+
+            for d in td_rows:
+                # Resolve URL: prefer file_url, fall back to file_path in assessment-evidence
+                if not d.get("file_url"):
+                    fp = d.get("file_path") or ""
+                    d["file_url"] = (f"{supabase_url}/storage/v1/object/public/assessment-evidence/{fp}"
+                                     if fp else "")
+                d["_source"] = "portfolio"
+            portfolio_docs = td_rows
+    except Exception as e:
+        print(f"[trainees_documents] portfolio error: {e}")
+
+    # ── 3. Apply search filter ───────────────────────────────────────────────
+    def _matches(doc, key):
+        s = (doc.get("student") or {})
+        return (q.lower() in s.get("full_name", "").lower() or
+                q.lower() in s.get("admission_no", "").lower())
+
+    if q:
+        assessments    = [d for d in assessments    if _matches(d, q)]
+        portfolio_docs = [d for d in portfolio_docs if _matches(d, q)]
+
+    # ── 4. Apply doc-type filter ─────────────────────────────────────────────
+    if doc_type == "assessment":
+        portfolio_docs = []
+    elif doc_type == "portfolio":
+        assessments = []
+
+    return render_template(
+        "dept_admin/trainees_documents.html",
+        assessments=assessments,
+        portfolio_docs=portfolio_docs,
+        q=q,
+        doc_type=doc_type,
+        total=len(assessments) + len(portfolio_docs),
+    )
+
+
 # ── Class List ────────────────────────────────────────────────────────────────
 
 @dept_admin_bp.route("/class-list")

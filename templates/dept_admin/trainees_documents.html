@@ -1,0 +1,399 @@
+{% extends "dept_admin/base.html" %}
+{% block title %}Trainees Documents{% endblock %}
+{% block page_title %}Trainees Documents{% endblock %}
+
+{% block extra_style %}
+<style>
+  .docs-wrap { padding: 24px; }
+
+  /* ── Search / filter bar ───────────────────────── */
+  .filter-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  .filter-card .fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 220px; }
+  .filter-card label { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+  .filter-card input,
+  .filter-card select {
+    padding: 9px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #f9fafb;
+    transition: border-color .2s, box-shadow .2s;
+    width: 100%;
+  }
+  .filter-card input:focus,
+  .filter-card select:focus {
+    outline: none;
+    border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21,101,192,.1);
+    background: #fff;
+  }
+  .btn-search {
+    padding: 9px 22px;
+    background: linear-gradient(135deg,#1565c0,#0d47a1);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    transition: opacity .2s;
+  }
+  .btn-search:hover { opacity: .9; }
+  .btn-clear {
+    padding: 9px 16px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-clear:hover { background: #e5e7eb; }
+
+  /* ── Tabs ──────────────────────────────────────── */
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280;
+    text-decoration: none; transition: all .15s;
+  }
+  .tab-btn:hover { background: #e0e7ff; border-color: #1565c0; color: #1565c0; }
+  .tab-btn.active { background: #1565c0; border-color: #1565c0; color: #fff; }
+  .tab-count {
+    display: inline-block; background: rgba(255,255,255,.25);
+    border-radius: 9999px; padding: 0 7px; font-size: 11px; margin-left: 4px;
+  }
+  .tab-btn:not(.active) .tab-count { background: #e5e7eb; color: #374151; }
+
+  /* ── Section header ────────────────────────────── */
+  .section-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-hdr h2 {
+    font-size: 16px; font-weight: 700; color: #111827;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .count-badge {
+    background: #dbeafe; color: #1d4ed8; font-size: 12px;
+    font-weight: 700; padding: 2px 10px; border-radius: 9999px;
+  }
+
+  /* ── Table ─────────────────────────────────────── */
+  .docs-table-wrap {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .docs-table { width: 100%; border-collapse: collapse; }
+  .docs-table thead { background: #f8fafc; }
+  .docs-table th {
+    padding: 11px 16px; text-align: left;
+    font-size: 11px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .docs-table td {
+    padding: 12px 16px; font-size: 13px; color: #374151;
+    border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+  }
+  .docs-table tr:last-child td { border-bottom: none; }
+  .docs-table tr:hover td { background: #f0f7ff; }
+
+  .student-name { font-weight: 600; color: #111827; }
+  .adm-no { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 9999px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .badge-pending  { background: #fef3c7; color: #b45309; }
+  .badge-approved { background: #dcfce7; color: #15803d; }
+  .badge-rejected { background: #fee2e2; color: #b91c1c; }
+  .badge-info     { background: #dbeafe; color: #1d4ed8; }
+
+  .type-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+    background: #ede9fe; color: #6d28d9;
+  }
+
+  .file-cell { display: flex; align-items: center; gap: 8px; max-width: 260px; }
+  .file-icon { font-size: 18px; flex-shrink: 0; }
+  .file-icon.pdf   { color: #ef4444; }
+  .file-icon.image { color: #3b82f6; }
+  .file-icon.video { color: #8b5cf6; }
+  .file-icon.audio { color: #10b981; }
+  .file-icon.other { color: #9ca3af; }
+  .file-name { font-size: 12px; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .btn-view {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    background: #1565c0; color: #fff; text-decoration: none;
+    transition: opacity .15s; white-space: nowrap;
+  }
+  .btn-view:hover { opacity: .85; }
+  .btn-view.disabled { background: #e5e7eb; color: #9ca3af; pointer-events: none; }
+
+  .empty-state { padding: 48px 24px; text-align: center; color: #9ca3af; }
+  .empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+  .empty-state p { font-size: 14px; margin: 0; }
+
+  @media (max-width: 640px) {
+    .docs-table th:nth-child(3),
+    .docs-table td:nth-child(3),
+    .docs-table th:nth-child(5),
+    .docs-table td:nth-child(5) { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="docs-wrap">
+
+  <!-- ── Page header ──────────────────────────────────────────────────── -->
+  <div style="margin-bottom:20px">
+    <h1 style="font-size:22px;font-weight:800;color:#0d2167;margin:0 0 4px">
+      <i class="fas fa-file-alt" style="color:#1565c0;margin-right:8px"></i>Trainees Documents
+    </h1>
+    <p style="color:#6b7280;font-size:13px;margin:0">
+      All documents uploaded by trainees in your department &mdash;
+      <strong>{{ total }}</strong> file{{ 's' if total != 1 else '' }} found
+      {% if q %} matching <em>"{{ q }}"</em>{% endif %}
+    </p>
+  </div>
+
+  <!-- ── Search / filter bar ─────────────────────────────────────────── -->
+  <form method="get" action="/dept-admin/trainees-documents" class="filter-card">
+    <div class="fg" style="flex:2;min-width:260px">
+      <label for="q"><i class="fas fa-search"></i> Search by name or admission number</label>
+      <input id="q" name="q" type="text" value="{{ q }}"
+             placeholder="e.g. John Doe or ADM/2024/001">
+    </div>
+    <div class="fg" style="flex:1;min-width:160px">
+      <label for="type"><i class="fas fa-filter"></i> Document type</label>
+      <select id="type" name="type">
+        <option value=""       {% if not doc_type %}selected{% endif %}>All types</option>
+        <option value="assessment" {% if doc_type=='assessment' %}selected{% endif %}>Assessment Scripts</option>
+        <option value="portfolio"  {% if doc_type=='portfolio'  %}selected{% endif %}>Portfolio / Personal</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn-search">
+        <i class="fas fa-search"></i> Search
+      </button>
+      {% if q or doc_type %}
+      <a href="/dept-admin/trainees-documents" class="btn-clear">
+        <i class="fas fa-times"></i> Clear
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────────── -->
+  <div class="tab-bar">
+    <a href="/dept-admin/trainees-documents?q={{ q }}"
+       class="tab-btn {% if not doc_type %}active{% endif %}">
+      All Documents
+      <span class="tab-count">{{ assessments|length + portfolio_docs|length }}</span>
+    </a>
+    <a href="/dept-admin/trainees-documents?q={{ q }}&type=assessment"
+       class="tab-btn {% if doc_type=='assessment' %}active{% endif %}">
+      <i class="fas fa-file-pdf"></i> Assessment Scripts
+      <span class="tab-count">{{ assessments|length }}</span>
+    </a>
+    <a href="/dept-admin/trainees-documents?q={{ q }}&type=portfolio"
+       class="tab-btn {% if doc_type=='portfolio' %}active{% endif %}">
+      <i class="fas fa-folder-open"></i> Portfolio / Personal
+      <span class="tab-count">{{ portfolio_docs|length }}</span>
+    </a>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ASSESSMENT SCRIPTS
+  ═════════════════════════════════════════════════════════════════════ -->
+  {% if doc_type != 'portfolio' %}
+  <div class="section-hdr">
+    <h2><i class="fas fa-file-pdf" style="color:#ef4444"></i> Assessment Scripts
+      <span class="count-badge">{{ assessments|length }}</span>
+    </h2>
+  </div>
+
+  <div class="docs-table-wrap">
+    {% if assessments %}
+    <table class="docs-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Unit</th>
+          <th>Class</th>
+          <th>Type / No</th>
+          <th>File</th>
+          <th>Uploaded</th>
+          <th>Status</th>
+          <th style="text-align:right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assessments %}
+        {% set student = a.get('student') or {} %}
+        {% set unit    = a.get('units')   or {} %}
+        {% set cls     = a.get('classes') or {} %}
+        <tr>
+          <td>
+            <div class="student-name">{{ student.get('full_name','—') }}</div>
+            <div class="adm-no">{{ student.get('admission_no','') }}</div>
+          </td>
+          <td>
+            <span style="font-weight:600">{{ unit.get('code','') }}</span>
+            <div style="font-size:11px;color:#9ca3af">{{ unit.get('name','—') }}</div>
+          </td>
+          <td style="font-size:12px;color:#6b7280">{{ cls.get('name','—') }}</td>
+          <td>
+            <span class="type-badge">{{ a.get('assessment_type','?') }} #{{ a.get('assessment_no','?') }}</span>
+            <div style="font-size:11px;color:#9ca3af;margin-top:3px">T{{ a.get('term','?') }} · Y{{ a.get('year','?') }}</div>
+          </td>
+          <td>
+            <div class="file-cell">
+              <i class="fas fa-file-pdf file-icon pdf"></i>
+              <span class="file-name" title="{{ a.get('script_file_name','') }}">{{ a.get('script_file_name','—') }}</span>
+            </div>
+            {% if a.get('script_file_size') %}
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">{{ '%.1f'|format(a['script_file_size']/1024) }} KB</div>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap;font-size:12px;color:#6b7280">
+            {{ a.get('uploaded_at','')[:10] if a.get('uploaded_at') else '—' }}
+          </td>
+          <td>
+            {% set s = a.get('status','') %}
+            <span class="badge badge-{{ 'approved' if s=='approved' else 'rejected' if s=='rejected' else 'pending' }}">
+              {{ s|title if s else '—' }}
+            </span>
+          </td>
+          <td style="text-align:right">
+            {% if a.get('file_url') %}
+            <a href="{{ a.file_url }}" target="_blank" class="btn-view">
+              <i class="fas fa-eye"></i> View
+            </a>
+            {% else %}
+            <span class="btn-view disabled"><i class="fas fa-eye-slash"></i> N/A</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-file-pdf"></i>
+      <p>No assessment scripts found{% if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       PORTFOLIO / PERSONAL DOCUMENTS
+  ═════════════════════════════════════════════════════════════════════ -->
+  {% if doc_type != 'assessment' %}
+  <div class="section-hdr">
+    <h2><i class="fas fa-folder-open" style="color:#f59e0b"></i> Portfolio &amp; Personal Documents
+      <span class="count-badge">{{ portfolio_docs|length }}</span>
+    </h2>
+  </div>
+
+  <div class="docs-table-wrap">
+    {% if portfolio_docs %}
+    <table class="docs-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Document Type</th>
+          <th>Document Name</th>
+          <th>File</th>
+          <th>Uploaded</th>
+          <th>Status</th>
+          <th style="text-align:right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in portfolio_docs %}
+        {% set student = d.get('student') or {} %}
+        {% set ext = (d.get('file_name','') or '').rsplit('.',1)[-1].lower() %}
+        {% set fi_cls = 'pdf' if ext=='pdf' else 'image' if ext in ('jpg','jpeg','png','gif','webp') else 'video' if ext in ('mp4','mkv','avi','mov') else 'audio' if ext in ('mp3','wav','ogg') else 'other' %}
+        {% set fi_icon = 'file-pdf' if fi_cls=='pdf' else 'image' if fi_cls=='image' else 'video' if fi_cls=='video' else 'music' if fi_cls=='audio' else 'file' %}
+        <tr>
+          <td>
+            <div class="student-name">{{ student.get('full_name','—') }}</div>
+            <div class="adm-no">{{ student.get('admission_no','') }}</div>
+          </td>
+          <td>
+            <span class="type-badge">{{ (d.get('document_type','') or '').replace('_',' ')|title }}</span>
+          </td>
+          <td style="font-size:13px;color:#374151">{{ d.get('document_name','—') }}</td>
+          <td>
+            <div class="file-cell">
+              <i class="fas fa-{{ fi_icon }} file-icon {{ fi_cls }}"></i>
+              <span class="file-name" title="{{ d.get('file_name','') }}">{{ d.get('file_name','—') }}</span>
+            </div>
+            {% if d.get('file_size') %}
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">{{ '%.1f'|format(d['file_size']/1024) }} KB</div>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap;font-size:12px;color:#6b7280">
+            {{ d.get('uploaded_at','')[:10] if d.get('uploaded_at') else '—' }}
+          </td>
+          <td>
+            {% set s = d.get('status','') %}
+            <span class="badge badge-{{ 'approved' if s=='approved' else 'rejected' if s=='rejected' else 'pending' if s=='pending' else 'info' }}">
+              {{ s|title if s else 'Uploaded' }}
+            </span>
+          </td>
+          <td style="text-align:right">
+            {% if d.get('file_url') %}
+            <a href="{{ d.file_url }}" target="_blank" class="btn-view">
+              <i class="fas fa-eye"></i> View
+            </a>
+            {% else %}
+            <span class="btn-view disabled"><i class="fas fa-eye-slash"></i> N/A</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-folder-open"></i>
+      <p>No portfolio or personal documents found{% if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
