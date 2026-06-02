@@ -740,94 +740,199 @@ def trainee_poe():
 
 # ── Trainees Documents ────────────────────────────────────────────────────────
 
+TRAINEE_DOC_TYPES = [
+    ("passport_photo",     "Passport Photo",          True),
+    ("admission_letter",   "Admission Letter",         True),
+    ("medical_form",       "Medical Examination Form", True),
+    ("personal_data_form", "Personal Data Form",       True),
+    ("declaration_form",   "Declaration Form",         True),
+    ("kcse_result_slip",   "KCSE Result Slip",         True),
+    ("kcse_certificate",   "KCSE Certificate",         True),
+    ("kcpe_result_slip",   "KCPE Result Slip",         True),
+    ("birth_certificate",  "Birth Certificate",        True),
+    ("national_id",        "National ID",              True),
+    ("guardian_id",        "Guardian ID Copies",       False),
+    ("consent_form",       "Consent Form",             True),
+]
+
+
+def _resolve_doc_url(doc, supabase_url):
+    """Return a public URL for a trainee_document record."""
+    if doc.get("file_url"):
+        return doc["file_url"]
+    fp = doc.get("file_path") or ""
+    if fp:
+        return f"{supabase_url}/storage/v1/object/public/assessment-evidence/{fp}"
+    return ""
+
+
 @dept_admin_bp.route("/trainees-documents")
 @dept_admin_required
 def trainees_documents():
     import os
     db = get_service_client()
-    dept_id = _dept_id()
+    dept_id  = _dept_id()
     supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+    q = request.args.get("q", "").strip()
 
-    q        = request.args.get("q", "").strip()
-    doc_type = request.args.get("type", "")   # "assessment" | "portfolio" | ""
+    # All students enrolled in any class of this department
+    enr = (db.table("enrollments")
+           .select("student_id, classes!inner(department_id, name), "
+                   "user_profiles!enrollments_student_id_fkey(id, full_name, admission_no, email)")
+           .eq("classes.department_id", dept_id)
+           .execute().data or [])
 
-    # ── 1. Assessment scripts for this department ────────────────────────────
-    assessments = []
-    try:
-        a_rows = (db.table("assessments")
-            .select("id, student_id, class_id, unit_id, assessment_type, assessment_no, "
-                    "term, cycle, year, script_file_path, script_file_name, script_file_size, "
-                    "status, uploaded_at, "
-                    "student:user_profiles!assessments_student_id_fkey(full_name, admission_no), "
-                    "units!inner(name, code, department_id), "
-                    "classes(name)")
-            .eq("units.department_id", dept_id)
-            .order("uploaded_at", desc=True)
-            .execute().data or [])
+    # Deduplicate students
+    seen = {}
+    for e in enr:
+        up = e.get("user_profiles") or {}
+        sid = up.get("id") or e.get("student_id")
+        if sid and sid not in seen:
+            seen[sid] = {
+                "id":           sid,
+                "full_name":    up.get("full_name", "—"),
+                "admission_no": up.get("admission_no", "—"),
+                "email":        up.get("email", ""),
+                "class_name":   (e.get("classes") or {}).get("name", ""),
+            }
+    students = list(seen.values())
 
-        for a in a_rows:
-            path = a.get("script_file_path") or ""
-            a["file_url"] = (f"{supabase_url}/storage/v1/object/public/assessment-scripts/{path}"
-                             if path else "")
-            a["_source"] = "assessment"
-        assessments = a_rows
-    except Exception as e:
-        print(f"[trainees_documents] assessments error: {e}")
-
-    # ── 2. Student IDs enrolled in this department ───────────────────────────
-    portfolio_docs = []
-    try:
-        enr = (db.table("enrollments")
-               .select("student_id, classes!inner(department_id)")
-               .eq("classes.department_id", dept_id)
-               .execute().data or [])
-        student_ids = list({r["student_id"] for r in enr})
-
-        if student_ids:
-            td_rows = (db.table("trainee_documents")
-                .select("id, student_id, document_type, document_name, file_name, "
-                        "file_path, file_url, file_size, file_type, description, "
-                        "academic_year, term, status, uploaded_at, "
-                        "student:user_profiles!trainee_documents_student_id_fkey(full_name, admission_no)")
-                .in_("student_id", student_ids)
-                .order("uploaded_at", desc=True)
-                .execute().data or [])
-
-            for d in td_rows:
-                # Resolve URL: prefer file_url, fall back to file_path in assessment-evidence
-                if not d.get("file_url"):
-                    fp = d.get("file_path") or ""
-                    d["file_url"] = (f"{supabase_url}/storage/v1/object/public/assessment-evidence/{fp}"
-                                     if fp else "")
-                d["_source"] = "portfolio"
-            portfolio_docs = td_rows
-    except Exception as e:
-        print(f"[trainees_documents] portfolio error: {e}")
-
-    # ── 3. Apply search filter ───────────────────────────────────────────────
-    def _matches(doc, key):
-        s = (doc.get("student") or {})
-        return (q.lower() in s.get("full_name", "").lower() or
-                q.lower() in s.get("admission_no", "").lower())
-
+    # Apply search
     if q:
-        assessments    = [d for d in assessments    if _matches(d, q)]
-        portfolio_docs = [d for d in portfolio_docs if _matches(d, q)]
+        ql = q.lower()
+        students = [s for s in students
+                    if ql in s["full_name"].lower() or ql in s["admission_no"].lower()]
 
-    # ── 4. Apply doc-type filter ─────────────────────────────────────────────
-    if doc_type == "assessment":
-        portfolio_docs = []
-    elif doc_type == "portfolio":
-        assessments = []
+    # Fetch all trainee_documents for those students
+    student_ids = [s["id"] for s in students]
+    doc_map = {}   # {student_id: {doc_type: doc_record}}
+    if student_ids:
+        td_rows = (db.table("trainee_documents")
+                   .select("id, student_id, document_type, file_name, file_path, "
+                           "file_url, file_size, status, uploaded_at, description")
+                   .in_("student_id", student_ids)
+                   .execute().data or [])
+        for d in td_rows:
+            sid = d["student_id"]
+            doc_map.setdefault(sid, {})[d["document_type"]] = d
+            d["_url"] = _resolve_doc_url(d, supabase_url)
+
+    # Attach completion stats to each student
+    total_required = sum(1 for _, _, req in TRAINEE_DOC_TYPES if req)
+    for s in students:
+        docs = doc_map.get(s["id"], {})
+        s["docs"]       = docs
+        s["uploaded"]   = len(docs)
+        s["required_ok"] = sum(1 for dt, _, req in TRAINEE_DOC_TYPES if req and dt in docs)
+        s["total_req"]  = total_required
+        # Overall status: use most-recent doc status or "pending"
+        statuses = [d.get("status") for d in docs.values() if d.get("status")]
+        if all(st == "approved" for st in statuses) and statuses:
+            s["overall_status"] = "approved"
+        elif any(st == "rejected" for st in statuses):
+            s["overall_status"] = "rejected"
+        else:
+            s["overall_status"] = "pending"
+        # HOD comment stored on first doc's description
+        first = next(iter(docs.values()), None)
+        s["hod_comment"] = (first or {}).get("description") or ""
+
+    students.sort(key=lambda s: s["full_name"])
 
     return render_template(
         "dept_admin/trainees_documents.html",
-        assessments=assessments,
-        portfolio_docs=portfolio_docs,
+        students=students,
+        doc_types=TRAINEE_DOC_TYPES,
         q=q,
-        doc_type=doc_type,
-        total=len(assessments) + len(portfolio_docs),
     )
+
+
+@dept_admin_bp.route("/trainees-documents/<student_id>")
+@dept_admin_required
+def trainee_document_detail(student_id):
+    import os
+    db = get_service_client()
+    dept_id      = _dept_id()
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+
+    student = db.table("user_profiles").select(
+        "id, full_name, admission_no, email, mobile_number, department_id"
+    ).eq("id", student_id).single().execute().data
+    if not student:
+        flash("Student not found.", "error")
+        return redirect(url_for("dept_admin.trainees_documents"))
+
+    # Confirm student belongs to this dept via enrollment
+    enr = (db.table("enrollments")
+           .select("class_id, classes!inner(name, department_id)")
+           .eq("student_id", student_id)
+           .eq("classes.department_id", dept_id)
+           .execute().data or [])
+    class_name = (enr[0].get("classes") or {}).get("name", "") if enr else ""
+
+    # Fetch all 12 docs for this student
+    td_rows = (db.table("trainee_documents")
+               .select("id, document_type, file_name, file_path, file_url, "
+                       "file_size, status, uploaded_at, description")
+               .eq("student_id", student_id)
+               .execute().data or [])
+
+    docs = {}
+    hod_comment = ""
+    for d in td_rows:
+        d["_url"] = _resolve_doc_url(d, supabase_url)
+        docs[d["document_type"]] = d
+        if d.get("description") and not hod_comment:
+            hod_comment = d["description"]
+
+    # Overall status
+    statuses = [d.get("status") for d in docs.values() if d.get("status")]
+    if all(st == "approved" for st in statuses) and statuses:
+        overall_status = "approved"
+    elif any(st == "rejected" for st in statuses):
+        overall_status = "rejected"
+    else:
+        overall_status = "pending"
+
+    return render_template(
+        "dept_admin/trainee_document_detail.html",
+        student=student,
+        class_name=class_name,
+        docs=docs,
+        doc_types=TRAINEE_DOC_TYPES,
+        overall_status=overall_status,
+        hod_comment=hod_comment,
+    )
+
+
+@dept_admin_bp.route("/trainees-documents/<student_id>/verify", methods=["POST"])
+@dept_admin_required
+def verify_trainee_documents(student_id):
+    db = get_service_client()
+    dept_id = _dept_id()
+    status  = request.form.get("status", "pending")
+    comment = request.form.get("comment", "").strip()
+
+    if status not in ("pending", "approved", "rejected"):
+        status = "pending"
+
+    # Update all existing trainee_documents for this student
+    existing = (db.table("trainee_documents")
+                .select("id")
+                .eq("student_id", student_id)
+                .execute().data or [])
+
+    for doc in existing:
+        db.table("trainee_documents").update({
+            "status": status,
+            "description": comment,
+        }).eq("id", doc["id"]).execute()
+
+    write_audit_log("verify_trainee_documents",
+                    target=f"student:{student_id}",
+                    detail={"status": status})
+    flash(f"Verification saved — documents marked as {status}.", "success")
+    return redirect(url_for("dept_admin.trainee_document_detail", student_id=student_id))
 
 
 # ── Class List ────────────────────────────────────────────────────────────────
