@@ -756,18 +756,30 @@ TRAINEE_DOC_TYPES = [
 ]
 
 
-def _resolve_doc_url(doc, supabase_url):
-    """Return a public URL for a trainee_document record."""
+def _resolve_doc_url(doc):
     return doc.get("file_url") or ""
+
+
+def _parse_hod_verification(docs):
+    """
+    HOD verification is stored in description as:
+        HOD_STATUS=approved\nComment text here
+    Returns (status_str, comment_str).
+    """
+    import re
+    for d in docs.values():
+        desc = d.get("description") or ""
+        m = re.match(r"^HOD_STATUS=(\w+)\n?(.*)", desc, re.DOTALL)
+        if m:
+            return m.group(1), m.group(2).strip()
+    return "pending", ""
 
 
 @dept_admin_bp.route("/trainees-documents")
 @dept_admin_required
 def trainees_documents():
-    import os
     db = get_service_client()
-    dept_id  = _dept_id()
-    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+    dept_id = _dept_id()
     q = request.args.get("q", "").strip()
 
     # All students enrolled in any class of this department
@@ -777,10 +789,9 @@ def trainees_documents():
            .eq("classes.department_id", dept_id)
            .execute().data or [])
 
-    # Deduplicate students
     seen = {}
     for e in enr:
-        up = e.get("user_profiles") or {}
+        up  = e.get("user_profiles") or {}
         sid = up.get("id") or e.get("student_id")
         if sid and sid not in seen:
             seen[sid] = {
@@ -792,45 +803,35 @@ def trainees_documents():
             }
     students = list(seen.values())
 
-    # Apply search
     if q:
         ql = q.lower()
         students = [s for s in students
                     if ql in s["full_name"].lower() or ql in s["admission_no"].lower()]
 
-    # Fetch all trainee_documents for those students
     student_ids = [s["id"] for s in students]
-    doc_map = {}   # {student_id: {doc_type: doc_record}}
+    doc_map = {}
     if student_ids:
-        td_rows = (db.table("trainee_documents")
-                   .select("id, student_id, document_type, file_name, "
-                           "file_url, file_size, status, uploaded_at, description")
-                   .in_("student_id", student_ids)
-                   .execute().data or [])
-        for d in td_rows:
-            sid = d["student_id"]
-            doc_map.setdefault(sid, {})[d["document_type"]] = d
-            d["_url"] = _resolve_doc_url(d, supabase_url)
+        try:
+            td_rows = (db.table("trainee_documents")
+                       .select("*")
+                       .in_("student_id", student_ids)
+                       .execute().data or [])
+            for d in td_rows:
+                sid = d["student_id"]
+                doc_map.setdefault(sid, {})[d["document_type"]] = d
+                d["_url"] = _resolve_doc_url(d)
+        except Exception as e:
+            print(f"[trainees_documents] fetch error: {e}")
 
-    # Attach completion stats to each student
     total_required = sum(1 for _, _, req in TRAINEE_DOC_TYPES if req)
     for s in students:
         docs = doc_map.get(s["id"], {})
-        s["docs"]       = docs
-        s["uploaded"]   = len(docs)
+        s["docs"]        = docs
+        s["uploaded"]    = len(docs)
         s["required_ok"] = sum(1 for dt, _, req in TRAINEE_DOC_TYPES if req and dt in docs)
-        s["total_req"]  = total_required
-        # Overall status: use most-recent doc status or "pending"
-        statuses = [d.get("status") for d in docs.values() if d.get("status")]
-        if all(st == "approved" for st in statuses) and statuses:
-            s["overall_status"] = "approved"
-        elif any(st == "rejected" for st in statuses):
-            s["overall_status"] = "rejected"
-        else:
-            s["overall_status"] = "pending"
-        # HOD comment stored on first doc's description
-        first = next(iter(docs.values()), None)
-        s["hod_comment"] = (first or {}).get("description") or ""
+        s["total_req"]   = total_required
+        overall_status, _ = _parse_hod_verification(docs)
+        s["overall_status"] = overall_status
 
     students.sort(key=lambda s: s["full_name"])
 
@@ -845,10 +846,8 @@ def trainees_documents():
 @dept_admin_bp.route("/trainees-documents/<student_id>")
 @dept_admin_required
 def trainee_document_detail(student_id):
-    import os
     db = get_service_client()
-    dept_id      = _dept_id()
-    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+    dept_id = _dept_id()
 
     student = db.table("user_profiles").select(
         "id, full_name, admission_no, email, mobile_number, department_id"
@@ -857,7 +856,6 @@ def trainee_document_detail(student_id):
         flash("Student not found.", "error")
         return redirect(url_for("dept_admin.trainees_documents"))
 
-    # Confirm student belongs to this dept via enrollment
     enr = (db.table("enrollments")
            .select("class_id, classes!inner(name, department_id)")
            .eq("student_id", student_id)
@@ -865,29 +863,21 @@ def trainee_document_detail(student_id):
            .execute().data or [])
     class_name = (enr[0].get("classes") or {}).get("name", "") if enr else ""
 
-    # Fetch all 12 docs for this student
-    td_rows = (db.table("trainee_documents")
-               .select("id, document_type, file_name, file_url, "
-                       "file_size, status, uploaded_at, description")
-               .eq("student_id", student_id)
-               .execute().data or [])
+    td_rows = []
+    try:
+        td_rows = (db.table("trainee_documents")
+                   .select("*")
+                   .eq("student_id", student_id)
+                   .execute().data or [])
+    except Exception as e:
+        print(f"[trainee_document_detail] fetch error: {e}")
 
     docs = {}
-    hod_comment = ""
     for d in td_rows:
-        d["_url"] = _resolve_doc_url(d, supabase_url)
+        d["_url"] = _resolve_doc_url(d)
         docs[d["document_type"]] = d
-        if d.get("description") and not hod_comment:
-            hod_comment = d["description"]
 
-    # Overall status
-    statuses = [d.get("status") for d in docs.values() if d.get("status")]
-    if all(st == "approved" for st in statuses) and statuses:
-        overall_status = "approved"
-    elif any(st == "rejected" for st in statuses):
-        overall_status = "rejected"
-    else:
-        overall_status = "pending"
+    overall_status, hod_comment = _parse_hod_verification(docs)
 
     return render_template(
         "dept_admin/trainee_document_detail.html",
@@ -904,24 +894,27 @@ def trainee_document_detail(student_id):
 @dept_admin_required
 def verify_trainee_documents(student_id):
     db = get_service_client()
-    dept_id = _dept_id()
     status  = request.form.get("status", "pending")
     comment = request.form.get("comment", "").strip()
 
     if status not in ("pending", "approved", "rejected"):
         status = "pending"
 
-    # Update all existing trainee_documents for this student
+    # Encode status + comment into description field (no status column exists)
+    new_desc = f"HOD_STATUS={status}\n{comment}".strip()
+
     existing = (db.table("trainee_documents")
                 .select("id")
                 .eq("student_id", student_id)
                 .execute().data or [])
 
     for doc in existing:
-        db.table("trainee_documents").update({
-            "status": status,
-            "description": comment,
-        }).eq("id", doc["id"]).execute()
+        try:
+            db.table("trainee_documents").update({
+                "description": new_desc,
+            }).eq("id", doc["id"]).execute()
+        except Exception as e:
+            print(f"[verify_trainee_documents] update error: {e}")
 
     write_audit_log("verify_trainee_documents",
                     target=f"student:{student_id}",
