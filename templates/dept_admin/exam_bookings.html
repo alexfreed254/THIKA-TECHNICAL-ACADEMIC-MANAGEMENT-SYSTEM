@@ -1,179 +1,302 @@
 {% extends "dept_admin/base.html" %}
-
+{% block title %}Exam Booking Approvals{% endblock %}
 {% block page_title %}Exam Booking Approvals{% endblock %}
 
 {% block extra_style %}
 <style>
-  .booking-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  .eb-wrap { padding: 24px; }
+
+  /* ── Top bar ────────────────────────────────────────── */
+  .top-bar {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    align-items: flex-end; margin-bottom: 24px;
   }
-  .student-info {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
+  .search-fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 220px; }
+  .search-fg label { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+  .search-fg input {
+    padding: 9px 14px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; background: #f9fafb; width: 100%;
+    transition: border-color .2s, box-shadow .2s;
   }
-  .student-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #1565c0;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: 600;
+  .search-fg input:focus { outline: none; border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,.1); background: #fff; }
+  .btn-search {
+    padding: 9px 20px; background: linear-gradient(135deg,#1565c0,#0d47a1);
+    color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   }
+  .btn-search:hover { opacity: .9; }
+  .btn-clear {
+    padding: 9px 14px; background: #f3f4f6; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-clear:hover { background: #e5e7eb; }
+
+  /* ── Status tabs ────────────────────────────────────── */
+  .tab-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tab-link {
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .tab-link:hover { background: #e0e7ff; border-color: #1565c0; color: #1565c0; }
+  .tab-link.active { background: #1565c0; border-color: #1565c0; color: #fff; }
+  .tab-count {
+    display: inline-block; padding: 1px 7px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+    background: rgba(255,255,255,.25);
+  }
+  .tab-link:not(.active) .tab-count { background: #e5e7eb; color: #374151; }
+
+  /* ── Booking table ──────────────────────────────────── */
+  .bookings-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+  .bookings-table { width: 100%; border-collapse: collapse; }
+  .bookings-table thead { background: #f0f7ff; }
+  .bookings-table th {
+    padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700;
+    color: #1565c0; text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 2px solid #dbeafe;
+  }
+  .bookings-table td {
+    padding: 13px 14px; font-size: 13px; color: #374151;
+    border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+  }
+  .bookings-table tr:last-child td { border-bottom: none; }
+  .bookings-table tr:hover td { background: #f8fbff; }
+
+  /* left accent by status */
+  .row-pending  td:first-child { border-left: 4px solid #f59e0b; }
+  .row-approved td:first-child { border-left: 4px solid #22c55e; }
+  .row-rejected td:first-child { border-left: 4px solid #ef4444; }
+
+  .student-name { font-weight: 700; color: #111827; }
+  .student-sub  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
+  .b-pending  { background: #fef3c7; color: #b45309; }
+  .b-approved { background: #dcfce7; color: #15803d; }
+  .b-rejected { background: #fee2e2; color: #b91c1c; }
+
+  .unit-name { font-weight: 600; color: #0d2167; }
+  .unit-code { display: inline-block; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 5px; margin-top: 3px; }
+
+  .serial { font-family: monospace; font-size: 11px; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+
+  /* ── Action forms ───────────────────────────────────── */
+  .action-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .btn-approve {
-    background: #2e7d32;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
+    padding: 5px 12px; background: #16a34a; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px; transition: opacity .15s;
   }
-  .btn-approve:hover { background: #1b5e20; }
+  .btn-approve:hover { opacity: .85; }
   .btn-reject {
-    background: #c62828;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
+    padding: 5px 12px; background: #dc2626; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px; transition: opacity .15s;
   }
-  .btn-reject:hover { background: #8b0000; }
-  .action-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
+  .btn-reject:hover { opacity: .85; }
+  .reject-input {
+    padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 12px; width: 160px; background: #f9fafb;
   }
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #999;
-  }
-  .empty-state i {
-    font-size: 48px;
-    margin-bottom: 16px;
+  .reject-input:focus { outline: none; border-color: #dc2626; }
+
+  /* reviewer info */
+  .reviewer-info { font-size: 12px; color: #6b7280; }
+  .reviewer-info strong { color: #374151; }
+
+  /* empty state */
+  .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
+  .empty-state i { font-size: 40px; margin-bottom: 14px; display: block; }
+  .empty-state p { font-size: 14px; margin: 0; }
+
+  @media (max-width: 768px) {
+    .bookings-table th:nth-child(4),
+    .bookings-table td:nth-child(4),
+    .bookings-table th:nth-child(5),
+    .bookings-table td:nth-child(5) { display: none; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-  <h2 style="margin:0;">Exam Booking Approvals</h2>
-  <div style="font-size: 13px; font-weight: 600; color: #555; background: #e3f2fd; padding: 6px 14px; border-radius: 20px;">
-    <i class="fas fa-sitemap"></i> Department: {{ department_name or 'General' }}
-  </div>
-</div>
+<div class="eb-wrap">
 
-<!-- Review Status Tabs -->
-<div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 12px; overflow-x: auto;">
-  <a href="/dept-admin/exam-bookings?status=pending" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'pending' %}background: #007bff; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
-    <i class="fas fa-clock"></i> Pending
-  </a>
-  <a href="/dept-admin/exam-bookings?status=approved" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'approved' %}background: #2e7d32; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
-    <i class="fas fa-check-circle"></i> Approved
-  </a>
-  <a href="/dept-admin/exam-bookings?status=rejected" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'rejected' %}background: #c62828; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
-    <i class="fas fa-times-circle"></i> Rejected
-  </a>
-  <a href="/dept-admin/exam-bookings?status=all" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; {% if status_filter == 'all' %}background: #555; color: white;{% else %}background: #f5f5f5; color: #555;{% endif %}">
-    <i class="fas fa-list"></i> All Bookings
-  </a>
-</div>
-
-{% if not bookings %}
-<div class="empty-state">
-  <i class="fas fa-folder-open" style="font-size: 48px; color: #ccc; margin-bottom: 12px;"></i>
-  <p>No exam bookings found matching the selected status.</p>
-</div>
-{% else %}
-{% for booking in bookings %}
-<div class="booking-card" style="border-left: 4px solid {% if booking.status == 'approved' %}#2e7d32{% elif booking.status == 'rejected' %}#c62828{% else %}#007bff{% endif %};">
-  <div class="student-info">
-    <div class="student-avatar">
-      {{ booking.student_user.full_name[0] if booking.student_user.full_name else 'S' }}
-    </div>
-    <div>
-      <h3 style="margin: 0 0 4px 0;">{{ booking.student_user.full_name }}</h3>
-      <div style="color: #666; font-size: 14px;">
-        Admission: {{ booking.student_user.admission_no }}
-        <span style="margin: 0 10px;">|</span>
-        Class: {{ booking.classes.name if booking.classes else '—' }}
-      </div>
-    </div>
+  <div style="margin-bottom: 20px">
+    <h1 style="font-size:22px;font-weight:800;color:#0d2167;margin:0 0 4px">
+      <i class="fas fa-calendar-check" style="color:#1565c0;margin-right:8px"></i>Exam Booking Approvals
+    </h1>
+    <p style="color:#6b7280;font-size:13px;margin:0">
+      Review and approve exam booking requests submitted by trainees in your department.
+    </p>
   </div>
-  
-  <div style="margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
-    <h4 style="margin: 0 0 10px 0;">{{ booking.units.name }} ({{ booking.units.code }})</h4>
-    <div style="color: #666; font-size: 14px;">
-      <i class="fas fa-calendar"></i> {{ booking.exam_date | to_eat('%d %b %Y') }}
-      <span style="margin: 0 10px;">|</span>
-      <i class="fas fa-clock"></i> {{ booking.exam_session|title }}
-      {% if booking.exam_venue %}
-      <span style="margin: 0 10px;">|</span>
-      <i class="fas fa-map-marker-alt"></i> {{ booking.exam_venue }}
+
+  <!-- ── Search bar ──────────────────────────────────────── -->
+  <form method="get" action="/dept-admin/exam-bookings" class="top-bar">
+    <input type="hidden" name="status" value="{{ status_filter }}">
+    <div class="search-fg">
+      <label><i class="fas fa-search"></i> Search trainee</label>
+      <input name="q" type="text" value="{{ q }}" placeholder="Name or admission number…" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
+      {% if q %}
+      <a href="/dept-admin/exam-bookings?status={{ status_filter }}" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
       {% endif %}
     </div>
-  </div>
-  
-  <div style="margin-bottom: 15px;">
-    <strong>Purpose:</strong> {{ booking.purpose }}
-    {% if booking.special_requirements %}
-    <br><strong>Special Requirements:</strong> {{ booking.special_requirements }}
-    {% endif %}
-  </div>
-  
-  <div style="font-size: 12px; color: #999; margin-bottom: 15px;">
-    Submitted: {{ booking.created_at | to_eat('%d %b %Y %H:%M') }}
+  </form>
+
+  <!-- ── Status tabs ──────────────────────────────────────── -->
+  <div class="tab-bar">
+    {% set base = '/dept-admin/exam-bookings' + ('?q=' + q if q else '') %}
+    <a href="{{ base }}{% if q %}&{% else %}?{% endif %}status=all"
+       class="tab-link {% if status_filter == 'all' %}active{% endif %}">
+      <i class="fas fa-list"></i> All
+      <span class="tab-count">{{ counts.all }}</span>
+    </a>
+    <a href="{{ base }}{% if q %}&{% else %}?{% endif %}status=pending"
+       class="tab-link {% if status_filter == 'pending' %}active{% endif %}">
+      <i class="fas fa-clock"></i> Pending
+      <span class="tab-count">{{ counts.pending }}</span>
+    </a>
+    <a href="{{ base }}{% if q %}&{% else %}?{% endif %}status=approved"
+       class="tab-link {% if status_filter == 'approved' %}active{% endif %}">
+      <i class="fas fa-check-circle"></i> Approved
+      <span class="tab-count">{{ counts.approved }}</span>
+    </a>
+    <a href="{{ base }}{% if q %}&{% else %}?{% endif %}status=rejected"
+       class="tab-link {% if status_filter == 'rejected' %}active{% endif %}">
+      <i class="fas fa-times-circle"></i> Rejected
+      <span class="tab-count">{{ counts.rejected }}</span>
+    </a>
   </div>
 
-  <!-- HOD Review Details Display -->
-  {% if booking.status != 'pending' %}
-  <div style="margin-top: 15px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; margin-bottom: 15px;">
-    <div style="font-weight: 700; color: #334155; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-      <i class="fas fa-user-check" style="color: {% if booking.status == 'approved' %}#2e7d32{% else %}#c62828{% endif %};"></i> 
-      Reviewed By: <span style="color: #0f172a; font-weight: 800;">{{ booking.approved_by_user.full_name if booking.approved_by_user.full_name else 'HOD' }}</span>
-    </div>
-    <div style="color: #64748b; display: flex; align-items: center; gap: 6px;">
-      <i class="far fa-calendar-check"></i> 
-      Date Reviewed: <span style="font-weight: 600; color: #334155;">{{ booking.approved_at | to_eat('%d %b %Y, %I:%M %p') }}</span>
-    </div>
-    {% if booking.rejection_reason %}
-    <div style="color: #475569; margin-top: 6px; font-style: italic; border-top: 1px solid #f1f5f9; padding-top: 6px;">
-      <strong>Remarks:</strong> "{{ booking.rejection_reason }}"
-    </div>
-    {% endif %}
+  <!-- ── Bookings table ───────────────────────────────────── -->
+  {% if bookings %}
+  <div class="bookings-card">
+    <table class="bookings-table">
+      <thead>
+        <tr>
+          <th>Trainee</th>
+          <th>Unit</th>
+          <th>Session / Date</th>
+          <th>Serial No.</th>
+          <th>Purpose</th>
+          <th>Submitted</th>
+          <th>Status</th>
+          <th>Action / Reviewer</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        {% set su = b.student_user %}
+        {% set rv = b.approved_by_user %}
+        {% set unit = b.get('units') or {} %}
+        <tr class="row-{{ b.status or 'pending' }}">
+
+          <!-- Trainee -->
+          <td>
+            <div class="student-name">{{ su.get('full_name','—') }}</div>
+            <div class="student-sub"><i class="fas fa-id-card" style="font-size:9px"></i> {{ su.get('admission_no','') }}</div>
+            {% if b.class_name %}
+            <div class="student-sub"><i class="fas fa-door-open" style="font-size:9px"></i> {{ b.class_name }}</div>
+            {% endif %}
+            {% if su.get('mobile_number') %}
+            <div class="student-sub"><i class="fas fa-phone" style="font-size:9px"></i> {{ su.mobile_number }}</div>
+            {% endif %}
+          </td>
+
+          <!-- Unit -->
+          <td>
+            <div class="unit-name">{{ unit.get('name','—') }}</div>
+            {% if unit.get('code') %}<span class="unit-code">{{ unit.code }}</span>{% endif %}
+          </td>
+
+          <!-- Session -->
+          <td style="white-space:nowrap">
+            <div>{{ b.exam_session or '—' }}</div>
+            {% if b.exam_date %}
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">
+              {{ b.exam_date[:10] if b.exam_date else '' }}
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Serial -->
+          <td><span class="serial">{{ b.get('serial_number','—') }}</span></td>
+
+          <!-- Purpose -->
+          <td style="font-size:12px;color:#6b7280;max-width:160px">
+            {{ b.get('purpose','—') }}
+            {% if b.get('special_requirements') and b.special_requirements != 'N/A' %}
+            <div style="color:#b45309;font-size:11px;margin-top:2px"><i class="fas fa-wheelchair"></i> {{ b.special_requirements }}</div>
+            {% endif %}
+          </td>
+
+          <!-- Submitted -->
+          <td style="font-size:12px;color:#9ca3af;white-space:nowrap">
+            {{ b.get('created_at','')[:10] if b.get('created_at') else '—' }}
+          </td>
+
+          <!-- Status badge -->
+          <td>
+            <span class="badge b-{{ b.status or 'pending' }}">
+              {{ (b.status or 'pending') | title }}
+            </span>
+          </td>
+
+          <!-- Action / Reviewer -->
+          <td>
+            {% if b.status == 'pending' %}
+            <div class="action-cell">
+              <form action="{{ url_for('dept_admin.approve_exam_booking', booking_id=b.id) }}" method="post" style="margin:0">
+                <button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button>
+              </form>
+              <form action="{{ url_for('dept_admin.reject_exam_booking', booking_id=b.id) }}" method="post" style="margin:0;display:flex;gap:4px;align-items:center">
+                <input type="text" name="rejection_reason" class="reject-input" placeholder="Reason…">
+                <button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
+              </form>
+            </div>
+            {% else %}
+            <div class="reviewer-info">
+              {% if rv.get('full_name') %}
+              <div><i class="fas fa-user-check" style="color:{% if b.status=='approved' %}#16a34a{% else %}#dc2626{% endif %}"></i>
+                <strong>{{ rv.full_name }}</strong>
+              </div>
+              {% endif %}
+              {% if b.get('approved_at') %}
+              <div style="margin-top:2px"><i class="far fa-clock"></i> {{ b.approved_at[:10] }}</div>
+              {% endif %}
+              {% if b.get('rejection_reason') %}
+              <div style="margin-top:4px;font-style:italic;color:#b91c1c">
+                "{{ b.rejection_reason }}"
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p style="font-size:12px;color:#9ca3af;margin-top:12px">
+    Showing {{ bookings|length }} booking{{ 's' if bookings|length != 1 else '' }}
+    {% if status_filter != 'all' %} with status <strong>{{ status_filter }}</strong>{% endif %}
+    {% if q %} matching <em>"{{ q }}"</em>{% endif %}
+  </p>
+
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-calendar-times"></i>
+    <p>
+      No exam bookings found
+      {% if status_filter != 'all' %} with status <strong>{{ status_filter }}</strong>{% endif %}
+      {% if q %} matching <em>"{{ q }}"</em>{% endif %}.
+    </p>
   </div>
   {% endif %}
-  
-  {% if booking.status == 'pending' %}
-  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-    <form action="{{ url_for('dept_admin.approve_exam_booking', booking_id=booking.id) }}" method="POST" style="margin:0;">
-      <button type="submit" class="btn-approve">
-        <i class="fas fa-check"></i> Approve
-      </button>
-    </form>
-    
-    <form action="{{ url_for('dept_admin.reject_exam_booking', booking_id=booking.id) }}" method="POST" style="flex: 1; min-width: 280px; margin:0;">
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <input type="text" name="rejection_reason" placeholder="Reason for rejection (optional)" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex: 1;">
-        <button type="submit" class="btn-reject">
-          <i class="fas fa-times"></i> Reject
-        </button>
-      </div>
-    </form>
-  </div>
-  {% endif %}
+
 </div>
-{% endfor %}
-{% endif %}
 {% endblock %}

@@ -546,29 +546,77 @@ def download_unit_report(unit_id):
 @dept_admin_required
 def exam_bookings():
     db = get_service_client()
-    dept_id = _dept_id()
-    status_filter = request.args.get("status", "pending")
-    query = (db.table("exam_bookings")
-        .select("*, units(name, code, department_id), student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no), reviewer:user_profiles!exam_bookings_approved_by_fkey(full_name)")
-        .order("created_at", desc=True))
-    if status_filter and status_filter != "all":
-        query = query.eq("status", status_filter)
-    bookings = query.execute().data or []
-    bookings = [b for b in bookings if b.get("units", {}).get("department_id") == dept_id]
+    dept_id       = _dept_id()
+    status_filter = request.args.get("status", "all")
+    q             = request.args.get("q", "").strip()
 
-    # Attach class name via student enrollment (no FK between exam_bookings and classes)
+    # Filter by students enrolled in THIS department (not by unit.department_id)
+    enr = (db.table("enrollments")
+           .select("student_id, classes!inner(department_id, name)")
+           .eq("classes.department_id", dept_id)
+           .execute().data or [])
+
+    # Build student_id → class_name map
+    student_class = {}
+    for e in enr:
+        sid = e.get("student_id")
+        cls = (e.get("classes") or {}).get("name", "")
+        if sid and sid not in student_class:
+            student_class[sid] = cls
+
+    student_ids = list(student_class.keys())
+
+    bookings = []
+    if student_ids:
+        query = (db.table("exam_bookings")
+            .select("*, "
+                    "units(name, code), "
+                    "student:user_profiles!exam_bookings_student_id_fkey"
+                    "(full_name, admission_no, mobile_number), "
+                    "reviewer:user_profiles!exam_bookings_approved_by_fkey(full_name)")
+            .in_("student_id", student_ids)
+            .order("created_at", desc=True))
+
+        if status_filter and status_filter != "all":
+            query = query.eq("status", status_filter)
+
+        bookings = query.execute().data or []
+
+    # Flatten nested aliases and attach class name
     for b in bookings:
-        b["student_user"] = b.get("student") or {}
+        b["student_user"]    = b.get("student")  or {}
         b["approved_by_user"] = b.get("reviewer") or {}
-        student_id = b.get("student_id")
-        if student_id:
-            enroll = (db.table("enrollments")
-                .select("classes(name)")
-                .eq("student_id", student_id).limit(1).execute().data or [])
-            b["classes"] = enroll[0].get("classes") if enroll and enroll[0] else None
+        b["class_name"]      = student_class.get(b.get("student_id"), "—")
+
+    # Name/admission search (client-side friendly — done server-side here)
+    if q:
+        ql = q.lower()
+        bookings = [b for b in bookings
+                    if ql in b["student_user"].get("full_name",  "").lower()
+                    or ql in b["student_user"].get("admission_no", "").lower()]
+
+    # Counts for tab badges
+    all_student_bookings = []
+    if student_ids:
+        try:
+            all_student_bookings = (db.table("exam_bookings")
+                .select("status")
+                .in_("student_id", student_ids)
+                .execute().data or [])
+        except Exception:
+            pass
+    counts = {
+        "all":      len(all_student_bookings),
+        "pending":  sum(1 for b in all_student_bookings if b["status"] == "pending"),
+        "approved": sum(1 for b in all_student_bookings if b["status"] == "approved"),
+        "rejected": sum(1 for b in all_student_bookings if b["status"] == "rejected"),
+    }
 
     return render_template("dept_admin/exam_bookings.html",
-                           bookings=bookings, status_filter=status_filter)
+                           bookings=bookings,
+                           status_filter=status_filter,
+                           q=q,
+                           counts=counts)
 
 
 @dept_admin_bp.route("/exam-bookings/<booking_id>/approve", methods=["POST"])
