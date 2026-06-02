@@ -847,40 +847,79 @@ def trainer_documents():
 @dept_admin_bp.route("/trainee-poe")
 @dept_admin_required
 def trainee_poe():
+    import os
     db = get_service_client()
-    dept_id = _dept_id()
-    
-    status_filter = request.args.get("status", "")
-    class_filter  = request.args.get("class_id", "")
-    unit_filter   = request.args.get("unit_id", "")
-    
-    query = (db.table("assessments")
-        .select("*, student:user_profiles!assessments_student_id_fkey(full_name, admission_no), units!inner(name, code, department_id), classes(name), reviewer:user_profiles!assessments_reviewed_by_fkey(full_name)")
-        .eq("units.department_id", dept_id))
-    
-    if status_filter in ("approved", "rejected"):
-        query = query.eq("status", status_filter)
-    else:
-        query = query.in_("status", ["approved", "rejected"])
-        
-    if class_filter:
-        query = query.eq("class_id", class_filter)
-    if unit_filter:
-        query = query.eq("unit_id", unit_filter)
-        
-    assessments = query.order("reviewed_at", desc=True).execute().data or []
-    
-    classes = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
-    units   = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
-    
+    dept_id      = _dept_id()
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+
+    def _fmt_size(b):
+        if not b: return "0 B"
+        for u in ["B", "KB", "MB", "GB"]:
+            if b < 1024: return f"{b:.1f} {u}"
+            b /= 1024
+        return f"{b:.1f} GB"
+
+    try:
+        rows = (db.table("assessments")
+            .select("id, status, script_file_path, script_file_name, script_file_size, "
+                    "uploaded_at, assessment_type, assessment_no, term, year, "
+                    "student:user_profiles!assessments_student_id_fkey(full_name, admission_no), "
+                    "units!inner(name, code, department_id), "
+                    "classes(name)")
+            .eq("units.department_id", dept_id)
+            .order("uploaded_at", desc=True)
+            .execute().data or [])
+    except Exception as e:
+        print(f"[trainee_poe] {e}")
+        rows = []
+
+    # Build class → unit → files structure
+    folder_map = {}
+    for a in rows:
+        cls_name  = (a.get("classes") or {}).get("name") or "Uncategorised"
+        unit_obj  = a.get("units") or {}
+        unit_name = f"{unit_obj.get('code','?')} — {unit_obj.get('name','?')}" if unit_obj.get("name") else "Unknown Unit"
+        student   = a.get("student") or {}
+        fp        = a.get("script_file_path") or ""
+        status    = (a.get("status") or "pending").title()
+
+        file_obj = {
+            "id":             str(a.get("id", "")),
+            "name":           a.get("script_file_name") or f"{a.get('assessment_type','?')} #{a.get('assessment_no','?')}",
+            "url":            f"{supabase_url}/storage/v1/object/public/assessment-scripts/{fp}" if fp else "",
+            "status":         status,
+            "admissionNumber": student.get("admission_no") or "N/A",
+            "studentName":    student.get("full_name") or "Unknown",
+            "formattedSize":  _fmt_size(a.get("script_file_size") or 0),
+            "size":           a.get("script_file_size") or 0,
+            "assessmentType": a.get("assessment_type") or "",
+            "assessmentNo":   str(a.get("assessment_no") or ""),
+            "term":           str(a.get("term") or ""),
+            "year":           str(a.get("year") or ""),
+            "uploadedAt":     (a.get("uploaded_at") or "")[:10],
+            "className":      cls_name,
+            "unitName":       unit_name,
+        }
+        folder_map.setdefault(cls_name, {}).setdefault(unit_name, []).append(file_obj)
+
+    classes_data = []
+    for cls_name in sorted(folder_map):
+        units_list = []
+        for unit_name in sorted(folder_map[cls_name]):
+            files = sorted(folder_map[cls_name][unit_name],
+                           key=lambda f: (f["admissionNumber"] == "N/A", f["admissionNumber"]))
+            units_list.append({"name": unit_name, "files": files})
+        classes_data.append({"name": cls_name, "units": units_list})
+
+    total_size = _fmt_size(sum(a.get("script_file_size") or 0 for a in rows))
+
     return render_template(
         "dept_admin/trainee_poe.html",
-        assessments=assessments,
-        classes=classes,
-        units=units,
-        status_filter=status_filter,
-        class_filter=class_filter,
-        unit_filter=unit_filter
+        classes_data=classes_data,
+        total_classes=len(folder_map),
+        total_units=sum(len(v) for v in folder_map.values()),
+        total_files=len(rows),
+        total_size=total_size,
     )
 
 
