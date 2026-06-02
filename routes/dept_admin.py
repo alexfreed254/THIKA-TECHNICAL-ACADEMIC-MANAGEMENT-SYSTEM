@@ -1671,7 +1671,7 @@ def review_application(app_id):
     return redirect(url_for("dept_admin.applications"))
 
 
-# ── GIS Placement Tracking Dashboard ────────────────────────────────────────────
+# ── GIS Placement Tracking & Digital Logbook ─────────────────────────────────
 
 @dept_admin_bp.route("/gis-tracking")
 @dept_admin_required
@@ -1679,18 +1679,78 @@ def gis_tracking():
     db = get_service_client()
     dept_id = _dept_id()
 
+    # ── Students enrolled in this department ────────────────────────────────────
+    enr = (db.table("enrollments")
+           .select("student_id, classes!inner(department_id)")
+           .eq("classes.department_id", dept_id)
+           .execute().data or [])
+    student_ids = list({e["student_id"] for e in enr})
+
+    # ── Industrial attachments (company locations on map) ───────────────────────
     placements = []
     try:
-        placements = (db.table("industrial_attachments")
-            .select("*, companies(name, latitude, longitude, city, industry_classification), "
-                    "units(name, code), user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no)")
-            .in_("status", ["active", "approved", "pending"])
-            .not_.is_("companies.latitude", None)
-            .not_.is_("companies.longitude", None)
-            .order("created_at", desc=True)
-            .execute().data or [])
+        if student_ids:
+            placements = (db.table("industrial_attachments")
+                .select("id, student_id, status, start_date, end_date, "
+                        "companies(name, latitude, longitude, city, "
+                        "  industry_classification, geofence_radius_meters), "
+                        "units(name, code), "
+                        "student:user_profiles!industrial_attachments_student_id_fkey"
+                        "(full_name, admission_no)")
+                .in_("student_id", student_ids)
+                .in_("status", ["active", "approved", "pending"])
+                .order("created_at", desc=True)
+                .execute().data or [])
     except Exception as e:
-        flash(f"Error loading GIS data: {e}", "error")
+        flash(f"Error loading placements: {e}", "warning")
+
+    # ── Live locations: most recent check-in per student ────────────────────────
+    live_locations = []
+    try:
+        if student_ids:
+            loc_rows = (db.table("location_logs")
+                .select("student_id, latitude, longitude, check_in_time, "
+                        "check_out_time, accuracy_meters, is_within_geofence")
+                .in_("student_id", student_ids)
+                .not_.is_("latitude", "null")
+                .order("check_in_time", desc=True)
+                .execute().data or [])
+            seen = set()
+            for loc in loc_rows:
+                sid = loc["student_id"]
+                if sid not in seen:
+                    seen.add(sid)
+                    live_locations.append(loc)
+    except Exception as e:
+        print(f"[gis_tracking] location_logs: {e}")
+
+    # Attach student info to live locations from placements
+    student_map = {p.get("student_id"): p.get("student") or {}
+                   for p in placements if p.get("student_id")}
+    for loc in live_locations:
+        loc["student"] = student_map.get(loc["student_id"], {})
+
+    # ── Digital Logbook entries ─────────────────────────────────────────────────
+    logbook_entries = []
+    logbook_error   = None
+    try:
+        if student_ids:
+            logbook_entries = (db.table("digital_logbook")
+                .select("id, student_id, log_date, entry_time, tasks_performed, "
+                        "skills_applied, hours_worked, challenges_encountered, "
+                        "achievements, mentor_approval_status, mentor_comments, "
+                        "trainer_comments, created_at, "
+                        "student:user_profiles!digital_logbook_student_id_fkey"
+                        "(full_name, admission_no), "
+                        "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
+                        "(companies(name))")
+                .in_("student_id", student_ids)
+                .order("log_date", desc=True)
+                .limit(500)
+                .execute().data or [])
+    except Exception as e:
+        logbook_error = str(e)
+        print(f"[gis_tracking] digital_logbook: {e}")
 
     status_counts = {"active": 0, "approved": 0, "pending": 0}
     for p in placements:
@@ -1698,6 +1758,12 @@ def gis_tracking():
         if s in status_counts:
             status_counts[s] += 1
 
-    return render_template("dept_admin/gis_tracking.html",
-                          placements=placements,
-                          status_counts=status_counts)
+    return render_template(
+        "dept_admin/gis_tracking.html",
+        placements=placements,
+        live_locations=live_locations,
+        logbook_entries=logbook_entries,
+        logbook_error=logbook_error,
+        status_counts=status_counts,
+        total_students=len(student_ids),
+    )

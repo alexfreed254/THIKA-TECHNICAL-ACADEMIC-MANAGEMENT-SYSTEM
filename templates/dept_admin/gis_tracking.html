@@ -1,158 +1,474 @@
 {% extends "dept_admin/base.html" %}
+{% block title %}GIS Placements & Logbook{% endblock %}
+{% block page_title %}GIS Placements & Industrial Attachments{% endblock %}
 
-{% block title %}GIS Placement Tracking{% endblock %}
-{% block page_title %}GIS Placement Tracking{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.tailwindcss.com"></script>
+{% endblock %}
 
 {% block extra_style %}
 <style>
-  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
-  .stat-card { background: white; border-radius: 8px; padding: 18px; text-align: center; }
-  .stat-card .num { font-size: 28px; font-weight: 700; }
-  .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
-  .stat-card.active .num { color: #2196f3; }
-  .stat-card.approved .num { color: #27ae60; }
-  .stat-card.pending .num { color: #e67e22; }
+  #gis-app { font-family: 'Inter', sans-serif; }
 
-  #map { height: 500px; border-radius: 8px; margin-bottom: 20px; }
+  /* ── Tab nav ── */
+  .gtab-active { background:#1565c0 !important; color:#fff !important; border-color:#1565c0 !important; }
 
-  .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-  .filters select, .filters input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
-  .filter-pill { padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: white; transition: all .2s; }
-  .filter-pill:hover, .filter-pill.active { background: #1565c0; color: white; border-color: #1565c0; }
+  /* ── Stat chips ── */
+  .schip {
+    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+    padding:16px 20px; display:flex; align-items:center; gap:14px; flex:1; min-width:130px;
+  }
+  .schip-icon { width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
+  .schip-num  { font-size:26px;font-weight:800;color:#111827;line-height:1; }
+  .schip-lbl  { font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
 
-  .placement-table { background: white; border-radius: 8px; overflow: hidden; }
-  .placement-table table { width: 100%; border-collapse: collapse; }
-  .placement-table th, .placement-table td { padding: 10px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid #eee; }
-  .placement-table th { background: #f5f5f5; font-weight: 600; }
-  .placement-table tr:hover { background: #f8f9fa; }
-  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .status-dot.active { background: #2196f3; }
-  .status-dot.approved { background: #27ae60; }
-  .status-dot.pending { background: #e67e22; }
+  /* ── Map ── */
+  #map { height:480px; border-radius:12px; border:1px solid #e5e7eb; }
+
+  /* ── Filters ── */
+  .filter-wrap {
+    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
+    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+    padding:16px 20px; margin-bottom:20px;
+  }
+  .filter-wrap input, .filter-wrap select {
+    padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
+    font-size:13px; background:#f9fafb; outline:none;
+    transition:border-color .2s;
+  }
+  .filter-wrap input:focus, .filter-wrap select:focus { border-color:#1565c0; background:#fff; }
+  .filter-wrap input[type=text] { min-width:200px; flex:1; }
+
+  /* ── Table shared ── */
+  .data-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+  .data-tbl  { width:100%; border-collapse:collapse; }
+  .data-tbl thead { background:#f0f7ff; }
+  .data-tbl th {
+    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+    color:#1565c0; text-transform:uppercase; letter-spacing:.05em;
+    border-bottom:2px solid #dbeafe; white-space:nowrap;
+  }
+  .data-tbl td { padding:12px 14px; font-size:13px; color:#374151; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+  .data-tbl tr:last-child td { border-bottom:none; }
+  .data-tbl tr:hover td { background:#f8fbff; }
+  .sname { font-weight:600; color:#111827; }
+  .sadm  { font-size:11px; color:#9ca3af; margin-top:2px; }
+
+  /* Status badges */
+  .badge { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
+  .b-active   { background:#dbeafe; color:#1d4ed8; }
+  .b-approved { background:#dcfce7; color:#15803d; }
+  .b-pending  { background:#fef3c7; color:#b45309; }
+  .b-terminated { background:#fee2e2; color:#b91c1c; }
+  .b-lb-approved { background:#dcfce7; color:#15803d; }
+  .b-lb-pending  { background:#fef3c7; color:#b45309; }
+  .b-lb-rejected { background:#fee2e2; color:#b91c1c; }
+
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+  .dot-active   { background:#3b82f6; }
+  .dot-approved { background:#22c55e; }
+  .dot-pending  { background:#f59e0b; }
+
+  /* Live location badge */
+  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;
+              animation:pulseDot 1.4s infinite; }
+  @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+  /* Logbook entry detail cell */
+  .lb-text { font-size:12px; color:#374151; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* Map legend */
+  .map-legend { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 16px; font-size:12px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-weight:600; color:#374151; }
+  .legend-circle-company { width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 2px #3b82f6; }
+  .legend-circle-live    { width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px #ef4444; }
+
+  .empty-state { padding:48px 24px; text-align:center; color:#9ca3af; }
+  .empty-state i { font-size:36px; display:block; margin-bottom:10px; }
+
+  @media(max-width:640px) {
+    .data-tbl th:nth-child(n+4), .data-tbl td:nth-child(n+4) { display:none; }
+  }
 </style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 {% endblock %}
 
 {% block content %}
-<div class="stat-cards">
-  <div class="stat-card active">
-    <div class="num">{{ status_counts.active }}</div>
-    <div class="label">Active Placements</div>
-  </div>
-  <div class="stat-card approved">
-    <div class="num">{{ status_counts.approved }}</div>
-    <div class="label">Approved</div>
-  </div>
-  <div class="stat-card pending">
-    <div class="num">{{ status_counts.pending }}</div>
-    <div class="label">Pending</div>
-  </div>
-  <div class="stat-card">
-    <div class="num">{{ placements|length }}</div>
-    <div class="label">Total on Map</div>
-  </div>
-</div>
+<div id="gis-app" class="p-4">
 
-<div class="filters">
-  <input type="text" id="searchInput" placeholder="Search student or company..." style="flex:1;min-width:200px">
-  <select id="statusFilter">
-    <option value="all">All Statuses</option>
-    <option value="active">Active</option>
-    <option value="approved">Approved</option>
-    <option value="pending">Pending</option>
-  </select>
-</div>
+  <!-- ── Tab nav ── -->
+  <nav class="flex p-1.5 bg-white rounded-2xl shadow-sm border border-slate-200 mb-8 w-fit gap-1">
+    <button id="tab-gis" onclick="gTab('gis')"
+      class="gtab-active px-6 py-2.5 rounded-xl text-sm font-bold border border-transparent flex items-center gap-2">
+      <i class="fas fa-map-marked-alt"></i> GIS Live Map
+    </button>
+    <button id="tab-logbook" onclick="gTab('logbook')"
+      class="px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-transparent hover:bg-slate-50 flex items-center gap-2">
+      <i class="fas fa-book-open"></i> Digital Logbook
+      <span id="lb-badge" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ logbook_entries|length }}</span>
+    </button>
+  </nav>
 
-<div id="map"></div>
+  <!-- ══════════════════════════ GIS TAB ══════════════════════════ -->
+  <section id="sec-gis">
 
-<div class="placement-table">
-  <table>
-    <thead>
-      <tr>
-        <th>Student</th>
-        <th>Company</th>
-        <th>Location</th>
-        <th>Unit</th>
-        <th>Status</th>
-        <th>Period</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody">
-      {% for p in placements %}
-      {% set company = p.companies or {} %}
-      {% set student = p.user_profiles or {} %}
-      {% set unit = p.units or {} %}
-      <tr data-status="{{ p.status }}" data-search="{{ student.full_name|lower }} {{ company.name|lower }}">
-        <td>{{ student.full_name }}<br><small style="color:#999">{{ student.admission_no }}</small></td>
-        <td>{{ company.name }}</td>
-        <td>{{ company.city or '' }}</td>
-        <td>{{ unit.name }} ({{ unit.code }})</td>
-        <td><span class="status-dot {{ p.status }}"></span>{{ p.status|capitalize }}</td>
-        <td>{{ p.start_date }} &rarr; {{ p.end_date }}</td>
-      </tr>
+    <!-- Stat chips -->
+    <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:24px">
+      <div class="schip">
+        <div class="schip-icon" style="background:#dbeafe"><i class="fas fa-users" style="color:#1d4ed8"></i></div>
+        <div><div class="schip-num">{{ total_students }}</div><div class="schip-lbl">Dept Students</div></div>
+      </div>
+      <div class="schip">
+        <div class="schip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
+        <div><div class="schip-num">{{ status_counts.active }}</div><div class="schip-lbl">Active</div></div>
+      </div>
+      <div class="schip">
+        <div class="schip-icon" style="background:#ede9fe"><i class="fas fa-clipboard-check" style="color:#6d28d9"></i></div>
+        <div><div class="schip-num">{{ status_counts.approved }}</div><div class="schip-lbl">Approved</div></div>
+      </div>
+      <div class="schip">
+        <div class="schip-icon" style="background:#fef3c7"><i class="fas fa-clock" style="color:#b45309"></i></div>
+        <div><div class="schip-num">{{ status_counts.pending }}</div><div class="schip-lbl">Pending</div></div>
+      </div>
+      <div class="schip">
+        <div class="schip-icon" style="background:#fee2e2"><i class="fas fa-map-pin" style="color:#b91c1c"></i></div>
+        <div><div class="schip-num">{{ live_locations|length }}</div><div class="schip-lbl">Live Check-ins</div></div>
+      </div>
+    </div>
+
+    <!-- Map legend -->
+    <div class="map-legend">
+      <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;">Map Legend:</span>
+      <span class="legend-item"><span class="legend-circle-company"></span> Company / Placement Site</span>
+      <span class="legend-item"><span class="legend-circle-live"></span> <span class="live-dot" style="width:8px;height:8px;margin-right:0"></span>&nbsp;Trainee Last Check-in</span>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-wrap">
+      <input type="text" id="gis-search" placeholder="Search student or company…" oninput="filterGIS()">
+      <select id="gis-status" onchange="filterGIS()">
+        <option value="all">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="approved">Approved</option>
+        <option value="pending">Pending</option>
+      </select>
+    </div>
+
+    <!-- Leaflet map -->
+    <div id="map" style="margin-bottom:24px"></div>
+
+    <!-- Placements table -->
+    <div class="data-card">
+      <div style="padding:14px 18px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:15px;font-weight:700;color:#0d2167"><i class="fas fa-table" style="color:#1565c0;margin-right:6px"></i>All Placements</span>
+        <span style="font-size:12px;color:#9ca3af">{{ placements|length }} placement{{ 's' if placements|length!=1 }}</span>
+      </div>
+      {% if placements %}
+      <div style="overflow-x:auto">
+        <table class="data-tbl" id="placement-table">
+          <thead>
+            <tr>
+              <th>Trainee</th>
+              <th>Company</th>
+              <th>City</th>
+              <th>Unit</th>
+              <th>Status</th>
+              <th>Period</th>
+              <th>Last Check-in</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in placements %}
+            {% set co = p.companies or {} %}
+            {% set st = p.student   or {} %}
+            {% set un = p.units     or {} %}
+            <tr data-status="{{ p.status }}" data-search="{{ st.get('full_name','')|lower }} {{ co.get('name','')|lower }}">
+              <td>
+                <div class="sname">{{ st.get('full_name','—') }}</div>
+                <div class="sadm">{{ st.get('admission_no','') }}</div>
+              </td>
+              <td style="font-weight:600">{{ co.get('name','—') }}</td>
+              <td style="color:#6b7280;font-size:12px">{{ co.get('city','') }}</td>
+              <td>
+                <span style="font-weight:600;color:#0d2167">{{ un.get('code','') }}</span>
+                <div style="font-size:11px;color:#9ca3af">{{ un.get('name','') }}</div>
+              </td>
+              <td>
+                <span class="dot dot-{{ p.status }}"></span>
+                <span class="badge b-{{ p.status }}">{{ p.status|title }}</span>
+              </td>
+              <td style="font-size:12px;color:#6b7280;white-space:nowrap">
+                {{ p.start_date or '—' }} → {{ p.end_date or '—' }}
+              </td>
+              <td id="checkin-{{ p.student_id }}" style="font-size:12px;color:#9ca3af">—</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
-      <tr><td colspan="6" style="text-align:center;padding:30px;color:#999">No placements with location data found.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endblock %}
+      <div class="empty-state"><i class="fas fa-map-pin"></i><p>No placements found for your department.</p></div>
+      {% endif %}
+    </div>
+  </section>
 
-{% block extra_script %}
+  <!-- ══════════════════════════ LOGBOOK TAB ══════════════════════════ -->
+  <section id="sec-logbook" class="hidden">
+
+    {% if logbook_error %}
+    <div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:14px 20px;border-radius:10px;margin-bottom:20px;font-size:13px">
+      <i class="fas fa-exclamation-triangle"></i> Could not load logbook data: {{ logbook_error }}
+    </div>
+    {% endif %}
+
+    <!-- Logbook filter bar -->
+    <div class="filter-wrap">
+      <input type="text" id="lb-search" placeholder="Search trainee name or admission no…" oninput="filterLogbook()" style="flex:2">
+      <select id="lb-status" onchange="filterLogbook()">
+        <option value="all">All Approvals</option>
+        <option value="approved">Approved</option>
+        <option value="pending">Pending</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <input type="date" id="lb-date-from" onchange="filterLogbook()" title="From date">
+      <input type="date" id="lb-date-to"   onchange="filterLogbook()" title="To date">
+      <button onclick="clearLBFilters()"
+        style="padding:8px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+        <i class="fas fa-undo"></i> Clear
+      </button>
+    </div>
+
+    <div class="data-card">
+      <div style="padding:14px 18px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span style="font-size:15px;font-weight:700;color:#0d2167"><i class="fas fa-book-open" style="color:#1565c0;margin-right:6px"></i>Digital Logbook Entries</span>
+        <span id="lb-count" style="font-size:12px;color:#9ca3af">{{ logbook_entries|length }} entr{{ 'ies' if logbook_entries|length!=1 else 'y' }}</span>
+      </div>
+
+      {% if logbook_entries %}
+      <div style="overflow-x:auto">
+        <table class="data-tbl" id="lb-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Trainee</th>
+              <th>Company</th>
+              <th>Time Slot</th>
+              <th>Tasks Performed</th>
+              <th>Skills Applied</th>
+              <th>Hrs</th>
+              <th>Challenges</th>
+              <th>Achievements</th>
+              <th>Status</th>
+              <th>Mentor Comment</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in logbook_entries %}
+            {% set st  = e.student    or {} %}
+            {% set att = e.attachment or {} %}
+            {% set co  = (att.get('companies') or {}) if att else {} %}
+            {% set lb_status = e.get('mentor_approval_status','pending') %}
+            <tr data-status="{{ lb_status }}"
+                data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}"
+                data-date="{{ e.get('log_date','') }}">
+              <td style="white-space:nowrap;font-weight:600;color:#374151">{{ e.get('log_date','—') }}</td>
+              <td>
+                <div class="sname">{{ st.get('full_name','—') }}</div>
+                <div class="sadm">{{ st.get('admission_no','') }}</div>
+              </td>
+              <td style="font-size:12px;color:#6b7280">{{ co.get('name','—') }}</td>
+              <td style="white-space:nowrap">
+                <span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">
+                  {{ e.get('entry_time','—') }}
+                </span>
+              </td>
+              <td><div class="lb-text" title="{{ e.get('tasks_performed','') }}">{{ e.get('tasks_performed','—') }}</div></td>
+              <td><div class="lb-text" title="{{ e.get('skills_applied','') }}">{{ e.get('skills_applied','—') }}</div></td>
+              <td style="font-weight:700;text-align:center">{{ e.get('hours_worked','—') }}</td>
+              <td><div class="lb-text" title="{{ e.get('challenges_encountered','') }}">{{ e.get('challenges_encountered','—') }}</div></td>
+              <td><div class="lb-text" title="{{ e.get('achievements','') }}">{{ e.get('achievements','—') }}</div></td>
+              <td>
+                <span class="badge b-lb-{{ lb_status }}">
+                  {% if lb_status == 'approved' %}<i class="fas fa-check-circle"></i>{% elif lb_status == 'rejected' %}<i class="fas fa-times-circle"></i>{% else %}<i class="fas fa-clock"></i>{% endif %}
+                  {{ lb_status|title }}
+                </span>
+              </td>
+              <td>
+                {% if e.get('mentor_comments') %}
+                <div class="lb-text" title="{{ e.get('mentor_comments','') }}" style="font-style:italic;color:#6b7280">
+                  "{{ e.mentor_comments }}"
+                </div>
+                {% else %}
+                <span style="color:#d1d5db;font-size:12px">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-book"></i>
+        <p>No logbook entries found{% if not logbook_error %} for trainees in your department{% endif %}.</p>
+        <p style="font-size:12px;margin-top:6px">Trainees submit logbook entries from the Trainee Dashboard → Digital Logbook.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </section>
+
+</div><!-- /gis-app -->
+
+{% block scripts %}{% endblock %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const placements = {{ placements | tojson | safe }};
-
-// Init map centered on Thika, Kenya
-const map = L.map('map').setView([-1.038, 37.083], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors',
-  maxZoom: 18
-}).addTo(map);
-
-const bounds = [];
-placements.forEach(p => {
-  const company = p.companies || {};
-  const student = p.user_profiles || {};
-  const unit = p.units || {};
-  const lat = parseFloat(company.latitude);
-  const lng = parseFloat(company.longitude);
-  if (!lat || !lng) return;
-
-  const color = p.status === 'active' ? '#2196f3' : p.status === 'approved' ? '#27ae60' : '#e67e22';
-  const marker = L.circleMarker([lat, lng], {
-    radius: 10, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8
-  }).addTo(map);
-
-  marker.bindPopup(`
-    <b>${company.name}</b><br>
-    <b>Student:</b> ${student.full_name || 'N/A'} (${student.admission_no || ''})<br>
-    <b>Unit:</b> ${unit.name || ''} ${unit.code || ''}<br>
-    <b>Status:</b> ${p.status}<br>
-    <b>Period:</b> ${p.start_date} &rarr; ${p.end_date}
-  `);
-  bounds.push([lat, lng]);
-});
-
-if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
-
-// Filtering
-const searchInput = document.getElementById('searchInput');
-const statusFilter = document.getElementById('statusFilter');
-
-function filterTable() {
-  const q = searchInput.value.toLowerCase().trim();
-  const status = statusFilter.value;
-  document.querySelectorAll('#tableBody tr').forEach(row => {
-    const rowStatus = row.dataset.status;
-    const rowSearch = row.dataset.search || '';
-    const matchStatus = status === 'all' || rowStatus === status;
-    const matchSearch = !q || rowSearch.includes(q);
-    row.style.display = matchStatus && matchSearch ? '' : 'none';
+/* ═══ TAB SWITCHING ═══ */
+function gTab(tab) {
+  ['gis','logbook'].forEach(function(t) {
+    document.getElementById('sec-'+t).classList.toggle('hidden', t !== tab);
+    var btn = document.getElementById('tab-'+t);
+    if (t === tab) {
+      btn.className = 'gtab-active px-6 py-2.5 rounded-xl text-sm font-bold border flex items-center gap-2';
+    } else {
+      btn.className = 'px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-transparent hover:bg-slate-50 flex items-center gap-2';
+    }
   });
 }
 
-searchInput.addEventListener('input', filterTable);
-statusFilter.addEventListener('change', filterTable);
+/* ═══ MAP SETUP ═══ */
+var PLACEMENTS   = {{ placements    | tojson | safe }};
+var LIVE_LOCS    = {{ live_locations | tojson | safe }};
+
+var map = L.map('map').setView([-1.038, 37.083], 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
+}).addTo(map);
+
+var bounds    = [];
+var allMarkers = [];
+
+/* Company / placement site markers */
+PLACEMENTS.forEach(function(p) {
+  var co  = p.companies || {};
+  var st  = p.student   || {};
+  var un  = p.units     || {};
+  var lat = parseFloat(co.latitude);
+  var lng = parseFloat(co.longitude);
+  if (!lat || !lng) return;
+
+  var color = p.status === 'active' ? '#3b82f6' : p.status === 'approved' ? '#22c55e' : '#f59e0b';
+  var marker = L.circleMarker([lat, lng], {
+    radius: 12, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.85
+  }).addTo(map);
+
+  var geofenceR = parseFloat(co.geofence_radius_meters || 300);
+  L.circle([lat, lng], { radius: geofenceR, color: color, fillColor: color, fillOpacity: 0.08, weight: 1 }).addTo(map);
+
+  marker.bindPopup(
+    '<div style="font-family:Inter,sans-serif;min-width:200px">' +
+    '<b style="font-size:14px">'+escHtml(co.name || '—')+'</b>' +
+    '<div style="color:#6b7280;font-size:12px;margin-top:2px">'+escHtml(co.city || '')+'</div>' +
+    '<hr style="margin:8px 0;border-color:#f3f4f6">' +
+    '<b>Student:</b> '+escHtml(st.full_name||'—')+' ('+escHtml(st.admission_no||'')+')<br>' +
+    '<b>Unit:</b> '+escHtml(un.code||'')+' '+escHtml(un.name||'')+'<br>' +
+    '<b>Status:</b> '+p.status+'<br>' +
+    '<b>Period:</b> '+(p.start_date||'—')+' → '+(p.end_date||'—') +
+    '</div>'
+  );
+  bounds.push([lat, lng]);
+  allMarkers.push({ marker: marker, status: p.status,
+                    search: (st.full_name||'').toLowerCase()+' '+(co.name||'').toLowerCase() });
+});
+
+/* Live check-in markers */
+var liveByStudent = {};
+LIVE_LOCS.forEach(function(loc) { liveByStudent[loc.student_id] = loc; });
+
+LIVE_LOCS.forEach(function(loc) {
+  var lat = parseFloat(loc.latitude);
+  var lng = parseFloat(loc.longitude);
+  if (!lat || !lng) return;
+  var st  = loc.student || {};
+
+  var liveIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #ef4444;animation:pulseDot 1.4s infinite"></div>',
+    iconSize: [16, 16], iconAnchor: [8, 8]
+  });
+
+  var ci = loc.check_in_time ? loc.check_in_time.replace('T',' ').slice(0,16) : '—';
+  var co = loc.check_out_time ? loc.check_out_time.replace('T',' ').slice(0,16) : 'Still checked in';
+
+  var m = L.marker([lat, lng], { icon: liveIcon }).addTo(map);
+  m.bindPopup(
+    '<div style="font-family:Inter,sans-serif;min-width:190px">' +
+    '<b style="color:#ef4444"><i class="fas fa-map-pin"></i> Live Location</b>' +
+    '<hr style="margin:6px 0;border-color:#f3f4f6">' +
+    '<b>Student:</b> '+escHtml(st.full_name||'—')+' ('+escHtml(st.admission_no||'')+')<br>' +
+    '<b>Check-in:</b> '+ci+'<br>' +
+    '<b>Check-out:</b> '+co+'<br>' +
+    (loc.accuracy_meters ? '<b>Accuracy:</b> '+loc.accuracy_meters+' m<br>' : '') +
+    '<b>Within geofence:</b> '+(loc.is_within_geofence ? '✅ Yes' : '❌ No') +
+    '</div>'
+  );
+  bounds.push([lat, lng]);
+
+  /* Populate "Last Check-in" column in table */
+  var cell = document.getElementById('checkin-'+loc.student_id);
+  if (cell) {
+    cell.innerHTML = '<span style="color:#374151;font-weight:600">'+ci+'</span>' +
+      (loc.is_within_geofence
+        ? '<br><span style="color:#15803d;font-size:10px"><i class="fas fa-check-circle"></i> In geofence</span>'
+        : '<br><span style="color:#b91c1c;font-size:10px"><i class="fas fa-times-circle"></i> Outside geofence</span>');
+  }
+});
+
+if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
+
+/* ═══ GIS FILTER ═══ */
+function filterGIS() {
+  var q      = document.getElementById('gis-search').value.toLowerCase().trim();
+  var status = document.getElementById('gis-status').value;
+  document.querySelectorAll('#placement-table tbody tr').forEach(function(row) {
+    var ms = status === 'all' || row.dataset.status === status;
+    var mq = !q || (row.dataset.search || '').includes(q);
+    row.style.display = ms && mq ? '' : 'none';
+  });
+}
+
+/* ═══ LOGBOOK FILTER ═══ */
+function filterLogbook() {
+  var q    = document.getElementById('lb-search').value.toLowerCase().trim();
+  var stat = document.getElementById('lb-status').value;
+  var from = document.getElementById('lb-date-from').value;
+  var to   = document.getElementById('lb-date-to').value;
+  var vis  = 0;
+  document.querySelectorAll('#lb-table tbody tr').forEach(function(row) {
+    var ms = stat === 'all' || row.dataset.status === stat;
+    var mq = !q    || (row.dataset.search || '').includes(q);
+    var d  = row.dataset.date || '';
+    var mf = !from || d >= from;
+    var mt = !to   || d <= to;
+    var show = ms && mq && mf && mt;
+    row.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  var cnt = document.getElementById('lb-count');
+  if (cnt) cnt.textContent = vis + ' entr' + (vis !== 1 ? 'ies' : 'y');
+}
+
+function clearLBFilters() {
+  ['lb-search','lb-date-from','lb-date-to'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('lb-status').value = 'all';
+  filterLogbook();
+}
+
+/* ═══ HELPER ═══ */
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 </script>
 {% endblock %}
