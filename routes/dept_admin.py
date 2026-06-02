@@ -675,15 +675,15 @@ def reject_exam_booking(booking_id):
 # ── Marks ─────────────────────────────────────────────────────────────────────
 
 def _compute_grade(obtained, max_m):
-    """Return grade letter and percentage for a marks record."""
+    """Return (percentage, grade_code) using the TVET proficiency scale."""
     try:
         pct = round(float(obtained) / float(max_m) * 100, 1) if max_m else 0
     except (TypeError, ZeroDivisionError):
         pct = 0
-    if pct >= 70:   grade = "M"
-    elif pct >= 50: grade = "P"
-    elif pct >= 40: grade = "C"
-    else:           grade = "NYC"
+    if pct >= 80:   grade = "4"   # Mastery
+    elif pct >= 65: grade = "3"   # Proficiency
+    elif pct >= 50: grade = "2"   # Competent
+    else:           grade = "1"   # Not Yet Competent
     return pct, grade
 
 
@@ -784,7 +784,7 @@ def marks():
 
     # Summary stats
     distinct_students = len({r["student"].get("admission_no") for r in marks_list if r["student"].get("admission_no")})
-    pass_count  = sum(1 for r in marks_list if r["grade"] in ("M", "P"))
+    pass_count  = sum(1 for r in marks_list if r["grade"] in ("4", "3", "2"))  # Code 2+
     pass_rate   = round(pass_count / len(marks_list) * 100) if marks_list else 0
 
     return render_template(
