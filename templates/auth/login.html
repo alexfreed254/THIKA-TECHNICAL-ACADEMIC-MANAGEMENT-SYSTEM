@@ -187,9 +187,6 @@
       border-color: #93c5fd;
     }
 
-    .tab.apply-tab.active { color: #1565c0; background: #e3f2fd; border-color: #90caf9; }
-    .tab.apply-tab i { margin-right: 4px; }
-
     .login-panel h2 {
       font-size: clamp(2rem, 2.4vw, 2.5rem);
       line-height: 1.05;
@@ -378,7 +375,6 @@
         <div class="tabs">
           <button type="button" class="tab {% if (request.form.get('login_type', 'staff') == 'staff' or request.form.get('origin') == 'employer') and not request.args.get('apply') %}active{% endif %}" data-type="staff">Staff / Admin / Employer</button>
           <button type="button" class="tab {% if request.form.get('login_type') == 'student' %}active{% endif %}" data-type="student">Trainee</button>
-          <button type="button" class="tab apply-tab {% if request.args.get('apply') %}active{% endif %}" data-type="apply"><i class="fas fa-file-signature"></i> Apply</button>
         </div>
         <h2 id="welcomeHeading">Welcome back</h2>
         <p id="welcomeSubtext">Sign in to your account to continue.</p>
@@ -437,48 +433,8 @@
         <button type="submit" class="btn-login"><i class="fas fa-arrow-right"></i> Sign In</button>
       </form>
 
-      <form method="post" action="/apply" enctype="multipart/form-data" class="apply-form" id="applyForm">
-        <div class="field">
-          <label for="afull_name">Full Name <span style="color:#dc2626">*</span></label>
-          <input id="afull_name" type="text" name="full_name" placeholder="John Doe" required>
-        </div>
-        <div class="field">
-          <label for="aemail">Email Address <span style="color:#dc2626">*</span></label>
-          <input id="aemail" type="email" name="email" placeholder="john@example.com" required>
-        </div>
-        <div class="field">
-          <label for="aphone">Phone Number</label>
-          <input id="aphone" type="tel" name="phone" placeholder="+254 7XX XXX XXX">
-        </div>
-        <div class="field">
-          <label for="adepartment_id">Department <span style="color:#dc2626">*</span></label>
-          <select id="adepartment_id" name="department_id" required>
-            <option value="">-- Select Department --</option>
-            {% for dept in departments %}
-            <option value="{{ dept.id }}">{{ dept.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="field">
-          <label for="acourse_name">Course Name <span style="color:#dc2626">*</span></label>
-          <textarea id="acourse_name" name="course_name" placeholder="e.g. Diploma in Information Technology" required></textarea>
-        </div>
-        <div class="field">
-          <label>Upload Documents (KCSE Cert, ID, etc.)</label>
-          <div class="field-file" onclick="document.getElementById('adocuments').click()">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <p><strong>Click to upload</strong> or drag and drop</p>
-            <p style="font-size:0.82rem;color:#94a3b8">PDF, JPG, PNG — Max 5MB each</p>
-          </div>
-          <input id="adocuments" type="file" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="updateApplyFileLabel(this)">
-          <div id="applyFileList" style="font-size:0.85rem;color:#64748b;margin-top:4px;"></div>
-        </div>
-        <button type="submit" class="btn-apply"><i class="fas fa-paper-plane"></i> Submit Application</button>
-      </form>
-
       <div class="login-footer">
         <span id="employerRegisterSpan" style="display:none">New employer? <a href="/employer/register">Create employer account</a></span>
-        <span>New student? <a href="#" onclick="document.querySelector('.tab.apply-tab').click();return false">Apply for a Course</a></span>
       </div>
     </section>
   </div>
@@ -490,25 +446,14 @@
     const loginType = document.getElementById('loginType');
     const origin = document.getElementById('origin');
     const loginForm = document.getElementById('loginForm');
-    const applyForm = document.getElementById('applyForm');
     const welcomeHeading = document.getElementById('welcomeHeading');
     const welcomeSubtext = document.getElementById('welcomeSubtext');
     const staffIcon = document.getElementById('staffIcon');
 
     function showLoginForms() {
       loginForm.style.display = 'grid';
-      applyForm.classList.remove('visible');
-      applyForm.style.display = 'none';
       welcomeHeading.style.display = '';
       welcomeSubtext.style.display = '';
-    }
-
-    function showApplyForm() {
-      loginForm.style.display = 'none';
-      applyForm.style.display = 'grid';
-      applyForm.classList.add('visible');
-      welcomeHeading.style.display = 'none';
-      welcomeSubtext.style.display = 'none';
     }
 
     const forgotPwdLink = document.getElementById('forgotPwdLink');
@@ -537,9 +482,7 @@
         const type = tab.dataset.type;
         loginType.value = type;
 
-        if (type === 'apply') {
-          showApplyForm();
-        } else {
+        {
           showLoginForms();
           if (type === 'student') {
             staffField.style.display = 'none';
@@ -566,20 +509,6 @@
       }
     })();
 
-    // Check URL param to show apply tab on load
-    if (window.location.search.includes('apply=1')) {
-      document.querySelector('.tab.apply-tab').click();
-    }
-
-    function updateApplyFileLabel(input) {
-      const list = document.getElementById('applyFileList');
-      if (input.files.length === 0) {
-        list.textContent = '';
-        return;
-      }
-      list.innerHTML = '<strong>Selected files:</strong><br>' +
-        Array.from(input.files).map(f => `&bull; ${f.name} (${(f.size / 1024).toFixed(1)} KB)`).join('<br>');
-    }
   </script>
 </body>
 </html>
