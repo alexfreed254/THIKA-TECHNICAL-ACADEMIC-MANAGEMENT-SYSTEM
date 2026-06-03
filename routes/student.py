@@ -2020,21 +2020,25 @@ def industrial_attachment():
     user = current_user()
     student_id = user["id"]
     
-    # Get student's class via enrollments, then fetch class_units for that class
+    # Get student's class + department (course) via enrollments
     enrollment = (db.table("enrollments")
-                  .select("class_id, classes(name)")
+                  .select("class_id, classes(id, name, departments(name))")
                   .eq("student_id", student_id)
                   .limit(1)
                   .execute().data or [])
 
-    enrolled_units = []
+    course_name = ""
     if enrollment:
-        class_id = enrollment[0].get("class_id")
-        if class_id:
-            enrolled_units = (db.table("class_units")
-                              .select("*, units(name, code)")
-                              .eq("class_id", class_id)
-                              .execute().data or [])
+        cls  = enrollment[0].get("classes") or {}
+        dept = cls.get("departments") or {}
+        class_label = cls.get("name", "")
+        dept_label  = dept.get("name", "")
+        if dept_label and class_label:
+            course_name = f"{dept_label} — {class_label}"
+        else:
+            course_name = dept_label or class_label
+
+    enrolled_units = []  # kept for backward-compat but no longer used in the form
     
     # Get ALL student attachments (for history table)
     all_attachments = (db.table("industrial_attachments")
@@ -2068,7 +2072,8 @@ def industrial_attachment():
                           current_attachment=current_attachment,
                           all_attachments=all_attachments,
                           enrolled_units=enrolled_units,
-                          companies=[],  # no longer used — trainee types company
+                          course_name=course_name,
+                          companies=[],
                           today_logs=today_logs)
 
 
@@ -2086,7 +2091,9 @@ def request_attachment():
     company_address    = (request.form.get("company_address") or "").strip()
     supervisor_name    = (request.form.get("supervisor_name") or "").strip()
     supervisor_contact = (request.form.get("supervisor_contact") or "").strip()
-    unit_id            = (request.form.get("unit_id") or "").strip()
+    raw_unit_id        = (request.form.get("unit_id") or "").strip()
+    # Reject "None" / "null" strings that render from a missing template value
+    unit_id = raw_unit_id if raw_unit_id and raw_unit_id.lower() not in ("none", "null", "undefined", "") else None
     start_date         = (request.form.get("start_date") or "").strip()
     end_date           = (request.form.get("end_date") or "").strip()
     attachment_goals   = (request.form.get("attachment_goals") or "").strip()
@@ -2100,7 +2107,7 @@ def request_attachment():
     except ValueError:
         latitude = longitude = None
 
-    if not all([company_name, company_address, supervisor_name, supervisor_contact, unit_id, start_date, end_date]):
+    if not all([company_name, company_address, supervisor_name, supervisor_contact, start_date, end_date]):
         flash("All required fields must be filled in.", "error")
         return redirect(url_for("student.industrial_attachment"))
 

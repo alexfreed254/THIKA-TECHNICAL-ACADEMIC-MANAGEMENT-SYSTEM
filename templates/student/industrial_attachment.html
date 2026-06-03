@@ -471,17 +471,16 @@
               <input class="f-input" type="date" name="end_date" required>
             </div>
             <div class="f-field">
-              <label class="f-label">Unit of Competency <span class="req">*</span></label>
-              <select class="f-select" name="unit_id" required>
-                <option value="">-- Select Unit --</option>
-                {% for u in enrolled_units %}
-                {% set unit = u.get('units') or {} %}
-                <option value="{{ unit.get('id') }}">{{ unit.get('name','?') }} ({{ unit.get('code','') }})</option>
-                {% endfor %}
-              </select>
-              {% if not enrolled_units %}
-              <span class="f-hint" style="color:#dc2626">No units found — contact your department admin.</span>
-              {% endif %}
+              <label class="f-label">Course of Study</label>
+              <div class="f-input" style="background:#f1f5f9;color:#1e3a5f;font-weight:600;cursor:default;display:flex;align-items:center;gap:8px">
+                <i class="fas fa-graduation-cap" style="color:#3b82f6;flex-shrink:0"></i>
+                {% if course_name %}
+                  {{ course_name }}
+                {% else %}
+                  <em style="color:#9ca3af;font-weight:400">Not enrolled — contact your department admin</em>
+                {% endif %}
+              </div>
+              <input type="hidden" name="unit_id" value="">
             </div>
           </div>
         </div>
