@@ -1,154 +1,367 @@
 {% extends "industry_mentor/base.html" %}
-
-{% block title %}Logbook Review{% endblock %}
-{% block page_title %}Logbook Review{% endblock %}
+{% block title %}Digital Logbook{% endblock %}
+{% block page_title %}Digital Logbook Review{% endblock %}
 
 {% block extra_style %}
 <style>
-  .filters { display: flex; gap: 15px; margin-bottom: 20px; }
-  .filters select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
-  .logbook-list { display: grid; gap: 15px; }
-  .logbook-item { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ddd; }
-  .logbook-item.status-pending { border-left-color: #ffc107; }
-  .logbook-item.status-approved { border-left-color: #28a745; }
-  .logbook-item.status-rejected { border-left-color: #dc3545; }
-  .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-  .item-trainee { font-weight: 600; font-size: 16px; }
-  .item-date { color: #666; font-size: 14px; }
-  .item-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
-  .status-pending { background: #fff3cd; color: #856404; }
-  .status-approved { background: #d4edda; color: #155724; }
-  .status-rejected { background: #f8d7da; color: #721c24; }
-  .item-content { margin-bottom: 15px; }
-  .content-label { font-size: 12px; color: #666; margin-bottom: 4px; }
-  .content-value { margin-bottom: 10px; }
-  .item-actions { display: flex; gap: 10px; }
-  .btn-approve { background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
-  .btn-reject { background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
-  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-  .modal.active { display: flex; align-items: center; justify-content: center; }
-  .modal-content { background: white; padding: 25px; border-radius: 8px; max-width: 500px; width: 90%; }
-  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-  .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; height: 80px; resize: vertical; }
-  .btn-submit { background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
+  .lb-wrap { padding: 20px; }
+
+  /* ── Tab / status bar ─────────────────────────────── */
+  .status-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+  .stab {
+    padding:7px 18px; border-radius:8px; font-size:13px; font-weight:600;
+    text-decoration:none; border:1px solid #d1d5db; background:#f9fafb; color:#6b7280;
+    display:inline-flex; align-items:center; gap:6px; transition:all .15s;
+  }
+  .stab:hover { border-color:#374151; color:#374151; }
+  .stab.active-all      { background:#374151; color:#fff; border-color:#374151; }
+  .stab.active-pending  { background:#b45309; color:#fff; border-color:#b45309; }
+  .stab.active-approved { background:#15803d; color:#fff; border-color:#15803d; }
+  .stab.active-rejected { background:#b91c1c; color:#fff; border-color:#b91c1c; }
+  .tab-count { background:rgba(255,255,255,.25); padding:1px 7px; border-radius:9999px; font-size:11px; }
+  .stab:not([class*='active']) .tab-count { background:#e5e7eb; color:#374151; }
+
+  /* ── Search bar ───────────────────────────────────── */
+  .search-bar { display:flex; gap:10px; margin-bottom:20px; }
+  .search-bar input {
+    flex:1; padding:9px 14px; border:1px solid #d1d5db; border-radius:8px;
+    font-size:13px; background:#f9fafb; outline:none;
+  }
+  .search-bar input:focus { border-color:#1a56db; background:#fff; }
+
+  /* ── Entry cards ──────────────────────────────────── */
+  .entry-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+    margin-bottom:18px; overflow:hidden;
+    transition:box-shadow .2s;
+  }
+  .entry-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+  .entry-card.status-pending  { border-left:4px solid #f59e0b; }
+  .entry-card.status-approved { border-left:4px solid #22c55e; }
+  .entry-card.status-rejected { border-left:4px solid #ef4444; }
+
+  /* card header */
+  .ec-header {
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid #f3f4f6; flex-wrap:wrap; gap:10px;
+  }
+  .ec-student  { font-size:15px; font-weight:700; color:#111827; }
+  .ec-adm      { font-size:12px; color:#9ca3af; margin-top:2px; }
+  .ec-meta     { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:6px; }
+  .ec-date     { font-size:13px; font-weight:600; color:#374151; }
+  .slot-badge  {
+    background:#ede9fe; color:#6d28d9; font-size:11px; font-weight:700;
+    padding:3px 10px; border-radius:6px;
+  }
+  .hrs-badge   { background:#dbeafe; color:#1d4ed8; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; }
+
+  /* status pill */
+  .spill { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:9999px; font-size:11px; font-weight:700; }
+  .sp-pending  { background:#fef3c7; color:#b45309; border:1px solid #fde68a; }
+  .sp-approved { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+  .sp-rejected { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+
+  /* card body */
+  .ec-body { padding:14px 18px; }
+  .fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  @media(max-width:600px){ .fields-grid { grid-template-columns:1fr; } }
+  .field-lbl { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  .field-val  { font-size:13px; color:#374151; line-height:1.5; }
+
+  /* evidence strip */
+  .evidence-strip { margin-top:14px; }
+  .ev-lbl { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .ev-items { display:flex; flex-wrap:wrap; gap:8px; }
+  .ev-img {
+    width:80px; height:80px; object-fit:cover; border-radius:8px;
+    border:1px solid #e5e7eb; cursor:pointer; transition:transform .15s;
+  }
+  .ev-img:hover { transform:scale(1.05); }
+  .ev-video { width:160px; height:90px; border-radius:8px; border:1px solid #e5e7eb; background:#000; }
+  .ev-audio { width:240px; }
+  .ev-pdf {
+    display:inline-flex; align-items:center; gap:6px; padding:8px 14px;
+    background:#fef2f2; border:1px solid #fca5a5; border-radius:8px;
+    color:#b91c1c; font-size:12px; font-weight:700; text-decoration:none;
+  }
+  .ev-pdf:hover { background:#fee2e2; }
+  .ev-other {
+    display:inline-flex; align-items:center; gap:6px; padding:8px 14px;
+    background:#f3f4f6; border:1px solid #d1d5db; border-radius:8px;
+    color:#374151; font-size:12px; font-weight:700; text-decoration:none;
+  }
+  .no-evidence { font-size:12px; color:#d1d5db; font-style:italic; }
+
+  /* comment box */
+  .mentor-comment {
+    margin-top:12px; background:#f8fafc; border:1px solid #f1f5f9;
+    border-radius:8px; padding:10px 14px; font-size:13px; color:#6b7280; font-style:italic;
+  }
+
+  /* card actions */
+  .ec-actions {
+    padding:12px 18px; border-top:1px solid #f3f4f6;
+    display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap;
+  }
+  .btn-approve {
+    padding:8px 18px; background:#16a34a; color:#fff; border:none;
+    border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px; transition:opacity .15s;
+  }
+  .btn-approve:hover { opacity:.88; }
+  .reject-form { display:flex; gap:6px; flex:1; min-width:260px; }
+  .reject-input {
+    flex:1; padding:7px 12px; border:1px solid #fca5a5; border-radius:8px;
+    font-size:13px; background:#fff9f9; outline:none;
+  }
+  .reject-input:focus { border-color:#ef4444; }
+  .btn-reject {
+    padding:8px 16px; background:#dc2626; color:#fff; border:none;
+    border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;
+    display:inline-flex; align-items:center; gap:5px; transition:opacity .15s;
+    white-space:nowrap;
+  }
+  .btn-reject:hover { opacity:.88; }
+
+  /* lightbox */
+  #lightbox {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
+    z-index:9999; align-items:center; justify-content:center;
+  }
+  #lightbox.open { display:flex; }
+  #lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; }
+  #lightbox-close {
+    position:absolute; top:18px; right:24px; color:#fff; font-size:32px;
+    cursor:pointer; line-height:1;
+  }
+
+  .empty-state { padding:48px 24px; text-align:center; color:#9ca3af; }
+  .empty-state i { font-size:36px; display:block; margin-bottom:10px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="filters">
-  <select name="status" onchange="location.href='/industry-mentor/logbook?status='+this.value">
-    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
-    <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
-    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
-  </select>
-</div>
+<div class="lb-wrap">
 
-<div class="logbook-list">
-  {% for log in logbooks %}
-  <div class="logbook-item status-{{ log.mentor_approval_status }}">
-    <div class="item-header">
-      <div>
-        <div class="item-trainee">{{ log.user_profiles.full_name }} ({{ log.user_profiles.admission_no }})</div>
-        <div class="item-date">{{ log.log_date }}</div>
-      </div>
-      <span class="item-status status-{{ log.mentor_approval_status }}">
-        {{ log.mentor_approval_status|capitalize }}
-      </span>
-    </div>
-    <div class="item-content">
-      <div class="content-label">Tasks Performed</div>
-      <div class="content-value">{{ log.tasks_performed }}</div>
-      
-      {% if log.skills_applied %}
-      <div class="content-label">Skills Applied</div>
-      <div class="content-value">{{ log.skills_applied }}</div>
-      {% endif %}
-      
-      {% if log.hours_worked %}
-      <div class="content-label">Hours Worked</div>
-      <div class="content-value">{{ log.hours_worked }} hours</div>
-      {% endif %}
-      
-      {% if log.challenges_encountered %}
-      <div class="content-label">Challenges Encountered</div>
-      <div class="content-value">{{ log.challenges_encountered }}</div>
-      {% endif %}
-      
-      {% if log.achievements %}
-      <div class="content-label">Achievements</div>
-      <div class="content-value">{{ log.achievements }}</div>
-      {% endif %}
-    </div>
-    
-    {% if log.mentor_approval_status == 'pending' %}
-    <div class="item-actions">
-      <button class="btn-approve" onclick="approveLogbook('{{ log.id }}')">Approve</button>
-      <button class="btn-reject" onclick="openRejectModal('{{ log.id }}')">Reject</button>
-    </div>
-    {% endif %}
-    
-    {% if log.mentor_comments %}
-    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-top: 15px;">
-      <div class="content-label">Mentor Comments</div>
-      <div class="content-value">{{ log.mentor_comments }}</div>
-    </div>
+  <div style="margin-bottom:18px">
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 4px">
+      <i class="fas fa-book-open" style="color:#1a56db;margin-right:8px"></i>Digital Logbook
+    </h1>
+    {% if company_name %}
+    <p style="font-size:13px;color:#6b7280;margin:0">
+      <i class="fas fa-building" style="font-size:11px"></i> {{ company_name }} &mdash;
+      Trainees submit entries every 3 hours during industrial attachment.
+    </p>
     {% endif %}
   </div>
+
+  <!-- Status tabs -->
+  <div class="status-tabs">
+    {% set base_url = '/industry-mentor/logbook' %}
+    <a href="{{ base_url }}?status=all"
+       class="stab {% if status=='all' %}active-all{% endif %}">
+      <i class="fas fa-list"></i> All
+      <span class="tab-count">{{ counts.all }}</span>
+    </a>
+    <a href="{{ base_url }}?status=pending"
+       class="stab {% if status=='pending' %}active-pending{% endif %}">
+      <i class="fas fa-clock"></i> Pending
+      <span class="tab-count">{{ counts.pending }}</span>
+    </a>
+    <a href="{{ base_url }}?status=approved"
+       class="stab {% if status=='approved' %}active-approved{% endif %}">
+      <i class="fas fa-check-circle"></i> Approved
+      <span class="tab-count">{{ counts.approved }}</span>
+    </a>
+    <a href="{{ base_url }}?status=rejected"
+       class="stab {% if status=='rejected' %}active-rejected{% endif %}">
+      <i class="fas fa-times-circle"></i> Rejected
+      <span class="tab-count">{{ counts.rejected }}</span>
+    </a>
+  </div>
+
+  <!-- Search -->
+  <div class="search-bar">
+    <input type="text" id="lb-search" placeholder="Search trainee name or admission number…"
+           oninput="filterCards()" autocomplete="off">
+  </div>
+
+  <!-- Entry cards -->
+  {% if logbooks %}
+  <div id="card-container">
+    {% for log in logbooks %}
+    {% set st = log._student %}
+    {% set status_v = log.get('mentor_approval_status') or 'pending' %}
+    <div class="entry-card status-{{ status_v }}"
+         data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}">
+
+      <!-- Header -->
+      <div class="ec-header">
+        <div>
+          <div class="ec-student">{{ st.get('full_name','Unknown Trainee') }}</div>
+          <div class="ec-adm"><i class="fas fa-id-card" style="font-size:10px"></i> {{ st.get('admission_no','—') }}</div>
+          <div class="ec-meta">
+            <span class="ec-date"><i class="fas fa-calendar-day" style="font-size:11px;color:#9ca3af"></i> {{ log.get('log_date','—') }}</span>
+            {% if log.get('entry_time') %}
+            <span class="slot-badge"><i class="fas fa-clock"></i> {{ log.entry_time }}</span>
+            {% endif %}
+            {% if log.get('hours_worked') %}
+            <span class="hrs-badge"><i class="fas fa-hourglass-half"></i> {{ log.hours_worked }}h</span>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          {% if status_v == 'approved' %}
+            <span class="spill sp-approved"><i class="fas fa-check-circle"></i> Approved</span>
+          {% elif status_v == 'rejected' %}
+            <span class="spill sp-rejected"><i class="fas fa-times-circle"></i> Rejected</span>
+          {% else %}
+            <span class="spill sp-pending"><i class="fas fa-clock"></i> Pending Review</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Body: activity fields -->
+      <div class="ec-body">
+        <div class="fields-grid">
+          <div>
+            <div class="field-lbl"><i class="fas fa-tasks" style="color:#6d28d9"></i> Tasks Performed</div>
+            <div class="field-val">{{ log.get('tasks_performed') or '—' }}</div>
+          </div>
+          <div>
+            <div class="field-lbl"><i class="fas fa-brain" style="color:#1d4ed8"></i> Skills Applied</div>
+            <div class="field-val">{{ log.get('skills_applied') or '—' }}</div>
+          </div>
+          {% if log.get('challenges_encountered') %}
+          <div>
+            <div class="field-lbl"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i> Challenges</div>
+            <div class="field-val">{{ log.challenges_encountered }}</div>
+          </div>
+          {% endif %}
+          {% if log.get('achievements') %}
+          <div>
+            <div class="field-lbl"><i class="fas fa-star" style="color:#15803d"></i> Achievements</div>
+            <div class="field-val">{{ log.achievements }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Evidence -->
+        <div class="evidence-strip">
+          <div class="ev-lbl">
+            <i class="fas fa-paperclip" style="color:#6b7280"></i> Evidence
+            <span style="font-weight:400;color:#9ca3af;font-size:10px">({{ log._evidence|length }} file{{ 's' if log._evidence|length != 1 }})</span>
+          </div>
+          {% if log._evidence %}
+          <div class="ev-items">
+            {% for ev in log._evidence %}
+              {% if ev.ext in ['jpg','jpeg','png','webp','gif'] %}
+              <img src="{{ ev.url }}" alt="{{ ev.name }}" class="ev-img"
+                   onclick="openLightbox('{{ ev.url }}')" title="{{ ev.name }}">
+              {% elif ev.ext in ['mp4','mov','avi','webm'] %}
+              <video src="{{ ev.url }}" controls class="ev-video" preload="metadata"></video>
+              {% elif ev.ext in ['mp3','wav','ogg','m4a'] %}
+              <audio src="{{ ev.url }}" controls class="ev-audio"></audio>
+              {% elif ev.ext == 'pdf' %}
+              <a href="{{ ev.url }}" target="_blank" class="ev-pdf">
+                <i class="fas fa-file-pdf"></i> {{ ev.name[:20] }}{% if ev.name|length > 20 %}…{% endif %}
+              </a>
+              {% else %}
+              <a href="{{ ev.url }}" target="_blank" class="ev-other">
+                <i class="fas fa-file"></i> {{ ev.name[:20] }}{% if ev.name|length > 20 %}…{% endif %}
+              </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% else %}
+          <span class="no-evidence"><i class="fas fa-image" style="margin-right:4px"></i>No evidence files attached</span>
+          {% endif %}
+        </div>
+
+        <!-- Mentor/trainer comments -->
+        {% if log.get('mentor_comments') %}
+        <div class="mentor-comment">
+          <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:5px"></i>
+          <strong>Supervisor comment:</strong> {{ log.mentor_comments }}
+        </div>
+        {% endif %}
+        {% if log.get('trainer_comments') %}
+        <div class="mentor-comment" style="border-left:3px solid #6d28d9;margin-top:6px">
+          <i class="fas fa-chalkboard-teacher" style="color:#6d28d9;margin-right:5px"></i>
+          <strong>Trainer comment:</strong> {{ log.trainer_comments }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Actions (pending only) -->
+      {% if status_v == 'pending' %}
+      <div class="ec-actions">
+        <form action="{{ url_for('industry_mentor.approve_logbook', log_id=log.id) }}" method="post" style="margin:0">
+          <button type="submit" class="btn-approve" onclick="return confirm('Approve this entry?')">
+            <i class="fas fa-check"></i> Approve
+          </button>
+        </form>
+        <form action="{{ url_for('industry_mentor.reject_logbook', log_id=log.id) }}" method="post"
+              class="reject-form" style="margin:0">
+          <input type="text" name="comments" class="reject-input" required
+                 placeholder="Reason for rejection (required)…">
+          <button type="submit" class="btn-reject">
+            <i class="fas fa-times"></i> Reject
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="no-results" style="display:none" class="empty-state">
+    <i class="fas fa-search"></i>
+    <p>No entries match your search.</p>
+  </div>
+
   {% else %}
-  <div style="text-align: center; padding: 30px; background: #f5f5f5; border-radius: 8px;">
-    No logbook entries found.
+  <div class="empty-state">
+    <i class="fas fa-book"></i>
+    <p>No logbook entries found{% if status != 'all' %} with status <strong>{{ status }}</strong>{% endif %}.</p>
+    <p style="font-size:12px;margin-top:8px">Trainees submit entries from their dashboard &rarr; Digital Logbook.</p>
   </div>
-  {% endfor %}
+  {% endif %}
+
 </div>
 
-<!-- Reject Modal -->
-<div class="modal" id="rejectModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Reject Logbook Entry</h2>
-      <button class="modal-close" onclick="closeRejectModal()">&times;</button>
-    </div>
-    <form id="rejectForm" method="POST">
-      <input type="hidden" id="rejectLogId" name="log_id">
-      <div class="form-group">
-        <label>Comments (required)</label>
-        <textarea name="comments" required placeholder="Provide feedback for the trainee"></textarea>
-      </div>
-      <button type="submit" class="btn-submit">Reject with Comments</button>
-    </form>
-  </div>
+<!-- Lightbox -->
+<div id="lightbox">
+  <span id="lightbox-close" onclick="closeLightbox()">&times;</span>
+  <img id="lightbox-img" src="" alt="Evidence">
 </div>
+
 {% endblock %}
 
 {% block extra_script %}
 <script>
-function approveLogbook(logId) {
-  if (confirm('Are you sure you want to approve this logbook entry?')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/industry-mentor/logbook/${logId}/approve`;
-    document.body.appendChild(form);
-    form.submit();
-  }
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
 }
-
-function openRejectModal(logId) {
-  document.getElementById('rejectLogId').value = logId;
-  document.getElementById('rejectModal').classList.add('active');
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
 }
-
-function closeRejectModal() {
-  document.getElementById('rejectModal').classList.remove('active');
-}
-
-document.getElementById('rejectForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  const logId = document.getElementById('rejectLogId').value;
-  this.action = `/industry-mentor/logbook/${logId}/reject`;
-  this.submit();
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
 });
+
+function filterCards() {
+  var q = document.getElementById('lb-search').value.toLowerCase().trim();
+  var cards = document.querySelectorAll('#card-container .entry-card');
+  var visible = 0;
+  cards.forEach(function(c) {
+    var match = !q || (c.dataset.search || '').includes(q);
+    c.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  var nr = document.getElementById('no-results');
+  if (nr) nr.style.display = (visible === 0 && q) ? '' : 'none';
+}
 </script>
 {% endblock %}

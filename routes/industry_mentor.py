@@ -88,42 +88,85 @@ def dashboard():
 @login_required
 @industry_mentor_required
 def logbook():
-    """View and approve trainee logbook entries."""
+    """View and approve trainee logbook entries for the supervisor's company."""
+    import os
     db = get_service_client()
     user = current_user()
-    
-    # Get mentor's company
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+
     mentor = (db.table("mentors")
-             .select("company_id")
-             .eq("user_id", user["id"])
-             .single()
-             .execute().data)
-    
+              .select("company_id, companies(name)")
+              .eq("user_id", user["id"])
+              .single()
+              .execute().data)
     if not mentor:
         abort(403)
-    
-    company_id = mentor["company_id"]
-    
-    # Get filter parameters
-    status = request.args.get("status", "pending")
-    
-    # Build query
-    query = (db.table("digital_logbook")
-            .select("*, user_profiles(full_name, admission_no), industrial_attachments(start_date, end_date, companies(name))")
-            .eq("mentor_approval_status", status))
-    
-    logbooks = query.order("log_date", desc=True).execute().data or []
-    
-    # Filter by company
-    company_logbooks = []
+
+    company_id   = mentor["company_id"]
+    company_name = (mentor.get("companies") or {}).get("name", "")
+    status       = request.args.get("status", "pending")
+
+    # All attachments for this company → used to scope logbook entries
+    attachments  = (db.table("industrial_attachments")
+                    .select("id, student_id")
+                    .eq("company_id", company_id)
+                    .execute().data or [])
+    attachment_ids = [a["id"]       for a in attachments]
+    student_ids    = list({a["student_id"] for a in attachments})
+
+    # Fetch all logbook entries for this company (all statuses for counting)
+    all_entries = []
+    if attachment_ids:
+        all_entries = (db.table("digital_logbook")
+                       .select("*")
+                       .in_("attachment_id", attachment_ids)
+                       .order("log_date", desc=True)
+                       .order("entry_time", desc=False)
+                       .execute().data or [])
+
+    counts = {
+        "all":      len(all_entries),
+        "pending":  sum(1 for e in all_entries if (e.get("mentor_approval_status") or "pending") == "pending"),
+        "approved": sum(1 for e in all_entries if e.get("mentor_approval_status") == "approved"),
+        "rejected": sum(1 for e in all_entries if e.get("mentor_approval_status") == "rejected"),
+    }
+
+    # Apply status filter for display
+    if status == "all":
+        logbooks = all_entries
+    else:
+        logbooks = [e for e in all_entries
+                    if (e.get("mentor_approval_status") or "pending") == status]
+
+    # Attach student profiles
+    profile_map = {}
+    if student_ids:
+        profiles = (db.table("user_profiles")
+                    .select("id, full_name, admission_no")
+                    .in_("id", student_ids)
+                    .execute().data or [])
+        profile_map = {p["id"]: p for p in profiles}
+
+    # Pre-process evidence URLs and student info
     for log in logbooks:
-        attachment = log.get("industrial_attachments", {})
-        if attachment.get("companies", {}).get("id") == company_id:
-            company_logbooks.append(log)
-    
-    return render_template("industry_mentor/logbook.html",
-                          logbooks=company_logbooks,
-                          status=status)
+        log["_student"] = profile_map.get(log["student_id"], {})
+        ev_paths = log.get("evidence_urls") or []
+        log["_evidence"] = [
+            {
+                "url": f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                "ext": p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                "name": p.rsplit("/", 1)[-1],
+            }
+            for p in ev_paths if p
+        ]
+
+    return render_template(
+        "industry_mentor/logbook.html",
+        logbooks=logbooks,
+        status=status,
+        counts=counts,
+        company_name=company_name,
+    )
 
 
 @industry_mentor_bp.route("/logbook/<log_id>/approve", methods=["POST"])

@@ -217,104 +217,173 @@
 
     {% if logbook_error %}
     <div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:14px 20px;border-radius:10px;margin-bottom:20px;font-size:13px">
-      <i class="fas fa-exclamation-triangle"></i> Could not load logbook data: {{ logbook_error }}
+      <i class="fas fa-exclamation-triangle"></i> Could not load logbook: {{ logbook_error }}
     </div>
     {% endif %}
 
-    <!-- Logbook filter bar -->
-    <div class="filter-wrap">
-      <input type="text" id="lb-search" placeholder="Search trainee name or admission no…" oninput="filterLogbook()" style="flex:2">
+    <!-- Filter bar -->
+    <div class="filter-wrap" style="align-items:flex-end">
+      <input type="text"  id="lb-search"    placeholder="Search trainee name or admission no…" oninput="filterLogbook()" style="flex:2;min-width:200px">
       <select id="lb-status" onchange="filterLogbook()">
-        <option value="all">All Approvals</option>
+        <option value="all">All Statuses</option>
         <option value="approved">Approved</option>
         <option value="pending">Pending</option>
         <option value="rejected">Rejected</option>
       </select>
-      <input type="date" id="lb-date-from" onchange="filterLogbook()" title="From date">
-      <input type="date" id="lb-date-to"   onchange="filterLogbook()" title="To date">
-      <button onclick="clearLBFilters()"
-        style="padding:8px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+      <input type="date" id="lb-date-from" onchange="filterLogbook()" title="From date" style="min-width:0">
+      <input type="date" id="lb-date-to"   onchange="filterLogbook()" title="To date"   style="min-width:0">
+      <button onclick="clearLBFilters()" style="padding:8px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
         <i class="fas fa-undo"></i> Clear
       </button>
     </div>
 
-    <div class="data-card">
-      <div style="padding:14px 18px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <span style="font-size:15px;font-weight:700;color:#0d2167"><i class="fas fa-book-open" style="color:#1565c0;margin-right:6px"></i>Digital Logbook Entries</span>
-        <span id="lb-count" style="font-size:12px;color:#9ca3af">{{ logbook_entries|length }} entr{{ 'ies' if logbook_entries|length!=1 else 'y' }}</span>
-      </div>
-
-      {% if logbook_entries %}
-      <div style="overflow-x:auto">
-        <table class="data-tbl" id="lb-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Trainee</th>
-              <th>Company</th>
-              <th>Time Slot</th>
-              <th>Tasks Performed</th>
-              <th>Skills Applied</th>
-              <th>Hrs</th>
-              <th>Challenges</th>
-              <th>Achievements</th>
-              <th>Status</th>
-              <th>Mentor Comment</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for e in logbook_entries %}
-            {% set st  = e.student    or {} %}
-            {% set att = e.attachment or {} %}
-            {% set co  = (att.get('companies') or {}) if att else {} %}
-            {% set lb_status = e.get('mentor_approval_status','pending') %}
-            <tr data-status="{{ lb_status }}"
-                data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}"
-                data-date="{{ e.get('log_date','') }}">
-              <td style="white-space:nowrap;font-weight:600;color:#374151">{{ e.get('log_date','—') }}</td>
-              <td>
-                <div class="sname">{{ st.get('full_name','—') }}</div>
-                <div class="sadm">{{ st.get('admission_no','') }}</div>
-              </td>
-              <td style="font-size:12px;color:#6b7280">{{ co.get('name','—') }}</td>
-              <td style="white-space:nowrap">
-                <span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">
-                  {{ e.get('entry_time','—') }}
-                </span>
-              </td>
-              <td><div class="lb-text" title="{{ e.get('tasks_performed','') }}">{{ e.get('tasks_performed','—') }}</div></td>
-              <td><div class="lb-text" title="{{ e.get('skills_applied','') }}">{{ e.get('skills_applied','—') }}</div></td>
-              <td style="font-weight:700;text-align:center">{{ e.get('hours_worked','—') }}</td>
-              <td><div class="lb-text" title="{{ e.get('challenges_encountered','') }}">{{ e.get('challenges_encountered','—') }}</div></td>
-              <td><div class="lb-text" title="{{ e.get('achievements','') }}">{{ e.get('achievements','—') }}</div></td>
-              <td>
-                <span class="badge b-lb-{{ lb_status }}">
-                  {% if lb_status == 'approved' %}<i class="fas fa-check-circle"></i>{% elif lb_status == 'rejected' %}<i class="fas fa-times-circle"></i>{% else %}<i class="fas fa-clock"></i>{% endif %}
-                  {{ lb_status|title }}
-                </span>
-              </td>
-              <td>
-                {% if e.get('mentor_comments') %}
-                <div class="lb-text" title="{{ e.get('mentor_comments','') }}" style="font-style:italic;color:#6b7280">
-                  "{{ e.mentor_comments }}"
-                </div>
-                {% else %}
-                <span style="color:#d1d5db;font-size:12px">—</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="empty-state">
-        <i class="fas fa-book"></i>
-        <p>No logbook entries found{% if not logbook_error %} for trainees in your department{% endif %}.</p>
-        <p style="font-size:12px;margin-top:6px">Trainees submit logbook entries from the Trainee Dashboard → Digital Logbook.</p>
-      </div>
-      {% endif %}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:15px;font-weight:700;color:#0d2167">
+        <i class="fas fa-book-open" style="color:#1565c0;margin-right:6px"></i>Digital Logbook Entries
+      </span>
+      <span id="lb-count" style="font-size:12px;color:#9ca3af">
+        {{ logbook_entries|length }} entr{{ 'ies' if logbook_entries|length!=1 else 'y' }}
+      </span>
     </div>
+
+    {% if logbook_entries %}
+    <div id="lb-cards">
+      {% for e in logbook_entries %}
+      {% set st     = e.student    or {} %}
+      {% set att    = e.attachment or {} %}
+      {% set co     = (att.get('companies') or {}) if att else {} %}
+      {% set lb_st  = e.get('mentor_approval_status') or 'pending' %}
+      {% set ev_list = e._evidence or [] %}
+      <div class="data-card" style="margin-bottom:16px;border-left:4px solid {% if lb_st=='approved' %}#22c55e{% elif lb_st=='rejected' %}#ef4444{% else %}#f59e0b{% endif %}"
+           data-status="{{ lb_st }}"
+           data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}"
+           data-date="{{ e.get('log_date','') }}">
+
+        <!-- Entry header -->
+        <div style="padding:12px 16px;border-bottom:1px solid #f3f4f6;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between">
+          <div>
+            <div style="font-weight:700;font-size:14px;color:#111827">{{ st.get('full_name','Unknown') }}</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:1px">
+              <i class="fas fa-id-card" style="font-size:9px"></i> {{ st.get('admission_no','—') }}
+              {% if co.get('name') %} &nbsp;&bull;&nbsp; <i class="fas fa-building" style="font-size:9px"></i> {{ co.name }}{% endif %}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">
+              <span style="font-size:13px;font-weight:600;color:#374151"><i class="fas fa-calendar-day" style="color:#9ca3af;font-size:11px"></i> {{ e.get('log_date','—') }}</span>
+              {% if e.get('entry_time') %}
+              <span style="background:#ede9fe;color:#6d28d9;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700">
+                <i class="fas fa-clock"></i> {{ e.entry_time }}
+              </span>
+              {% endif %}
+              {% if e.get('hours_worked') %}
+              <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">
+                <i class="fas fa-hourglass-half"></i> {{ e.hours_worked }}h
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          <span class="badge b-lb-{{ lb_st }}">
+            {% if lb_st=='approved' %}<i class="fas fa-check-circle"></i>{% elif lb_st=='rejected' %}<i class="fas fa-times-circle"></i>{% else %}<i class="fas fa-clock"></i>{% endif %}
+            {{ lb_st|title }}
+          </span>
+        </div>
+
+        <!-- Activity fields -->
+        <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-tasks" style="color:#6d28d9"></i> Tasks Performed</div>
+            <div style="font-size:13px;color:#374151">{{ e.get('tasks_performed') or '—' }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-brain" style="color:#1d4ed8"></i> Skills Applied</div>
+            <div style="font-size:13px;color:#374151">{{ e.get('skills_applied') or '—' }}</div>
+          </div>
+          {% if e.get('challenges_encountered') %}
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i> Challenges</div>
+            <div style="font-size:13px;color:#374151">{{ e.challenges_encountered }}</div>
+          </div>
+          {% endif %}
+          {% if e.get('achievements') %}
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-star" style="color:#15803d"></i> Achievements</div>
+            <div style="font-size:13px;color:#374151">{{ e.achievements }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Evidence -->
+        <div style="padding:10px 16px;border-top:1px solid #f9fafb;background:#fafbfc">
+          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
+            <i class="fas fa-paperclip"></i> Evidence
+            <span style="font-weight:400;color:#9ca3af">({{ ev_list|length }} file{{ 's' if ev_list|length!=1 }})</span>
+          </div>
+          {% if ev_list %}
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">
+            {% for ev in ev_list %}
+              {% if ev.ext in ['jpg','jpeg','png','webp','gif'] %}
+              <a href="{{ ev.url }}" target="_blank">
+                <img src="{{ ev.url }}" alt="{{ ev.name }}"
+                     style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;cursor:pointer;transition:transform .15s"
+                     onmouseover="this.style.transform='scale(1.07)'" onmouseout="this.style.transform='scale(1)'"
+                     onclick="openLbLightbox('{{ ev.url }}');return false">
+              </a>
+              {% elif ev.ext in ['mp4','mov','avi','webm'] %}
+              <video src="{{ ev.url }}" controls
+                     style="width:160px;height:90px;border-radius:8px;border:1px solid #e5e7eb;background:#000"
+                     preload="metadata"></video>
+              {% elif ev.ext in ['mp3','wav','ogg','m4a'] %}
+              <audio src="{{ ev.url }}" controls style="width:220px"></audio>
+              {% elif ev.ext == 'pdf' %}
+              <a href="{{ ev.url }}" target="_blank"
+                 style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#b91c1c;font-size:12px;font-weight:700;text-decoration:none">
+                <i class="fas fa-file-pdf"></i> {{ ev.name[:18] }}{% if ev.name|length>18 %}…{% endif %}
+              </a>
+              {% else %}
+              <a href="{{ ev.url }}" target="_blank"
+                 style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;color:#374151;font-size:12px;font-weight:700;text-decoration:none">
+                <i class="fas fa-file"></i> {{ ev.name[:18] }}{% if ev.name|length>18 %}…{% endif %}
+              </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% else %}
+          <span style="font-size:12px;color:#d1d5db;font-style:italic"><i class="fas fa-image" style="margin-right:4px"></i>No evidence attached</span>
+          {% endif %}
+        </div>
+
+        <!-- Mentor / trainer comments -->
+        {% if e.get('mentor_comments') or e.get('trainer_comments') %}
+        <div style="padding:8px 16px 12px;border-top:1px solid #f9fafb">
+          {% if e.get('mentor_comments') %}
+          <div style="font-size:12px;color:#6b7280;font-style:italic;margin-bottom:4px">
+            <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:4px"></i>
+            <strong>Supervisor:</strong> "{{ e.mentor_comments }}"
+          </div>
+          {% endif %}
+          {% if e.get('trainer_comments') %}
+          <div style="font-size:12px;color:#6b7280;font-style:italic">
+            <i class="fas fa-chalkboard-teacher" style="color:#6d28d9;margin-right:4px"></i>
+            <strong>Trainer:</strong> "{{ e.trainer_comments }}"
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <div id="lb-no-results" style="display:none" class="empty-state">
+      <i class="fas fa-search"></i><p>No entries match your filters.</p>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-book"></i>
+      <p>No logbook entries found for trainees in your department.</p>
+      <p style="font-size:12px;margin-top:6px">Trainees submit entries from Trainee Dashboard &rarr; Digital Logbook every 3 hours.</p>
+    </div>
+    {% endif %}
 
   </section>
 
@@ -444,18 +513,20 @@ function filterLogbook() {
   var from = document.getElementById('lb-date-from').value;
   var to   = document.getElementById('lb-date-to').value;
   var vis  = 0;
-  document.querySelectorAll('#lb-table tbody tr').forEach(function(row) {
-    var ms = stat === 'all' || row.dataset.status === stat;
-    var mq = !q    || (row.dataset.search || '').includes(q);
-    var d  = row.dataset.date || '';
+  document.querySelectorAll('#lb-cards > .data-card').forEach(function(card) {
+    var ms = stat === 'all' || card.dataset.status === stat;
+    var mq = !q    || (card.dataset.search || '').includes(q);
+    var d  = card.dataset.date || '';
     var mf = !from || d >= from;
     var mt = !to   || d <= to;
     var show = ms && mq && mf && mt;
-    row.style.display = show ? '' : 'none';
+    card.style.display = show ? '' : 'none';
     if (show) vis++;
   });
   var cnt = document.getElementById('lb-count');
   if (cnt) cnt.textContent = vis + ' entr' + (vis !== 1 ? 'ies' : 'y');
+  var nr = document.getElementById('lb-no-results');
+  if (nr) nr.style.display = (vis === 0) ? '' : 'none';
 }
 
 function clearLBFilters() {
@@ -464,6 +535,21 @@ function clearLBFilters() {
   });
   document.getElementById('lb-status').value = 'all';
   filterLogbook();
+}
+
+/* ═══ LIGHTBOX (logbook images) ═══ */
+function openLbLightbox(url) {
+  var lb = document.getElementById('lb-lightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'lb-lightbox';
+    lb.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;';
+    lb.innerHTML = '<span style="position:absolute;top:18px;right:26px;color:#fff;font-size:34px;cursor:pointer;line-height:1" onclick="this.parentElement.style.display=\'none\'">&times;</span><img id="lb-lb-img" style="max-width:90vw;max-height:90vh;border-radius:8px">';
+    lb.addEventListener('click', function(e){ if(e.target===lb) lb.style.display='none'; });
+    document.body.appendChild(lb);
+  }
+  document.getElementById('lb-lb-img').src = url;
+  lb.style.display = 'flex';
 }
 
 /* ═══ HELPER ═══ */

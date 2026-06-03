@@ -1731,6 +1731,8 @@ def gis_tracking():
         loc["student"] = student_map.get(loc["student_id"], {})
 
     # ── Digital Logbook entries ─────────────────────────────────────────────────
+    import os
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
     logbook_entries = []
     logbook_error   = None
     try:
@@ -1739,7 +1741,7 @@ def gis_tracking():
                 .select("id, student_id, log_date, entry_time, tasks_performed, "
                         "skills_applied, hours_worked, challenges_encountered, "
                         "achievements, mentor_approval_status, mentor_comments, "
-                        "trainer_comments, created_at, "
+                        "trainer_comments, evidence_urls, created_at, "
                         "student:user_profiles!digital_logbook_student_id_fkey"
                         "(full_name, admission_no), "
                         "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
@@ -1748,6 +1750,18 @@ def gis_tracking():
                 .order("log_date", desc=True)
                 .limit(500)
                 .execute().data or [])
+
+        # Pre-process evidence URLs
+        for entry in logbook_entries:
+            ev_paths = entry.get("evidence_urls") or []
+            entry["_evidence"] = [
+                {
+                    "url": f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                    "ext": p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                    "name": p.rsplit("/", 1)[-1],
+                }
+                for p in ev_paths if p
+            ]
     except Exception as e:
         logbook_error = str(e)
         print(f"[gis_tracking] digital_logbook: {e}")
