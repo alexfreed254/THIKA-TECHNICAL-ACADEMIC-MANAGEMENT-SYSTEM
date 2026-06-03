@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clearance Certificate — {{ serial }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+
+    .page { max-width: 860px; margin: 20px auto; background: #fff; border-radius: 0; }
+
+    /* ── Print controls ── */
+    .print-bar {
+      background: #1e3a5f; color: #fff; padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+    .print-bar span { font-size: 13px; opacity: .85; }
+    .btn-print {
+      padding: 8px 20px; background: #22c55e; color: #fff; border: none;
+      border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+
+    /* ── Certificate content ── */
+    .cert { padding: 36px 44px; }
+
+    /* Header */
+    .cert-header {
+      display: flex; align-items: center; gap: 20px;
+      border-bottom: 3px solid #1e3a5f; padding-bottom: 18px; margin-bottom: 22px;
+    }
+    .cert-logo { width: 80px; height: 80px; object-fit: contain; flex-shrink: 0; }
+    .cert-school h1 { font-size: 18px; font-weight: 800; color: #1e3a5f; text-transform: uppercase; line-height: 1.2; }
+    .cert-school p  { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .cert-title-block { text-align: right; margin-left: auto; }
+    .cert-title-block h2 { font-size: 20px; font-weight: 800; color: #1e3a5f; text-transform: uppercase; }
+    .cert-title-block .form-ref { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+
+    /* Serial + QR row */
+    .serial-qr-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      background: #f0f9f0; border: 1px solid #bbf7d0; border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 22px; gap: 20px;
+    }
+    .serial-block h3 { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+    .serial-block .serial-num {
+      font-family: monospace; font-size: 22px; font-weight: 800; color: #15803d;
+      letter-spacing: .08em; margin: 4px 0;
+    }
+    .serial-block .serial-sub { font-size: 11px; color: #9ca3af; }
+    #qrcode { width: 90px; height: 90px; flex-shrink: 0; }
+    #qrcode canvas, #qrcode img { width: 90px !important; height: 90px !important; }
+
+    /* Student info table */
+    .student-table { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
+    .student-table th {
+      background: #1e3a5f; color: #fff; padding: 8px 12px; text-align: left;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .student-table td { padding: 9px 12px; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
+    .student-table tr:last-child td { border-bottom: none; }
+    .student-table .field-label { color: #6b7280; font-weight: 600; width: 35%; }
+
+    /* Stage approvals table */
+    .stage-title {
+      font-size: 14px; font-weight: 700; color: #1e3a5f; text-transform: uppercase;
+      letter-spacing: .05em; margin: 22px 0 10px;
+      border-bottom: 2px solid #1e3a5f; padding-bottom: 6px;
+    }
+    .stages-table { width: 100%; border-collapse: collapse; margin-bottom: 22px; font-size: 12px; }
+    .stages-table th {
+      background: #1e3a5f; color: #fff; padding: 7px 10px; text-align: left;
+      font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .stages-table td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    .stages-table tr:last-child td { border-bottom: none; }
+    .stages-table tr:nth-child(even) td { background: #f9fafb; }
+    .status-ok  { color: #15803d; font-weight: 700; }
+    .stage-grp  { font-size: 10px; font-weight: 700; color: #1565c0; background: #dbeafe;
+                   padding: 1px 7px; border-radius: 5px; }
+
+    /* Signatures */
+    .sig-row {
+      display: flex; gap: 24px; margin-top: 28px; flex-wrap: wrap; justify-content: space-between;
+    }
+    .sig-block { flex: 1; min-width: 160px; text-align: center; }
+    .sig-line { border-top: 1.5px solid #374151; margin-bottom: 6px; padding-top: 8px; }
+    .sig-name { font-size: 12px; font-weight: 700; color: #111827; }
+    .sig-role { font-size: 11px; color: #9ca3af; }
+
+    /* Footer */
+    .cert-footer {
+      margin-top: 24px; padding-top: 14px; border-top: 1px solid #e5e7eb;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: #9ca3af;
+    }
+    .verify-url { font-family: monospace; font-size: 11px; color: #1565c0; }
+
+    /* Security watermark: show only when NOT completed */
+    .watermark {
+      display: none;
+    }
+
+    @media print {
+      .print-bar { display: none !important; }
+      body { background: #fff; }
+      .page { margin: 0; box-shadow: none; }
+      .cert { padding: 24px 32px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Print controls (screen only) -->
+  <div class="print-bar">
+    <span>Clearance Certificate — {{ serial }}</span>
+    <button class="btn-print" onclick="window.print()">
+      🖨 Print / Save PDF
+    </button>
+  </div>
+
+  <div class="cert">
+
+    <!-- Header -->
+    <div class="cert-header">
+      <img src="{{ LOGO_URL }}" alt="TTTI Logo" class="cert-logo">
+      <div class="cert-school">
+        <h1>Thika Technical Training Institute</h1>
+        <p>P.O. Box 2952–01000, Thika, Kenya | info@thikattt.ac.ke</p>
+      </div>
+      <div class="cert-title-block">
+        <h2>Clearance Certificate</h2>
+        <div class="form-ref">Form Ref: TTTI/ADM/CLEAR/F1</div>
+        <div class="form-ref" style="margin-top:4px">
+          Issued: {{ cr.get('completed_at','')[:10] or 'N/A' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Serial + QR -->
+    <div class="serial-qr-row">
+      <div class="serial-block">
+        <h3>Official Serial Number</h3>
+        <div class="serial-num">{{ serial }}</div>
+        <div class="serial-sub">Scan QR or visit the link below to verify authenticity</div>
+        <div class="serial-sub verify-url" style="margin-top:4px">{{ verify_url }}</div>
+      </div>
+      <div id="qrcode"></div>
+    </div>
+
+    <!-- Student information -->
+    <table class="student-table">
+      <tr>
+        <th colspan="4">Student Information</th>
+      </tr>
+      <tr>
+        <td class="field-label">Full Name</td>
+        <td><strong>{{ student.get('full_name','—') }}</strong></td>
+        <td class="field-label">Admission No.</td>
+        <td><strong>{{ student.get('admission_no','—') }}</strong></td>
+      </tr>
+      <tr>
+        <td class="field-label">Course</td>
+        <td>{{ (cr.get('courses') or {}).get('name','—') }} ({{ (cr.get('courses') or {}).get('code','') }})</td>
+        <td class="field-label">Department</td>
+        <td>{{ (cr.get('departments') or {}).get('name','—') }}</td>
+      </tr>
+      <tr>
+        <td class="field-label">Clearance Date</td>
+        <td>{{ cr.get('completed_at','')[:10] or '—' }}</td>
+        <td class="field-label">Status</td>
+        <td class="status-ok">✅ CLEARED</td>
+      </tr>
+    </table>
+
+    <!-- Stage-by-stage approvals -->
+    <div class="stage-title">Clearance Stage Approvals</div>
+    <table class="stages-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Stage</th>
+          <th>Section / Department</th>
+          <th>Approved By</th>
+          <th>Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in approvals %}
+        {% set stage = a.get('clearance_stages') or {} %}
+        {% set cd    = stage.get('clearance_departments') or {} %}
+        {% set grp   = _global_group(stage) %}
+        {% set appr  = a.get('_approver') or {} %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>
+            {{ stage.get('stage_name','—') }}
+            <br><span class="stage-grp">Group {{ grp }}</span>
+          </td>
+          <td>{{ cd.get('name','—') }}</td>
+          <td>{{ appr.get('full_name','—') }}</td>
+          <td style="white-space:nowrap">{{ (a.get('approved_at') or '')[:10] or '—' }}</td>
+          <td class="status-ok">✅ Approved</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Signature blocks -->
+    <div class="sig-row">
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-name">Head of Department</div>
+        <div class="sig-role">Academic Department</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-name">Finance Officer</div>
+        <div class="sig-role">Finance Office</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-name">Dean of Students</div>
+        <div class="sig-role">Dean's Office</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-name">Academic Registrar</div>
+        <div class="sig-role">Registrar's Office</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="cert-footer">
+      <span>Generated by TTTI Online Academic Management System</span>
+      <span class="verify-url">Verify at: {{ verify_url }}</span>
+    </div>
+
+  </div><!-- /cert -->
+</div><!-- /page -->
+
+<!-- QR Code generation (client-side, no library install needed) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+  QRCode.toCanvas(document.createElement('canvas'), "{{ verify_url | safe }}", {
+    width: 90, margin: 1, color: { dark: '#1e3a5f', light: '#ffffff' }
+  }, function(err, canvas) {
+    if (!err) {
+      document.getElementById('qrcode').appendChild(canvas);
+    } else {
+      // Fallback: show text link
+      document.getElementById('qrcode').innerHTML =
+        '<div style="font-size:10px;color:#6b7280;word-break:break-all">{{ verify_url }}</div>';
+    }
+  });
+</script>
+</body>
+</html>

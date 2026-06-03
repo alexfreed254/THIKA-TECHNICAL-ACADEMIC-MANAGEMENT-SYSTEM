@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clearance Verification — TTTI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f0f4f8; min-height: 100vh;
+           display: flex; flex-direction: column; align-items: center; padding: 40px 16px; }
+
+    .header { text-align: center; margin-bottom: 36px; }
+    .logo-wrap { width: 72px; height: 72px; margin: 0 auto 14px; }
+    .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .header h1 { font-size: 22px; font-weight: 800; color: #1e3a5f; }
+    .header p  { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+    .verify-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+      padding: 32px; width: 100%; max-width: 540px; box-shadow: 0 4px 20px rgba(0,0,0,.06);
+      margin-bottom: 24px;
+    }
+    .verify-card h2 { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+    .verify-card p  { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+
+    .input-row { display: flex; gap: 10px; }
+    .sn-input {
+      flex: 1; padding: 12px 16px; border: 2px solid #d1d5db; border-radius: 10px;
+      font-size: 15px; font-family: monospace; font-weight: 600; text-transform: uppercase;
+      outline: none; transition: border-color .2s;
+    }
+    .sn-input:focus { border-color: #1565c0; }
+    .btn-verify {
+      padding: 12px 22px; background: #1565c0; color: #fff; border: none;
+      border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+      white-space: nowrap; transition: opacity .15s;
+    }
+    .btn-verify:hover { opacity: .88; }
+
+    /* Result cards */
+    .result-ok  {
+      background: #fff; border: 2px solid #22c55e; border-radius: 14px; padding: 24px;
+      width: 100%; max-width: 540px; box-shadow: 0 4px 20px rgba(34,197,94,.12);
+    }
+    .result-err {
+      background: #fef2f2; border: 2px solid #ef4444; border-radius: 14px; padding: 24px;
+      width: 100%; max-width: 540px;
+    }
+
+    .result-hdr { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+    .result-icon { font-size: 28px; }
+    .result-title { font-size: 18px; font-weight: 800; color: #15803d; }
+    .result-serial { font-family: monospace; font-size: 20px; font-weight: 800; color: #1e3a5f;
+                     letter-spacing: .08em; margin-bottom: 16px; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .info-cell { background: #f0fdf4; border-radius: 8px; padding: 10px 14px; }
+    .info-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+    .info-val   { font-size: 14px; font-weight: 700; color: #111827; margin-top: 3px; }
+
+    .cleared-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px;
+      background: #dcfce7; color: #15803d; border: 1px solid #86efac;
+      border-radius: 9999px; font-size: 13px; font-weight: 700; margin-top: 6px;
+    }
+
+    .err-title { font-size: 16px; font-weight: 700; color: #b91c1c; margin-bottom: 8px; }
+    .err-msg   { font-size: 13px; color: #7f1d1d; }
+
+    .footer { font-size: 12px; color: #9ca3af; text-align: center; margin-top: 32px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo-wrap">
+      <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+    </div>
+    <h1>Clearance Verification Portal</h1>
+    <p>Thika Technical Training Institute &mdash; Verify student clearance authenticity</p>
+  </div>
+
+  <!-- Search form -->
+  <div class="verify-card">
+    <h2><i class="fas fa-search" style="color:#1565c0;margin-right:8px"></i>Verify Clearance</h2>
+    <p>Enter the serial number printed on the clearance certificate to confirm its authenticity.</p>
+    <form method="post" action="/clearance/verify">
+      <div class="input-row">
+        <input type="text" name="serial_number" class="sn-input"
+               placeholder="e.g. CLR/2026/A1B2C3"
+               value="{{ serial_number or '' }}" required autocomplete="off">
+        <button type="submit" class="btn-verify">
+          <i class="fas fa-search"></i> Verify
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Error result -->
+  {% if error %}
+  <div class="result-err">
+    <div class="err-title"><i class="fas fa-times-circle"></i> Verification Failed</div>
+    <div class="err-msg">{{ error }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Success result -->
+  {% if result %}
+  {% set student = result.get('user_profiles') or result.get('student') or {} %}
+  <div class="result-ok">
+    <div class="result-hdr">
+      <span class="result-icon">✅</span>
+      <div>
+        <div class="result-title">Valid Clearance Confirmed</div>
+        <div style="font-size:12px;color:#6b7280">This clearance certificate is authentic and on record.</div>
+      </div>
+    </div>
+
+    <div class="result-serial">{{ result._serial }}</div>
+
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Student Name</div>
+        <div class="info-val">{{ student.get('full_name','—') }}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Admission Number</div>
+        <div class="info-val">{{ student.get('admission_no','—') }}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Course</div>
+        <div class="info-val">{{ (result.get('courses') or {}).get('name','—') }}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Department</div>
+        <div class="info-val">{{ (result.get('departments') or {}).get('name','—') }}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Clearance Date</div>
+        <div class="info-val">{{ (result.get('completed_at') or '')[:10] or '—' }}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Issued By</div>
+        <div class="info-val">TTTI Academic System</div>
+      </div>
+    </div>
+
+    <span class="cleared-badge">
+      <i class="fas fa-check-circle"></i> CLEARED — All stages approved
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    &copy; {{ now().year }} Thika Technical Training Institute &mdash;
+    <a href="/clearance" style="color:#1565c0">Student Portal</a>
+  </div>
+
+</body>
+</html>

@@ -1,160 +1,330 @@
 {% extends "student/base.html" %}
-
 {% block title %}Clearance{% endblock %}
 {% block page_title %}Course Clearance{% endblock %}
 
 {% block extra_style %}
 <style>
-  .clearance-status { padding: 25px; background: #f5f5f5; border-radius: 8px; margin-bottom: 25px; }
-  .status-badge { padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; }
-  .status-pending { background: #fff3cd; color: #856404; }
-  .status-in_progress { background: #cce5ff; color: #004085; }
-  .status-completed { background: #d4edda; color: #155724; }
-  .status-rejected { background: #f8d7da; color: #721c24; }
-  .clearance-section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 25px; }
-  .section-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; }
-  .approval-list { display: grid; gap: 15px; }
-  .approval-item { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #ddd; }
-  .approval-item.status-pending { border-left-color: #ffc107; }
-  .approval-item.status-approved { border-left-color: #28a745; }
-  .approval-item.status-rejected { border-left-color: #dc3545; }
-  .approval-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .approval-stage { font-weight: 600; font-size: 15px; }
-  .approval-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
-  .approval-dept { font-size: 13px; color: #666; margin-bottom: 8px; }
-  .approval-comments { background: white; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 13px; }
-  .approval-date { font-size: 12px; color: #666; margin-top: 8px; }
-  .initiate-form { background: white; padding: 25px; border-radius: 8px; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
-  .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-  .btn-initiate { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; }
-  .btn-initiate:hover { background: #45a049; }
-  .btn-certificate { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; }
-  .btn-certificate:hover { background: #0056b3; }
-  .certificate-ready { background: #d4edda; padding: 20px; border-radius: 8px; text-align: center; margin-top: 20px; }
-  .timeline { position: relative; padding-left: 30px; }
-  .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #e0e0e0; }
-  .timeline-item { position: relative; margin-bottom: 20px; }
-  .timeline-item::before { content: ''; position: absolute; left: -24px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; border: 2px solid white; }
-  .timeline-item.completed::before { background: #28a745; }
-  .timeline-item.pending::before { background: #ffc107; }
-  .timeline-item.rejected::before { background: #dc3545; }
+  .cl-wrap { padding: 24px; max-width: 900px; }
+
+  /* ── Initiate card ── */
+  .initiate-card {
+    background: linear-gradient(135deg, #1e3a5f, #1565c0);
+    color: #fff; border-radius: 16px; padding: 32px; margin-bottom: 24px;
+  }
+  .initiate-card h2 { font-size: 22px; font-weight: 800; margin: 0 0 8px; }
+  .initiate-card p  { font-size: 14px; opacity: .85; margin: 0 0 20px; line-height: 1.6; }
+  .select-course {
+    width: 100%; padding: 11px 14px; border-radius: 8px; border: none;
+    font-size: 14px; font-weight: 600; color: #1e3a5f; background: #fff;
+    margin-bottom: 14px; outline: none;
+  }
+  .btn-initiate {
+    padding: 11px 28px; background: #22c55e; color: #fff; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; transition: opacity .15s;
+  }
+  .btn-initiate:hover { opacity: .88; }
+
+  /* ── Status banner ── */
+  .status-banner {
+    border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .sb-in_progress { background: #dbeafe; border-left: 4px solid #1565c0; }
+  .sb-completed   { background: #dcfce7; border-left: 4px solid #15803d; }
+  .sb-rejected    { background: #fee2e2; border-left: 4px solid #b91c1c; }
+  .sb-pending     { background: #fef3c7; border-left: 4px solid #b45309; }
+  .sb-icon { font-size: 24px; }
+  .sb-info { flex: 1; }
+  .sb-title { font-size: 15px; font-weight: 700; color: #111827; }
+  .sb-sub   { font-size: 12px; color: #6b7280; margin-top: 3px; }
+  .sb-serial {
+    background: rgba(255,255,255,.6); border: 1px solid rgba(0,0,0,.08);
+    padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    font-family: monospace; color: #1e3a5f; white-space: nowrap;
+  }
+
+  /* ── 9-step flow ── */
+  .flow-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    padding: 24px; margin-bottom: 24px;
+  }
+  .flow-title {
+    font-size: 15px; font-weight: 700; color: #111827;
+    margin: 0 0 20px; display: flex; align-items: center; gap: 8px;
+  }
+
+  .step-list { display: flex; flex-direction: column; gap: 0; }
+
+  .step-row {
+    display: flex; align-items: flex-start; gap: 16px; position: relative; padding-bottom: 4px;
+  }
+  .step-row:not(:last-child)::before {
+    content: ''; position: absolute; left: 19px; top: 42px;
+    width: 2px; height: calc(100% - 10px); background: #e5e7eb; z-index: 0;
+  }
+  .step-row.step-approved::before   { background: #22c55e; }
+  .step-row.step-in_progress::before { background: #1565c0; }
+  .step-row.step-rejected::before   { background: #ef4444; }
+
+  .step-icon {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; z-index: 1; border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #e5e7eb;
+  }
+  .icon-locked      { background: #f3f4f6; color: #9ca3af; box-shadow: 0 0 0 2px #e5e7eb; }
+  .icon-in_progress { background: #dbeafe; color: #1d4ed8; box-shadow: 0 0 0 2px #1565c0; }
+  .icon-approved    { background: #dcfce7; color: #15803d; box-shadow: 0 0 0 2px #22c55e; }
+  .icon-rejected    { background: #fee2e2; color: #b91c1c; box-shadow: 0 0 0 2px #ef4444; }
+  .icon-complete    { background: #15803d; color: #fff;    box-shadow: 0 0 0 2px #15803d; }
+
+  .step-body { flex: 1; padding: 10px 0 20px; }
+  .step-name { font-size: 14px; font-weight: 700; color: #111827; }
+  .step-desc { font-size: 12px; color: #6b7280; margin-top: 3px; }
+  .step-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 9999px;
+    font-size: 11px; font-weight: 700; margin-top: 6px;
+  }
+  .badge-locked      { background: #f3f4f6; color: #9ca3af; }
+  .badge-in_progress { background: #dbeafe; color: #1d4ed8; }
+  .badge-approved    { background: #dcfce7; color: #15803d; }
+  .badge-rejected    { background: #fee2e2; color: #b91c1c; }
+  .badge-n_a         { background: #f3f4f6; color: #9ca3af; }
+
+  /* ── Approval details expand ── */
+  .approval-details { margin-top: 10px; display: none; }
+  .approval-details.open { display: block; }
+  .ap-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; background: #f9fafb; border-radius: 8px;
+    margin-bottom: 4px; font-size: 12px;
+  }
+  .ap-name    { color: #374151; font-weight: 600; }
+  .ap-comment { color: #6b7280; font-style: italic; margin-top: 2px; }
+  .ap-date    { color: #9ca3af; white-space: nowrap; margin-left: 12px; }
+
+  /* ── Download block ── */
+  .download-block {
+    background: linear-gradient(135deg, #15803d, #16a34a);
+    color: #fff; border-radius: 14px; padding: 24px; text-align: center;
+    margin-bottom: 24px;
+  }
+  .download-block h3  { font-size: 20px; font-weight: 800; margin: 0 0 6px; }
+  .download-block p   { font-size: 13px; opacity: .88; margin: 0 0 16px; }
+  .btn-download {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 28px; background: #fff; color: #15803d;
+    border: none; border-radius: 10px; font-size: 15px; font-weight: 800;
+    text-decoration: none; cursor: pointer; transition: opacity .15s;
+  }
+  .btn-download:hover { opacity: .9; }
+  .serial-display {
+    font-family: monospace; font-size: 18px; font-weight: 800;
+    letter-spacing: .1em; color: #bbf7d0; margin: 8px 0 18px;
+  }
+
+  /* ── Locked download ── */
+  .locked-download {
+    background: #f3f4f6; border: 2px dashed #d1d5db;
+    border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af;
+    margin-bottom: 24px;
+  }
+  .locked-download i { font-size: 28px; display: block; margin-bottom: 8px; }
+
+  /* ── Toggle expand btn ── */
+  .expand-btn {
+    background: none; border: none; color: #1565c0; font-size: 11px;
+    font-weight: 700; cursor: pointer; padding: 0; margin-top: 4px;
+  }
+  .expand-btn:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 
 {% block content %}
-{% if not has_request %}
-<div class="initiate-form">
-  <h3>Initiate Course Clearance</h3>
-  <p style="margin-bottom: 20px; color: #666;">Initiate the clearance process when you have completed your course requirements.</p>
-  <form method="POST" action="/clearance/initiate">
-    <div class="form-group">
-      <label>Select Course *</label>
-      <select name="course_id" required>
-        <option value="">Choose a course</option>
+<div class="cl-wrap">
+
+  {% if not has_request %}
+  <!-- ── INITIATE ── -->
+  <div class="initiate-card">
+    <h2><i class="fas fa-graduation-cap"></i> Start Your Course Clearance</h2>
+    <p>
+      Initiate clearance when you have completed your course requirements.
+      The clearance follows a sequential 7-stage process — each stage must be
+      approved before the next unlocks.
+    </p>
+    <form method="post" action="/clearance/initiate">
+      <select name="course_id" class="select-course" required>
+        <option value="">— Select your course —</option>
         {% for enrollment in enrollments %}
-        {% set cls = enrollment.get('classes') or {} %}
-        {% set crs = cls.get('courses') or {} %}
-        {% if cls.get('course_id') and crs.get('name') %}
-        <option value="{{ cls.get('course_id') }}">{{ crs.get('name') }} ({{ crs.get('code','') }})</option>
-        {% endif %}
+          {% set cls = enrollment.get('classes') or {} %}
+          {% set crs = cls.get('courses') or {} %}
+          {% if cls.get('course_id') and crs.get('name') %}
+          <option value="{{ cls.course_id }}">{{ crs.name }} ({{ crs.get('code','') }})</option>
+          {% endif %}
         {% endfor %}
       </select>
-    </div>
-    <button type="submit" class="btn-initiate">Initiate Clearance Process</button>
-  </form>
-</div>
-{% else %}
-<div class="clearance-status">
-  <h3>Clearance Status</h3>
-  <div style="margin-bottom: 15px;">
-    <span class="status-badge status-{{ clearance_request.status }}">{{ clearance_request.status|replace('_', ' ')|title }}</span>
-  </div>
-  <div style="font-size: 14px; color: #666;">
-    <p><strong>Course:</strong> {{ clearance_request.courses.name }} ({{ clearance_request.courses.code }})</p>
-    <p><strong>Department:</strong> {{ clearance_request.departments.name }}</p>
-    <p><strong>Initiated:</strong> {{ clearance_request.initiated_at | to_eat }}</p>
-    {% if clearance_request.completed_at %}
-    <p><strong>Completed:</strong> {{ clearance_request.completed_at | to_eat }}</p>
-    {% endif %}
-  </div>
-  
-  {% if clearance_request.status == 'completed' and not clearance_request.certificate_issued %}
-  <div class="certificate-ready">
-    <h4>Certificate Ready for Collection</h4>
-    <p style="margin: 10px 0;">Your clearance is complete. Click below to issue your certificate.</p>
-    <form method="POST" action="/clearance/issue-certificate/{{ clearance_request.id }}">
-      <button type="submit" class="btn-certificate">Issue Certificate</button>
+      <button type="submit" class="btn-initiate">
+        <i class="fas fa-play-circle"></i> Start Clearance Process
+      </button>
     </form>
-    <a href="/clearance/clearance-form/{{ clearance_request.id }}" class="btn-certificate" style="background:#1565c0;margin-left:10px;display:inline-block;margin-top:8px">
-      <i class="fas fa-file-alt"></i> Download Clearance Form
-    </a>
   </div>
-  {% endif %}
-  
-  {% if clearance_request.certificate_issued %}
-  <div class="certificate-ready" style="background: #cce5ff;">
-    <h4>Certificate Issued</h4>
-    <p style="margin: 10px 0;">Your certificate was issued on {{ clearance_request.certificate_issued_at | to_eat }}</p>
-    <a href="/clearance/clearance-form/{{ clearance_request.id }}" class="btn-certificate" style="background:#1565c0;display:inline-block;margin-top:8px">
-      <i class="fas fa-file-alt"></i> Download Clearance Form
-    </a>
-  </div>
-  {% endif %}
-</div>
 
-<div class="clearance-section">
-  <div class="section-title">Clearance Progress Timeline</div>
-  <div class="timeline">
-    {% for approval in department_approvals %}
-    <div class="timeline-item {{ approval.status }}">
-      <div class="approval-header">
-        <div class="approval-stage">{{ approval.clearance_stages.stage_name }}</div>
-        <span class="approval-status status-{{ approval.status }}">{{ approval.status|capitalize }}</span>
+  <!-- 9-step explainer -->
+  <div class="flow-card">
+    <p class="flow-title"><i class="fas fa-route" style="color:#1565c0"></i> How Clearance Works</p>
+    <div style="display:grid;gap:10px;font-size:13px;color:#374151">
+      {% for num, label in [('1','Trainer Clearance'),('2','Home Dept Technicians'),
+          ('3','HOD Approval (Gates All Other Stages)'),('4','Institutional Sections'),
+          ('5','Finance Office'),('6','Dean of Students / Final Authority'),('✓','Clearance Issued')] %}
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ num }}</span>
+        <span>{{ label }}</span>
       </div>
-      <div class="approval-dept">{{ approval.clearance_departments.name }} - Department Clearance</div>
-      {% if approval.comments %}
-      <div class="approval-comments"><strong>Comments:</strong> {{ approval.comments }}</div>
-      {% endif %}
-      {% if approval.approved_at %}
-      <div class="approval-date">Approved: {{ approval.approved_at | to_eat }}</div>
-      {% endif %}
+      {% endfor %}
     </div>
-    {% endfor %}
-    
-    {% for approval in institutional_approvals %}
-    <div class="timeline-item {{ approval.status }}">
-      <div class="approval-header">
-        <div class="approval-stage">{{ approval.clearance_stages.stage_name }}</div>
-        <span class="approval-status status-{{ approval.status }}">{{ approval.status|capitalize }}</span>
-      </div>
-      <div class="approval-dept">{{ approval.clearance_departments.name }} - Institutional Clearance</div>
-      {% if approval.comments %}
-      <div class="approval-comments"><strong>Comments:</strong> {{ approval.comments }}</div>
-      {% endif %}
-      {% if approval.approved_at %}
-      <div class="approval-date">Approved: {{ approval.approved_at | to_eat }}</div>
-      {% endif %}
-    </div>
-    {% endfor %}
-    
-    {% for approval in central_approvals %}
-    <div class="timeline-item {{ approval.status }}">
-      <div class="approval-header">
-        <div class="approval-stage">{{ approval.clearance_stages.stage_name }}</div>
-        <span class="approval-status status-{{ approval.status }}">{{ approval.status|capitalize }}</span>
-      </div>
-      <div class="approval-dept">{{ approval.clearance_departments.name }} - Central Authority</div>
-      {% if approval.comments %}
-      <div class="approval-comments"><strong>Comments:</strong> {{ approval.comments }}</div>
-      {% endif %}
-      {% if approval.approved_at %}
-      <div class="approval-date">Approved: {{ approval.approved_at | to_eat }}</div>
-      {% endif %}
-    </div>
-    {% endfor %}
   </div>
-</div>
-{% endif %}
+
+  {% else %}
+
+  <!-- ── STATUS BANNER ── -->
+  {% set cr_status = clearance_request.get('status','in_progress') %}
+  <div class="status-banner sb-{{ cr_status }}">
+    <span class="sb-icon">
+      {% if cr_status == 'completed' %}🎓{% elif cr_status == 'rejected' %}❌{% else %}⏳{% endif %}
+    </span>
+    <div class="sb-info">
+      <div class="sb-title">
+        {% if cr_status == 'completed' %}Clearance Complete — Certificate Ready{% elif cr_status == 'rejected' %}Clearance Rejected{% else %}Clearance In Progress{% endif %}
+      </div>
+      <div class="sb-sub">
+        Course: {{ (clearance_request.get('courses') or {}).get('name','—') }}
+        &nbsp;·&nbsp; Initiated: {{ clearance_request.get('initiated_at','')[:10] }}
+      </div>
+    </div>
+    <span class="sb-serial">{{ serial }}</span>
+  </div>
+
+  <!-- ── DOWNLOAD BLOCK ── -->
+  {% if cr_status == 'completed' %}
+  <div class="download-block">
+    <h3><i class="fas fa-certificate"></i> Your Clearance is Approved!</h3>
+    <div class="serial-display">{{ serial }}</div>
+    <p>All stages have been approved. Download your official clearance certificate below.</p>
+    <a href="/clearance/certificate/{{ clearance_request.id }}" target="_blank" class="btn-download">
+      <i class="fas fa-download"></i> Download Clearance Certificate
+    </a>
+  </div>
+  {% else %}
+  <div class="locked-download">
+    <i class="fas fa-lock"></i>
+    <p style="font-size:13px;font-weight:600;margin:0 0 4px">Download Not Yet Available</p>
+    <p style="font-size:12px;margin:0">Complete all clearance stages to unlock your certificate.</p>
+  </div>
+  {% endif %}
+
+  <!-- ── 9-STEP PROGRESS FLOW ── -->
+  <div class="flow-card">
+    <p class="flow-title">
+      <i class="fas fa-route" style="color:#1565c0"></i> Clearance Progress
+    </p>
+
+    <div class="step-list">
+
+      {% set step_icons = {
+        'approved':    'fa-check',
+        'in_progress': 'fa-clock',
+        'locked':      'fa-lock',
+        'rejected':    'fa-times',
+        'n_a':         'fa-minus',
+      } %}
+      {% set step_descs = {
+        1: 'All trainers who taught you must approve.',
+        2: 'All workshop technicians in your department.',
+        3: 'Head of Department — gates all remaining stages.',
+        4: 'Library, Sports, Environment, Dean\'s Office, etc.',
+        5: 'Finance verifies all fees are settled.',
+        6: 'Deputy Principal / Dean final verification.',
+      } %}
+
+      {% for step in steps %}{% set i = loop.index %}{% if i <= 6 %}
+      {% set st = step.status %}
+      <div class="step-row step-{{ st }}">
+        <div class="step-icon icon-{{ st if st != 'n_a' else 'locked' }}">
+          {% if st == 'approved' %}<i class="fas fa-check"></i>
+          {% elif st == 'in_progress' %}<i class="fas fa-clock"></i>
+          {% elif st == 'rejected' %}<i class="fas fa-times"></i>
+          {% else %}<i class="fas fa-lock"></i>{% endif %}
+        </div>
+        <div class="step-body">
+          <div class="step-name">Stage {{ i }}: {{ step.label }}</div>
+          <div class="step-desc">{{ step_descs.get(i,'') }}</div>
+          <span class="step-badge badge-{{ st }}">
+            {{ {'approved':'✅ Approved','in_progress':'🔄 In Progress','locked':'🔒 Locked','rejected':'❌ Rejected','n_a':'—'}.get(st, st)|title }}
+          </span>
+          {% if step.approvals %}
+          <button class="expand-btn" onclick="toggleApprovals({{ loop.index }})">
+            Show details ({{ step.approvals|length }})
+          </button>
+          <div class="approval-details" id="apd-{{ loop.index }}">
+            {% for a in step.approvals %}
+            <div class="ap-row">
+              <div>
+                <div class="ap-name">
+                  {% if a.status == 'approved' %}✅{% elif a.status == 'rejected' %}❌{% else %}⏳{% endif %}
+                  {{ (a.get('clearance_stages') or {}).get('stage_name','Stage') }}
+                </div>
+                {% if a.get('comments') and not a.comments.startswith('ASSIGNED_TO:') %}
+                <div class="ap-comment">"{{ a.comments }}"</div>
+                {% endif %}
+              </div>
+              <div class="ap-date">{{ (a.get('approved_at') or '')[:10] or 'Pending' }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}{% endfor %}
+
+      <!-- Final: Clearance Issued -->
+      <div class="step-row {% if cr_status == 'completed' %}step-approved{% endif %}">
+        <div class="step-icon {% if cr_status == 'completed' %}icon-complete{% else %}icon-locked{% endif %}">
+          {% if cr_status == 'completed' %}<i class="fas fa-certificate"></i>
+          {% else %}<i class="fas fa-lock"></i>{% endif %}
+        </div>
+        <div class="step-body">
+          <div class="step-name">Clearance Issued</div>
+          <div class="step-desc">All stages approved — certificate downloadable with QR code and serial number.</div>
+          {% if cr_status == 'completed' %}
+          <span class="step-badge badge-approved">✅ Clearance Issued</span>
+          {% else %}
+          <span class="step-badge badge-locked">🔒 Awaiting All Stages</span>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /step-list -->
+  </div>
+
+  {% endif %}
+
+</div><!-- /cl-wrap -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleApprovals(idx) {
+  var el = document.getElementById('apd-' + idx);
+  if (!el) return;
+  var open = el.classList.toggle('open');
+  // Update button label
+  var btn = el.previousElementSibling;
+  if (btn) {
+    var n = el.querySelectorAll('.ap-row').length;
+    btn.textContent = (open ? 'Hide' : 'Show') + ' details (' + n + ')';
+  }
+}
+</script>
 {% endblock %}
