@@ -55,7 +55,6 @@
 
     <div class="sidebar-menu">
 
-      <div class="menu-section">Overview</div>
       <a href="/super-admin/dashboard"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
 
       <div class="menu-section">User Management</div>
@@ -63,22 +62,16 @@
       <a href="/super-admin/users?role=super_admin"><i class="fas fa-shield-alt fa-fw"></i> Super Admins</a>
       <a href="/super-admin/users?role=dept_admin"><i class="fas fa-user-tie fa-fw"></i> Dept Admins / HODs</a>
       <a href="/super-admin/users?role=trainer"><i class="fas fa-chalkboard-teacher fa-fw"></i> Trainers</a>
+      <a href="/super-admin/users?role=workshop_technician"><i class="fas fa-tools fa-fw"></i> Workshop Technicians</a>
       <a href="/super-admin/users?role=student"><i class="fas fa-user-graduate fa-fw"></i> Students</a>
       <a href="/super-admin/users?role=registrar"><i class="fas fa-id-card fa-fw"></i> Registrar</a>
+      <a href="/super-admin/users?role=dean_students"><i class="fas fa-user-friends fa-fw"></i> Dean of Students</a>
       <a href="/super-admin/users?role=deputy_principal"><i class="fas fa-user-shield fa-fw"></i> Deputy Principal</a>
       <a href="/super-admin/users?role=examination_officer"><i class="fas fa-file-signature fa-fw"></i> Exam Officer</a>
       <a href="/super-admin/users?role=quality_assurance_officer"><i class="fas fa-clipboard-check fa-fw"></i> QA Officer</a>
-
-      <div class="menu-section">Employer Portal</div>
-      <a href="/super-admin/employers?status=pending" id="pendingEmployersLink">
-        <i class="fas fa-building fa-fw"></i> Employer Accounts
-        {% if pending_employers_count > 0 %}
-        <span style="margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;padding:1px 8px;font-size:10px;font-weight:700">{{ pending_employers_count }}</span>
-        {% endif %}
-      </a>
-      <a href="/super-admin/job-postings"><i class="fas fa-briefcase fa-fw"></i> Job Postings</a>
-      <a href="/super-admin/job-applications"><i class="fas fa-paper-plane fa-fw"></i> Applications</a>
-      <a href="/super-admin/employer-verifications"><i class="fas fa-certificate fa-fw"></i> Verifications</a>
+      <a href="/super-admin/users?role=liaison_officer"><i class="fas fa-handshake fa-fw"></i> Industrial Liaison Officer</a>
+      <a href="/super-admin/users?role=cdacc_verifier"><i class="fas fa-certificate fa-fw"></i> CDACC External Verifiers</a>
+      <a href="/super-admin/users?role=industry_supervisor"><i class="fas fa-hard-hat fa-fw"></i> Industry Supervisors</a>
 
       <div class="menu-section">Academic Structure</div>
       <a href="/super-admin/departments"><i class="fas fa-sitemap fa-fw"></i> Departments</a>
@@ -88,22 +81,19 @@
 
       <div class="menu-section">Attendance &amp; Assessment</div>
       <a href="/super-admin/attendance"><i class="fas fa-calendar-check fa-fw"></i> Attendance Records</a>
-      <a href="/super-admin/assessments"><i class="fas fa-file-alt fa-fw"></i> All Assessments</a>
-      <a href="/super-admin/assessments?status=pending"><i class="fas fa-clock fa-fw"></i> Pending Review</a>
-      <a href="/super-admin/marks"><i class="fas fa-chart-bar fa-fw"></i> Marks &amp; Results</a>
+      <a href="/super-admin/assessments"><i class="fas fa-folder-open fa-fw"></i> All POE</a>
+      <a href="/super-admin/marks"><i class="fas fa-chart-bar fa-fw"></i> All Marks</a>
 
-      <div class="menu-section">Clearance &amp; Admission</div>
-      <a href="/super-admin/clearances"><i class="fas fa-clipboard-check fa-fw"></i> Clearance Requests</a>
-      <a href="/super-admin/admissions"><i class="fas fa-file-upload fa-fw"></i> Admission Requests</a>
+      <div class="menu-section">Clearance Management</div>
+      <a href="/super-admin/clearances"><i class="fas fa-clipboard-check fa-fw"></i> Clearance Approvals</a>
 
-      <div class="menu-section">Dual Training</div>
-      <a href="/super-admin/companies"><i class="fas fa-industry fa-fw"></i> Industry Partners</a>
-      <a href="/super-admin/attachments"><i class="fas fa-handshake fa-fw"></i> Attachments</a>
+      <div class="menu-section">Industrial Attachments</div>
+      <a href="/super-admin/attachments"><i class="fas fa-briefcase fa-fw"></i> Manage Attachments</a>
+      <a href="/super-admin/logbooks"><i class="fas fa-book-open fa-fw"></i> Digital Logbooks</a>
 
       <div class="menu-section">System</div>
       <a href="/super-admin/logs"><i class="fas fa-history fa-fw"></i> Audit Logs</a>
       <a href="/super-admin/import"><i class="fas fa-file-excel fa-fw"></i> Import Data</a>
-      <a href="/employer/job-board" target="_blank"><i class="fas fa-external-link-alt fa-fw"></i> Public Job Board</a>
 
       <div class="menu-section">Profile</div>
       <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>

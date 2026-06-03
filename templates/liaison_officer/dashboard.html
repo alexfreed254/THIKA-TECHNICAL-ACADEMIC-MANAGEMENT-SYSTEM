@@ -1,0 +1,132 @@
+{% extends "liaison_officer/base.html" %}
+{% block title %}ILO Dashboard{% endblock %}
+{% block page_title %}Industrial Liaison Officer Dashboard{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-slate-800 to-blue-900 rounded-xl shadow-lg p-6 mb-8 text-white">
+    <h1 class="text-2xl font-bold mb-1"><i class="fas fa-handshake mr-2"></i>Welcome, {{ current_user.full_name }}!</h1>
+    <p class="text-blue-200 text-sm">{{ current_month }} &bull; Industrial Liaison Officer Portal</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 text-center">
+      <div class="text-3xl font-bold text-blue-600 mb-1">{{ stats.total or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Total Attachments</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-orange-100 text-center">
+      <div class="text-3xl font-bold text-orange-500 mb-1">{{ stats.pending or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Pending Approval</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-green-100 text-center">
+      <div class="text-3xl font-bold text-green-600 mb-1">{{ stats.active or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Active</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-blue-100 text-center">
+      <div class="text-3xl font-bold text-blue-600 mb-1">{{ stats.approved or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Approved</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-purple-100 text-center">
+      <div class="text-3xl font-bold text-purple-600 mb-1">{{ stats.companies or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Industry Partners</div>
+    </div>
+  </div>
+
+  <!-- Pending Attachments -->
+  <div class="bg-white rounded-xl shadow-sm mb-8 border border-orange-100">
+    <div class="px-6 py-4 border-b border-orange-50 flex items-center justify-between bg-orange-50 rounded-t-xl">
+      <h2 class="text-lg font-bold text-orange-900"><i class="fas fa-clock text-orange-500 mr-2"></i>Pending Attachments
+        <span class="ml-2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ pending_attachments|length }}</span>
+      </h2>
+      <a href="/liaison-officer/attachments?status=pending" class="text-orange-600 text-sm font-semibold hover:underline">View All</a>
+    </div>
+    {% if pending_attachments %}
+    <div class="divide-y divide-gray-50">
+      {% for a in pending_attachments %}
+      <div class="px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50">
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-900">{{ a.get('user_profiles',{}).get('full_name','—') }}
+            <span class="text-xs text-gray-400 ml-2">{{ a.get('user_profiles',{}).get('admission_no','') }}</span></p>
+          <p class="text-sm text-gray-600"><i class="fas fa-building mr-1"></i>{{ a.get('companies',{}).get('name','—') }}</p>
+          <p class="text-xs text-gray-400">{{ a.start_date }} → {{ a.end_date or 'TBD' }}</p>
+        </div>
+        <form method="POST" action="/liaison-officer/attachments/{{ a.id }}/approve" class="flex gap-2 flex-shrink-0">
+          <input type="hidden" name="status" value="approved">
+          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">
+            <i class="fas fa-check mr-1"></i>Approve
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-gray-400"><i class="fas fa-check-circle text-4xl mb-3 block"></i>No pending attachments</div>
+    {% endif %}
+  </div>
+
+  <!-- Active Attachments -->
+  <div class="bg-white rounded-xl shadow-sm mb-8 border border-green-100">
+    <div class="px-6 py-4 border-b border-green-50 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-circle text-green-500 mr-2"></i>Active Attachments</h2>
+      <a href="/liaison-officer/attachments?status=active" class="text-green-600 text-sm font-semibold hover:underline">View All</a>
+    </div>
+    {% if active_attachments %}
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Company</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Start</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">End</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for a in active_attachments %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ a.get('user_profiles',{}).get('full_name','—') }}</td>
+            <td class="px-6 py-3 text-sm text-gray-600">{{ a.get('companies',{}).get('name','—') }}</td>
+            <td class="px-6 py-3 text-sm text-gray-500">{{ a.start_date or '—' }}</td>
+            <td class="px-6 py-3 text-sm text-gray-500">{{ a.end_date or 'Ongoing' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-400">No active attachments at the moment.</div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Logbooks -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-book-open text-blue-500 mr-2"></i>Recent Logbook Entries</h2>
+      <a href="/liaison-officer/logbooks" class="text-blue-600 text-sm font-semibold hover:underline">View All</a>
+    </div>
+    {% if recent_logbooks %}
+    <div class="divide-y divide-gray-50">
+      {% for l in recent_logbooks %}
+      <div class="px-6 py-3 flex items-center gap-4 hover:bg-gray-50">
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-sm text-gray-900">{{ l.get('user_profiles',{}).get('full_name','—') }}</p>
+          <p class="text-xs text-gray-500">{{ l.task_title or '—' }} &bull; {{ l.log_date }}</p>
+        </div>
+        <span class="px-2 py-1 rounded-full text-xs font-bold
+          {% if l.mentor_approval_status == 'approved' %}bg-green-100 text-green-700
+          {% elif l.mentor_approval_status == 'rejected' %}bg-red-100 text-red-700
+          {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+          {{ (l.mentor_approval_status or 'pending')|upper }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-400">No logbook entries found.</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

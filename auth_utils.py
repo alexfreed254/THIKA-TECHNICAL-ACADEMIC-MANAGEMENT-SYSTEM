@@ -24,8 +24,24 @@ SESSION_REFRESH = "sb_refresh_token"
 
 
 # ── Role definitions ────────────────────────────────────────────────────────────
-STAFF_ROLES = frozenset({'super_admin', 'dept_admin', 'trainer', 'employer', 'examination_officer', 'industry_mentor', 'internal_verifier', 'sports_hod', 'environment_hod', 'dean_students', 'library_hod', 'finance_officer', 'registrar', 'deputy_principal', 'quality_assurance_officer'})
-ALL_ROLES = frozenset({'super_admin', 'dept_admin', 'trainer', 'student', 'employer', 'examination_officer', 'industry_mentor', 'internal_verifier', 'sports_hod', 'environment_hod', 'dean_students', 'library_hod', 'finance_officer', 'registrar', 'deputy_principal', 'quality_assurance_officer'})
+STAFF_ROLES = frozenset({
+    'super_admin', 'dept_admin', 'trainer', 'employer',
+    'examination_officer', 'industry_mentor', 'internal_verifier',
+    'sports_hod', 'environment_hod', 'dean_students', 'library_hod',
+    'finance_officer', 'registrar', 'deputy_principal',
+    'quality_assurance_officer',
+    # New roles
+    'workshop_technician', 'liaison_officer', 'cdacc_verifier', 'industry_supervisor',
+})
+ALL_ROLES = frozenset({
+    'super_admin', 'dept_admin', 'trainer', 'student', 'employer',
+    'examination_officer', 'industry_mentor', 'internal_verifier',
+    'sports_hod', 'environment_hod', 'dean_students', 'library_hod',
+    'finance_officer', 'registrar', 'deputy_principal',
+    'quality_assurance_officer',
+    # New roles
+    'workshop_technician', 'liaison_officer', 'cdacc_verifier', 'industry_supervisor',
+})
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -345,6 +361,22 @@ def deputy_principal_required(f):
 
 def quality_assurance_officer_required(f):
     return role_required("quality_assurance_officer")(f)
+
+
+def workshop_technician_required(f):
+    return role_required("workshop_technician")(f)
+
+
+def liaison_officer_required(f):
+    return role_required("liaison_officer")(f)
+
+
+def cdacc_verifier_required(f):
+    return role_required("cdacc_verifier")(f)
+
+
+def industry_supervisor_required(f):
+    return role_required("industry_supervisor")(f)
 
 
 def dept_isolation_check(department_id: str) -> bool:

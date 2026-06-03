@@ -843,3 +843,20 @@ def attachments():
     records = query.execute().data or []
     return render_template("super_admin/attachments.html",
                            attachments=records, status_filter=status_filter)
+
+
+@super_admin_bp.route("/logbooks")
+@super_admin_required
+def logbooks():
+    db = _svc()
+    dept_filter = request.args.get("department", "")
+    query = (db.table("digital_logbook")
+               .select("*, user_profiles!digital_logbook_student_id_fkey(full_name, admission_no), "
+                       "units(name, code)")
+               .order("log_date", desc=True)
+               .limit(300))
+    records = query.execute().data or []
+    departments = db.table("departments").select("id, name").order("name").execute().data or []
+    return render_template("super_admin/logbooks.html",
+                           logbooks=records, departments=departments,
+                           dept_filter=dept_filter)

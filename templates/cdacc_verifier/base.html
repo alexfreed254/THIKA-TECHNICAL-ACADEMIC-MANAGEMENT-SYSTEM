@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CDACC Verifier{% endblock %} | TTTI Verification Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  {% block extra_head %}{% endblock %}
+  <style>
+    .sidebar { background: linear-gradient(180deg, #1b1b2f 0%, #162447 55%, #1f4068 100%); }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,.13); border-left-color: #e2b714; color: #fff; }
+    .topbar { border-bottom: 2px solid #fef9c3; }
+    .topbar-title { color: #1b1b2f; }
+    .flash-success,.flash-error,.flash-warning,.flash-info{display:flex;align-items:center;gap:12px;padding:13px 22px;font-size:13.5px;font-weight:500;border-left:4px solid;}
+    .flash-success{background:#f0fdf4;color:#15803d;border-left-color:#16a34a;}
+    .flash-error{background:#fef2f2;color:#991b1b;border-left-color:#dc2626;}
+    .flash-warning{background:#fffbeb;color:#92400e;border-left-color:#d97706;}
+    .flash-info{background:#f0f9ff;color:#0e7490;border-left-color:#0891b2;}
+    .notif-wrapper{position:relative}.notif-panel{position:absolute;right:0;top:calc(100% + 10px);width:340px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:9999;overflow:hidden}.notif-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid #f3f4f6}.notif-panel-ttl{font-weight:700;color:#111827;font-size:14px}.notif-mark-all-btn{font-size:12px;color:#2563eb;background:none;border:none;cursor:pointer;font-weight:600;padding:0}.notif-mark-all-btn:hover{text-decoration:underline}.notif-list{max-height:360px;overflow-y:auto}.notif-item{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid #f9fafb;cursor:pointer;transition:background .15s;text-decoration:none;color:inherit}.notif-item:hover{background:#f9fafb}.notif-item.unread{background:#eff6ff;border-left:3px solid #2563eb}.notif-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}.notif-icon.info{background:#dbeafe;color:#1d4ed8}.notif-icon.success{background:#dcfce7;color:#15803d}.notif-icon.warning{background:#fef3c7;color:#b45309}.notif-icon.error{background:#fee2e2;color:#b91c1c}.notif-body{flex:1;min-width:0}.notif-title{font-size:13px;font-weight:600;color:#111827;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notif-msg{font-size:12px;color:#6b7280;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notif-time{font-size:11px;color:#9ca3af;margin-top:3px}.notif-dot{width:8px;height:8px;background:#2563eb;border-radius:50%;flex-shrink:0;margin-top:4px}.notif-view-all-link{display:block;text-align:center;padding:11px;font-size:13px;font-weight:600;color:#2563eb;border-top:1px solid #f3f4f6;text-decoration:none}.notif-view-all-link:hover{background:#eff6ff}.notif-empty{padding:28px 16px;text-align:center;color:#9ca3af;font-size:13px}.notif-loading{padding:20px;text-align:center;color:#9ca3af;font-size:13px}
+    {% block extra_style %}{% endblock %}
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="dashboard-container">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+      <h2>THIKA TECHNICAL<br>TRAINING INSTITUTE</h2>
+      <div class="role-badge"><i class="fas fa-certificate"></i>&nbsp; CDACC Verifier</div>
+    </div>
+    <div class="sidebar-menu">
+      <a href="/cdacc-verifier/dashboard"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
+      <div class="menu-section">Assessment Verification</div>
+      <a href="/cdacc-verifier/assessments"><i class="fas fa-folder-open fa-fw"></i> All POE Records</a>
+      <a href="/cdacc-verifier/assessments?status=pending"><i class="fas fa-clock fa-fw"></i> Pending Verification</a>
+      <a href="/cdacc-verifier/assessments?status=approved"><i class="fas fa-check-circle fa-fw"></i> Verified</a>
+      <div class="menu-section">Profile</div>
+      <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
+      <a href="/notifications"><i class="fas fa-bell fa-fw"></i> Notifications
+        {% if unread_notification_count > 0 %}<span style="margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;padding:1px 7px;font-size:10px;font-weight:700">{{ unread_notification_count }}</span>{% endif %}
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
+    </div>
+  </aside>
+  <div class="main-content">
+    <header class="topbar">
+      <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="notif-wrapper" id="notifWrapper">
+          <button class="notification-bell" id="notifBell" title="Notifications" aria-expanded="false" aria-haspopup="true">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge" id="notifBadge"{% if unread_notification_count == 0 %} style="display:none"{% endif %}>{{ unread_notification_count }}</span>
+          </button>
+          <div class="notif-panel" id="notifPanel" hidden>
+            <div class="notif-panel-hdr">
+              <span class="notif-panel-ttl"><i class="fas fa-bell" style="color:#2563eb;margin-right:6px;font-size:13px;"></i>Notifications</span>
+              <button class="notif-mark-all-btn" id="notifMarkAll">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notifList"><div class="notif-loading"><i class="fas fa-spinner fa-spin"></i></div></div>
+            <a href="/notifications" class="notif-view-all-link">View all <i class="fas fa-arrow-right" style="font-size:11px;"></i></a>
+          </div>
+        </div>
+        <div class="topbar-user"><i class="fas fa-certificate"></i> {{ current_user.full_name if current_user else '' }}</div>
+      </div>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="flash-{{ 'success' if cat == 'success' else 'error' if cat in ('error','danger') else 'warning' if cat == 'warning' else 'info' }}">
+        <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat in ('error','danger') %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        {{ msg }}
+      </div>
+      {% endfor %}
+    {% endwith %}
+    <main>{% block content %}{% endblock %}</main>
+  </div>
+</div>
+{% block scripts %}{% endblock %}
+<script>
+  const toggle=document.getElementById('sidebarToggle'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('sidebarOverlay');
+  function openSidebar(){sidebar.classList.add('open');overlay.classList.add('open');toggle.innerHTML='<i class="fas fa-times"></i>';}
+  function closeSidebar(){sidebar.classList.remove('open');overlay.classList.remove('open');toggle.innerHTML='<i class="fas fa-bars"></i>';}
+  toggle.addEventListener('click',()=>sidebar.classList.contains('open')?closeSidebar():openSidebar());
+  overlay.addEventListener('click',closeSidebar);
+  const path=window.location.pathname;
+  document.querySelectorAll('.sidebar-menu a').forEach(a=>{a.addEventListener('click',()=>{if(window.innerWidth<=768)closeSidebar();});if(a.getAttribute('href')===path)a.classList.add('active');});
+  window.showToast=function(msg,type,duration){var tc=document.getElementById('toast-container');if(!tc)return;var icons={success:'check-circle',error:'exclamation-circle',warning:'exclamation-triangle',info:'info-circle'};var t=document.createElement('div');t.className='toast toast-'+(type||'info');t.innerHTML='<i class="fas fa-'+(icons[type]||icons.info)+'"></i><span class="toast-msg">'+msg+'</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';tc.appendChild(t);setTimeout(function(){t.classList.add('toast-out');setTimeout(function(){t.remove();},300);},(duration||4000));};
+  (function(){var bell=document.getElementById('notifBell'),panel=document.getElementById('notifPanel'),badge=document.getElementById('notifBadge'),list=document.getElementById('notifList'),markAllBtn=document.getElementById('notifMarkAll');if(!bell)return;var ICONS={info:'info-circle',success:'check-circle',warning:'exclamation-triangle',error:'exclamation-circle'};function timeAgo(iso){if(!iso)return '';var diff=Math.floor((Date.now()-new Date(iso))/1000);if(diff<60)return 'just now';if(diff<3600)return Math.floor(diff/60)+'m ago';if(diff<86400)return Math.floor(diff/3600)+'h ago';return Math.floor(diff/86400)+'d ago';}function setBadge(n){badge.textContent=n>99?'99+':n;badge.style.display=n>0?'':'none';}function renderList(items){if(!items||!items.length){list.innerHTML='<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:22px;margin-bottom:6px;display:block;"></i>No notifications yet</div>';return;}list.innerHTML=items.map(function(n){var icon=ICONS[n.type]||'info-circle',url=n.action_url||'/notifications',uc=n.is_read?'':'unread',dot=n.is_read?'':'<div class="notif-dot"></div>',title=(n.title||'').replace(/</g,'&lt;'),msg=(n.message||'').replace(/</g,'&lt;');return '<a href="'+url+'" class="notif-item '+uc+'" data-id="'+n.id+'"><div class="notif-icon '+(n.type||'info')+'"><i class="fas fa-'+icon+'"></i></div><div class="notif-body"><div class="notif-title">'+title+'</div><div class="notif-msg">'+msg+'</div><div class="notif-time">'+timeAgo(n.created_at)+'</div></div>'+dot+'</a>';}).join('');list.querySelectorAll('.notif-item').forEach(function(item){item.addEventListener('click',function(){if(!this.classList.contains('unread'))return;var self=this;fetch('/notifications/'+this.dataset.id+'/read',{method:'POST',headers:{'Content-Type':'application/json'}}).then(function(r){return r.json();}).then(function(d){if(d.success){self.classList.remove('unread');var dot=self.querySelector('.notif-dot');if(dot)dot.remove();setBadge(Math.max(0,(parseInt(badge.textContent)||0)-1));}}).catch(function(){});});});}function loadRecent(){list.innerHTML='<div class="notif-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';fetch('/notifications/recent').then(function(r){return r.json();}).then(function(data){renderList(data.notifications);setBadge(data.unread_count);}).catch(function(){list.innerHTML='<div class="notif-empty">Could not load.</div>';});}bell.addEventListener('click',function(e){e.stopPropagation();var nowOpen=panel.hidden;panel.hidden=!nowOpen;bell.setAttribute('aria-expanded',nowOpen);if(nowOpen)loadRecent();});markAllBtn.addEventListener('click',function(){fetch('/notifications/mark-all-read',{method:'POST',headers:{'Content-Type':'application/json'}}).then(function(r){return r.json();}).then(function(){setBadge(0);loadRecent();}).catch(function(){});});document.addEventListener('click',function(e){if(!panel.hidden&&!document.getElementById('notifWrapper').contains(e.target)){panel.hidden=true;bell.setAttribute('aria-expanded','false');}});var lastCount=parseInt(badge.textContent)||0;setInterval(function(){fetch('/notifications/count').then(function(r){return r.json();}).then(function(d){var nc=d.count||0;if(nc>lastCount)window.showToast('You have '+nc+' unread notification'+(nc>1?'s':'')+'.','info',5000);lastCount=nc;setBadge(nc);if(!panel.hidden)loadRecent();}).catch(function(){});},30000);})();
+</script>
+</body>
+</html>

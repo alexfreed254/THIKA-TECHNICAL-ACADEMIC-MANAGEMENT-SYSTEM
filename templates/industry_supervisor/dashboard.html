@@ -1,0 +1,103 @@
+{% extends "industry_supervisor/base.html" %}
+{% block title %}Supervisor Dashboard{% endblock %}
+{% block page_title %}Industry Supervisor Dashboard{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <div class="bg-gradient-to-r from-gray-900 to-green-900 rounded-xl shadow-lg p-6 mb-8 text-white">
+    <h1 class="text-2xl font-bold mb-1"><i class="fas fa-hard-hat mr-2"></i>Welcome, {{ current_user.full_name }}!</h1>
+    <p class="text-green-200 text-sm">{{ current_month }}
+      {% if mentor and mentor.get('companies') %}&bull; {{ mentor.get('companies',{}).get('name','') }}{% endif %}
+    </p>
+  </div>
+
+  {% if not mentor %}
+  <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8 flex items-center gap-4">
+    <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl"></i>
+    <div>
+      <p class="font-semibold text-yellow-800">Supervisor Profile Not Linked</p>
+      <p class="text-sm text-yellow-700">Your account is not yet linked to a company. Please contact your administrator.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-green-100 text-center">
+      <div class="text-3xl font-bold text-green-600 mb-1">{{ stats.trainees or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Active Trainees</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-orange-100 text-center">
+      <div class="text-3xl font-bold text-orange-500 mb-1">{{ stats.pending_logs or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Pending Logbooks</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border border-blue-100 text-center">
+      <div class="text-3xl font-bold text-blue-600 mb-1">{{ stats.logbooks or 0 }}</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase">Total Log Entries</div>
+    </div>
+  </div>
+
+  <!-- Active Trainees -->
+  <div class="bg-white rounded-xl shadow-sm mb-8 border border-green-100">
+    <div class="px-6 py-4 border-b border-green-50 bg-green-50 rounded-t-xl flex items-center justify-between">
+      <h2 class="text-lg font-bold text-green-900"><i class="fas fa-users text-green-500 mr-2"></i>My Active Trainees</h2>
+      <a href="/industry-supervisor/trainees" class="text-green-600 text-sm font-semibold hover:underline">View All</a>
+    </div>
+    {% if trainees %}
+    <div class="divide-y divide-gray-50">
+      {% for t in trainees %}
+      <div class="px-6 py-4 flex items-center gap-4 hover:bg-gray-50">
+        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-user-graduate text-green-600"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-900">{{ t.get('user_profiles',{}).get('full_name','—') }}</p>
+          <p class="text-xs text-gray-500">{{ t.get('user_profiles',{}).get('admission_no','') }} &bull; {{ t.get('user_profiles',{}).get('departments',{}).get('name','') }}</p>
+          <p class="text-xs text-gray-400">{{ t.start_date }} → {{ t.end_date or 'Ongoing' }}</p>
+        </div>
+        <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">ACTIVE</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-gray-400"><i class="fas fa-user-slash text-4xl mb-3 block"></i>No active trainees assigned</div>
+    {% endif %}
+  </div>
+
+  <!-- Pending Logbooks -->
+  <div class="bg-white rounded-xl shadow-sm border border-orange-100">
+    <div class="px-6 py-4 border-b border-orange-50 bg-orange-50 rounded-t-xl flex items-center justify-between">
+      <h2 class="text-lg font-bold text-orange-900"><i class="fas fa-clock text-orange-500 mr-2"></i>Pending Logbook Approvals
+        <span class="ml-2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ pending_logbooks|length }}</span>
+      </h2>
+      <a href="/industry-supervisor/logbooks?status=pending" class="text-orange-600 text-sm font-semibold hover:underline">View All</a>
+    </div>
+    {% if pending_logbooks %}
+    <div class="divide-y divide-gray-50">
+      {% for l in pending_logbooks %}
+      <div class="px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50">
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-sm text-gray-900">{{ l.get('user_profiles',{}).get('full_name','—') }}</p>
+          <p class="text-xs text-gray-600">{{ l.task_title or '—' }}</p>
+          <p class="text-xs text-gray-400">{{ l.log_date }} &bull; {{ l.hours_spent or 0 }}h &bull; {{ l.get('units',{}).get('code','') }}</p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <form method="POST" action="/industry-supervisor/logbooks/{{ l.id }}/approve">
+            <input type="hidden" name="status" value="approved">
+            <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-green-700">Approve</button>
+          </form>
+          <form method="POST" action="/industry-supervisor/logbooks/{{ l.id }}/approve">
+            <input type="hidden" name="status" value="rejected">
+            <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-red-600">Reject</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-gray-400"><i class="fas fa-check-circle text-4xl mb-3 block"></i>No pending logbooks</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

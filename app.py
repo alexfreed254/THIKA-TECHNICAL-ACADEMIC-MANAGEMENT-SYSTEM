@@ -51,6 +51,9 @@ from routes.admission import admission_bp
 from routes.admin_oversight import admin_oversight_bp
 from routes.notifications import notifications_bp
 from routes.main import main_bp
+from routes.liaison_officer import liaison_officer_bp
+from routes.cdacc_verifier import cdacc_verifier_bp
+from routes.industry_supervisor import industry_supervisor_bp
 
 app.register_blueprint(main_bp)
 app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -66,6 +69,9 @@ app.register_blueprint(clearance_bp, url_prefix="/clearance")
 app.register_blueprint(admission_bp, url_prefix="/admission")
 app.register_blueprint(admin_oversight_bp, url_prefix="/admin-oversight")
 app.register_blueprint(notifications_bp, url_prefix="/notifications")
+app.register_blueprint(liaison_officer_bp, url_prefix="/liaison-officer")
+app.register_blueprint(cdacc_verifier_bp, url_prefix="/cdacc-verifier")
+app.register_blueprint(industry_supervisor_bp, url_prefix="/industry-supervisor")
 
 # ── Template globals ──────────────────────────────────────────────────────────
 @app.context_processor

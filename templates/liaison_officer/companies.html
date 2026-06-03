@@ -1,0 +1,35 @@
+{% extends "liaison_officer/base.html" %}
+{% block title %}Industry Partners{% endblock %}
+{% block page_title %}Industry Partners{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="px-6 py-4 border-b border-gray-100"><h2 class="text-lg font-bold text-gray-900"><i class="fas fa-industry text-blue-500 mr-2"></i>Industry Partners <span class="text-sm text-gray-400 font-normal">({{ companies|length }})</span></h2></div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Company Name</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Industry</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Address</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Contact</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for c in companies %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-xs text-gray-400">{{ loop.index }}</td>
+            <td class="px-4 py-3 font-semibold text-sm text-gray-900">{{ c.name }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ c.industry_classification or '—' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ c.address or '—' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ c.contact_person or '—' }}<br><span class="text-xs text-gray-400">{{ c.contact_phone or '' }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="px-4 py-12 text-center text-gray-400">No industry partners found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
