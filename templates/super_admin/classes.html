@@ -1,49 +1,120 @@
 {% extends "super_admin/base.html" %}
 {% block title %}Classes{% endblock %}
 {% block page_title %}Manage Classes{% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}.card-header{background:#7b1fa2;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}.card-body{padding:20px}.inline-form{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px}.form-group input,.form-group select{padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;min-width:180px}.btn{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}.btn-primary{background:#7b1fa2;color:#fff}.btn-danger{background:#c62828;color:#fff;padding:5px 12px;font-size:12px}.error-box{background:#ffebee;color:#c62828;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:11px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}td{padding:11px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.page-wrap{padding:24px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
+.card-header{background:linear-gradient(135deg,#0a0f1e,#0f1f40);color:#fff;padding:14px 20px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-body{padding:20px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select{padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-size:13px;outline:none;background:#fff}
+.fg input:focus,.fg select:focus{border-color:#fbbf24}
+.btn{padding:9px 20px;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700}
+.btn-add{background:#fbbf24;color:#0a0f1e;margin-top:18px}
+.btn-add:hover{background:#f59e0b}
+.btn-del{background:#c62828;color:#fff;padding:6px 14px;font-size:12px}
+.btn-del:hover{background:#b71c1c}
+.err{background:#ffebee;color:#c62828;border-radius:7px;padding:10px 14px;font-size:13px;margin-bottom:16px;border:1px solid #ffcdd2}
+table{width:100%;border-collapse:collapse}
+th{background:#f8f9fa;padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e9ecef}
+td{padding:12px 16px;border-bottom:1px solid #f0f0f0;font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.chip-dept{background:#e3f2fd;color:#1565c0}
+.chip-course{background:#f3e5f5;color:#6a1b9a}
+.chip-level{background:#e8f5e9;color:#2e7d32}
 {% endblock %}
+
 {% block content %}
 <div class="page-wrap">
+
   <div class="card">
-    <div class="card-header"><i class="fas fa-plus"></i> Add Class</div>
+    <div class="card-header"><i class="fas fa-plus-circle"></i> Add Class</div>
     <div class="card-body">
-      {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+      {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
       <form method="post">
-        <input type="hidden" name="action" value="create">
-        <div class="inline-form">
-          <div class="form-group"><label>Class Name</label><input type="text" name="name" placeholder="e.g. ICT 1A" required></div>
-          <div class="form-group"><label>Department</label>
+        <input type="hidden" name="add_class" value="1">
+        <div class="form-grid">
+          <div class="fg">
+            <label>Class Name <span style="color:#c62828">*</span></label>
+            <input type="text" name="name" placeholder="e.g. DICT 1A 2024" required>
+          </div>
+          <div class="fg">
+            <label>Department <span style="color:#c62828">*</span></label>
             <select name="department_id" required>
-              <option value="">-- Select --</option>
-              {% for d in depts %}<option value="{{ d.id }}" {% if dept_filter==d.id %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+              <option value="">— Select —</option>
+              {% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
             </select>
           </div>
-          <button type="submit" class="btn btn-primary" style="margin-top:20px"><i class="fas fa-save"></i> Add</button>
+          <div class="fg">
+            <label>Course</label>
+            <select name="course_id">
+              <option value="">— Select Course —</option>
+              {% for c in courses %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Intake Year</label>
+            <input type="number" name="intake_year" placeholder="e.g. 2024" min="2000" max="2100">
+          </div>
+          <div class="fg">
+            <label>Level</label>
+            <select name="level">
+              <option value="">— None —</option>
+              <option>Level 3</option>
+              <option>Level 4</option>
+              <option>Level 5</option>
+              <option>Level 6</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Cycle</label>
+            <select name="cycle">
+              <option value="">— None —</option>
+              <option>Cycle 1</option>
+              <option>Cycle 2</option>
+              <option>Cycle 3</option>
+              <option>Cycle 3 Moderated</option>
+            </select>
+          </div>
         </div>
+        <button type="submit" class="btn btn-add"><i class="fas fa-save"></i> Add Class</button>
       </form>
     </div>
   </div>
+
   <div class="card">
-    <div class="card-header"><i class="fas fa-list"></i> Classes ({{ classes|length }})</div>
-    <table><thead><tr><th>#</th><th>Name</th><th>Department</th><th>Action</th></tr></thead>
-    <tbody>
-      {% for c in classes %}
-      <tr>
-        <td style="color:#aaa">{{ loop.index }}</td>
-        <td><strong>{{ c.name }}</strong></td>
-        <td>{{ c.departments.name if c.departments else '—' }}</td>
-        <td>
-          <form method="post" style="display:inline" onsubmit="return confirm('Delete this class?')">
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="class_id" value="{{ c.id }}">
-            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% else %}<tr><td colspan="4" style="text-align:center;color:#aaa;padding:32px">No classes yet.</td></tr>{% endfor %}
-    </tbody></table>
+    <div class="card-header"><i class="fas fa-door-open"></i> All Classes
+      <span style="margin-left:8px;background:rgba(255,255,255,.2);color:#fff;padding:2px 10px;border-radius:20px;font-size:12px">{{ classes|length }}</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Class Name</th><th>Department</th><th>Course</th><th>Level</th><th>Cycle</th><th style="width:120px">Action</th></tr></thead>
+      <tbody>
+        {% for c in classes %}
+        <tr>
+          <td style="color:#aaa;width:40px">{{ loop.index }}</td>
+          <td><strong>{{ c.name }}</strong></td>
+          <td><span class="chip chip-dept">{{ c.get('departments',{}).get('name','—') }}</span></td>
+          <td><span class="chip chip-course">{{ c.get('courses',{}).get('name','—') }}</span></td>
+          <td>{{ c.level or '—' }}</td>
+          <td>{{ c.cycle or '—' }}</td>
+          <td>
+            <a href="?delete={{ c.id }}" class="btn btn-del"
+               onclick="return confirm('Delete class {{ c.name }}?\nThis will remove all enrollments and attendance records.')">
+              <i class="fas fa-trash"></i> Delete
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:#aaa;padding:40px">No classes yet. Add one above.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+
 </div>
 {% endblock %}

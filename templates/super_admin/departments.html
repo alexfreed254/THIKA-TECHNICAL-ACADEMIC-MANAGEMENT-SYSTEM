@@ -3,62 +3,76 @@
 {% block page_title %}Manage Departments{% endblock %}
 
 {% block extra_style %}
-.page-wrap { padding:24px; }
-.card { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:24px; overflow:hidden; }
-.card-header { background:#7b1fa2; color:#fff; padding:14px 20px; font-size:14px; font-weight:600; }
-.card-body { padding:20px; }
-.inline-form { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
-.form-group label { display:block; font-size:12px; font-weight:600; color:#555; margin-bottom:5px; }
-.form-group input { padding:9px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px; min-width:220px; }
-.btn { padding:9px 18px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; }
-.btn-primary { background:#7b1fa2; color:#fff; }
-.btn-danger  { background:#c62828; color:#fff; padding:6px 12px; font-size:12px; }
-.error-box { background:#ffebee; color:#c62828; border-radius:6px; padding:10px 14px; font-size:13px; margin-bottom:16px; }
-table { width:100%; border-collapse:collapse; }
-th { background:#f5f5f5; padding:11px 14px; text-align:left; font-size:12px; color:#555; border-bottom:2px solid #eee; }
-td { padding:11px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
+.page-wrap{padding:24px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
+.card-header{background:linear-gradient(135deg,#0a0f1e,#0f1f40);color:#fff;padding:14px 20px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-body{padding:20px}
+.form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:180px}
+.fg label{font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em}
+.fg input{padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-size:13px;outline:none}
+.fg input:focus{border-color:#fbbf24}
+.btn{padding:9px 20px;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700}
+.btn-add{background:#fbbf24;color:#0a0f1e}
+.btn-add:hover{background:#f59e0b}
+.btn-del{background:#c62828;color:#fff;padding:6px 14px;font-size:12px}
+.btn-del:hover{background:#b71c1c}
+.err{background:#ffebee;color:#c62828;border-radius:7px;padding:10px 14px;font-size:13px;margin-bottom:16px;border:1px solid #ffcdd2}
+table{width:100%;border-collapse:collapse}
+th{background:#f8f9fa;padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e9ecef}
+td{padding:12px 16px;border-bottom:1px solid #f0f0f0;font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:#e3f2fd;color:#1565c0}
 {% endblock %}
 
 {% block content %}
 <div class="page-wrap">
+
   <div class="card">
-    <div class="card-header"><i class="fas fa-plus"></i> Add Department</div>
+    <div class="card-header"><i class="fas fa-plus-circle"></i> Add Department</div>
     <div class="card-body">
-      {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+      {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
       <form method="post">
         <input type="hidden" name="add_dept" value="1">
-        <div class="inline-form">
-          <div class="form-group">
-            <label>Department Name</label>
+        <div class="form-row">
+          <div class="fg">
+            <label>Department Name <span style="color:#c62828">*</span></label>
             <input type="text" name="name" placeholder="e.g. INFORMATION TECHNOLOGY" required>
           </div>
-          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add</button>
+          <div class="fg" style="max-width:180px">
+            <label>Code <span style="color:#c62828">*</span></label>
+            <input type="text" name="code" placeholder="e.g. ICT" required>
+          </div>
+          <button type="submit" class="btn btn-add"><i class="fas fa-save"></i> Add Department</button>
         </div>
       </form>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-header"><i class="fas fa-list"></i> Departments ({{ depts|length }})</div>
+    <div class="card-header"><i class="fas fa-sitemap"></i> All Departments <span class="badge" style="margin-left:8px;background:rgba(255,255,255,.2);color:#fff">{{ departments|length }}</span></div>
     <table>
-      <thead><tr><th>#</th><th>Name</th><th>Action</th></tr></thead>
+      <thead><tr><th>#</th><th>Name</th><th>Code</th><th style="width:120px">Action</th></tr></thead>
       <tbody>
-        {% for d in depts %}
+        {% for d in departments %}
         <tr>
-          <td style="color:#aaa;">{{ loop.index }}</td>
+          <td style="color:#aaa;width:40px">{{ loop.index }}</td>
           <td><strong>{{ d.name }}</strong></td>
+          <td><span class="badge">{{ d.code }}</span></td>
           <td>
-            <a href="?delete={{ d.id }}" class="btn btn-danger"
-               onclick="return confirm('Delete {{ d.name }}? This will remove all related data.')">
+            <a href="?delete={{ d.id }}" class="btn btn-del"
+               onclick="return confirm('Delete department {{ d.name }}?\nThis will also delete all related courses, classes, and units.')">
               <i class="fas fa-trash"></i> Delete
             </a>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="3" style="text-align:center;color:#aaa;padding:32px;">No departments yet.</td></tr>
+        <tr><td colspan="4" style="text-align:center;color:#aaa;padding:40px">No departments yet. Add one above.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
 </div>
 {% endblock %}

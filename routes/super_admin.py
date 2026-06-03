@@ -397,24 +397,33 @@ def classes():
     db = _svc()
     error = None
 
-    if request.method == "POST" and request.form.get("add_class"):
-        name = request.form.get("name", "").strip()
-        course_id = request.form.get("course_id")
-        department_id = request.form.get("department_id")
-        intake_year = request.form.get("intake_year")
-        intake_month = request.form.get("intake_month")
-        level = request.form.get("level")
-        cycle = request.form.get("cycle")
+    if request.args.get("delete"):
+        try:
+            db.table("classes").delete().eq("id", request.args["delete"]).execute()
+            write_audit_log("delete_class", target=request.args["delete"])
+            flash("Class deleted.", "success")
+            return redirect(url_for("super_admin.classes"))
+        except Exception as exc:
+            error = f"Error deleting: {exc}"
 
-        if not all([name, course_id, department_id]):
-            error = "Name, course, and department are required."
+    if request.method == "POST" and request.form.get("add_class"):
+        name          = request.form.get("name", "").strip()
+        course_id     = request.form.get("course_id") or None
+        department_id = request.form.get("department_id") or None
+        intake_year   = request.form.get("intake_year") or None
+        intake_month  = request.form.get("intake_month") or None
+        level         = request.form.get("level") or None
+        cycle         = request.form.get("cycle") or None
+
+        if not name or not department_id:
+            error = "Class name and department are required."
         else:
             try:
                 db.table("classes").insert({
                     "name": name,
                     "course_id": course_id,
                     "department_id": department_id,
-                    "intake_year": intake_year,
+                    "intake_year": int(intake_year) if intake_year else None,
                     "intake_month": intake_month,
                     "level": level,
                     "cycle": cycle
@@ -426,14 +435,14 @@ def classes():
                 error = f"Error: {exc}"
 
     classes_list = db.table("classes").select("*, departments(name), courses(name)").order("name").execute().data or []
-    departments = db.table("departments").select("*").order("name").execute().data or []
-    courses = db.table("courses").select("*").order("name").execute().data or []
+    departments  = db.table("departments").select("*").order("name").execute().data or []
+    courses      = db.table("courses").select("*").order("name").execute().data or []
 
     return render_template("super_admin/classes.html",
-                          classes=classes_list,
-                          departments=departments,
-                          courses=courses,
-                          error=error)
+                           classes=classes_list,
+                           departments=departments,
+                           courses=courses,
+                           error=error)
 
 
 # ── Units Management ───────────────────────────────────────────────────────────
@@ -444,13 +453,22 @@ def units():
     db = _svc()
     error = None
 
-    if request.method == "POST" and request.form.get("add_unit"):
-        code = request.form.get("code", "").strip().upper()
-        name = request.form.get("name", "").strip()
-        department_id = request.form.get("department_id")
-        course_id = request.form.get("course_id")
+    if request.args.get("delete"):
+        try:
+            db.table("units").delete().eq("id", request.args["delete"]).execute()
+            write_audit_log("delete_unit", target=request.args["delete"])
+            flash("Unit deleted.", "success")
+            return redirect(url_for("super_admin.units"))
+        except Exception as exc:
+            error = f"Error deleting: {exc}"
 
-        if not all([code, name, department_id]):
+    if request.method == "POST" and request.form.get("add_unit"):
+        code          = request.form.get("code", "").strip().upper()
+        name          = request.form.get("name", "").strip()
+        department_id = request.form.get("department_id") or None
+        course_id     = request.form.get("course_id") or None
+
+        if not code or not name or not department_id:
             error = "Code, name, and department are required."
         else:
             try:
@@ -466,15 +484,15 @@ def units():
             except Exception as exc:
                 error = f"Error: {exc}"
 
-    units_list = db.table("units").select("*, departments(name), courses(name)").order("code").execute().data or []
+    units_list  = db.table("units").select("*, departments(name), courses(name)").order("code").execute().data or []
     departments = db.table("departments").select("*").order("name").execute().data or []
-    courses = db.table("courses").select("*").order("name").execute().data or []
+    courses     = db.table("courses").select("*").order("name").execute().data or []
 
     return render_template("super_admin/units.html",
-                          units=units_list,
-                          departments=departments,
-                          courses=courses,
-                          error=error)
+                           units=units_list,
+                           departments=departments,
+                           courses=courses,
+                           error=error)
 
 
 # ── Courses Management ─────────────────────────────────────────────────────────
@@ -485,12 +503,21 @@ def courses():
     db = _svc()
     error = None
 
-    if request.method == "POST" and request.form.get("add_course"):
-        name = request.form.get("name", "").strip()
-        code = request.form.get("code", "").strip().upper()
-        department_id = request.form.get("department_id")
+    if request.args.get("delete"):
+        try:
+            db.table("courses").delete().eq("id", request.args["delete"]).execute()
+            write_audit_log("delete_course", target=request.args["delete"])
+            flash("Course deleted.", "success")
+            return redirect(url_for("super_admin.courses"))
+        except Exception as exc:
+            error = f"Error deleting: {exc}"
 
-        if not all([name, code, department_id]):
+    if request.method == "POST" and request.form.get("add_course"):
+        name          = request.form.get("name", "").strip()
+        code          = request.form.get("code", "").strip().upper()
+        department_id = request.form.get("department_id") or None
+
+        if not name or not code or not department_id:
             error = "Name, code, and department are required."
         else:
             try:
@@ -506,12 +533,12 @@ def courses():
                 error = f"Error: {exc}"
 
     courses_list = db.table("courses").select("*, departments(name)").order("name").execute().data or []
-    departments = db.table("departments").select("*").order("name").execute().data or []
+    departments  = db.table("departments").select("*").order("name").execute().data or []
 
     return render_template("super_admin/courses.html",
-                          courses=courses_list,
-                          departments=departments,
-                          error=error)
+                           courses=courses_list,
+                           departments=departments,
+                           error=error)
 
 
 # ── System Logs ───────────────────────────────────────────────────────────────
