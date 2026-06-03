@@ -266,15 +266,21 @@ def users():
     suggested_password = _generate_password()
 
     if request.method == "POST" and request.form.get("add_user"):
-        email       = request.form.get("email", "").strip().lower()
-        full_name   = request.form.get("full_name", "").strip()
-        role        = request.form.get("role", "")
+        email         = request.form.get("email", "").strip().lower()
+        full_name     = request.form.get("full_name", "").strip()
+        role          = request.form.get("role", "")
         department_id = request.form.get("department_id") or None
-        password    = request.form.get("password", "").strip()
-        admission_no = request.form.get("admission_no", "").strip()
+        password      = request.form.get("password", "").strip()
+        admission_no  = request.form.get("admission_no", "").strip()
+        staff_no      = request.form.get("staff_no", "").strip() or None
+        mobile_number = request.form.get("mobile_number", "").strip() or None
 
+        # Validate role against allowed set
+        from auth_utils import ALL_ROLES
         if not all([email, full_name, role, password]):
             error = "Full name, email, role and password are all required."
+        elif role not in ALL_ROLES:
+            error = f"Invalid role: {role}"
         elif len(password) < 8:
             error = "Password must be at least 8 characters."
         else:
@@ -299,7 +305,8 @@ def users():
                                     email=email,
                                     full_name=full_name,
                                     department_id=department_id,
-                                    class_id=None
+                                    class_id=None,
+                                    mobile_number=mobile_number
                                 )
                                 new_user_creds = {"full_name": full_name, "role": role,
                                                   "email": email, "password": password}
@@ -312,7 +319,9 @@ def users():
                             password=password,
                             full_name=full_name,
                             role=role,
-                            department_id=department_id
+                            department_id=department_id,
+                            staff_no=staff_no,
+                            mobile_number=mobile_number
                         )
                         new_user_creds = {"full_name": full_name, "role": role,
                                           "email": email, "password": password}

@@ -3,207 +3,326 @@
 {% block page_title %}User Management{% endblock %}
 
 {% block extra_style %}
-.page-wrap{padding:24px}
-/* ── Add user card ── */
-.add-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
-.add-card-header{background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;padding:16px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px}
-.add-card-body{padding:22px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.form-group{display:flex;flex-direction:column;gap:5px}
-.form-group label{font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em}
-.form-group input,.form-group select{padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#f8fafc}
-.form-group input:focus,.form-group select:focus{outline:none;border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
-.full-col{grid-column:1/-1}
-.btn-add{padding:11px 28px;border:none;border-radius:8px;background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px}
-.btn-add:hover{filter:brightness(1.08)}
-.error-box{background:#ffebee;color:#c62828;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-/* ── Credential flash ── */
-.cred-box{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px}
-.cred-box strong{color:#1b5e20;display:block;margin-bottom:6px;font-size:14px}
-.cred-box code{background:#fff;padding:3px 8px;border-radius:4px;font-size:13px;border:1px solid #c8e6c9}
-/* ── Users table card ── */
-.card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden}
-.card-header{padding:14px 20px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0}
-.filter-bar{padding:12px 20px;background:#fafafa;border-bottom:1px solid #eee;display:flex;gap:8px;flex-wrap:wrap}
-.filter-bar a{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;background:#eee;color:#555;transition:all .2s}
-.filter-bar a.active,.filter-bar a:hover{background:#1565c0;color:#fff}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:11px;color:#666;border-bottom:2px solid #eee;text-transform:uppercase;letter-spacing:.04em}
-td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-super_admin{background:#ede7f6;color:#4a148c}
-.badge-dept_admin{background:#e3f2fd;color:#1565c0}
-.badge-trainer{background:#e8f5e9;color:#2e7d32}
-.badge-student{background:#fff3e0;color:#e65100}
-.badge-employer{background:#e0f2f1;color:#00695c}
-.badge-examination_officer,.badge-registrar,.badge-deputy_principal,.badge-quality_assurance_officer{background:#fce4ec;color:#880e4f}
-.badge-industry_mentor,.badge-internal_verifier{background:#f3e5f5;color:#6a1b9a}
-.badge-active{background:#e8f5e9;color:#2e7d32}
-.badge-inactive{background:#ffebee;color:#c62828}
-.btn-xs{padding:4px 10px;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;text-decoration:none;display:inline-block}
-.btn-edit{background:#e3f2fd;color:#1565c0}
-.btn-danger{background:#ffebee;color:#c62828}
-.btn-enable{background:#e8f5e9;color:#2e7d32}
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* Role badge colours */
+.badge { display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600; }
+.badge-super_admin              { background:#ede7f6;color:#4a148c }
+.badge-dept_admin               { background:#e3f2fd;color:#1565c0 }
+.badge-trainer                  { background:#e8f5e9;color:#2e7d32 }
+.badge-workshop_technician      { background:#fff8e1;color:#f57f17 }
+.badge-student                  { background:#fff3e0;color:#e65100 }
+.badge-registrar                { background:#fce4ec;color:#880e4f }
+.badge-deputy_principal         { background:#fce4ec;color:#880e4f }
+.badge-quality_assurance_officer{ background:#fce4ec;color:#880e4f }
+.badge-examination_officer      { background:#fce4ec;color:#880e4f }
+.badge-internal_verifier        { background:#f3e5f5;color:#6a1b9a }
+.badge-industry_mentor          { background:#e0f7fa;color:#006064 }
+.badge-employer                 { background:#e0f2f1;color:#00695c }
+.badge-liaison_officer          { background:#e8eaf6;color:#283593 }
+.badge-cdacc_verifier           { background:#fef9c3;color:#713f12 }
+.badge-industry_supervisor      { background:#dcfce7;color:#14532d }
+.badge-dean_students            { background:#ffe4e6;color:#9f1239 }
+.badge-sports_hod               { background:#fef3c7;color:#92400e }
+.badge-environment_hod          { background:#d1fae5;color:#065f46 }
+.badge-library_hod              { background:#e0e7ff;color:#3730a3 }
+.badge-finance_officer          { background:#dbeafe;color:#1e40af }
+.badge-active   { background:#dcfce7;color:#15803d }
+.badge-inactive { background:#fee2e2;color:#991b1b }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="page-wrap">
+<div class="p-6 bg-gray-50 min-h-screen">
 
-  <!-- ── Credential display after creation ── -->
+  <!-- Credential flash after creation -->
   {% if new_user_creds %}
-  <div class="cred-box">
-    <strong><i class="fas fa-key"></i> New Account Created — Share these credentials securely</strong>
-    <table style="border-collapse:collapse;margin-top:6px">
-      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Name:</td><td>{{ new_user_creds.full_name }}</td></tr>
-      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Role:</td><td>{{ new_user_creds.role|replace('_',' ')|title }}</td></tr>
-      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Email:</td><td><code>{{ new_user_creds.email }}</code></td></tr>
-      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Password:</td><td><code>{{ new_user_creds.password }}</code></td></tr>
-      <tr><td style="padding:3px 12px 3px 0;color:#555;font-weight:600">Login URL:</td><td><code>/auth/login</code> → Staff/Admin tab</td></tr>
-    </table>
-    <p style="margin-top:8px;color:#2e7d32;font-size:12px"><i class="fas fa-exclamation-triangle"></i> This password is shown only once. Copy it now and share it with the user.</p>
+  <div class="bg-green-50 border border-green-300 rounded-xl p-5 mb-6 shadow-sm">
+    <p class="font-bold text-green-800 mb-3 flex items-center gap-2">
+      <i class="fas fa-key text-green-600"></i> New Account Created — Share credentials securely
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+      <div><span class="text-gray-500 font-semibold">Name:</span> <span class="text-gray-900">{{ new_user_creds.full_name }}</span></div>
+      <div><span class="text-gray-500 font-semibold">Role:</span> <span class="text-gray-900">{{ new_user_creds.role|replace('_',' ')|title }}</span></div>
+      <div><span class="text-gray-500 font-semibold">Email:</span> <code class="bg-white px-2 py-0.5 rounded border text-sm">{{ new_user_creds.email }}</code></div>
+      <div><span class="text-gray-500 font-semibold">Password:</span> <code class="bg-white px-2 py-0.5 rounded border text-sm font-bold">{{ new_user_creds.password }}</code></div>
+    </div>
+    <p class="mt-3 text-xs text-green-700 flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> Password shown once — copy and share it now.</p>
   </div>
   {% endif %}
 
-  <!-- ── Add User Form ── -->
-  <div class="add-card">
-    <div class="add-card-header"><i class="fas fa-user-plus"></i> Create New User Account</div>
-    <div class="add-card-body">
-      {% if error %}<div class="error-box"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
+  <!-- ── Create New User Form ── -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+    <div class="bg-gradient-to-r from-blue-800 to-blue-900 px-6 py-4 flex items-center gap-3">
+      <i class="fas fa-user-plus text-blue-200 text-lg"></i>
+      <h2 class="text-white font-bold text-base">Create New User Account</h2>
+    </div>
+    <div class="p-6">
+      {% if error %}
+      <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-5 flex items-center gap-2 text-sm">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+      </div>
+      {% endif %}
+
       <form method="post">
         <input type="hidden" name="add_user" value="1">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Full Name *</label>
-            <input type="text" name="full_name" required placeholder="e.g. John Kamau" value="{{ request.form.get('full_name','') }}">
+
+        <!-- Row 1: Name, Email, Role -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Full Name <span class="text-red-500">*</span></label>
+            <input type="text" name="full_name" required
+                   placeholder="e.g. Alice Muthoni"
+                   value="{{ request.form.get('full_name','') }}"
+                   class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-gray-50 focus:bg-white transition">
           </div>
-          <div class="form-group">
-            <label>Email Address *</label>
-            <input type="email" name="email" required placeholder="user@tttti.ac.ke" value="{{ request.form.get('email','') }}">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Email Address <span class="text-red-500">*</span></label>
+            <input type="email" name="email" required
+                   placeholder="user@ttti.ac.ke"
+                   value="{{ request.form.get('email','') }}"
+                   class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-gray-50 focus:bg-white transition">
           </div>
-          <div class="form-group">
-            <label>Role *</label>
-            <select name="role" required id="roleSelect" onchange="toggleAdmission()">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Role <span class="text-red-500">*</span></label>
+            <select name="role" required id="roleSelect" onchange="onRoleChange()"
+                    class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 focus:bg-white transition">
               <option value="">— Select Role —</option>
+
               <optgroup label="Administration">
-                <option value="super_admin">Super Admin</option>
-                <option value="dept_admin">Department Admin</option>
+                <option value="super_admin"   {% if request.form.get('role')=='super_admin' %}selected{% endif %}>Super Admin</option>
+                <option value="dept_admin"    {% if request.form.get('role')=='dept_admin' %}selected{% endif %}>Department Admin / HOD</option>
               </optgroup>
+
               <optgroup label="Academic Staff">
-                <option value="trainer">Trainer</option>
+                <option value="trainer"              {% if request.form.get('role')=='trainer' %}selected{% endif %}>Trainer</option>
+                <option value="workshop_technician"  {% if request.form.get('role')=='workshop_technician' %}selected{% endif %}>Workshop Technician</option>
               </optgroup>
+
               <optgroup label="Oversight &amp; Compliance">
-                <option value="registrar">Registrar</option>
-                <option value="deputy_principal">Deputy Principal</option>
-                <option value="quality_assurance_officer">Quality Assurance Officer</option>
-                <option value="examination_officer">Examination Officer</option>
-                <option value="internal_verifier">Internal Verifier</option>
+                <option value="registrar"                  {% if request.form.get('role')=='registrar' %}selected{% endif %}>Registrar</option>
+                <option value="deputy_principal"           {% if request.form.get('role')=='deputy_principal' %}selected{% endif %}>Deputy Principal</option>
+                <option value="dean_students"              {% if request.form.get('role')=='dean_students' %}selected{% endif %}>Dean of Students</option>
+                <option value="examination_officer"        {% if request.form.get('role')=='examination_officer' %}selected{% endif %}>Examination Officer</option>
+                <option value="quality_assurance_officer"  {% if request.form.get('role')=='quality_assurance_officer' %}selected{% endif %}>Quality Assurance Officer</option>
+                <option value="internal_verifier"          {% if request.form.get('role')=='internal_verifier' %}selected{% endif %}>Internal Verifier</option>
+                <option value="cdacc_verifier"             {% if request.form.get('role')=='cdacc_verifier' %}selected{% endif %}>CDACC External Verifier</option>
               </optgroup>
-              <optgroup label="Industry">
-                <option value="industry_mentor">Industry Mentor</option>
-                <option value="employer">Employer</option>
+
+              <optgroup label="Clearance &amp; Student Services">
+                <option value="sports_hod"      {% if request.form.get('role')=='sports_hod' %}selected{% endif %}>Sports HOD</option>
+                <option value="environment_hod" {% if request.form.get('role')=='environment_hod' %}selected{% endif %}>Environment HOD</option>
+                <option value="library_hod"     {% if request.form.get('role')=='library_hod' %}selected{% endif %}>Library HOD</option>
+                <option value="finance_officer" {% if request.form.get('role')=='finance_officer' %}selected{% endif %}>Finance Officer</option>
               </optgroup>
-              <optgroup label="Clearance">
-                <option value="sports_hod">Sports HOD</option>
-                <option value="environment_hod">Environment HOD</option>
-                <option value="dean_students">Dean of Students</option>
-                <option value="library_hod">Library HOD</option>
-                <option value="finance_officer">Finance Officer</option>
+
+              <optgroup label="Industrial Attachments">
+                <option value="liaison_officer"      {% if request.form.get('role')=='liaison_officer' %}selected{% endif %}>Industrial Liaison Officer</option>
+                <option value="industry_mentor"      {% if request.form.get('role')=='industry_mentor' %}selected{% endif %}>Industry Mentor</option>
+                <option value="industry_supervisor"  {% if request.form.get('role')=='industry_supervisor' %}selected{% endif %}>Industry Supervisor</option>
+                <option value="employer"             {% if request.form.get('role')=='employer' %}selected{% endif %}>Employer</option>
               </optgroup>
+
               <optgroup label="Trainee">
-                <option value="student">Student / Trainee</option>
+                <option value="student" {% if request.form.get('role')=='student' %}selected{% endif %}>Student / Trainee</option>
               </optgroup>
             </select>
           </div>
-          <div class="form-group">
-            <label>Department</label>
-            <select name="department_id">
+        </div>
+
+        <!-- Row 2: Department, Staff No, Mobile -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Department</label>
+            <select name="department_id"
+                    class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 focus:bg-white transition">
               <option value="">— No Department —</option>
               {% for d in departments %}
-              <option value="{{ d.id }}">{{ d.name }}</option>
+              <option value="{{ d.id }}" {% if request.form.get('department_id')==d.id %}selected{% endif %}>{{ d.name }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="form-group" id="admissionGroup" style="display:none">
-            <label>Admission Number <small style="color:#888">(students only)</small></label>
-            <input type="text" name="admission_no" placeholder="e.g. TTTTI/2025/001" value="{{ request.form.get('admission_no','') }}">
+          <div class="flex flex-col gap-1.5" id="staffNoGroup">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Staff Number <span class="text-gray-300 font-normal">(staff only)</span></label>
+            <input type="text" name="staff_no"
+                   placeholder="e.g. TTTI/STF/001"
+                   value="{{ request.form.get('staff_no','') }}"
+                   class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 focus:bg-white transition">
           </div>
-          <div class="form-group">
-            <label>Temporary Password *</label>
-            <input type="text" name="password" required placeholder="Min 8 characters" id="pwdField" value="{{ suggested_password or '' }}">
+          <div class="flex flex-col gap-1.5" id="admissionGroup" style="display:none">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Admission Number <span class="text-red-500">*</span></label>
+            <input type="text" name="admission_no"
+                   placeholder="e.g. TTTI/2025/001"
+                   value="{{ request.form.get('admission_no','') }}"
+                   class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 focus:bg-white transition">
           </div>
-          <div class="form-group" style="justify-content:flex-end">
-            <label>&nbsp;</label>
-            <button type="button" onclick="generatePassword()" style="padding:10px 14px;border:1px dashed #1565c0;border-radius:8px;background:#f0f7ff;color:#1565c0;cursor:pointer;font-size:12px;font-weight:600">
-              <i class="fas fa-dice"></i> Generate Password
+          <div class="flex flex-col gap-1.5" id="mobileGroup" style="display:none">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Mobile Number</label>
+            <input type="text" name="mobile_number"
+                   placeholder="e.g. 0712345678"
+                   value="{{ request.form.get('mobile_number','') }}"
+                   class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 focus:bg-white transition">
+          </div>
+        </div>
+
+        <!-- Row 3: Password -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="flex flex-col gap-1.5 md:col-span-2">
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Temporary Password <span class="text-red-500">*</span></label>
+            <div class="flex gap-2">
+              <input type="text" name="password" required id="pwdField"
+                     placeholder="Min 8 chars — include numbers &amp; symbols"
+                     value="{{ suggested_password or '' }}"
+                     class="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 focus:bg-white transition">
+              <button type="button" onclick="generatePassword()"
+                      class="px-4 py-2.5 border border-blue-300 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition whitespace-nowrap">
+                <i class="fas fa-dice mr-1"></i>Generate
+              </button>
+            </div>
+          </div>
+          <div class="flex items-end">
+            <button type="submit"
+                    class="w-full bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-sm">
+              <i class="fas fa-user-plus"></i> Create Account &amp; Show Credentials
             </button>
           </div>
         </div>
-        <div style="margin-top:16px">
-          <button type="submit" class="btn-add"><i class="fas fa-user-plus"></i> Create Account &amp; Show Credentials</button>
-        </div>
+
       </form>
     </div>
   </div>
 
   <!-- ── Users Table ── -->
-  <div class="card">
-    <div class="card-header">
-      <span><i class="fas fa-users"></i> All Users ({{ users|length }})</span>
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
+      <h2 class="font-bold text-gray-900"><i class="fas fa-users text-blue-500 mr-2"></i>All Users <span class="text-gray-400 font-normal text-sm">({{ users|length }})</span></h2>
     </div>
-    <div class="filter-bar">
-      <a href="/super-admin/users" class="{% if not role_filter %}active{% endif %}">All</a>
-      <a href="?role=super_admin"              class="{% if role_filter=='super_admin' %}active{% endif %}">Super Admin</a>
-      <a href="?role=dept_admin"               class="{% if role_filter=='dept_admin' %}active{% endif %}">Dept Admin</a>
-      <a href="?role=trainer"                  class="{% if role_filter=='trainer' %}active{% endif %}">Trainer</a>
-      <a href="?role=student"                  class="{% if role_filter=='student' %}active{% endif %}">Student</a>
-      <a href="?role=registrar"                class="{% if role_filter=='registrar' %}active{% endif %}">Registrar</a>
-      <a href="?role=deputy_principal"         class="{% if role_filter=='deputy_principal' %}active{% endif %}">Deputy Principal</a>
-      <a href="?role=examination_officer"      class="{% if role_filter=='examination_officer' %}active{% endif %}">Exam Officer</a>
-      <a href="?role=quality_assurance_officer" class="{% if role_filter=='quality_assurance_officer' %}active{% endif %}">QA Officer</a>
-      <a href="?role=employer"                 class="{% if role_filter=='employer' %}active{% endif %}">Employer</a>
+
+    <!-- Filter bar — all roles -->
+    <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex gap-2 flex-wrap">
+      <a href="/super-admin/users"
+         class="px-3 py-1.5 rounded-full text-xs font-semibold transition {% if not role_filter %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-600 hover:bg-gray-300{% endif %}">All</a>
+      {% set filter_roles = [
+        ('super_admin','Super Admin'),
+        ('dept_admin','Dept Admin'),
+        ('trainer','Trainer'),
+        ('workshop_technician','Workshop Tech'),
+        ('student','Student'),
+        ('registrar','Registrar'),
+        ('deputy_principal','Deputy Principal'),
+        ('dean_students','Dean of Students'),
+        ('examination_officer','Exam Officer'),
+        ('quality_assurance_officer','QA Officer'),
+        ('internal_verifier','Internal Verifier'),
+        ('cdacc_verifier','CDACC Verifier'),
+        ('liaison_officer','Liaison Officer'),
+        ('industry_mentor','Industry Mentor'),
+        ('industry_supervisor','Industry Supervisor'),
+        ('employer','Employer'),
+        ('sports_hod','Sports HOD'),
+        ('environment_hod','Env HOD'),
+        ('library_hod','Library HOD'),
+        ('finance_officer','Finance Officer'),
+      ] %}
+      {% for role_val, role_label in filter_roles %}
+      <a href="?role={{ role_val }}"
+         class="px-3 py-1.5 rounded-full text-xs font-semibold transition {% if role_filter==role_val %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-600 hover:bg-gray-300{% endif %}">
+        {{ role_label }}
+      </a>
+      {% endfor %}
     </div>
-    <div style="overflow-x:auto">
-      <table>
-        <thead>
-          <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Actions</th></tr>
-        </thead>
-        <tbody>
-          {% for u in users %}
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
           <tr>
-            <td style="color:#aaa">{{ loop.index }}</td>
-            <td><strong>{{ u.full_name }}</strong>{% if u.admission_no %}<br><small style="color:#aaa">{{ u.admission_no }}</small>{% endif %}</td>
-            <td style="font-size:12px;color:#555">{{ u.email }}</td>
-            <td><span class="badge badge-{{ u.role }}">{{ u.role|replace('_',' ')|title }}</span></td>
-            <td>{{ u.get('departments',{}).get('name','—') if u.get('departments') else '—' }}</td>
-            <td><span class="badge badge-{{ 'active' if u.is_active else 'inactive' }}">{{ 'Active' if u.is_active else 'Disabled' }}</span></td>
-            <td style="display:flex;gap:6px;flex-wrap:wrap">
-              <a href="/super-admin/users/{{ u.id }}/edit" class="btn-xs btn-edit"><i class="fas fa-edit"></i> Edit</a>
-              <a href="/super-admin/users/{{ u.id }}/delete" class="btn-xs btn-danger"
-                 onclick="return confirm('Delete {{ u.full_name }}? This cannot be undone.')"><i class="fas fa-trash"></i></a>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for u in users %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-3 text-xs text-gray-400">{{ loop.index }}</td>
+            <td class="px-4 py-3">
+              <p class="font-semibold text-gray-900 text-sm">{{ u.full_name }}</p>
+              {% if u.admission_no %}<p class="text-xs text-gray-400">{{ u.admission_no }}</p>{% endif %}
+              {% if u.staff_no %}<p class="text-xs text-gray-400">{{ u.staff_no }}</p>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500">{{ u.email }}</td>
+            <td class="px-4 py-3">
+              <span class="badge badge-{{ u.role }}">{{ u.role|replace('_',' ')|title }}</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600">
+              {{ u.get('departments',{}).get('name','—') if u.get('departments') else '—' }}
+            </td>
+            <td class="px-4 py-3 text-center">
+              <span class="badge badge-{{ 'active' if u.is_active else 'inactive' }}">
+                {{ 'Active' if u.is_active else 'Disabled' }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex gap-2">
+                <a href="/super-admin/users/{{ u.id }}/edit"
+                   class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs font-semibold transition">
+                  <i class="fas fa-edit mr-1"></i>Edit
+                </a>
+                <a href="/super-admin/users/{{ u.id }}/delete"
+                   class="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1 rounded-lg text-xs font-semibold transition"
+                   onclick="return confirm('Delete {{ u.full_name }}? This cannot be undone.')">
+                  <i class="fas fa-trash"></i>
+                </a>
+              </div>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px">No users found.</td></tr>
+          <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">
+            <i class="fas fa-users text-4xl mb-3 block text-gray-200"></i>
+            No users found.
+          </td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+
 </div>
 
 <script>
-function toggleAdmission() {
+// Roles that get staff number field
+const STAFF_ROLES = new Set([
+  'super_admin','dept_admin','trainer','workshop_technician','registrar',
+  'deputy_principal','dean_students','examination_officer','quality_assurance_officer',
+  'internal_verifier','cdacc_verifier','liaison_officer','industry_mentor',
+  'industry_supervisor','sports_hod','environment_hod','library_hod','finance_officer'
+]);
+
+function onRoleChange() {
   const role = document.getElementById('roleSelect').value;
-  document.getElementById('admissionGroup').style.display = role === 'student' ? 'flex' : 'none';
+  const isStudent  = role === 'student';
+  const isEmployer = role === 'employer';
+  const isStaff    = STAFF_ROLES.has(role);
+
+  document.getElementById('admissionGroup').style.display = isStudent  ? 'flex' : 'none';
+  document.getElementById('staffNoGroup').style.display   = isStaff    ? 'flex' : 'none';
+  document.getElementById('mobileGroup').style.display    = isStudent  ? 'flex' : 'none';
 }
 
 function generatePassword() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!$';
   let pwd = '';
   for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
-  document.getElementById('pwdField').value = pwd;
-  document.getElementById('pwdField').type = 'text';
+  const f = document.getElementById('pwdField');
+  f.value = pwd;
+  f.type  = 'text';
 }
+
+// Init on page load (handles back-navigation with form data)
+onRoleChange();
 </script>
 {% endblock %}

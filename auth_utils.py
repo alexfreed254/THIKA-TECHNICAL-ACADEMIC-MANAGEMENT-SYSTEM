@@ -194,17 +194,18 @@ def authenticate_student(admission_no: str, password: str) -> Optional[dict]:
         return None
 
 
-def create_student_auth_user(admission_no: str, password: str, email: str, full_name: str, 
-                             department_id: str, class_id: str) -> str:
+def create_student_auth_user(admission_no: str, password: str, email: str, full_name: str,
+                             department_id: str, class_id: str,
+                             mobile_number: str = None) -> str:
     """
     Create a student user with password hash.
     Returns the user UUID.
     """
     import uuid
-    
+
     # Generate UUID for the user
     user_id = str(uuid.uuid4())
-    
+
     # Create in Supabase Auth (for consistency, but student won't use it)
     try:
         svc = get_service_client()
@@ -221,8 +222,7 @@ def create_student_auth_user(admission_no: str, password: str, email: str, full_
         # Continue with local UUID
     
     # Create user profile
-    svc = get_service_client()
-    svc.table("user_profiles").insert({
+    profile = {
         "id": user_id,
         "email": email,
         "full_name": full_name,
@@ -230,14 +230,18 @@ def create_student_auth_user(admission_no: str, password: str, email: str, full_
         "admission_no": admission_no,
         "department_id": department_id,
         "password_hash": generate_password_hash(password),
-        "is_active": True
-    }).execute()
-    
+        "is_active": True,
+    }
+    if mobile_number:
+        profile["mobile_number"] = mobile_number
+    svc = get_service_client()
+    svc.table("user_profiles").insert(profile).execute()
     return user_id
 
 
-def create_staff_auth_user(email: str, password: str, full_name: str, role: str, 
-                           department_id: str = None) -> str:
+def create_staff_auth_user(email: str, password: str, full_name: str, role: str,
+                           department_id: str = None, staff_no: str = None,
+                           mobile_number: str = None) -> str:
     """
     Create staff user in Supabase Auth.
     Returns the auth user UUID.
@@ -249,22 +253,26 @@ def create_staff_auth_user(email: str, password: str, full_name: str, role: str,
         'email_confirm': True,
         'user_metadata': {'full_name': full_name, 'role': role}
     })
-    
+
     if not response or not response.user:
         raise RuntimeError('Supabase Auth did not return a user.')
-    
+
     user_id = str(response.user.id)
-    
-    # Create user profile
-    svc.table("user_profiles").insert({
+
+    profile = {
         "id": user_id,
         "email": email,
         "full_name": full_name,
         "role": role,
         "department_id": department_id,
-        "is_active": True
-    }).execute()
-    
+        "is_active": True,
+    }
+    if staff_no:
+        profile["staff_no"] = staff_no
+    if mobile_number:
+        profile["mobile_number"] = mobile_number
+
+    svc.table("user_profiles").insert(profile).execute()
     return user_id
 
 
