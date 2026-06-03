@@ -3,8 +3,36 @@
 {% block page_title %}Trainee POE — All Departments{% endblock %}
 {% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
 
+{% block extra_style %}
+/* ── Lightbox ── */
+#lb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:none;align-items:center;justify-content:center;}
+#lb-overlay.open{display:flex;}
+#lb-img{max-width:92vw;max-height:88vh;border-radius:12px;object-fit:contain;}
+#lb-close{position:fixed;top:18px;right:22px;color:#fff;font-size:28px;cursor:pointer;z-index:10000;background:rgba(0,0,0,.4);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+#lb-close:hover{background:rgba(255,255,255,.15);}
+/* ── Evidence thumbnails ── */
+.ev-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0;cursor:pointer;transition:transform .15s,border-color .15s;}
+.ev-thumb:hover{transform:scale(1.06);border-color:#3b82f6;}
+.ev-vid-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1d4ed8;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}
+.ev-vid-btn:hover{background:#1e40af;}
+.ev-aud-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#7c3aed;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}
+.ev-aud-btn:hover{background:#6d28d9;}
+.ev-file-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#6b7280;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}
+/* ── Assessment row ── */
+.assess-row{border:1.5px solid #e5e7eb;border-radius:14px;background:#fff;margin-bottom:12px;overflow:hidden;}
+.assess-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;gap:12px;}
+.assess-head:hover{background:#f8fafc;}
+.assess-body{padding:0 16px 16px;border-top:1px solid #f1f5f9;}
+{% endblock %}
+
 {% block content %}
 <div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Lightbox for photo preview -->
+  <div id="lb-overlay" onclick="closeLB(event)">
+    <div id="lb-close" onclick="closeLB()"><i class="fas fa-times"></i></div>
+    <img id="lb-img" src="" alt="Evidence preview">
+  </div>
 
   <!-- Stats -->
   <div class="grid grid-cols-3 gap-4 mb-6">
@@ -14,11 +42,11 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
       <div class="text-2xl font-bold text-gray-800">{{ total_files }}</div>
-      <div class="text-xs text-gray-500 font-semibold uppercase mt-1">Total Files</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase mt-1">Assessments</div>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
       <div class="text-2xl font-bold text-purple-600">{{ total_size }}</div>
-      <div class="text-xs text-gray-500 font-semibold uppercase mt-1">Total Size</div>
+      <div class="text-xs text-gray-500 font-semibold uppercase mt-1">Script Storage</div>
     </div>
   </div>
 
@@ -75,132 +103,252 @@
           <i class="fas fa-times"></i>
         </a>
       </div>
-
     </div>
   </form>
 
-  <!-- Results: Department → Class → Unit accordion -->
+  <!-- Results: Dept → Class → Unit → Assessment rows -->
   {% if depts_data %}
   <div class="space-y-4">
     {% for dept in depts_data %}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 
       <!-- Department header -->
-      <button type="button"
-              onclick="toggleSection('dept-{{ loop.index }}')"
-              class="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-800 to-blue-900 text-white text-left hover:from-slate-700 hover:to-blue-800 transition">
+      <button type="button" onclick="toggleSection('dept-{{ loop.index }}')"
+              class="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-800 to-blue-900 text-white text-left hover:brightness-110 transition">
         <span class="font-bold text-base flex items-center gap-2">
-          <i class="fas fa-sitemap text-blue-300"></i>
-          {{ dept.name }}
+          <i class="fas fa-sitemap text-blue-300"></i> {{ dept.name }}
         </span>
-        <span class="flex items-center gap-3 text-sm text-blue-200">
-          <span>{{ dept.classes|length }} class{% if dept.classes|length != 1 %}es{% endif %}</span>
-          <span>{{ dept.classes | sum(attribute='units') | length if false else '' }}</span>
-          <i class="fas fa-chevron-down transition-transform" id="icon-dept-{{ loop.index }}"></i>
+        <span class="text-blue-200 text-sm flex items-center gap-2">
+          {{ dept.classes|length }} class{% if dept.classes|length != 1 %}es{% endif %}
+          <i class="fas fa-chevron-down text-xs transition-transform" id="icon-dept-{{ loop.index }}"></i>
         </span>
       </button>
 
       <div id="dept-{{ loop.index }}">
         {% for cls in dept.classes %}
-        <div class="border-b border-gray-100 last:border-0">
+        <div class="border-b border-gray-50 last:border-0">
 
           <!-- Class header -->
-          <button type="button"
-                  onclick="toggleSection('cls-{{ loop.index }}-{{ dept.name|replace(' ','-') }}')"
+          <button type="button" onclick="toggleSection('cls-{{ dept.name|replace(' ','-') }}-{{ loop.index }}')"
                   class="w-full flex items-center justify-between px-6 py-3 bg-blue-50 hover:bg-blue-100 transition text-left">
-            <span class="font-semibold text-blue-900 flex items-center gap-2 text-sm">
-              <i class="fas fa-door-open text-blue-500"></i>{{ cls.name }}
+            <span class="font-semibold text-blue-900 text-sm flex items-center gap-2">
+              <i class="fas fa-door-open text-blue-500"></i> {{ cls.name }}
             </span>
             <span class="text-xs text-blue-500 flex items-center gap-2">
               {{ cls.units|length }} unit{% if cls.units|length != 1 %}s{% endif %}
-              <i class="fas fa-chevron-down" id="icon-cls-{{ loop.index }}-{{ dept.name|replace(' ','-') }}"></i>
+              <i class="fas fa-chevron-down text-xs"></i>
             </span>
           </button>
 
-          <div id="cls-{{ loop.index }}-{{ dept.name|replace(' ','-') }}">
+          <div id="cls-{{ dept.name|replace(' ','-') }}-{{ loop.index }}">
             {% for unit in cls.units %}
-            <div class="px-6 py-3 border-b border-gray-50 last:border-0">
+            <div class="px-4 py-4 border-b border-gray-50 last:border-0 bg-white">
 
-              <!-- Unit sub-header -->
-              <button type="button"
-                      onclick="toggleSection('unit-{{ loop.index }}-{{ cls.name|replace(' ','-') }}-{{ dept.name|replace(' ','-') }}')"
-                      class="w-full flex items-center justify-between mb-2 text-left group">
-                <span class="font-semibold text-gray-700 text-sm flex items-center gap-2 group-hover:text-blue-700 transition">
-                  <i class="fas fa-book text-gray-400 group-hover:text-blue-500"></i>{{ unit.name }}
-                </span>
-                <span class="text-xs text-gray-400 flex items-center gap-1">
-                  {{ unit.files|length }} file{% if unit.files|length != 1 %}s{% endif %}
-                  <i class="fas fa-chevron-down text-xs"></i>
-                </span>
-              </button>
+              <!-- Unit label -->
+              <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                <i class="fas fa-book text-indigo-400 text-sm"></i>
+                <span class="font-semibold text-gray-700 text-sm">{{ unit.name }}</span>
+                <span class="ml-auto text-xs text-gray-400">{{ unit.files|length }} submission{% if unit.files|length != 1 %}s{% endif %}</span>
+              </div>
 
-              <div id="unit-{{ loop.index }}-{{ cls.name|replace(' ','-') }}-{{ dept.name|replace(' ','-') }}" class="overflow-x-auto">
-                <table class="w-full text-xs">
-                  <thead>
-                    <tr class="bg-gray-50">
-                      <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide">Student</th>
-                      <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide">Admission No</th>
-                      <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide">File</th>
-                      <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide">Type</th>
-                      <th class="px-3 py-2 text-center font-semibold text-gray-500 uppercase tracking-wide">Term/Year</th>
-                      <th class="px-3 py-2 text-center font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                      <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">Size</th>
-                      <th class="px-3 py-2 text-center font-semibold text-gray-500 uppercase tracking-wide">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-50">
-                    {% for f in unit.files %}
-                    <tr class="hover:bg-gray-50 transition">
-                      <td class="px-3 py-2 font-medium text-gray-900">{{ f.studentName }}</td>
-                      <td class="px-3 py-2 text-gray-500">{{ f.admissionNumber }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ f.name[:50] }}{% if f.name|length > 50 %}…{% endif %}</td>
-                      <td class="px-3 py-2">
-                        <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">{{ f.assessmentType or '—' }}</span>
-                      </td>
-                      <td class="px-3 py-2 text-center text-gray-500">
-                        {% if f.term %}T{{ f.term }}{% endif %}{% if f.year %}/{{ f.year }}{% endif %}
-                      </td>
-                      <td class="px-3 py-2 text-center">
-                        <span class="px-2 py-0.5 rounded-full font-bold
-                          {% if f.status == 'Approved' %}bg-green-100 text-green-700
-                          {% elif f.status == 'Rejected' %}bg-red-100 text-red-700
-                          {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                          {{ f.status|upper }}
-                        </span>
-                      </td>
-                      <td class="px-3 py-2 text-right text-gray-500">{{ f.formattedSize }}</td>
-                      <td class="px-3 py-2 text-center">
+              <!-- Assessment rows -->
+              <div class="space-y-3">
+                {% for f in unit.files %}
+                <div class="assess-row">
+
+                  <!-- Assessment header (click to expand) -->
+                  <div class="assess-head" onclick="toggleSection('assess-{{ f.id }}')">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                      <!-- Student avatar -->
+                      <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        {{ f.studentName[0]|upper if f.studentName else '?' }}
+                      </div>
+                      <div class="min-w-0">
+                        <p class="font-semibold text-gray-900 text-sm truncate">{{ f.studentName }}</p>
+                        <p class="text-xs text-gray-400">{{ f.admissionNumber }}
+                          {% if f.assessmentType %}&bull; <span class="font-semibold">{{ f.assessmentType }}</span>{% endif %}
+                          {% if f.term %}&bull; T{{ f.term }}{% endif %}{% if f.year %}/{{ f.year }}{% endif %}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                      <!-- Evidence count badge -->
+                      {% if f.evidence %}
+                      <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <i class="fas fa-paperclip text-xs"></i>{{ f.evidence|length }} evidence
+                      </span>
+                      {% endif %}
+                      <!-- Status -->
+                      <span class="px-2 py-0.5 rounded-full text-xs font-bold
+                        {% if f.status == 'Approved' %}bg-green-100 text-green-700
+                        {% elif f.status == 'Rejected' %}bg-red-100 text-red-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ f.status|upper }}
+                      </span>
+                      <i class="fas fa-chevron-down text-gray-300 text-xs transition-transform" id="icon-assess-{{ f.id }}"></i>
+                    </div>
+                  </div>
+
+                  <!-- Expanded body -->
+                  <div id="assess-{{ f.id }}" style="display:none">
+                    <div class="assess-body">
+
+                      <!-- ── MARKED SCRIPT ── -->
+                      <div class="mb-5">
+                        <div class="flex items-center gap-2 mb-2">
+                          <div class="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-file-pdf text-red-600 text-xs"></i>
+                          </div>
+                          <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Marked Script</span>
+                          <span class="text-xs text-gray-400">{{ f.formattedSize }}</span>
+                        </div>
+
                         {% if f.url %}
-                        <a href="{{ f.url }}" target="_blank"
-                           class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-xs font-semibold transition inline-flex items-center gap-1">
-                          <i class="fas fa-eye"></i> View
-                        </a>
+                        <div class="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl p-3">
+                          <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-800 truncate">{{ f.name }}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Uploaded {{ f.uploadedAt }}</p>
+                          </div>
+                          <a href="{{ f.url }}" target="_blank"
+                             class="flex-shrink-0 inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">
+                            <i class="fas fa-eye"></i> View Script
+                          </a>
+                        </div>
                         {% else %}
-                        <span class="text-gray-300 text-xs">No file</span>
+                        <div class="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-3 text-center">
+                          <p class="text-xs text-gray-400"><i class="fas fa-file-slash mr-1"></i>No script file uploaded</p>
+                        </div>
                         {% endif %}
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div><!-- /unit content -->
+                      </div>
 
-            </div>
+                      <!-- ── EVIDENCE FILES ── -->
+                      <div>
+                        <div class="flex items-center gap-2 mb-3">
+                          <div class="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-images text-purple-600 text-xs"></i>
+                          </div>
+                          <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Evidence Files</span>
+                          {% if f.evidence %}
+                          <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ f.evidence|length }}</span>
+                          {% endif %}
+                        </div>
+
+                        {% if f.evidence %}
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {% for ev in f.evidence %}
+                          <div class="border border-gray-100 rounded-xl p-3 bg-gray-50 flex items-start gap-3">
+
+                            {% if ev.kind == 'photo' %}
+                            <!-- Photo: thumbnail + lightbox -->
+                            <img src="{{ ev.url }}" alt="{{ ev.caption or ev.name }}"
+                                 class="ev-thumb"
+                                 onclick="openLB('{{ ev.url }}')"
+                                 onerror="this.style.display='none'">
+                            <div class="flex-1 min-w-0">
+                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
+                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
+                              <div class="flex items-center gap-2 mt-2">
+                                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <i class="fas fa-image text-xs"></i> Photo
+                                </span>
+                                <span class="text-xs text-gray-400">{{ ev.size }}</span>
+                              </div>
+                              <a href="{{ ev.url }}" target="_blank"
+                                 class="mt-2 inline-flex items-center gap-1 text-blue-600 hover:underline text-xs font-semibold">
+                                <i class="fas fa-expand-alt text-xs"></i> Open Full Size
+                              </a>
+                            </div>
+
+                            {% elif ev.kind == 'video' %}
+                            <!-- Video: player embed -->
+                            <div class="w-20 h-14 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              <video src="{{ ev.url }}" class="w-full h-full object-cover rounded-lg"
+                                     style="pointer-events:none;" preload="metadata"></video>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
+                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
+                              <div class="flex items-center gap-2 mt-2">
+                                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <i class="fas fa-video text-xs"></i> Video
+                                </span>
+                                <span class="text-xs text-gray-400">{{ ev.size }}</span>
+                              </div>
+                              <a href="{{ ev.url }}" target="_blank" class="ev-vid-btn mt-2">
+                                <i class="fas fa-play text-xs"></i> Watch Video
+                              </a>
+                            </div>
+
+                            {% elif ev.kind == 'audio' %}
+                            <!-- Audio player -->
+                            <div class="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <i class="fas fa-music text-purple-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
+                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
+                              <div class="flex items-center gap-2 mt-2 mb-2">
+                                <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <i class="fas fa-headphones text-xs"></i> Audio
+                                </span>
+                                <span class="text-xs text-gray-400">{{ ev.size }}</span>
+                              </div>
+                              <audio controls class="w-full" style="height:32px;outline:none;">
+                                <source src="{{ ev.url }}">
+                              </audio>
+                            </div>
+
+                            {% else %}
+                            <!-- Generic file -->
+                            <div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <i class="fas fa-file text-gray-500 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
+                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
+                              <span class="text-xs text-gray-400">{{ ev.size }}</span><br>
+                              <a href="{{ ev.url }}" target="_blank" class="ev-file-btn mt-2">
+                                <i class="fas fa-download text-xs"></i> Download
+                              </a>
+                            </div>
+                            {% endif %}
+
+                          </div>
+                          {% endfor %}
+                        </div>
+
+                        {% else %}
+                        <div class="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4 text-center">
+                          <i class="fas fa-images text-gray-300 text-2xl mb-1 block"></i>
+                          <p class="text-xs text-gray-400">No evidence files attached to this assessment</p>
+                        </div>
+                        {% endif %}
+
+                      </div>
+                    </div>
+                  </div><!-- /assess body -->
+
+                </div><!-- /assess-row -->
+                {% endfor %}
+              </div><!-- /assessments -->
+
+            </div><!-- /unit -->
             {% endfor %}
-          </div><!-- /class content -->
+          </div><!-- /cls content -->
 
-        </div>
+        </div><!-- /class -->
         {% endfor %}
       </div><!-- /dept content -->
 
-    </div>
+    </div><!-- /dept card -->
     {% endfor %}
   </div>
 
   {% else %}
   <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-16 text-center">
     <i class="fas fa-archive text-gray-300 text-5xl mb-4 block"></i>
-    <p class="text-gray-500 font-medium">No POE files found for the selected filters.</p>
+    <p class="text-gray-500 font-medium">No POE submissions found for the selected filters.</p>
     <a href="/cdacc-verifier/trainee-poe" class="mt-4 inline-block text-blue-600 text-sm hover:underline">Clear filters</a>
   </div>
   {% endif %}
@@ -213,11 +361,23 @@ function toggleSection(id) {
   var el   = document.getElementById(id);
   var icon = document.getElementById('icon-' + id);
   if (!el) return;
-  var hidden = el.style.display === 'none';
-  el.style.display = hidden ? '' : 'none';
-  if (icon) icon.style.transform = hidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+  var hidden = el.style.display === 'none' || el.style.display === '';
+  el.style.display = hidden ? 'block' : 'none';
+  if (icon) icon.style.transform = hidden ? 'rotate(180deg)' : 'rotate(0deg)';
 }
-// All sections open by default
+
+function openLB(src) {
+  document.getElementById('lb-img').src = src;
+  document.getElementById('lb-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLB(e) {
+  if (e && e.target !== document.getElementById('lb-overlay') && e.target !== document.getElementById('lb-close') && !document.getElementById('lb-close').contains(e.target)) return;
+  document.getElementById('lb-overlay').classList.remove('open');
+  document.getElementById('lb-img').src = '';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLB({target: document.getElementById('lb-overlay')}); });
 </script>
 {% endblock %}
 

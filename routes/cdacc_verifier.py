@@ -310,6 +310,39 @@ def trainee_poe():
 
         rows = query.execute().data or []
 
+        # Batch-fetch all evidence for these assessments
+        evidence_map = {}
+        if rows:
+            a_ids = [str(a["id"]) for a in rows if a.get("id")]
+            # Fetch in chunks of 400 to stay within Supabase limits
+            for i in range(0, len(a_ids), 400):
+                chunk = a_ids[i:i+400]
+                ev_rows = (db.table("evidence")
+                             .select("id, assessment_id, file_path, file_name, file_type, file_size, caption")
+                             .in_("assessment_id", chunk)
+                             .execute().data or [])
+                for ev in ev_rows:
+                    aid = str(ev.get("assessment_id", ""))
+                    ext = (ev.get("file_name") or "").rsplit(".", 1)[-1].lower()
+                    ftype = ev.get("file_type") or ""
+                    # Determine media kind from file_type field or extension
+                    if ftype == "photo" or ext in ("jpg","jpeg","png","gif","webp","bmp"):
+                        kind = "photo"
+                    elif ftype == "video" or ext in ("mp4","mov","avi","mkv","webm"):
+                        kind = "video"
+                    elif ext in ("mp3","wav","ogg","m4a","aac","flac"):
+                        kind = "audio"
+                    else:
+                        kind = "file"
+                    evidence_map.setdefault(aid, []).append({
+                        "id":      str(ev.get("id", "")),
+                        "name":    ev.get("file_name") or "Evidence",
+                        "caption": ev.get("caption") or "",
+                        "kind":    kind,
+                        "size":    _fmt_size(ev.get("file_size") or 0),
+                        "url":     f"{supabase_url}/storage/v1/object/public/assessment-evidence/{ev['file_path']}" if ev.get("file_path") else "",
+                    })
+
         if dept_id:
             classes_opts = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
             units_opts   = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
@@ -329,9 +362,10 @@ def trainee_poe():
         unit_name = f"{unit_obj.get('code','?')} — {unit_obj.get('name','?')}" if unit_obj.get("name") else "Unknown Unit"
         student   = a.get("student") or {}
         fp        = a.get("script_file_path") or ""
+        aid       = str(a.get("id", ""))
 
         file_obj = {
-            "id":             str(a.get("id", "")),
+            "id":             aid,
             "name":           a.get("script_file_name") or f"{a.get('assessment_type','?')} #{a.get('assessment_no','?')}",
             "url":            f"{supabase_url}/storage/v1/object/public/assessment-scripts/{fp}" if fp else "",
             "status":         (a.get("status") or "pending").title(),
@@ -344,6 +378,7 @@ def trainee_poe():
             "uploadedAt":     (a.get("uploaded_at") or "")[:10],
             "className":      cls_name,
             "unitName":       unit_name,
+            "evidence":       evidence_map.get(aid, []),
         }
         folder_map.setdefault(dept_name, {}).setdefault(cls_name, {}).setdefault(unit_name, []).append(file_obj)
 
