@@ -8,7 +8,7 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import (dept_admin_required, write_audit_log,
                         current_user, dept_isolation_check)
 from db import get_service_client
-from notifications import get_user_notifications
+from notifications import get_user_notifications, notify_dept_notice
 from datetime import datetime
 import secrets, string
 
@@ -1781,3 +1781,88 @@ def gis_tracking():
         status_counts=status_counts,
         total_students=len(student_ids),
     )
+
+
+# ── Department Notices / Memos ─────────────────────────────────────────────────
+
+@dept_admin_bp.route("/notices", methods=["GET"])
+@dept_admin_required
+def notices():
+    """List all notices sent by this dept admin."""
+    db = get_service_client()
+    dept_id = _dept_id()
+    dept = db.table("departments").select("name").eq("id", dept_id).single().execute().data or {}
+    notices_list = []
+    classes_list = []
+    try:
+        notices_list = (db.table("dept_notices")
+                         .select("*")
+                         .eq("department_id", dept_id)
+                         .order("sent_at", desc=True)
+                         .limit(50)
+                         .execute().data or [])
+        # Enrich with class name
+        classes_list = (db.table("classes")
+                         .select("id, name")
+                         .eq("department_id", dept_id)
+                         .order("name")
+                         .execute().data or [])
+        classes_map = {c["id"]: c["name"] for c in classes_list}
+        for n in notices_list:
+            cid = n.get("class_id")
+            n["class_name"] = classes_map.get(cid, "All Trainees") if cid else "All Trainees"
+    except Exception as e:
+        flash(f"Error loading notices: {e}", "danger")
+    return render_template("dept_admin/notices.html",
+                           notices=notices_list,
+                           classes=classes_list,
+                           dept=dept)
+
+
+@dept_admin_bp.route("/notices/send", methods=["POST"])
+@dept_admin_required
+def send_notice():
+    """Send an official notice/memo to trainees."""
+    dept_id = _dept_id()
+    user = current_user()
+
+    title   = (request.form.get("title") or "").strip()
+    message = (request.form.get("message") or "").strip()
+    ntype   = request.form.get("notice_type", "info")
+    class_id = request.form.get("class_id") or None
+
+    if not title or not message:
+        flash("Title and message are required.", "warning")
+        return redirect(url_for("dept_admin.notices"))
+    if ntype not in ("info", "warning", "success", "error"):
+        ntype = "info"
+
+    try:
+        db = get_service_client()
+        # Persist the notice record
+        db.table("dept_notices").insert({
+            "department_id": dept_id,
+            "sent_by": user["id"],
+            "title": title,
+            "message": message,
+            "notice_type": ntype,
+            "class_id": class_id,
+            "sent_at": datetime.now().isoformat()
+        }).execute()
+
+        # Push notifications to trainees
+        count = notify_dept_notice(
+            department_id=dept_id,
+            title=f"[Notice] {title}",
+            message=message,
+            notice_type=ntype,
+            action_url="/notifications",
+            class_id=class_id
+        )
+        write_audit_log(user["id"], "send_dept_notice",
+                        f"Sent notice '{title}' to {count} trainees in dept {dept_id}")
+        flash(f"Notice sent successfully to {count} trainee(s).", "success")
+    except Exception as e:
+        flash(f"Failed to send notice: {e}", "danger")
+
+    return redirect(url_for("dept_admin.notices"))

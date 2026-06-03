@@ -185,3 +185,44 @@ def notify_application_status(student_id, job_title, status):
         notification_type="success" if status in ("accepted", "shortlisted") else "info",
         action_url="/student/jobs"
     )
+
+
+def notify_dept_notice(department_id, title, message, notice_type='info',
+                       action_url=None, class_id=None):
+    """
+    Send an official notice/memo from dept admin to all trainees in a department.
+    Optionally restrict to a specific class_id.
+    Returns the count of trainees notified.
+    """
+    try:
+        db = get_service_client()
+        query = (db.table("user_profiles")
+                   .select("id")
+                   .eq("role", "student")
+                   .eq("department_id", department_id))
+        if class_id:
+            # Filter students enrolled in the given class
+            enrolled = (db.table("enrollments")
+                          .select("student_id")
+                          .eq("class_id", class_id)
+                          .execute().data or [])
+            ids = [e["student_id"] for e in enrolled if e.get("student_id")]
+            if not ids:
+                return 0
+            query = (db.table("user_profiles")
+                       .select("id")
+                       .eq("role", "student")
+                       .in_("id", ids))
+        students = query.execute().data or []
+        for s in students:
+            create_notification(
+                user_id=s["id"],
+                title=title,
+                message=message,
+                notification_type=notice_type,
+                action_url=action_url or "/notifications"
+            )
+        return len(students)
+    except Exception as e:
+        print(f"[notifications] Failed to send dept notice: {e}")
+        return 0

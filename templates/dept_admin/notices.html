@@ -1,0 +1,163 @@
+{% extends "dept_admin/base.html" %}
+{% block title %}Department Notices{% endblock %}
+{% block page_title %}Official Notices & Memos{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-blue-700 to-blue-900 rounded-xl shadow-lg p-6 mb-8 text-white">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <h1 class="text-2xl font-bold mb-1">
+          <i class="fas fa-bullhorn mr-2"></i>Official Notices &amp; Memos
+        </h1>
+        <p class="text-blue-200 text-sm">Send important messages directly to trainees in your department.</p>
+      </div>
+      <button onclick="document.getElementById('composeModal').classList.remove('hidden')"
+              class="bg-white text-blue-700 px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition flex items-center gap-2 shadow">
+        <i class="fas fa-paper-plane"></i> Compose Notice
+      </button>
+    </div>
+  </div>
+
+  <!-- Compose Modal -->
+  <div id="composeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-bullhorn text-blue-600 mr-2"></i>Compose Notice</h2>
+        <button onclick="document.getElementById('composeModal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+      </div>
+      <form method="POST" action="/dept-admin/notices/send" class="p-6 space-y-5">
+        <!-- Title -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Notice Title <span class="text-red-500">*</span></label>
+          <input type="text" name="title" required maxlength="200"
+                 placeholder="e.g. Exam Schedule Update, Fee Deadline Reminder…"
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm outline-none">
+        </div>
+
+        <!-- Message -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Message <span class="text-red-500">*</span></label>
+          <textarea name="message" required rows="5" maxlength="1000"
+                    placeholder="Write the full notice or memo content here…"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm outline-none resize-vertical"></textarea>
+          <p class="text-xs text-gray-400 mt-1">Max 1000 characters</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Notice Type -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Notice Type</label>
+            <select name="notice_type"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none bg-white">
+              <option value="info">ℹ️  Information</option>
+              <option value="warning">⚠️  Warning / Urgent</option>
+              <option value="success">✅  Good News / Announcement</option>
+              <option value="error">🚨  Critical Alert</option>
+            </select>
+          </div>
+
+          <!-- Target Class -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Send To</label>
+            <select name="class_id"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none bg-white">
+              <option value="">All Trainees in Department</option>
+              {% for cls in classes %}
+              <option value="{{ cls.id }}">Class: {{ cls.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3 pt-2">
+          <button type="submit"
+                  class="flex-1 bg-blue-700 hover:bg-blue-800 text-white py-2.5 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+            <i class="fas fa-paper-plane"></i> Send Notice
+          </button>
+          <button type="button"
+                  onclick="document.getElementById('composeModal').classList.add('hidden')"
+                  class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-600 font-semibold hover:bg-gray-50 transition">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notices List -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-gray-900">
+        <i class="fas fa-history text-blue-600 mr-2"></i>Sent Notices
+        <span class="ml-2 bg-gray-100 text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full">{{ notices | length }}</span>
+      </h2>
+    </div>
+
+    {% if notices %}
+    <div class="divide-y divide-gray-50">
+      {% for n in notices %}
+      <div class="px-6 py-5 hover:bg-gray-50 transition
+        {% if n.notice_type == 'warning' %}border-l-4 border-orange-400
+        {% elif n.notice_type == 'error' %}border-l-4 border-red-400
+        {% elif n.notice_type == 'success' %}border-l-4 border-green-400
+        {% else %}border-l-4 border-blue-400{% endif %}">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-start gap-3 flex-1 min-w-0">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+              {% if n.notice_type == 'warning' %}bg-orange-100
+              {% elif n.notice_type == 'error' %}bg-red-100
+              {% elif n.notice_type == 'success' %}bg-green-100
+              {% else %}bg-blue-100{% endif %}">
+              <i class="fas fa-{% if n.notice_type == 'warning' %}exclamation-triangle text-orange-600
+                {% elif n.notice_type == 'error' %}exclamation-circle text-red-600
+                {% elif n.notice_type == 'success' %}check-circle text-green-600
+                {% else %}info-circle text-blue-600{% endif %} text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <p class="font-semibold text-gray-900">{{ n.title }}</p>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                  {% if n.notice_type == 'warning' %}bg-orange-100 text-orange-700
+                  {% elif n.notice_type == 'error' %}bg-red-100 text-red-700
+                  {% elif n.notice_type == 'success' %}bg-green-100 text-green-700
+                  {% else %}bg-blue-100 text-blue-700{% endif %}">
+                  {{ n.notice_type | title }}
+                </span>
+              </div>
+              <p class="text-sm text-gray-600 mb-2">{{ n.message }}</p>
+              <div class="flex gap-4 text-xs text-gray-400">
+                <span><i class="fas fa-users mr-1"></i>{{ n.class_name }}</span>
+                <span><i class="fas fa-clock mr-1"></i>{{ n.sent_at | to_eat if n.sent_at else '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-16 text-center">
+      <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-bullhorn text-gray-300 text-3xl"></i>
+      </div>
+      <h3 class="text-lg font-bold text-gray-900 mb-2">No Notices Sent Yet</h3>
+      <p class="text-gray-500 mb-6">Use the "Compose Notice" button to send an official message to your trainees.</p>
+      <button onclick="document.getElementById('composeModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-2 bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800 transition">
+        <i class="fas fa-paper-plane"></i> Compose Your First Notice
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
