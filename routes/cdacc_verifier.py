@@ -141,6 +141,32 @@ def trainer_documents():
                            trainer_id=trainer_id, dept_id=dept_id)
 
 
+# ── Filter cascade API ────────────────────────────────────────────────────────
+
+@cdacc_verifier_bp.route("/filter-options")
+@login_required
+@cdacc_verifier_required
+def filter_options():
+    """Return classes, units, and trainers for a given department_id (JSON)."""
+    db = get_service_client()
+    dept_id = request.args.get("dept_id", "")
+    try:
+        if dept_id:
+            classes  = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
+            units    = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
+            trainers = (db.table("user_profiles").select("id, full_name")
+                        .eq("role", "trainer").eq("department_id", dept_id)
+                        .order("full_name").execute().data or [])
+        else:
+            classes  = db.table("classes").select("id, name").order("name").limit(200).execute().data or []
+            units    = db.table("units").select("id, name, code").order("name").limit(500).execute().data or []
+            trainers = (db.table("user_profiles").select("id, full_name")
+                        .eq("role", "trainer").order("full_name").limit(200).execute().data or [])
+        return jsonify({"classes": classes, "units": units, "trainers": trainers})
+    except Exception as e:
+        return jsonify({"error": str(e), "classes": [], "units": [], "trainers": []}), 500
+
+
 # ── Formative Marks (all departments) ────────────────────────────────────────
 
 def _grade(obtained, max_m):

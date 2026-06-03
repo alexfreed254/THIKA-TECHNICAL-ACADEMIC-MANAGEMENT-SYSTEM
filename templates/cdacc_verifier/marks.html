@@ -3,10 +3,20 @@
 {% block page_title %}Formative Assessment Marks{% endblock %}
 {% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
 
+{% block extra_style %}
+.fi{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;
+    background:#f9fafb;color:#111827;transition:border-color .18s,box-shadow .18s;outline:none;}
+.fi:focus{border-color:#1d4ed8;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1);}
+select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
+.fl{display:block;font-size:11px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #93c5fd;border-top-color:#1d4ed8;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-left:4px;}
+@keyframes sp{to{transform:rotate(360deg)}}
+{% endblock %}
+
 {% block content %}
 <div class="bg-gray-50 min-h-screen p-6">
 
-  <!-- Stats -->
+  <!-- Stats row -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
       <div class="text-2xl font-bold text-gray-800">{{ marks|length }}</div>
@@ -26,170 +36,247 @@
     </div>
   </div>
 
-  <!-- Filter Bar -->
-  <form method="GET" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-      <i class="fas fa-filter mr-1"></i>Filters
-    </p>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 mb-3">
+  <!-- ── Filter Card ── -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+    <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-slate-800 to-blue-900">
+      <i class="fas fa-sliders-h text-blue-300 text-sm"></i>
+      <span class="text-white font-bold text-sm">Filters</span>
+      <span class="text-blue-300 text-xs ml-auto">Select a department to auto-populate Class, Unit &amp; Trainer</span>
+    </div>
 
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Department</label>
-        <select name="dept_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All</option>
-          {% for d in departments %}
-          <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
-          {% endfor %}
-        </select>
+    <form method="GET" id="filterForm" class="p-5">
+
+      <!-- Row 1: Cascading filters -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+
+        <!-- Department — drives the cascade -->
+        <div>
+          <label class="fl">
+            Department
+            <span id="deptSpinner" style="display:none"><span class="spin"></span></span>
+          </label>
+          <select name="dept_id" id="deptSelect" class="fi" onchange="cascadeFilters(this.value)">
+            <option value="">— All Departments —</option>
+            {% for d in departments %}
+            <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+          </select>
+          {% if not departments %}
+          <p class="text-xs text-orange-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>No departments registered yet.</p>
+          {% endif %}
+        </div>
+
+        <!-- Class -->
+        <div>
+          <label class="fl">Class</label>
+          <select name="class_id" id="classSelect" class="fi">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Unit -->
+        <div>
+          <label class="fl">Unit</label>
+          <select name="unit_id" id="unitSelect" class="fi">
+            <option value="">All Units</option>
+            {% for u in units %}
+            <option value="{{ u.id }}" {% if unit_id == u.id %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Trainer -->
+        <div>
+          <label class="fl">Trainer</label>
+          <select name="trainer_id" id="trainerSelect" class="fi">
+            <option value="">All Trainers</option>
+            {% for t in trainers %}
+            <option value="{{ t.id }}" {% if trainer_id == t.id %}selected{% endif %}>{{ t.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
       </div>
 
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Class</label>
-        <select name="class_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Classes</option>
-          {% for c in classes %}
-          <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
+      <!-- Row 2: Year, Term, Actions -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
 
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Unit</label>
-        <select name="unit_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Units</option>
-          {% for u in units %}
-          <option value="{{ u.id }}" {% if unit_id == u.id %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
+        <div>
+          <label class="fl">Year</label>
+          <select name="year" class="fi">
+            {% for y in range(2024, 2028) %}
+            <option value="{{ y }}" {% if year|int == y %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Trainer</label>
-        <select name="trainer_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Trainers</option>
-          {% for t in trainers %}
-          <option value="{{ t.id }}" {% if trainer_id == t.id %}selected{% endif %}>{{ t.full_name }}</option>
-          {% endfor %}
-        </select>
-      </div>
+        <div>
+          <label class="fl">Term</label>
+          <select name="term" class="fi">
+            <option value="">All Terms</option>
+            <option value="1" {% if term == '1' %}selected{% endif %}>Term 1</option>
+            <option value="2" {% if term == '2' %}selected{% endif %}>Term 2</option>
+            <option value="3" {% if term == '3' %}selected{% endif %}>Term 3</option>
+          </select>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Year</label>
-        <select name="year" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          {% for y in range(2024, 2028) %}
-          <option value="{{ y }}" {% if year|int == y %}selected{% endif %}>{{ y }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Term</label>
-        <select name="term" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Terms</option>
-          <option value="1" {% if term == '1' %}selected{% endif %}>Term 1</option>
-          <option value="2" {% if term == '2' %}selected{% endif %}>Term 2</option>
-          <option value="3" {% if term == '3' %}selected{% endif %}>Term 3</option>
-        </select>
-      </div>
-
-      <div class="flex flex-col gap-1 justify-end">
-        <label class="text-xs font-bold text-transparent uppercase">x</label>
-        <div class="flex gap-2">
-          <button type="submit" class="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-lg text-sm font-semibold transition">
-            <i class="fas fa-filter mr-1"></i>Apply
+        <div class="flex gap-2 md:col-span-2 items-end">
+          <button type="submit"
+                  class="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">
+            <i class="fas fa-search"></i> Apply Filters
           </button>
-          <a href="/cdacc-verifier/marks" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-semibold transition">
-            <i class="fas fa-times"></i>
+          <a href="/cdacc-verifier/marks"
+             class="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl text-sm transition">
+            <i class="fas fa-times text-xs"></i> Reset
           </a>
         </div>
+
       </div>
 
-    </div>
-  </form>
+    </form>
+  </div>
 
-  <!-- Marks Table -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100">
-      <h2 class="text-lg font-bold text-gray-900">
-        <i class="fas fa-chart-bar text-blue-500 mr-2"></i>Marks Report
-        <span class="text-sm text-gray-400 font-normal ml-2">({{ marks|length }} entries)</span>
+  <!-- ── Results Table ── -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+        <i class="fas fa-chart-bar text-blue-500"></i> Marks Report
+        <span class="text-sm text-gray-400 font-normal">({{ marks|length }} record{% if marks|length != 1 %}s{% endif %})</span>
       </h2>
+      {% if dept_id %}
+      <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
+        {{ departments | selectattr('id', 'equalto', dept_id) | map(attribute='name') | first | default('Filtered') }}
+      </span>
+      {% endif %}
     </div>
 
     {% if marks %}
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead class="bg-blue-50">
+        <thead class="bg-gradient-to-r from-blue-50 to-indigo-50">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase whitespace-nowrap">#</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Department</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Student</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Class</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Unit</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Assessment</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Trainer</th>
-            <th class="px-4 py-3 text-center text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Marks</th>
-            <th class="px-4 py-3 text-center text-xs font-bold text-blue-700 uppercase whitespace-nowrap">%</th>
-            <th class="px-4 py-3 text-center text-xs font-bold text-blue-700 uppercase whitespace-nowrap">Grade</th>
+            {% for h in ['#','Department','Student','Class','Unit','Assessment','Trainer','Marks','%','Grade'] %}
+            <th class="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wide whitespace-nowrap">{{ h }}</th>
+            {% endfor %}
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
           {% for r in marks %}
-          <tr class="hover:bg-gray-50 transition">
-            <td class="px-4 py-2.5 text-xs text-gray-400">{{ loop.index }}</td>
+          <tr class="hover:bg-blue-50/30 transition">
+            <td class="px-4 py-2.5 text-xs text-gray-300 font-mono">{{ '%03d'|format(loop.index) }}</td>
             <td class="px-4 py-2.5">
-              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap">
                 {{ r.dept.get('name','—') }}
               </span>
             </td>
             <td class="px-4 py-2.5">
-              <p class="font-semibold text-gray-900">{{ r.student.get('full_name','—') }}</p>
+              <p class="font-semibold text-gray-900 whitespace-nowrap">{{ r.student.get('full_name','—') }}</p>
               <p class="text-xs text-gray-400">{{ r.student.get('admission_no','') }}</p>
             </td>
-            <td class="px-4 py-2.5 text-gray-600 text-xs">{{ r.class_.get('name','—') }}</td>
+            <td class="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{{ r.class_.get('name','—') }}</td>
             <td class="px-4 py-2.5">
-              <span class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{{ r.unit.get('code','—') }}</span>
+              <span class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">{{ r.unit.get('code','—') }}</span>
             </td>
             <td class="px-4 py-2.5">
-              <p class="text-gray-800">{{ r.assessment_name or '—' }}</p>
+              <p class="text-gray-800 whitespace-nowrap">{{ r.assessment_name or '—' }}</p>
               <p class="text-xs text-gray-400">{{ r.assessment_type or '' }}{% if r.term %} · T{{ r.term }}{% endif %}{% if r.year %} · {{ r.year }}{% endif %}</p>
             </td>
-            <td class="px-4 py-2.5 text-xs text-gray-600">{{ r.trainer.get('full_name','—') }}</td>
-            <td class="px-4 py-2.5 text-center font-mono">
-              {% if r.marks_obtained is not none %}
-              {{ r.marks_obtained }}/{{ r.max_marks }}
-              {% else %}—{% endif %}
+            <td class="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{{ r.trainer.get('full_name','—') }}</td>
+            <td class="px-4 py-2.5 text-center font-mono text-sm">
+              {% if r.marks_obtained is not none %}{{ r.marks_obtained }}/{{ r.max_marks }}{% else %}<span class="text-gray-300">—</span>{% endif %}
             </td>
-            <td class="px-4 py-2.5 text-center">
+            <td class="px-4 py-2.5 text-center font-semibold">
               {% if r.percentage is not none %}
-              <span class="font-semibold {% if r.percentage >= 60 %}text-green-600{% elif r.percentage >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                {{ r.percentage }}%
-              </span>
-              {% else %}—{% endif %}
+              <span class="{% if r.percentage >= 60 %}text-green-600{% elif r.percentage >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">{{ r.percentage }}%</span>
+              {% else %}<span class="text-gray-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-2.5 text-center">
-              {% if r.grade != 'N/A' %}
-              <span class="font-bold text-lg
-                {% if r.grade in ('4','3') %}text-green-600
-                {% elif r.grade == '2' %}text-blue-600
-                {% elif r.grade == '1' %}text-yellow-600
-                {% else %}text-red-600{% endif %}">
-                {{ r.grade }}
-              </span>
-              {% else %}<span class="text-gray-300">—</span>{% endif %}
+              {% if r.grade and r.grade != 'N/A' %}
+              <span class="font-black text-xl {% if r.grade in ('4','3') %}text-green-600{% elif r.grade == '2' %}text-blue-600{% elif r.grade == '1' %}text-yellow-600{% else %}text-red-500{% endif %}">{{ r.grade }}</span>
+              {% else %}<span class="text-gray-200">—</span>{% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
     {% else %}
-    <div class="px-6 py-16 text-center">
-      <i class="fas fa-chart-bar text-gray-300 text-5xl mb-4 block"></i>
-      <p class="text-gray-500 font-medium">No marks found. Adjust the filters above.</p>
+    <div class="px-6 py-20 text-center">
+      <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-chart-bar text-2xl text-blue-200"></i>
+      </div>
+      <p class="text-gray-500 font-semibold">No marks found</p>
+      <p class="text-gray-400 text-sm mt-1">Select a department and click "Apply Filters" to load data.</p>
     </div>
     {% endif %}
   </div>
 
 </div>
+
+{% block extra_script %}
+<script>
+// Pre-load the current filter values from Jinja for restoration after cascade
+const CURRENT = {
+  class_id:   "{{ class_id }}",
+  unit_id:    "{{ unit_id }}",
+  trainer_id: "{{ trainer_id }}",
+  dept_id:    "{{ dept_id }}"
+};
+
+function populateSelect(sel, items, valueKey, labelFn, current) {
+  const prev = current || sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  items.forEach(function(item) {
+    var opt = document.createElement('option');
+    opt.value = item[valueKey];
+    opt.textContent = labelFn(item);
+    if (item[valueKey] === prev) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function cascadeFilters(deptId) {
+  var spinner = document.getElementById('deptSpinner');
+  spinner.style.display = 'inline';
+
+  fetch('/cdacc-verifier/filter-options?dept_id=' + encodeURIComponent(deptId))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      spinner.style.display = 'none';
+
+      populateSelect(
+        document.getElementById('classSelect'),
+        data.classes, 'id',
+        function(c) { return c.name; },
+        CURRENT.class_id
+      );
+      populateSelect(
+        document.getElementById('unitSelect'),
+        data.units, 'id',
+        function(u) { return u.code + ' — ' + u.name; },
+        CURRENT.unit_id
+      );
+      populateSelect(
+        document.getElementById('trainerSelect'),
+        data.trainers, 'id',
+        function(t) { return t.full_name; },
+        CURRENT.trainer_id
+      );
+    })
+    .catch(function() { spinner.style.display = 'none'; });
+}
+
+// On page load: if a dept was already selected, run cascade once to sync dropdowns
+// (handles back-navigation and bookmarked URLs)
+(function() {
+  var deptId = document.getElementById('deptSelect').value;
+  if (deptId) cascadeFilters(deptId);
+})();
+</script>
+{% endblock %}
+
 {% endblock %}
