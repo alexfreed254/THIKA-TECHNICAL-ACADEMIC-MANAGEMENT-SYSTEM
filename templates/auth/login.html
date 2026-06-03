@@ -371,10 +371,6 @@
         <div class="stat"><strong>24/7</strong><small>Access</small></div>
       </div>
 
-      <div class="hero-apply">
-        <a href="#" class="hero-apply-btn" id="heroApplyBtn"><i class="fas fa-file-signature"></i> Apply for a Course</a>
-        <p>No account yet? Prospective trainees can apply by submitting your details and documents.</p>
-      </div>
     </section>
 
     <section class="login-panel">
@@ -558,13 +554,6 @@
           }
         }
       });
-    });
-
-    // Hero "Apply for a Course" button — switch to Apply tab
-    document.getElementById('heroApplyBtn').addEventListener('click', function(e) {
-      e.preventDefault();
-      document.querySelector('.tab.apply-tab').click();
-      document.querySelector('.login-panel').scrollIntoView({ behavior: 'smooth' });
     });
 
     // Init visibility on page load
