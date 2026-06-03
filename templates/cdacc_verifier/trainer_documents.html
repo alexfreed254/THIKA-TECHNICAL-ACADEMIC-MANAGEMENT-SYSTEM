@@ -1,0 +1,159 @@
+{% extends "cdacc_verifier/base.html" %}
+{% block title %}Trainer Documents{% endblock %}
+{% block page_title %}Trainer Documents{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Filter Bar -->
+  <form method="GET" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Department</label>
+        <select name="dept_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+          <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Trainer</label>
+        <select name="trainer_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+          <option value="">All Trainers</option>
+          {% for t in trainers %}
+          <option value="{{ t.id }}" {% if trainer_id == t.id %}selected{% endif %}>{{ t.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Document Type</label>
+        <select name="document_type" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+          <option value="">All Types</option>
+          {% for t in ['Lesson Plan','Scheme of Work','Assessment Tool','Meeting Minutes','Training Report','Other'] %}
+          <option value="{{ t }}" {% if document_type == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Academic Year</label>
+        <select name="year" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+          {% for y in range(2024, 2028) %}
+          <option value="{{ y }}" {% if year|int == y %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Term</label>
+        <select name="term" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+          <option value="">All Terms</option>
+          <option value="1" {% if term == '1' %}selected{% endif %}>Term 1</option>
+          <option value="2" {% if term == '2' %}selected{% endif %}>Term 2</option>
+          <option value="3" {% if term == '3' %}selected{% endif %}>Term 3</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1 justify-end">
+        <label class="text-xs font-bold text-transparent uppercase">Apply</label>
+        <div class="flex gap-2">
+          <button type="submit" class="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+            <i class="fas fa-filter mr-1"></i>Filter
+          </button>
+          <a href="/cdacc-verifier/trainer-documents" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-semibold transition">
+            <i class="fas fa-times"></i>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+  <!-- Results Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-gray-900">
+        <i class="fas fa-file-alt text-blue-500 mr-2"></i>Trainer Documents
+        <span class="ml-2 text-sm text-gray-400 font-normal">({{ documents|length }} records)</span>
+      </h2>
+    </div>
+
+    {% if documents %}
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Trainer</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Document Name</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Unit / Class</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Year/Term</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for doc in documents %}
+          {% set trainer = doc.get('user_profiles') or {} %}
+          {% set unit    = doc.get('units') or {} %}
+          {% set cls     = doc.get('classes') or {} %}
+          {% set dept    = unit.get('departments') or trainer.get('departments') or {} %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-3 text-xs text-gray-400">{{ loop.index }}</td>
+            <td class="px-4 py-3">
+              <p class="font-semibold text-sm text-gray-900">{{ trainer.get('full_name','—') }}</p>
+              <p class="text-xs text-gray-400">{{ trainer.get('staff_no','') }}</p>
+            </td>
+            <td class="px-4 py-3">
+              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                {{ dept.get('name') or unit.get('department_id','—')[:8] }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <p class="text-sm font-medium text-gray-900">{{ doc.get('document_name','—') }}</p>
+            </td>
+            <td class="px-4 py-3">
+              <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold">
+                {{ doc.get('document_type','—') }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-600">
+              {% if unit.get('name') %}<span class="font-mono bg-gray-100 px-1 rounded">{{ unit.get('code','') }}</span> {{ unit.get('name','') }}<br>{% endif %}
+              {% if cls.get('name') %}<span class="text-gray-400">{{ cls.get('name','') }}</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-center text-xs text-gray-600">
+              {{ doc.get('academic_year','—') }}{% if doc.get('term') %} / T{{ doc.get('term') }}{% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if doc.get('file_path') %}
+              <a href="{{ SUPABASE_URL }}/storage/v1/object/public/trainer-documents/{{ doc.file_path }}"
+                 target="_blank"
+                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+                <i class="fas fa-eye"></i> View
+              </a>
+              {% else %}
+              <span class="text-xs text-gray-400">No file</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-16 text-center">
+      <i class="fas fa-file-alt text-gray-300 text-5xl mb-4 block"></i>
+      <p class="text-gray-500 font-medium">No documents found for the selected filters.</p>
+      <a href="/cdacc-verifier/trainer-documents" class="mt-4 inline-block text-blue-600 text-sm hover:underline">Clear filters</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
