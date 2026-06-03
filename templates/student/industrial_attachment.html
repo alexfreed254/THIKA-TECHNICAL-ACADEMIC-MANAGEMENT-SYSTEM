@@ -546,9 +546,11 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ── Site map for existing attachment ──────────────── */
   const siteMapEl = document.getElementById('siteMap');
   if (siteMapEl) {
-    {% if current_attachment and co.get('latitude') and co.get('longitude') %}
-    const lat = {{ co.get('latitude') }};
-    const lng = {{ co.get('longitude') }};
+    {% if current_attachment %}
+    {% set _co = current_attachment.get('companies') or {} %}
+    {% if _co.get('latitude') and _co.get('longitude') %}
+    const lat = {{ _co.get('latitude') }};
+    const lng = {{ _co.get('longitude') }};
     const siteMap = L.map('siteMap').setView([lat, lng], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
@@ -560,8 +562,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     L.marker([lat, lng], { icon })
       .addTo(siteMap)
-      .bindPopup('<b>{{ co.get("name","Site") }}</b><br>{{ co.get("address","") }}')
+      .bindPopup('<b>{{ _co.get("name","Site") }}</b><br>{{ _co.get("address","") }}')
       .openPopup();
+    {% endif %}
     {% endif %}
   }
 
