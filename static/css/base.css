@@ -76,6 +76,7 @@ html {
 
 body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px;
   background: var(--gray-50);
   color: var(--gray-800);
   line-height: 1.55;
@@ -1388,6 +1389,39 @@ body.dark-mode .progress-bar { background: #334155; }
   .filter-grid { grid-template-columns: 1fr; }
   .modal { max-width: none; border-radius: 14px; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL FONT SIZE — 16px throughout the system
+   Uses !important so template-level overrides (font-size:13px on
+   td/th/select/etc.) are superseded by this rule everywhere.
+   ══════════════════════════════════════════════════════════════ */
+.main-content td,
+.main-content th,
+.main-content p,
+.main-content input,
+.main-content select,
+.main-content textarea,
+.main-content button,
+.main-content label,
+.main-content li,
+.main-content .filter-bar select,
+.main-content .filter-bar input,
+.main-content .card-body,
+.main-content .page-wrap,
+.main-content table { font-size: 16px !important; }
+
+/* Sidebar navigation text */
+.sidebar-menu a,
+.sidebar .role-badge,
+.sidebar-header h2 { font-size: 16px; }
+
+/* Topbar title */
+.topbar-title { font-size: 16px; }
+
+/* Form controls sitewide */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="date"], input[type="search"],
+select, textarea { font-size: 16px; }
 
 /* ══════════════════════════════════════════════════════════════
    GLOBAL TOAST JS (runs on every page)
