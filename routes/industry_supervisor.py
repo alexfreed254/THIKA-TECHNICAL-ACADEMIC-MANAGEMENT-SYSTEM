@@ -96,6 +96,33 @@ def dashboard():
                            current_month=datetime.now().strftime("%B %Y"))
 
 
+# ── My Trainees ───────────────────────────────────────────────────────────────
+
+@industry_supervisor_bp.route("/trainees")
+@login_required
+@industry_supervisor_required
+def trainees():
+    db         = get_service_client()
+    user       = current_user()
+    mentor     = _get_mentor(db, user["id"])
+    company_id = mentor["company_id"] if mentor else None
+
+    records = []
+    if company_id:
+        try:
+            records = (db.table("industrial_attachments")
+                .select("*, student:user_profiles!industrial_attachments_student_id_fkey"
+                        "(full_name, admission_no, mobile_number, departments(name))")
+                .eq("company_id", company_id)
+                .order("start_date", desc=True)
+                .execute().data or [])
+        except Exception as e:
+            flash(f"Error loading trainees: {e}", "danger")
+
+    return render_template("industry_supervisor/trainees.html",
+                           trainees=records, mentor=mentor)
+
+
 # ── Logbooks (search + weekly review) ────────────────────────────────────────
 
 @industry_supervisor_bp.route("/logbooks")
