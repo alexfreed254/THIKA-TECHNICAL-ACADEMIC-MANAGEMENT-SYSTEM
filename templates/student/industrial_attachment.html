@@ -22,7 +22,6 @@
   font-size: 14px; font-weight: 700;
   display: flex; align-items: center; gap: 10px;
 }
-.ia-card-body { padding: 24px; }
 
 /* Status banner */
 .status-banner {
@@ -51,6 +50,15 @@
 .info-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
 .info-value { font-size: 13.5px; font-weight: 600; color: #1e293b; }
 
+/* Form section divider */
+.form-section-hdr {
+  font-size: 11.5px; font-weight: 700; color: #0f2c54;
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: 8px 0; border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 16px; margin-top: 4px;
+  display: flex; align-items: center; gap: 7px;
+}
+
 /* Form fields */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
@@ -70,6 +78,7 @@
   outline: none; border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37,99,235,.1);
 }
+.f-input[readonly] { background: #f1f5f9; color: #64748b; cursor: default; }
 .f-textarea { resize: vertical; min-height: 80px; }
 .f-hint { font-size: 11px; color: #94a3b8; }
 
@@ -122,11 +131,11 @@
 .log-status-ok { color: #16a34a; font-weight: 700; }
 .log-status-out { color: #ea580c; font-weight: 700; }
 
-/* Action buttons */
+/* Submit button */
 .btn-primary {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 12px 28px; border: none; border-radius: 11px;
-  font-size: 13.5px; font-weight: 700; font-family: 'Inter', sans-serif;
+  padding: 13px 32px; border: none; border-radius: 11px;
+  font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif;
   cursor: pointer; transition: all .2s;
   background: linear-gradient(135deg,#0f2c54,#1a3d6e);
   color: #fff; box-shadow: 0 4px 14px rgba(15,44,84,.3);
@@ -142,7 +151,7 @@
 }
 .btn-logbook:hover { background: #eff6ff; color: #1a3d6e; }
 
-/* Attachment history table */
+/* History table */
 .hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .hist-table th {
   background: linear-gradient(135deg,#0f2c54,#1a3d6e);
@@ -157,6 +166,31 @@
 .hist-table tr:last-child td { border-bottom: none; }
 .hist-table tbody tr:hover td { background: #f8fafc; }
 
+/* History filter bar */
+.hist-filter-bar {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+  padding: 14px 18px; background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.hist-filter-bar label {
+  font-size: 11px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: .04em;
+  display: block; margin-bottom: 4px;
+}
+.hist-filter-bar select {
+  padding: 7px 11px; border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; background: #fff; color: #0f172a; cursor: pointer;
+  min-width: 120px;
+}
+.hist-filter-bar select:focus { outline: none; border-color: #2563eb; }
+.hist-reset-btn {
+  padding: 7px 14px; background: #e2e8f0; color: #475569;
+  border: none; border-radius: 8px; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; height: 36px; align-self: flex-end;
+  transition: background .15s;
+}
+.hist-reset-btn:hover { background: #cbd5e1; }
+
 /* Status pills */
 .pill {
   display: inline-flex; align-items: center; gap: 5px;
@@ -168,468 +202,482 @@
 .pill-approved { background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0; }
 .pill-completed{ background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
 .pill-rejected { background:#fef2f2;color:#991b1b;border:1px solid #fecaca; }
+
+/* Term badge */
+.term-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 7px;
+  font-size: 11px; font-weight: 700;
+  background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;
+}
 {% endblock %}
 
 {% block content %}
 <div class="ia-wrap">
 
-  {% if current_attachment %}
-  {# ── ACTIVE / CURRENT ATTACHMENT ───────────────────────────────────── #}
+{# ══════════════════════════════════════════════════════════════════
+   SECTION 1: CURRENT / ACTIVE ATTACHMENT STATUS
+══════════════════════════════════════════════════════════════════ #}
+{% if current_attachment %}
+{% set co = current_attachment.get('companies') or {} %}
+{% set st = current_attachment.get('status','pending') %}
 
-  {% set co = current_attachment.get('companies') or {} %}
-  {% set st = current_attachment.get('status','pending') %}
+<!-- Status banner -->
+<div class="status-banner {{ st }}">
+  <div class="status-icon">
+    {% if st == 'active' %}<i class="fas fa-circle-check"></i>
+    {% elif st == 'pending' %}<i class="fas fa-clock"></i>
+    {% elif st == 'approved' %}<i class="fas fa-thumbs-up"></i>
+    {% elif st == 'completed' %}<i class="fas fa-flag-checkered"></i>
+    {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+  </div>
+  <div style="flex:1">
+    <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px">
+      {{ co.get('name','—') }}
+      <span class="pill pill-{{ st }}" style="margin-left:10px">{{ st|title }}</span>
+    </div>
+    <div style="font-size:13px;color:#64748b">
+      <i class="fas fa-map-marker-alt" style="margin-right:5px;color:#1e5a9f"></i>{{ co.get('address','—') }}
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <a href="/student/logbook" class="btn-logbook">
+      <i class="fas fa-book-open"></i> Daily Logbook
+    </a>
+  </div>
+</div>
 
-  <!-- Status banner -->
-  <div class="status-banner {{ st }}">
-    <div class="status-icon">
-      {% if st == 'active' %}<i class="fas fa-circle-check"></i>
-      {% elif st == 'pending' %}<i class="fas fa-clock"></i>
-      {% elif st == 'approved' %}<i class="fas fa-thumbs-up"></i>
-      {% elif st == 'completed' %}<i class="fas fa-flag-checkered"></i>
-      {% else %}<i class="fas fa-times-circle"></i>{% endif %}
-    </div>
-    <div style="flex:1">
-      <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px">
-        {{ co.get('name','—') }}
-        <span class="pill pill-{{ st }}" style="margin-left:10px">{{ st|title }}</span>
+<!-- Attachment details card -->
+<div class="ia-card">
+  <div class="ia-card-head"><i class="fas fa-info-circle"></i> Attachment Details</div>
+  <div style="padding:24px">
+    <div class="info-grid">
+      {% if current_attachment.get('attachment_term') %}
+      <div class="info-item">
+        <div class="info-label">Term</div>
+        <div class="info-value">{{ current_attachment.get('attachment_term') }}</div>
       </div>
-      <div style="font-size:13px;color:#64748b">
-        <i class="fas fa-map-marker-alt" style="margin-right:5px;color:#1e5a9f"></i>{{ co.get('address','—') }}
+      {% endif %}
+      {% if current_attachment.get('attachment_year') %}
+      <div class="info-item">
+        <div class="info-label">Year</div>
+        <div class="info-value">{{ current_attachment.get('attachment_year') }}</div>
       </div>
+      {% endif %}
+      <div class="info-item">
+        <div class="info-label">Company / Place</div>
+        <div class="info-value">{{ co.get('name','—') }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Location / Address</div>
+        <div class="info-value">{{ co.get('address','—') }}</div>
+      </div>
+      {% if current_attachment.get('trainee_role') %}
+      <div class="info-item">
+        <div class="info-label">My Role</div>
+        <div class="info-value">{{ current_attachment.get('trainee_role') }}</div>
+      </div>
+      {% endif %}
+      <div class="info-item">
+        <div class="info-label">Supervisor</div>
+        <div class="info-value">{{ co.get('contact_person','—') }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Supervisor Phone</div>
+        <div class="info-value">{{ co.get('contact_phone','—') }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Start Date</div>
+        <div class="info-value">{{ current_attachment.get('start_date','—') }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">End Date</div>
+        <div class="info-value">{{ current_attachment.get('end_date','—') }}</div>
+      </div>
+      {% if current_attachment.get('final_grade') %}
+      <div class="info-item">
+        <div class="info-label">Final Grade</div>
+        <div class="info-value" style="font-size:18px;color:#1e5a9f">{{ current_attachment.get('final_grade') }}</div>
+      </div>
+      {% endif %}
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a href="/student/logbook" class="btn-logbook">
-        <i class="fas fa-book-open"></i> Daily Logbook
+
+    {% if current_attachment.get('supervisor_notes') %}
+    <div style="margin-top:14px;background:#eff6ff;border-radius:10px;padding:13px 16px;border:1px solid #bfdbfe">
+      <div class="info-label">Supervisor Notes</div>
+      <div style="font-size:13.5px;color:#1d4ed8;margin-top:5px">{{ current_attachment.get('supervisor_notes') }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Interactive site map -->
+{% if co.get('latitude') and co.get('longitude') %}
+<div class="ia-card">
+  <div class="ia-card-head"><i class="fas fa-map-marked-alt"></i> Attachment Site Location</div>
+  <div style="padding:16px">
+    <div id="siteMap" class="map-container"></div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <a href="https://www.google.com/maps?q={{ co.get('latitude') }},{{ co.get('longitude') }}"
+         target="_blank" rel="noopener"
+         style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">
+        <i class="fas fa-map"></i> Open in Google Maps
       </a>
+      <span style="font-size:12px;color:#94a3b8;align-self:center">
+        Coordinates: {{ co.get('latitude') }}, {{ co.get('longitude') }}
+      </span>
     </div>
   </div>
+</div>
+{% endif %}
 
-  <!-- Details grid -->
-  <div class="ia-card">
-    <div class="ia-card-head"><i class="fas fa-info-circle"></i> Attachment Details</div>
-    <div class="ia-card-body">
-      <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">Company / Place</div>
-          <div class="info-value">{{ co.get('name','—') }}</div>
+<!-- GPS Check-in (active attachments only) -->
+{% if st == 'active' %}
+<div class="ia-card">
+  <div class="ia-card-head"><i class="fas fa-crosshairs"></i> GPS Attendance — Today</div>
+  <div style="padding:24px">
+    <p style="font-size:13.5px;color:#64748b;margin-bottom:16px">
+      Record your daily attendance by checking in from your attachment site.
+      Your GPS coordinates are captured and timestamped automatically.
+    </p>
+    <form id="gpsForm" method="POST">
+      <input type="hidden" name="attachment_id" value="{{ current_attachment.get('id') }}">
+      <div class="coords-row" style="margin-bottom:14px">
+        <div class="f-field">
+          <label class="f-label">Latitude</label>
+          <input class="f-input" type="number" step="any" name="latitude" id="latitude" placeholder="e.g. -1.0332">
         </div>
-        <div class="info-item">
-          <div class="info-label">Address</div>
-          <div class="info-value">{{ co.get('address','—') }}</div>
+        <div class="f-field">
+          <label class="f-label">Longitude</label>
+          <input class="f-input" type="number" step="any" name="longitude" id="longitude" placeholder="e.g. 37.0694">
         </div>
-        <div class="info-item">
-          <div class="info-label">Supervisor</div>
-          <div class="info-value">{{ co.get('contact_person','—') }}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Supervisor Contact</div>
-          <div class="info-value">{{ co.get('contact_phone','—') }}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Start Date</div>
-          <div class="info-value">{{ current_attachment.get('start_date','—') }}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">End Date</div>
-          <div class="info-value">{{ current_attachment.get('end_date','—') }}</div>
-        </div>
-        {% set u = current_attachment.get('units') or {} %}
-        {% if u %}
-        <div class="info-item">
-          <div class="info-label">Unit</div>
-          <div class="info-value">{{ u.get('name','—') }} ({{ u.get('code','') }})</div>
-        </div>
-        {% endif %}
-        {% if current_attachment.get('final_grade') %}
-        <div class="info-item">
-          <div class="info-label">Final Grade</div>
-          <div class="info-value" style="font-size:18px;color:#1e5a9f">{{ current_attachment.get('final_grade') }}</div>
-        </div>
-        {% endif %}
+        <button type="button" class="btn-gps" onclick="autoDetect()">
+          <i class="fas fa-crosshairs"></i> Auto-Detect GPS
+        </button>
       </div>
+      <div id="gpsStatus" style="font-size:13px;color:#64748b;margin-bottom:12px"></div>
+      <div class="checkin-btns">
+        <button type="submit" formaction="/student/check-in" class="btn-checkin">
+          <i class="fas fa-sign-in-alt"></i> Check In
+        </button>
+        <button type="submit" formaction="/student/check-out" class="btn-checkout">
+          <i class="fas fa-sign-out-alt"></i> Check Out
+        </button>
+      </div>
+    </form>
 
-      {% if current_attachment.get('attachment_goals') %}
-      <div style="margin-top:16px;background:#f8fafc;border-radius:10px;padding:13px 16px;border:1px solid #e2e8f0">
-        <div class="info-label">Attachment Goals</div>
-        <div style="font-size:13.5px;color:#334155;margin-top:5px">{{ current_attachment.get('attachment_goals') }}</div>
-      </div>
-      {% endif %}
-      {% if current_attachment.get('supervisor_notes') %}
-      <div style="margin-top:12px;background:#eff6ff;border-radius:10px;padding:13px 16px;border:1px solid #bfdbfe">
-        <div class="info-label">Supervisor Notes</div>
-        <div style="font-size:13.5px;color:#1d4ed8;margin-top:5px">{{ current_attachment.get('supervisor_notes') }}</div>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Interactive site map -->
-  {% if co.get('latitude') and co.get('longitude') %}
-  <div class="ia-card">
-    <div class="ia-card-head"><i class="fas fa-map-marked-alt"></i> Attachment Site Location</div>
-    <div class="ia-card-body" style="padding:16px">
-      <div id="siteMap" class="map-container"></div>
-      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
-        <a href="https://www.google.com/maps?q={{ co.get('latitude') }},{{ co.get('longitude') }}"
-           target="_blank" rel="noopener"
-           style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">
-          <i class="fas fa-map"></i> Open in Google Maps
-        </a>
-        <span style="font-size:12px;color:#94a3b8;align-self:center">
-          Coordinates: {{ co.get('latitude') }}, {{ co.get('longitude') }}
+    {% if today_logs %}
+    <div style="margin-top:18px">
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Today's Activity</div>
+      {% for log in today_logs %}
+      <div class="log-row">
+        <span class="log-time"><i class="far fa-clock" style="margin-right:5px"></i>{{ log.get('check_in_time','')[:16].replace('T',' ') }}</span>
+        <span>
+          {% if log.get('check_out_time') %}
+          <span class="log-status-ok"><i class="fas fa-check-circle"></i> Checked out {{ log.get('check_out_time','')[:16].replace('T',' ') }}</span>
+          {% else %}
+          <span class="log-status-out"><i class="fas fa-play-circle"></i> Active check-in</span>
+          {% endif %}
+        </span>
+        <span style="font-size:12px;color:{{ '#16a34a' if log.get('is_within_geofence') else '#d97706' }}">
+          <i class="fas fa-map-pin"></i>
+          {{ 'On site' if log.get('is_within_geofence') else 'Outside geofence' }}
         </span>
       </div>
+      {% endfor %}
     </div>
+    {% endif %}
   </div>
-  {% endif %}
-
-  <!-- GPS Check-in (active only) -->
-  {% if st == 'active' %}
-  <div class="ia-card">
-    <div class="ia-card-head"><i class="fas fa-crosshairs"></i> GPS Attendance — Today</div>
-    <div class="ia-card-body">
-      <p style="font-size:13.5px;color:#64748b;margin-bottom:16px">
-        Record your daily attendance by checking in from your attachment site.
-        Your GPS coordinates are captured and timestamped automatically.
-      </p>
-      <form id="gpsForm" method="POST">
-        <input type="hidden" name="attachment_id" value="{{ current_attachment.get('id') }}">
-        <div class="coords-row" style="margin-bottom:14px">
-          <div class="f-field">
-            <label class="f-label">Latitude</label>
-            <input class="f-input" type="number" step="any" name="latitude" id="latitude" placeholder="e.g. -1.0332">
-          </div>
-          <div class="f-field">
-            <label class="f-label">Longitude</label>
-            <input class="f-input" type="number" step="any" name="longitude" id="longitude" placeholder="e.g. 37.0694">
-          </div>
-          <button type="button" class="btn-gps" onclick="autoDetect()">
-            <i class="fas fa-crosshairs"></i> Auto-Detect GPS
-          </button>
-        </div>
-        <div id="gpsStatus" style="font-size:13px;color:#64748b;margin-bottom:12px"></div>
-        <div class="checkin-btns">
-          <button type="submit" formaction="/student/check-in" class="btn-checkin">
-            <i class="fas fa-sign-in-alt"></i> Check In
-          </button>
-          <button type="submit" formaction="/student/check-out" class="btn-checkout">
-            <i class="fas fa-sign-out-alt"></i> Check Out
-          </button>
-        </div>
-      </form>
-
-      {% if today_logs %}
-      <div style="margin-top:18px">
-        <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Today's Activity</div>
-        {% for log in today_logs %}
-        <div class="log-row">
-          <span class="log-time"><i class="far fa-clock" style="margin-right:5px"></i>{{ log.get('check_in_time','')[:16].replace('T',' ') }}</span>
-          <span>
-            {% if log.get('check_out_time') %}
-            <span class="log-status-ok"><i class="fas fa-check-circle"></i> Checked out {{ log.get('check_out_time','')[:16].replace('T',' ') }}</span>
-            {% else %}
-            <span class="log-status-out"><i class="fas fa-play-circle"></i> Active check-in</span>
-            {% endif %}
-          </span>
-          <span style="font-size:12px;color:{{ '#16a34a' if log.get('is_within_geofence') else '#d97706' }}">
-            <i class="fas fa-map-pin"></i>
-            {{ 'On site' if log.get('is_within_geofence') else 'Outside geofence' }}
-          </span>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Past attachments table -->
-  {% if all_attachments and all_attachments|length > 1 %}
-  <div class="ia-card">
-    <div class="ia-card-head"><i class="fas fa-history"></i> Attachment History</div>
-    <div style="overflow-x:auto">
-      <table class="hist-table">
-        <thead>
-          <tr>
-            <th>Company</th><th>Period</th><th>Unit</th><th>Status</th><th>Grade</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for att in all_attachments %}
-          {% set ac = att.get('companies') or {} %}
-          <tr>
-            <td><strong>{{ ac.get('name','—') }}</strong><br><span style="font-size:12px;color:#94a3b8">{{ ac.get('address','') }}</span></td>
-            <td style="white-space:nowrap;font-size:12.5px">{{ att.get('start_date','—') }}<br>to {{ att.get('end_date','—') }}</td>
-            <td>{% set au = att.get('units') or {} %}{{ au.get('code','—') }}</td>
-            <td><span class="pill pill-{{ att.get('status','pending') }}">{{ att.get('status','pending')|title }}</span></td>
-            <td style="font-weight:700;color:#1e5a9f">{{ att.get('final_grade','—') }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if st in ['rejected','completed'] %}
-  {# Allow new request if previous is rejected/completed #}
-  {% endif %}
-
-  {% else %}
-  {# ── NO ATTACHMENT — CREATION FORM ──────────────────────────────────── #}
-
-  <div style="text-align:center;padding:32px 24px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;margin-bottom:28px;box-shadow:0 2px 12px rgba(0,0,0,.06)">
-    <i class="fas fa-industry" style="font-size:52px;color:#cbd5e1;display:block;margin-bottom:14px"></i>
-    <h3 style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px">Register Your Industrial Attachment</h3>
-    <p style="font-size:13.5px;color:#64748b;max-width:520px;margin:0 auto">
-      Fill in the form below to register your industrial attachment placement.
-      Your supervisor will receive notification and can review your daily logs.
-    </p>
-  </div>
-
-  {% endif %}
-
-  {# ── ATTACHMENT CREATION / REQUEST FORM (show when no active attachment) #}
-  {% if not current_attachment or current_attachment.get('status') in ['rejected','completed'] %}
-  <div class="ia-card">
-    <div class="ia-card-head">
-      <i class="fas fa-plus-circle"></i>
-      {{ 'New Attachment Request' if current_attachment else 'Register Industrial Attachment' }}
-    </div>
-    <div class="ia-card-body">
-      <form method="POST" action="/student/industrial-attachment/request" id="attachForm">
-
-        <!-- Company / Workplace -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
-            <i class="fas fa-building" style="margin-right:6px"></i>Company / Workplace Information
-          </div>
-          <div class="form-grid" style="margin-bottom:16px">
-            <div class="f-field">
-              <label class="f-label">Company / Place Name <span class="req">*</span></label>
-              <input class="f-input" type="text" name="company_name" required
-                     placeholder="e.g. Kenya Power, ABC Motors, Self-employed">
-            </div>
-            <div class="f-field">
-              <label class="f-label">Industry Type <span class="req">*</span></label>
-              <select class="f-select" name="industry_type" required>
-                <option value="">-- Select Industry --</option>
-                <option>Electrical Engineering</option>
-                <option>Mechanical Engineering</option>
-                <option>Information Technology</option>
-                <option>Civil Engineering</option>
-                <option>Automotive Engineering</option>
-                <option>Hospitality</option>
-                <option>Business Management</option>
-                <option>Health Sciences</option>
-                <option>Agriculture</option>
-                <option>Construction</option>
-                <option>Manufacturing</option>
-                <option>Other</option>
-              </select>
-            </div>
-          </div>
-          <div class="f-field" style="margin-bottom:16px">
-            <label class="f-label">Company / Site Address <span class="req">*</span></label>
-            <input class="f-input" type="text" name="company_address" required
-                   placeholder="e.g. Industrial Area, Nairobi / Thika Town">
-          </div>
-        </div>
-
-        <!-- Supervisor -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
-            <i class="fas fa-user-hard-hat" style="margin-right:6px"></i>Industry Supervisor Details
-          </div>
-          <div class="form-grid">
-            <div class="f-field">
-              <label class="f-label">Supervisor Full Name <span class="req">*</span></label>
-              <input class="f-input" type="text" name="supervisor_name" required
-                     placeholder="e.g. John Mwangi">
-            </div>
-            <div class="f-field">
-              <label class="f-label">Supervisor Phone / Email <span class="req">*</span></label>
-              <input class="f-input" type="text" name="supervisor_contact" required
-                     placeholder="e.g. 0712345678 or sup@company.co.ke">
-            </div>
-          </div>
-        </div>
-
-        <!-- Dates & Unit -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
-            <i class="fas fa-calendar-alt" style="margin-right:6px"></i>Attachment Period &amp; Unit
-          </div>
-          <div class="form-grid three">
-            <div class="f-field">
-              <label class="f-label">Start Date <span class="req">*</span></label>
-              <input class="f-input" type="date" name="start_date" required
-                     min="{{ now().strftime('%Y-%m-%d') }}">
-            </div>
-            <div class="f-field">
-              <label class="f-label">End Date <span class="req">*</span></label>
-              <input class="f-input" type="date" name="end_date" required>
-            </div>
-            <div class="f-field">
-              <label class="f-label">Course of Study</label>
-              <div class="f-input" style="background:#f1f5f9;color:#1e3a5f;font-weight:600;cursor:default;display:flex;align-items:center;gap:8px">
-                <i class="fas fa-graduation-cap" style="color:#3b82f6;flex-shrink:0"></i>
-                {% if course_name %}
-                  {{ course_name }}
-                {% else %}
-                  <em style="color:#9ca3af;font-weight:400">Not enrolled — contact your department admin</em>
-                {% endif %}
-              </div>
-              <input type="hidden" name="unit_id" value="">
-            </div>
-          </div>
-        </div>
-
-        <!-- Site Location (map) -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:12px;font-weight:700;color:#0f2c54;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
-            <i class="fas fa-map-marker-alt" style="margin-right:6px"></i>Site Coordinates (GPS Location)
-          </div>
-          <div class="coords-row" style="margin-bottom:12px">
-            <div class="f-field">
-              <label class="f-label">Latitude</label>
-              <input class="f-input" type="number" step="any" name="latitude" id="regLat"
-                     placeholder="e.g. -1.0332">
-            </div>
-            <div class="f-field">
-              <label class="f-label">Longitude</label>
-              <input class="f-input" type="number" step="any" name="longitude" id="regLng"
-                     placeholder="e.g. 37.0694">
-            </div>
-            <button type="button" class="btn-gps" onclick="detectForForm()">
-              <i class="fas fa-crosshairs"></i> Detect GPS
-            </button>
-          </div>
-          <div id="regGpsStatus" style="font-size:12.5px;color:#64748b;margin-bottom:12px"></div>
-          <div id="regMap" class="map-container"></div>
-          <div class="map-instructions">
-            <i class="fas fa-info-circle" style="color:#0891b2"></i>
-            Click anywhere on the map to set the site coordinates, or use the GPS button above.
-          </div>
-        </div>
-
-        <!-- Goals -->
-        <div style="margin-bottom:20px">
-          <div class="f-field" style="margin-bottom:14px">
-            <label class="f-label">Attachment Goals</label>
-            <textarea class="f-textarea" name="attachment_goals"
-                      placeholder="What do you hope to achieve during this attachment?"></textarea>
-          </div>
-          <div class="f-field">
-            <label class="f-label">Learning Objectives</label>
-            <textarea class="f-textarea" name="learning_objectives"
-                      placeholder="Specific skills or competencies you want to develop"></textarea>
-          </div>
-        </div>
-
-        <button type="submit" class="btn-primary">
-          <i class="fas fa-paper-plane"></i> Submit Attachment Request
-        </button>
-
-      </form>
-    </div>
-  </div>
-  {% endif %}
-
 </div>
+{% endif %}
+
+{% endif %}{# end current_attachment #}
+
+{# ══════════════════════════════════════════════════════════════════
+   SECTION 2: ATTACHMENT HISTORY TABLE (always visible)
+══════════════════════════════════════════════════════════════════ #}
+<div class="ia-card">
+  <div class="ia-card-head" style="justify-content:space-between">
+    <span><i class="fas fa-history"></i> Attachment History</span>
+    <span style="font-size:12px;font-weight:400;opacity:.75">{{ all_attachments|length }} record{{ 's' if all_attachments|length != 1 else '' }}</span>
+  </div>
+
+  {% if all_attachments %}
+  <!-- Quick filters -->
+  <div class="hist-filter-bar">
+    <div>
+      <label>Filter by Term</label>
+      <select id="termFilter" onchange="filterHistory()">
+        <option value="">All Terms</option>
+        <option value="Jan-Apr">Jan – Apr</option>
+        <option value="May-Aug">May – Aug</option>
+        <option value="Sept-Dec">Sept – Dec</option>
+      </select>
+    </div>
+    <div>
+      <label>Filter by Year</label>
+      <select id="yearFilter" onchange="filterHistory()">
+        <option value="">All Years</option>
+        {% set years_seen = namespace(val=[]) %}
+        {% for att in all_attachments %}
+          {% if att.get('attachment_year') and att.get('attachment_year')|string not in years_seen.val %}
+            {% set years_seen.val = years_seen.val + [att.get('attachment_year')|string] %}
+            <option value="{{ att.get('attachment_year') }}">{{ att.get('attachment_year') }}</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" class="hist-reset-btn" onclick="resetFilters()">
+      <i class="fas fa-undo" style="margin-right:4px"></i> Reset
+    </button>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table class="hist-table">
+      <thead>
+        <tr>
+          <th>Term</th>
+          <th>Year</th>
+          <th>Company</th>
+          <th>Location</th>
+          <th>My Role</th>
+          <th>Supervisor</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Status</th>
+          <th>Grade</th>
+        </tr>
+      </thead>
+      <tbody id="histTableBody">
+        {% for att in all_attachments %}
+        {% set ac = att.get('companies') or {} %}
+        <tr data-term="{{ att.get('attachment_term','') }}" data-year="{{ att.get('attachment_year','') }}">
+          <td>
+            {% if att.get('attachment_term') %}
+            <span class="term-badge">{{ att.get('attachment_term') }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-weight:600">{{ att.get('attachment_year','—') }}</td>
+          <td><strong>{{ ac.get('name','—') }}</strong></td>
+          <td style="font-size:12px;color:#64748b">{{ ac.get('address','—') }}</td>
+          <td style="font-size:12.5px">{{ att.get('trainee_role','—') }}</td>
+          <td style="font-size:12.5px">
+            {{ ac.get('contact_person','—') }}<br>
+            <span style="color:#94a3b8;font-size:11px">{{ ac.get('contact_phone','') }}</span>
+          </td>
+          <td style="white-space:nowrap;font-size:12.5px">{{ att.get('start_date','—') }}</td>
+          <td style="white-space:nowrap;font-size:12.5px">{{ att.get('end_date','—') }}</td>
+          <td><span class="pill pill-{{ att.get('status','pending') }}">{{ att.get('status','pending')|title }}</span></td>
+          <td style="font-weight:700;color:#1e5a9f">{{ att.get('final_grade','—') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div id="histNoResults" style="display:none;padding:28px;text-align:center;color:#94a3b8;font-size:13px">
+      <i class="fas fa-filter" style="display:block;font-size:24px;margin-bottom:8px"></i>
+      No attachments match the selected filters.
+    </div>
+  </div>
+  {% else %}
+  <div style="padding:36px 24px;text-align:center;color:#94a3b8">
+    <i class="fas fa-industry" style="font-size:36px;display:block;margin-bottom:12px"></i>
+    <p style="font-size:13.5px">No attachment history yet. Submit your first registration below.</p>
+  </div>
+  {% endif %}
+</div>
+
+{# ══════════════════════════════════════════════════════════════════
+   SECTION 3: REGISTRATION FORM (always visible)
+══════════════════════════════════════════════════════════════════ #}
+<div class="ia-card">
+  <div class="ia-card-head">
+    <i class="fas fa-plus-circle"></i>
+    Register Industrial Attachment
+  </div>
+  <div style="padding:28px">
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#92400e;display:flex;gap:10px;align-items:flex-start">
+      <i class="fas fa-info-circle" style="flex-shrink:0;margin-top:2px"></i>
+      <span>You can register a new attachment at any time — including future terms. Each submission is tracked separately in the history above and reviewed by your department.</span>
+    </div>
+
+    <form method="POST" action="/student/industrial-attachment/request" id="attachForm">
+
+      {# ── SCOPE / PERIOD ── #}
+      <div class="form-section-hdr">
+        <i class="fas fa-calendar-alt"></i> Scope / Period
+      </div>
+      <div class="form-grid" style="margin-bottom:24px">
+        <div class="f-field">
+          <label class="f-label">Attachment Term <span class="req">*</span></label>
+          <select class="f-select" name="attachment_term" required>
+            <option value="">— Select Term —</option>
+            <option value="Jan-Apr">January – April</option>
+            <option value="May-Aug">May – August</option>
+            <option value="Sept-Dec">September – December</option>
+          </select>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Attachment Year <span class="req">*</span></label>
+          <input class="f-input" type="number" name="attachment_year" required
+                 min="2020" max="2035"
+                 placeholder="e.g. {{ now().year }}"
+                 value="{{ now().year }}">
+        </div>
+      </div>
+
+      {# ── PERSONAL DETAILS ── #}
+      <div class="form-section-hdr">
+        <i class="fas fa-user"></i> Personal Details
+      </div>
+      <div class="form-grid three" style="margin-bottom:24px">
+        <div class="f-field">
+          <label class="f-label">Full Name</label>
+          <input class="f-input" type="text" readonly
+                 value="{{ profile.get('full_name','') }}">
+          <span class="f-hint">Pre-filled from your profile</span>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Admission No.</label>
+          <input class="f-input" type="text" readonly
+                 value="{{ profile.get('admission_no','') }}">
+          <span class="f-hint">Pre-filled from your profile</span>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Mobile Number <span class="req">*</span></label>
+          <input class="f-input" type="tel" name="mobile_number"
+                 value="{{ profile.get('mobile_number','') }}"
+                 placeholder="e.g. +254 7XX XXX XXX" maxlength="20">
+        </div>
+      </div>
+
+      {# ── COMPANY DETAILS ── #}
+      <div class="form-section-hdr">
+        <i class="fas fa-building"></i> Company / Workplace Details
+      </div>
+      <div class="form-grid" style="margin-bottom:24px">
+        <div class="f-field">
+          <label class="f-label">Company / Place Name <span class="req">*</span></label>
+          <input class="f-input" type="text" name="company_name" required
+                 placeholder="e.g. Kenya Power, ABC Motors, Self-employed">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Location / Address <span class="req">*</span></label>
+          <input class="f-input" type="text" name="company_address" required
+                 placeholder="e.g. Industrial Area, Nairobi / Thika Town">
+        </div>
+      </div>
+
+      {# ── TRAINEE ROLE ── #}
+      <div class="form-section-hdr">
+        <i class="fas fa-id-badge"></i> Your Role at the Company
+      </div>
+      <div style="margin-bottom:24px">
+        <div class="f-field">
+          <label class="f-label">Trainee Role / Position <span class="req">*</span></label>
+          <select class="f-select" name="trainee_role" required>
+            <option value="">— Select Your Role —</option>
+            <option>Human Resources Manager</option>
+            <option>Technical Supervisor</option>
+            <option>Department Manager</option>
+            <option>IT Manager</option>
+            <option>Workshop Supervisor</option>
+            <option>Site Engineer</option>
+            <option>Training Coordinator</option>
+            <option>Operations Manager</option>
+            <option>Director / CEO</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      {# ── SUPERVISOR DETAILS ── #}
+      <div class="form-section-hdr">
+        <i class="fas fa-user-tie"></i> Industry Supervisor Details
+      </div>
+      <div class="form-grid" style="margin-bottom:24px">
+        <div class="f-field">
+          <label class="f-label">Supervisor Full Name <span class="req">*</span></label>
+          <input class="f-input" type="text" name="supervisor_name" required
+                 placeholder="e.g. John Mwangi">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Supervisor Phone <span class="req">*</span></label>
+          <input class="f-input" type="tel" name="supervisor_contact" required
+                 placeholder="e.g. 0712 345 678">
+        </div>
+      </div>
+
+      {# ── TIMELINE ── #}
+      <div class="form-section-hdr">
+        <i class="fas fa-calendar-check"></i> Attachment Timeline
+      </div>
+      <div class="form-grid" style="margin-bottom:28px">
+        <div class="f-field">
+          <label class="f-label">Start Date <span class="req">*</span></label>
+          <input class="f-input" type="date" name="start_date" required id="startDate">
+        </div>
+        <div class="f-field">
+          <label class="f-label">End Date <span class="req">*</span></label>
+          <input class="f-input" type="date" name="end_date" required id="endDate">
+        </div>
+      </div>
+
+      <input type="hidden" name="unit_id" value="">
+
+      <button type="submit" class="btn-primary">
+        <i class="fas fa-paper-plane"></i> Submit Attachment Registration
+      </button>
+
+    </form>
+  </div>
+</div>
+
+</div>{# end ia-wrap #}
 {% endblock %}
 
 {% block extra_script %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-  /* ── Site map for existing attachment ──────────────── */
-  const siteMapEl = document.getElementById('siteMap');
+  /* ── Site map for existing attachment ───────────────────── */
+  var siteMapEl = document.getElementById('siteMap');
   if (siteMapEl) {
     {% if current_attachment %}
     {% set _co = current_attachment.get('companies') or {} %}
     {% if _co.get('latitude') and _co.get('longitude') %}
-    const lat = {{ _co.get('latitude') }};
-    const lng = {{ _co.get('longitude') }};
-    const siteMap = L.map('siteMap').setView([lat, lng], 15);
+    var lat = {{ _co.get('latitude') }};
+    var lng = {{ _co.get('longitude') }};
+    var siteMap = L.map('siteMap').setView([lat, lng], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(siteMap);
-    const icon = L.divIcon({
+    var icon = L.divIcon({
       className: '',
       html: '<div style="background:#1e5a9f;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
       iconSize: [16, 16], iconAnchor: [8, 8]
     });
-    L.marker([lat, lng], { icon })
+    L.marker([lat, lng], { icon: icon })
       .addTo(siteMap)
       .bindPopup('<b>{{ _co.get("name","Site") }}</b><br>{{ _co.get("address","") }}')
       .openPopup();
     {% endif %}
     {% endif %}
   }
-
-  /* ── Registration map (click-to-set coords) ─────────── */
-  const regMapEl = document.getElementById('regMap');
-  if (regMapEl) {
-    const defaultLat = -1.0332, defaultLng = 37.0694; // Thika
-    const regMap = L.map('regMap').setView([defaultLat, defaultLng], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(regMap);
-
-    let marker = null;
-
-    function setMapPoint(lat, lng) {
-      document.getElementById('regLat').value = lat.toFixed(6);
-      document.getElementById('regLng').value = lng.toFixed(6);
-      if (marker) { marker.setLatLng([lat, lng]); }
-      else {
-        marker = L.marker([lat, lng], { draggable: true }).addTo(regMap);
-        marker.on('dragend', function (e) {
-          const pos = e.target.getLatLng();
-          document.getElementById('regLat').value = pos.lat.toFixed(6);
-          document.getElementById('regLng').value = pos.lng.toFixed(6);
-        });
-      }
-      regMap.setView([lat, lng], 15);
-    }
-
-    regMap.on('click', function (e) { setMapPoint(e.latlng.lat, e.latlng.lng); });
-
-    // Expose for GPS button
-    window._setMapPoint = setMapPoint;
-    window._regMap      = regMap;
-
-    // If lat/lng inputs already have values (e.g. after GPS), place marker
-    const initLat = parseFloat(document.getElementById('regLat').value);
-    const initLng = parseFloat(document.getElementById('regLng').value);
-    if (!isNaN(initLat) && !isNaN(initLng)) setMapPoint(initLat, initLng);
-  }
 });
 
-/* ── GPS detection (registration form) ───────────── */
-function detectForForm() {
-  const status = document.getElementById('regGpsStatus');
-  if (!navigator.geolocation) {
-    status.innerHTML = '<span style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Geolocation not supported.</span>';
-    return;
-  }
-  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting your location…';
-  navigator.geolocation.getCurrentPosition(function (pos) {
-    const lat = pos.coords.latitude, lng = pos.coords.longitude;
-    document.getElementById('regLat').value = lat.toFixed(6);
-    document.getElementById('regLng').value = lng.toFixed(6);
-    status.innerHTML = '<span style="color:#16a34a"><i class="fas fa-check-circle"></i> Location detected — accuracy: ' + Math.round(pos.coords.accuracy) + 'm</span>';
-    if (window._setMapPoint) window._setMapPoint(lat, lng);
-  }, function (err) {
-    const msgs = { 1:'Permission denied.', 2:'GPS unavailable.', 3:'Request timed out.' };
-    status.innerHTML = '<span style="color:#d97706"><i class="fas fa-exclamation-triangle"></i> ' + (msgs[err.code] || 'GPS error.') + ' Enter coordinates manually.</span>';
-  }, { enableHighAccuracy: true, timeout: 12000 });
+/* ── Date validation ───────────────────────────────────── */
+var startDate = document.getElementById('startDate');
+var endDate   = document.getElementById('endDate');
+if (startDate && endDate) {
+  startDate.addEventListener('change', function () {
+    endDate.min = this.value;
+    if (endDate.value && endDate.value < this.value) endDate.value = '';
+  });
 }
 
-/* ── GPS detection (check-in form) ───────────────── */
+/* ── GPS detection (check-in form) ───────────────────── */
 function autoDetect() {
-  const status = document.getElementById('gpsStatus');
+  var status = document.getElementById('gpsStatus');
   if (!navigator.geolocation) {
     status.innerHTML = '<span style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Geolocation not supported.</span>';
     return;
@@ -640,13 +688,13 @@ function autoDetect() {
     document.getElementById('longitude').value = pos.coords.longitude.toFixed(6);
     status.innerHTML = '<span style="color:#16a34a"><i class="fas fa-check-circle"></i> GPS captured — accuracy: ' + Math.round(pos.coords.accuracy) + 'm</span>';
   }, function (err) {
-    const msgs = { 1:'Permission denied.', 2:'GPS unavailable.', 3:'Timed out.' };
+    var msgs = { 1:'Permission denied.', 2:'GPS unavailable.', 3:'Timed out.' };
     status.innerHTML = '<span style="color:#d97706"><i class="fas fa-exclamation-triangle"></i> ' + (msgs[err.code]||'Error.') + '</span>';
   }, { enableHighAccuracy: true, timeout: 12000 });
 }
 
-/* Auto-detect on page load (check-in form) */
-const latEl = document.getElementById('latitude');
+/* Auto-detect GPS on page load for check-in */
+var latEl = document.getElementById('latitude');
 if (latEl && navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(function (pos) {
     latEl.value = pos.coords.latitude.toFixed(6);
@@ -654,14 +702,27 @@ if (latEl && navigator.geolocation) {
   }, function(){}, { enableHighAccuracy: true, timeout: 6000 });
 }
 
-/* Date validation */
-const endDate = document.querySelector('[name="end_date"]');
-const startDate = document.querySelector('[name="start_date"]');
-if (startDate && endDate) {
-  startDate.addEventListener('change', function () {
-    endDate.min = this.value;
-    if (endDate.value && endDate.value < this.value) endDate.value = '';
+/* ── History table client-side filters ───────────────── */
+function filterHistory() {
+  var termVal = document.getElementById('termFilter').value;
+  var yearVal = document.getElementById('yearFilter').value;
+  var rows    = document.querySelectorAll('#histTableBody tr');
+  var visible = 0;
+  rows.forEach(function(row) {
+    var matchTerm = !termVal || row.dataset.term === termVal;
+    var matchYear = !yearVal || row.dataset.year === yearVal;
+    var show = matchTerm && matchYear;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
   });
+  var noResults = document.getElementById('histNoResults');
+  if (noResults) noResults.style.display = (visible === 0 && rows.length > 0) ? '' : 'none';
+}
+
+function resetFilters() {
+  document.getElementById('termFilter').value = '';
+  document.getElementById('yearFilter').value = '';
+  filterHistory();
 }
 </script>
 {% endblock %}

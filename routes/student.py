@@ -2038,8 +2038,16 @@ def industrial_attachment():
         else:
             course_name = dept_label or class_label
 
-    enrolled_units = []  # kept for backward-compat but no longer used in the form
-    
+    # Get student profile for form pre-fill
+    profile_rows = (db.table("user_profiles")
+                      .select("full_name, admission_no, mobile_number")
+                      .eq("id", student_id)
+                      .limit(1)
+                      .execute().data or [])
+    profile = profile_rows[0] if profile_rows else {}
+
+    enrolled_units = []  # kept for backward-compat
+
     # Get ALL student attachments (for history table)
     all_attachments = (db.table("industrial_attachments")
                        .select("*, companies(name, address, latitude, longitude, contact_person, contact_phone), units(name, code)")
@@ -2074,7 +2082,8 @@ def industrial_attachment():
                           enrolled_units=enrolled_units,
                           course_name=course_name,
                           companies=[],
-                          today_logs=today_logs)
+                          today_logs=today_logs,
+                          profile=profile)
 
 
 @student_bp.route("/industrial-attachment/request", methods=["POST"])
@@ -2085,42 +2094,27 @@ def request_attachment():
     user = current_user()
     student_id = user["id"]
     
-    # New free-form fields (trainee types their own company details)
     company_name       = (request.form.get("company_name") or "").strip()
-    industry_type      = (request.form.get("industry_type") or "Other").strip()
     company_address    = (request.form.get("company_address") or "").strip()
     supervisor_name    = (request.form.get("supervisor_name") or "").strip()
     supervisor_contact = (request.form.get("supervisor_contact") or "").strip()
+    trainee_role       = (request.form.get("trainee_role") or "").strip()
+    attachment_term    = (request.form.get("attachment_term") or "").strip()
+    attachment_year_raw= (request.form.get("attachment_year") or "").strip()
     raw_unit_id        = (request.form.get("unit_id") or "").strip()
-    # Reject "None" / "null" strings that render from a missing template value
     unit_id = raw_unit_id if raw_unit_id and raw_unit_id.lower() not in ("none", "null", "undefined", "") else None
     start_date         = (request.form.get("start_date") or "").strip()
     end_date           = (request.form.get("end_date") or "").strip()
-    attachment_goals   = (request.form.get("attachment_goals") or "").strip()
-    learning_objectives= (request.form.get("learning_objectives") or "").strip()
 
-    lat_raw = request.form.get("latitude", "").strip()
-    lng_raw = request.form.get("longitude", "").strip()
-    try:
-        latitude  = float(lat_raw)  if lat_raw  else None
-        longitude = float(lng_raw) if lng_raw else None
-    except ValueError:
-        latitude = longitude = None
-
-    if not all([company_name, company_address, supervisor_name, supervisor_contact, start_date, end_date]):
+    if not all([company_name, company_address, supervisor_name, supervisor_contact,
+                trainee_role, attachment_term, start_date, end_date]):
         flash("All required fields must be filled in.", "error")
         return redirect(url_for("student.industrial_attachment"))
 
     try:
-        # 1. Create (or reuse) company record from trainee-supplied info
+        # 1. Create company record from trainee-supplied info
         company_payload = {
-            "name":                    company_name,
-            "industry_classification": industry_type if industry_type in (
-                'Electrical Engineering','Mechanical Engineering','Information Technology',
-                'Civil Engineering','Automotive Engineering','Hospitality',
-                'Business Management','Health Sciences','Agriculture',
-                'Construction','Manufacturing'
-            ) else 'Other',
+            "name":             company_name,
             "address":          company_address,
             "contact_person":   supervisor_name,
             "contact_phone":    supervisor_contact,
@@ -2128,28 +2122,34 @@ def request_attachment():
             "available_slots":  1,
             "created_by":       student_id,
         }
-        if latitude  is not None: company_payload["latitude"]  = latitude
-        if longitude is not None: company_payload["longitude"] = longitude
-
         company_res = db.table("companies").insert(company_payload).execute()
         company_id  = company_res.data[0]["id"]
 
         # 2. Create attachment record
         att_payload = {
-            "student_id":          student_id,
-            "company_id":          company_id,
-            "unit_id":             unit_id if unit_id else None,
-            "start_date":          start_date,
-            "end_date":            end_date,
-            "status":              "pending",
-            "attachment_goals":    attachment_goals,
-            "learning_objectives": learning_objectives,
-            "created_by":          student_id,
+            "student_id":  student_id,
+            "company_id":  company_id,
+            "unit_id":     unit_id if unit_id else None,
+            "start_date":  start_date,
+            "end_date":    end_date,
+            "status":      "pending",
+            "created_by":  student_id,
         }
+        # New extended fields — columns added via migration
+        try:
+            att_payload["attachment_term"] = attachment_term
+            if attachment_year_raw:
+                att_payload["attachment_year"] = int(attachment_year_raw)
+            if trainee_role:
+                att_payload["trainee_role"] = trainee_role
+        except (ValueError, Exception):
+            pass
+
         db.table("industrial_attachments").insert(att_payload).execute()
 
         write_audit_log("request_attachment", target=f"company:{company_id}",
-                        detail={"company": company_name, "supervisor": supervisor_name})
+                        detail={"company": company_name, "supervisor": supervisor_name,
+                                "term": attachment_term, "role": trainee_role})
         flash("Attachment request submitted successfully. Awaiting department approval.", "success")
     except Exception as e:
         flash(f"Error submitting attachment request: {e}", "error")

@@ -1705,6 +1705,70 @@ def review_application(app_id):
     return redirect(url_for("dept_admin.applications"))
 
 
+# ── Digital Logbook Review ───────────────────────────────────────────────────
+
+@dept_admin_bp.route("/logbooks")
+@dept_admin_required
+def logbooks():
+    """View all digital logbook entries for students in this department."""
+    import os
+    db = get_service_client()
+    dept_id    = _dept_id()
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+
+    status_filter = request.args.get("status", "")
+    term_filter   = request.args.get("term", "")
+    adm_filter    = request.args.get("admission_no", "").strip().upper()
+
+    students = (db.table("user_profiles")
+                  .select("id")
+                  .eq("role", "student")
+                  .eq("department_id", dept_id)
+                  .execute().data or [])
+    student_ids = [s["id"] for s in students]
+
+    records = []
+    if student_ids:
+        query = (db.table("digital_logbook")
+                   .select("id, student_id, log_date, entry_time, tasks_performed, "
+                           "skills_applied, hours_worked, challenges_encountered, "
+                           "achievements, mentor_approval_status, mentor_comments, "
+                           "trainer_comments, evidence_urls, created_at, "
+                           "student:user_profiles!digital_logbook_student_id_fkey"
+                           "(full_name, admission_no), "
+                           "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
+                           "(companies(name), attachment_term, attachment_year, trainee_role)")
+                   .in_("student_id", student_ids)
+                   .order("log_date", desc=True)
+                   .limit(600))
+
+        if status_filter:
+            query = query.eq("mentor_approval_status", status_filter)
+
+        records = query.execute().data or []
+
+        if adm_filter:
+            records = [r for r in records
+                       if adm_filter in (r.get("student") or {}).get("admission_no", "").upper()]
+
+        for entry in records:
+            ev_paths = entry.get("evidence_urls") or []
+            entry["_evidence"] = [
+                {
+                    "url":  f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                    "ext":  p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                    "name": p.rsplit("/", 1)[-1],
+                }
+                for p in ev_paths if p
+            ]
+
+    return render_template("dept_admin/logbooks.html",
+                           logbooks=records,
+                           status_filter=status_filter,
+                           term_filter=term_filter,
+                           adm_filter=adm_filter)
+
+
 # ── GIS Placement Tracking & Digital Logbook ─────────────────────────────────
 
 @dept_admin_bp.route("/gis-tracking")

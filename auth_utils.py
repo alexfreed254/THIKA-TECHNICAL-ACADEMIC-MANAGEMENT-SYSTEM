@@ -31,7 +31,7 @@ STAFF_ROLES = frozenset({
     'finance_officer', 'registrar', 'deputy_principal',
     'quality_assurance_officer',
     # New roles
-    'workshop_technician', 'liaison_officer', 'cdacc_verifier', 'industry_supervisor',
+    'workshop_technician', 'liaison_officer', 'cdacc_verifier',
 })
 ALL_ROLES = frozenset({
     'super_admin', 'dept_admin', 'trainer', 'student', 'employer',
@@ -40,7 +40,7 @@ ALL_ROLES = frozenset({
     'finance_officer', 'registrar', 'deputy_principal',
     'quality_assurance_officer',
     # New roles
-    'workshop_technician', 'liaison_officer', 'cdacc_verifier', 'industry_supervisor',
+    'workshop_technician', 'liaison_officer', 'cdacc_verifier',
 })
 
 
@@ -381,10 +381,6 @@ def liaison_officer_required(f):
 
 def cdacc_verifier_required(f):
     return role_required("cdacc_verifier")(f)
-
-
-def industry_supervisor_required(f):
-    return role_required("industry_supervisor")(f)
 
 
 def dept_isolation_check(department_id: str) -> bool:

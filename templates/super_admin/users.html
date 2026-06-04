@@ -13,7 +13,7 @@
 .rb-deputy_principal{background:#fce4ec;color:#880e4f}.rb-quality_assurance_officer{background:#fdf4ff;color:#701a75}
 .rb-examination_officer{background:#fef9c3;color:#713f12}.rb-internal_verifier{background:#f3e5f5;color:#6a1b9a}
 .rb-cdacc_verifier{background:#fef3c7;color:#92400e}.rb-liaison_officer{background:#e8eaf6;color:#283593}
-.rb-industry_mentor{background:#e0f7fa;color:#006064}.rb-industry_supervisor{background:#dcfce7;color:#14532d}
+.rb-industry_mentor{background:#e0f7fa;color:#006064}
 .rb-dean_students{background:#ffe4e6;color:#9f1239}.rb-sports_hod{background:#fef3c7;color:#92400e}
 .rb-environment_hod{background:#d1fae5;color:#065f46}.rb-library_hod{background:#e0e7ff;color:#3730a3}
 .rb-finance_officer{background:#dbeafe;color:#1e40af}.rb-employer{background:#e0f2f1;color:#00695c}
@@ -184,7 +184,6 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
                 <optgroup label="🏭  Industrial Attachments">
                   <option value="liaison_officer"     {% if request.form.get('role')=='liaison_officer'     %}selected{% endif %}>Industrial Liaison Officer</option>
                   <option value="industry_mentor"     {% if request.form.get('role')=='industry_mentor'     %}selected{% endif %}>Industry Mentor</option>
-                  <option value="industry_supervisor" {% if request.form.get('role')=='industry_supervisor' %}selected{% endif %}>Industry Supervisor</option>
                   <option value="employer"            {% if request.form.get('role')=='employer'            %}selected{% endif %}>Employer</option>
                 </optgroup>
                 <optgroup label="🎒  Trainee">
@@ -330,7 +329,7 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
           <span class="h-5 w-px bg-gray-300 mx-1"></span>
 
           <!-- Industrial -->
-          {% for rv, rl in [('liaison_officer','Liaison Officer'),('industry_mentor','Industry Mentor'),('industry_supervisor','Industry Supervisor'),('employer','Employer')] %}
+          {% for rv, rl in [('liaison_officer','Liaison Officer'),('industry_mentor','Industry Mentor'),('employer','Employer')] %}
           <a href="?role={{ rv }}" class="ftag {% if role_filter==rv %}ftag-on{% else %}ftag-off{% endif %}">{{ rl }}</a>
           {% endfor %}
 
@@ -420,7 +419,7 @@ const STAFF_ROLES = new Set([
   'super_admin','dept_admin','trainer','workshop_technician','registrar',
   'deputy_principal','dean_students','examination_officer','quality_assurance_officer',
   'internal_verifier','cdacc_verifier','liaison_officer','industry_mentor',
-  'industry_supervisor','sports_hod','environment_hod','library_hod','finance_officer'
+  'sports_hod','environment_hod','library_hod','finance_officer'
 ]);
 
 function onRoleChange() {
