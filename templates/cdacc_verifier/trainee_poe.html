@@ -1,384 +1,388 @@
 {% extends "cdacc_verifier/base.html" %}
-{% block title %}Trainee POE{% endblock %}
-{% block page_title %}Trainee POE — All Departments{% endblock %}
-{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+{% block title %}Trainees POE{% endblock %}
+{% block page_title %}Trainees POE{% endblock %}
 
 {% block extra_style %}
+/* ── Layout ── */
+.page-wrap { padding: 24px; }
+
+/* ── Filter bar ── */
+.filter-bar {
+  background: #fff; border-radius: 14px; padding: 16px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 22px;
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+}
+.filter-bar label { font-size: 11px; font-weight: 700; color: #555; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.filter-bar select, .filter-bar input {
+  padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px;
+  font-size: 13px; background: #f9fafb; min-width: 140px;
+}
+.filter-bar input[type=text] { min-width: 180px; }
+.filter-bar select:focus, .filter-bar input:focus { border-color: #1b1b2f; outline: none; background: #fff; }
+.btn-sm { padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; }
+.btn-primary { background: #162447; color: #fff; }
+.btn-reset   { background: #f3f4f6; color: #374151; }
+
+/* ── Stats strip ── */
+.stats-strip { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.stat-chip {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  padding: 12px 18px; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 120px;
+}
+.stat-chip-num  { font-size: 22px; font-weight: 800; color: #111827; line-height: 1; }
+.stat-chip-lbl  { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.stat-chip-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+
+/* ── Table wrapper ── */
+.tbl-wrap { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); overflow: hidden; }
+.tbl-hdr {
+  background: #162447; color: #fff; padding: 14px 20px;
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.tbl-scroll { overflow-x: auto; }
+
+/* ── Table ── */
+.poe-tbl { width: 100%; border-collapse: collapse; min-width: 1200px; }
+.poe-tbl thead { position: sticky; top: 0; z-index: 10; }
+.poe-tbl thead tr { background: #1b1b2f; }
+.poe-tbl th {
+  padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700;
+  color: #e0e7ff; text-transform: uppercase; letter-spacing: .05em;
+  white-space: nowrap; border-bottom: 2px solid #162447;
+}
+.poe-tbl td {
+  padding: 10px 14px; border-bottom: 1px solid #f3f4f6;
+  font-size: 13px; color: #374151; vertical-align: middle;
+}
+.poe-tbl tbody tr:last-child td { border-bottom: none; }
+.poe-tbl tbody tr:hover td { background: #f8fbff; }
+.poe-tbl tbody tr:nth-child(even) td { background: #fafbfe; }
+.poe-tbl tbody tr:nth-child(even):hover td { background: #f0f4ff; }
+
+/* ── Cell helpers ── */
+.cell-student-name { font-weight: 700; color: #111827; white-space: nowrap; }
+.cell-adm   { font-size: 11px; color: #9ca3af; margin-top: 2px; white-space: nowrap; }
+.cell-unit  { font-weight: 600; color: #162447; white-space: nowrap; }
+.cell-ucode { font-size: 11px; color: #9ca3af; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-pending  { background: #fff3e0; color: #e65100; }
+.badge-approved { background: #e8f5e9; color: #2e7d32; }
+.badge-rejected { background: #ffebee; color: #c62828; }
+.badge-marked   { background: #e3f2fd; color: #1565c0; }
+
+/* ── Script link ── */
+.script-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px; border-radius: 7px; font-size: 12px; font-weight: 700;
+  background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5;
+  text-decoration: none; white-space: nowrap;
+}
+.script-btn:hover { background: #fee2e2; }
+.script-na { font-size: 12px; color: #d1d5db; font-style: italic; }
+
+/* ── Evidence row ── */
+.ev-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 180px; }
+.ev-img {
+  width: 44px; height: 44px; object-fit: cover; border-radius: 7px;
+  border: 1px solid #e5e7eb; cursor: pointer; flex-shrink: 0;
+  transition: transform .15s;
+}
+.ev-img:hover { transform: scale(1.08); }
+.ev-icon {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 9px; border-radius: 7px; font-size: 11px; font-weight: 700;
+  text-decoration: none; flex-shrink: 0; white-space: nowrap;
+}
+.ev-video { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.ev-audio { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+.ev-pdf   { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+.ev-file  { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.ev-none  { font-size: 12px; color: #d1d5db; font-style: italic; }
+
+.row-num { font-size: 11px; color: #9ca3af; font-weight: 600; }
+
+.empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
+.empty-state i { font-size: 40px; display: block; margin-bottom: 12px; }
+
 /* ── Lightbox ── */
-#lb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:none;align-items:center;justify-content:center;}
-#lb-overlay.open{display:flex;}
-#lb-img{max-width:92vw;max-height:88vh;border-radius:12px;object-fit:contain;}
-#lb-close{position:fixed;top:18px;right:22px;color:#fff;font-size:28px;cursor:pointer;z-index:10000;background:rgba(0,0,0,.4);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-#lb-close:hover{background:rgba(255,255,255,.15);}
-/* ── Evidence thumbnails ── */
-.ev-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0;cursor:pointer;transition:transform .15s,border-color .15s;}
-.ev-thumb:hover{transform:scale(1.06);border-color:#3b82f6;}
-.ev-vid-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1d4ed8;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}
-.ev-vid-btn:hover{background:#1e40af;}
-.ev-aud-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#7c3aed;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}
-.ev-aud-btn:hover{background:#6d28d9;}
-.ev-file-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#6b7280;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s;}
-/* ── Assessment row ── */
-.assess-row{border:1.5px solid #e5e7eb;border-radius:14px;background:#fff;margin-bottom:12px;overflow:hidden;}
-.assess-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;gap:12px;}
-.assess-head:hover{background:#f8fafc;}
-.assess-body{padding:0 16px 16px;border-top:1px solid #f1f5f9;}
+#poe-lb { display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center; }
+#poe-lb img { max-width:90vw;max-height:90vh;border-radius:10px; }
+#poe-lb-close { position:absolute;top:18px;right:26px;color:#fff;font-size:36px;cursor:pointer;line-height:1; }
 {% endblock %}
 
 {% block content %}
-<div class="bg-gray-50 min-h-screen p-6">
+<div class="page-wrap">
 
-  <!-- Lightbox for photo preview -->
-  <div id="lb-overlay" onclick="closeLB(event)">
-    <div id="lb-close" onclick="closeLB()"><i class="fas fa-times"></i></div>
-    <img id="lb-img" src="" alt="Evidence preview">
-  </div>
-
-  <!-- Stats -->
-  <div class="grid grid-cols-3 gap-4 mb-6">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-      <div class="text-2xl font-bold text-blue-600">{{ total_depts }}</div>
-      <div class="text-xs text-gray-500 font-semibold uppercase mt-1">Departments</div>
+  <!-- ── Filter bar ── -->
+  <form method="get" class="filter-bar">
+    <div>
+      <label>Status</label>
+      <select name="status">
+        <option value="">All Statuses</option>
+        {% for s in ['pending','approved','rejected','marked'] %}
+        <option value="{{ s }}" {% if s == status_filter %}selected{% endif %}>{{ s|title }}</option>
+        {% endfor %}
+      </select>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-      <div class="text-2xl font-bold text-gray-800">{{ total_files }}</div>
-      <div class="text-xs text-gray-500 font-semibold uppercase mt-1">Assessments</div>
+    <div>
+      <label>Department</label>
+      <select name="department">
+        <option value="">All Departments</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {% if d.id == dept_filter %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-      <div class="text-2xl font-bold text-purple-600">{{ total_size }}</div>
-      <div class="text-xs text-gray-500 font-semibold uppercase mt-1">Script Storage</div>
+    <div>
+      <label>Class</label>
+      <select name="class_id">
+        <option value="">All Classes</option>
+        {% for c in classes %}
+        <option value="{{ c.id }}" {% if c.id == class_filter %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
     </div>
-  </div>
-
-  <!-- Filter Bar -->
-  <form method="GET" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fas fa-filter mr-1"></i>Filters</p>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
-
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Department</label>
-        <select name="dept_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Departments</option>
-          {% for d in departments %}
-          <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Class</label>
-        <select name="class_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Classes</option>
-          {% for c in classes_opts %}
-          <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Unit</label>
-        <select name="unit_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Units</option>
-          {% for u in units_opts %}
-          <option value="{{ u.id }}" {% if unit_id == u.id %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-bold text-gray-500 uppercase">Status</label>
-        <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Statuses</option>
-          {% for s in ['pending','approved','rejected'] %}
-          <option value="{{ s }}" {% if status_f == s %}selected{% endif %}>{{ s|title }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex gap-2 items-end">
-        <button type="submit" class="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-          <i class="fas fa-filter mr-1"></i>Apply
-        </button>
-        <a href="/cdacc-verifier/trainee-poe" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-semibold transition">
-          <i class="fas fa-times"></i>
-        </a>
-      </div>
+    <div>
+      <label>Year</label>
+      <select name="year">
+        <option value="">All Years</option>
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == year_filter %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
     </div>
+    <div>
+      <label>Admission No.</label>
+      <input type="text" name="admission_no" placeholder="e.g. TT/ICT/001"
+             value="{{ adm_filter }}">
+    </div>
+    <button type="submit" class="btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
+    <a href="/cdacc-verifier/trainee-poe" class="btn-sm btn-reset"
+       style="text-decoration:none;display:inline-flex;align-items:center;gap:5px">
+      <i class="fas fa-undo"></i> Reset
+    </a>
   </form>
 
-  <!-- Results: Dept → Class → Unit → Assessment rows -->
-  {% if depts_data %}
-  <div class="space-y-4">
-    {% for dept in depts_data %}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  <!-- ── Stats strip ── -->
+  {% set total      = assessments|length %}
+  {% set n_approved = assessments|selectattr('status','equalto','approved')|list|length %}
+  {% set n_pending  = assessments|selectattr('status','equalto','pending')|list|length %}
+  {% set n_with_ev  = assessments|selectattr('_evidence')|list|length %}
+  {% set n_script   = assessments|selectattr('_script_url')|list|length %}
+  <div class="stats-strip">
+    <div class="stat-chip">
+      <div class="stat-chip-icon" style="background:#dbeafe"><i class="fas fa-file-alt" style="color:#1d4ed8"></i></div>
+      <div><div class="stat-chip-num">{{ total }}</div><div class="stat-chip-lbl">Total POE</div></div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
+      <div><div class="stat-chip-num">{{ n_approved }}</div><div class="stat-chip-lbl">Approved</div></div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-icon" style="background:#fef3c7"><i class="fas fa-clock" style="color:#b45309"></i></div>
+      <div><div class="stat-chip-num">{{ n_pending }}</div><div class="stat-chip-lbl">Pending</div></div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-icon" style="background:#fef2f2"><i class="fas fa-file-pdf" style="color:#b91c1c"></i></div>
+      <div><div class="stat-chip-num">{{ n_script }}</div><div class="stat-chip-lbl">With Script</div></div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-icon" style="background:#f5f3ff"><i class="fas fa-images" style="color:#6d28d9"></i></div>
+      <div><div class="stat-chip-num">{{ n_with_ev }}</div><div class="stat-chip-lbl">With Evidence</div></div>
+    </div>
+  </div>
 
-      <!-- Department header -->
-      <button type="button" onclick="toggleSection('dept-{{ loop.index }}')"
-              class="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-800 to-blue-900 text-white text-left hover:brightness-110 transition">
-        <span class="font-bold text-base flex items-center gap-2">
-          <i class="fas fa-sitemap text-blue-300"></i> {{ dept.name }}
+  <!-- ── Table ── -->
+  <div class="tbl-wrap">
+    <div class="tbl-hdr">
+      <span>
+        <i class="fas fa-folder-open" style="margin-right:8px"></i>Trainees POE
+        <span style="font-size:12px;font-weight:400;opacity:.8;margin-left:10px">
+          {{ total }} record{{ 's' if total != 1 }}
         </span>
-        <span class="text-blue-200 text-sm flex items-center gap-2">
-          {{ dept.classes|length }} class{% if dept.classes|length != 1 %}es{% endif %}
-          <i class="fas fa-chevron-down text-xs transition-transform" id="icon-dept-{{ loop.index }}"></i>
-        </span>
-      </button>
+      </span>
+      <input type="text" id="live-search" placeholder="&#xf002; Quick search…"
+             oninput="liveSearch()"
+             style="padding:7px 12px;border:1px solid rgba(255,255,255,.25);border-radius:8px;
+                    background:rgba(255,255,255,.12);color:#fff;font-size:13px;min-width:200px;
+                    outline:none;font-family:inherit">
+    </div>
 
-      <div id="dept-{{ loop.index }}">
-        {% for cls in dept.classes %}
-        <div class="border-b border-gray-50 last:border-0">
+    {% if assessments %}
+    <div class="tbl-scroll">
+      <table class="poe-tbl" id="poe-table">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>Student</th>
+            <th>Department</th>
+            <th>Class</th>
+            <th>Unit</th>
+            <th>Type</th>
+            <th>No.</th>
+            <th>Year</th>
+            <th>Term</th>
+            <th>Status</th>
+            <th>Uploaded</th>
+            <th>Script (PDF)</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody id="poe-tbody">
+          {% for a in assessments %}
+          {% set st  = a.student or {} %}
+          {% set un  = a.units   or {} %}
+          {% set cl  = a.classes or {} %}
+          {% set dpt = un.departments or {} %}
+          {% set ev_list = a._evidence or [] %}
+          <tr data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }} {{ dpt.get('name','')|lower }} {{ cl.get('name','')|lower }}">
 
-          <!-- Class header -->
-          <button type="button" onclick="toggleSection('cls-{{ dept.name|replace(' ','-') }}-{{ loop.index }}')"
-                  class="w-full flex items-center justify-between px-6 py-3 bg-blue-50 hover:bg-blue-100 transition text-left">
-            <span class="font-semibold text-blue-900 text-sm flex items-center gap-2">
-              <i class="fas fa-door-open text-blue-500"></i> {{ cls.name }}
-            </span>
-            <span class="text-xs text-blue-500 flex items-center gap-2">
-              {{ cls.units|length }} unit{% if cls.units|length != 1 %}s{% endif %}
-              <i class="fas fa-chevron-down text-xs"></i>
-            </span>
-          </button>
+            <td class="row-num">{{ loop.index }}</td>
 
-          <div id="cls-{{ dept.name|replace(' ','-') }}-{{ loop.index }}">
-            {% for unit in cls.units %}
-            <div class="px-4 py-4 border-b border-gray-50 last:border-0 bg-white">
-
-              <!-- Unit label -->
-              <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                <i class="fas fa-book text-indigo-400 text-sm"></i>
-                <span class="font-semibold text-gray-700 text-sm">{{ unit.name }}</span>
-                <span class="ml-auto text-xs text-gray-400">{{ unit.files|length }} submission{% if unit.files|length != 1 %}s{% endif %}</span>
+            <!-- Student -->
+            <td>
+              <div class="cell-student-name">{{ st.get('full_name','—') }}</div>
+              <div class="cell-adm">
+                <i class="fas fa-id-card" style="font-size:9px;margin-right:3px"></i>{{ st.get('admission_no','—') }}
               </div>
+            </td>
 
-              <!-- Assessment rows -->
-              <div class="space-y-3">
-                {% for f in unit.files %}
-                <div class="assess-row">
+            <!-- Department -->
+            <td style="white-space:nowrap;font-size:12px;color:#6b7280">{{ dpt.get('name','—') }}</td>
 
-                  <!-- Assessment header (click to expand) -->
-                  <div class="assess-head" onclick="toggleSection('assess-{{ f.id }}')">
-                    <div class="flex items-center gap-3 flex-1 min-w-0">
-                      <!-- Student avatar -->
-                      <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                        {{ f.studentName[0]|upper if f.studentName else '?' }}
-                      </div>
-                      <div class="min-w-0">
-                        <p class="font-semibold text-gray-900 text-sm truncate">{{ f.studentName }}</p>
-                        <p class="text-xs text-gray-400">{{ f.admissionNumber }}
-                          {% if f.assessmentType %}&bull; <span class="font-semibold">{{ f.assessmentType }}</span>{% endif %}
-                          {% if f.term %}&bull; T{{ f.term }}{% endif %}{% if f.year %}/{{ f.year }}{% endif %}
-                        </p>
-                      </div>
-                    </div>
+            <!-- Class -->
+            <td style="white-space:nowrap;font-size:12px">{{ cl.get('name','—') }}</td>
 
-                    <div class="flex items-center gap-3 flex-shrink-0">
-                      <!-- Evidence count badge -->
-                      {% if f.evidence %}
-                      <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <i class="fas fa-paperclip text-xs"></i>{{ f.evidence|length }} evidence
-                      </span>
-                      {% endif %}
-                      <!-- Status -->
-                      <span class="px-2 py-0.5 rounded-full text-xs font-bold
-                        {% if f.status == 'Approved' %}bg-green-100 text-green-700
-                        {% elif f.status == 'Rejected' %}bg-red-100 text-red-700
-                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                        {{ f.status|upper }}
-                      </span>
-                      <i class="fas fa-chevron-down text-gray-300 text-xs transition-transform" id="icon-assess-{{ f.id }}"></i>
-                    </div>
-                  </div>
+            <!-- Unit -->
+            <td>
+              <div class="cell-unit">{{ un.get('code','—') }}</div>
+              <div class="cell-ucode">{{ un.get('name','') }}</div>
+            </td>
 
-                  <!-- Expanded body -->
-                  <div id="assess-{{ f.id }}" style="display:none">
-                    <div class="assess-body">
+            <!-- Type -->
+            <td style="white-space:nowrap;font-size:12px;font-weight:600;color:#1b1b2f">
+              {{ a.get('assessment_type','—') }}
+            </td>
 
-                      <!-- ── MARKED SCRIPT ── -->
-                      <div class="mb-5">
-                        <div class="flex items-center gap-2 mb-2">
-                          <div class="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-file-pdf text-red-600 text-xs"></i>
-                          </div>
-                          <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Marked Script</span>
-                          <span class="text-xs text-gray-400">{{ f.formattedSize }}</span>
-                        </div>
+            <!-- No. -->
+            <td style="text-align:center;font-weight:700;color:#374151">{{ a.get('assessment_no','—') }}</td>
 
-                        {% if f.url %}
-                        <div class="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl p-3">
-                          <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-800 truncate">{{ f.name }}</p>
-                            <p class="text-xs text-gray-400 mt-0.5">Uploaded {{ f.uploadedAt }}</p>
-                          </div>
-                          <a href="{{ f.url }}" target="_blank"
-                             class="flex-shrink-0 inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">
-                            <i class="fas fa-eye"></i> View Script
-                          </a>
-                        </div>
-                        {% else %}
-                        <div class="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-3 text-center">
-                          <p class="text-xs text-gray-400"><i class="fas fa-file-slash mr-1"></i>No script file uploaded</p>
-                        </div>
-                        {% endif %}
-                      </div>
+            <!-- Year -->
+            <td style="text-align:center;font-size:12px;color:#6b7280;white-space:nowrap">{{ a.get('year','—') }}</td>
 
-                      <!-- ── EVIDENCE FILES ── -->
-                      <div>
-                        <div class="flex items-center gap-2 mb-3">
-                          <div class="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-images text-purple-600 text-xs"></i>
-                          </div>
-                          <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Evidence Files</span>
-                          {% if f.evidence %}
-                          <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ f.evidence|length }}</span>
-                          {% endif %}
-                        </div>
+            <!-- Term -->
+            <td style="text-align:center;font-size:12px;color:#6b7280;white-space:nowrap">{{ a.get('term','—') }}</td>
 
-                        {% if f.evidence %}
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {% for ev in f.evidence %}
-                          <div class="border border-gray-100 rounded-xl p-3 bg-gray-50 flex items-start gap-3">
+            <!-- Status -->
+            <td>
+              <span class="badge badge-{{ (a.get('status') or 'pending')|lower }}">
+                {{ (a.get('status') or 'pending')|title }}
+              </span>
+            </td>
 
-                            {% if ev.kind == 'photo' %}
-                            <!-- Photo: thumbnail + lightbox -->
-                            <img src="{{ ev.url }}" alt="{{ ev.caption or ev.name }}"
-                                 class="ev-thumb"
-                                 onclick="openLB('{{ ev.url }}')"
-                                 onerror="this.style.display='none'">
-                            <div class="flex-1 min-w-0">
-                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
-                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
-                              <div class="flex items-center gap-2 mt-2">
-                                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <i class="fas fa-image text-xs"></i> Photo
-                                </span>
-                                <span class="text-xs text-gray-400">{{ ev.size }}</span>
-                              </div>
-                              <a href="{{ ev.url }}" target="_blank"
-                                 class="mt-2 inline-flex items-center gap-1 text-blue-600 hover:underline text-xs font-semibold">
-                                <i class="fas fa-expand-alt text-xs"></i> Open Full Size
-                              </a>
-                            </div>
+            <!-- Uploaded -->
+            <td style="font-size:12px;color:#6b7280;white-space:nowrap">
+              {{ a.get('uploaded_at','')[:10] if a.get('uploaded_at') else '—' }}
+            </td>
 
-                            {% elif ev.kind == 'video' %}
-                            <!-- Video: player embed -->
-                            <div class="w-20 h-14 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                              <video src="{{ ev.url }}" class="w-full h-full object-cover rounded-lg"
-                                     style="pointer-events:none;" preload="metadata"></video>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
-                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
-                              <div class="flex items-center gap-2 mt-2">
-                                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <i class="fas fa-video text-xs"></i> Video
-                                </span>
-                                <span class="text-xs text-gray-400">{{ ev.size }}</span>
-                              </div>
-                              <a href="{{ ev.url }}" target="_blank" class="ev-vid-btn mt-2">
-                                <i class="fas fa-play text-xs"></i> Watch Video
-                              </a>
-                            </div>
+            <!-- Script PDF -->
+            <td>
+              {% if a._script_url %}
+              <a href="{{ a._script_url }}" target="_blank" class="script-btn">
+                <i class="fas fa-file-pdf"></i> View PDF
+                {% if a._script_size %}
+                <span style="opacity:.7;font-size:10px">({{ a._script_size }})</span>
+                {% endif %}
+              </a>
+              {% else %}
+              <span class="script-na"><i class="fas fa-minus" style="font-size:10px"></i> None</span>
+              {% endif %}
+            </td>
 
-                            {% elif ev.kind == 'audio' %}
-                            <!-- Audio player -->
-                            <div class="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <i class="fas fa-music text-purple-600 text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
-                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
-                              <div class="flex items-center gap-2 mt-2 mb-2">
-                                <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <i class="fas fa-headphones text-xs"></i> Audio
-                                </span>
-                                <span class="text-xs text-gray-400">{{ ev.size }}</span>
-                              </div>
-                              <audio controls class="w-full" style="height:32px;outline:none;">
-                                <source src="{{ ev.url }}">
-                              </audio>
-                            </div>
-
-                            {% else %}
-                            <!-- Generic file -->
-                            <div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <i class="fas fa-file text-gray-500 text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                              <p class="text-xs font-semibold text-gray-700 truncate">{{ ev.name }}</p>
-                              {% if ev.caption %}<p class="text-xs text-gray-500 mt-0.5">{{ ev.caption }}</p>{% endif %}
-                              <span class="text-xs text-gray-400">{{ ev.size }}</span><br>
-                              <a href="{{ ev.url }}" target="_blank" class="ev-file-btn mt-2">
-                                <i class="fas fa-download text-xs"></i> Download
-                              </a>
-                            </div>
-                            {% endif %}
-
-                          </div>
-                          {% endfor %}
-                        </div>
-
-                        {% else %}
-                        <div class="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4 text-center">
-                          <i class="fas fa-images text-gray-300 text-2xl mb-1 block"></i>
-                          <p class="text-xs text-gray-400">No evidence files attached to this assessment</p>
-                        </div>
-                        {% endif %}
-
-                      </div>
-                    </div>
-                  </div><!-- /assess body -->
-
-                </div><!-- /assess-row -->
+            <!-- Evidence (horizontal row) -->
+            <td>
+              {% if ev_list %}
+              <div class="ev-row">
+                {% for ev in ev_list %}
+                  {% if ev.ext in ['jpg','jpeg','png','webp','gif'] or ev.type == 'photo' %}
+                  <a href="{{ ev.url }}" target="_blank"
+                     onclick="openLb('{{ ev.url }}');return false"
+                     title="{{ ev.name }}">
+                    <img src="{{ ev.url }}" alt="{{ ev.name }}" class="ev-img"
+                         loading="lazy" onerror="this.style.display='none'">
+                  </a>
+                  {% elif ev.ext in ['mp4','mov','avi','webm','mkv'] or ev.type == 'video' %}
+                  <a href="{{ ev.url }}" target="_blank" class="ev-icon ev-video" title="{{ ev.name }}">
+                    <i class="fas fa-play-circle"></i> Video
+                  </a>
+                  {% elif ev.ext in ['mp3','wav','ogg','m4a','aac','flac'] or ev.type == 'audio' %}
+                  <a href="{{ ev.url }}" target="_blank" class="ev-icon ev-audio" title="{{ ev.name }}">
+                    <i class="fas fa-headphones"></i> Audio
+                  </a>
+                  {% elif ev.ext == 'pdf' %}
+                  <a href="{{ ev.url }}" target="_blank" class="ev-icon ev-pdf" title="{{ ev.name }}">
+                    <i class="fas fa-file-pdf"></i> PDF
+                  </a>
+                  {% else %}
+                  <a href="{{ ev.url }}" target="_blank" class="ev-icon ev-file" title="{{ ev.name }}">
+                    <i class="fas fa-file"></i> File
+                  </a>
+                  {% endif %}
                 {% endfor %}
-              </div><!-- /assessments -->
+              </div>
+              {% else %}
+              <span class="ev-none"><i class="fas fa-minus" style="font-size:10px"></i> None</span>
+              {% endif %}
+            </td>
 
-            </div><!-- /unit -->
-            {% endfor %}
-          </div><!-- /cls content -->
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
-        </div><!-- /class -->
-        {% endfor %}
-      </div><!-- /dept content -->
+    <div id="no-results" style="display:none" class="empty-state">
+      <i class="fas fa-search"></i><p>No records match your search.</p>
+    </div>
 
-    </div><!-- /dept card -->
-    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-folder-open"></i>
+      <p>No POE records found{% if dept_filter or year_filter or class_filter or adm_filter or status_filter %} for the selected filters{% endif %}.</p>
+    </div>
+    {% endif %}
   </div>
-
-  {% else %}
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-16 text-center">
-    <i class="fas fa-archive text-gray-300 text-5xl mb-4 block"></i>
-    <p class="text-gray-500 font-medium">No POE submissions found for the selected filters.</p>
-    <a href="/cdacc-verifier/trainee-poe" class="mt-4 inline-block text-blue-600 text-sm hover:underline">Clear filters</a>
-  </div>
-  {% endif %}
-
 </div>
 
-{% block extra_script %}
+<!-- Lightbox -->
+<div id="poe-lb" onclick="if(event.target===this)closeLb()">
+  <span id="poe-lb-close" onclick="closeLb()">&times;</span>
+  <img id="poe-lb-img" src="" alt="">
+</div>
+
 <script>
-function toggleSection(id) {
-  var el   = document.getElementById(id);
-  var icon = document.getElementById('icon-' + id);
-  if (!el) return;
-  var hidden = el.style.display === 'none' || el.style.display === '';
-  el.style.display = hidden ? 'block' : 'none';
-  if (icon) icon.style.transform = hidden ? 'rotate(180deg)' : 'rotate(0deg)';
+function liveSearch() {
+  var q = document.getElementById('live-search').value.toLowerCase().trim();
+  var rows = document.querySelectorAll('#poe-tbody tr');
+  var vis = 0;
+  rows.forEach(function(row) {
+    var match = !q || (row.dataset.search || '').includes(q);
+    row.style.display = match ? '' : 'none';
+    if (match) vis++;
+  });
+  document.getElementById('no-results').style.display =
+    (vis === 0 && {{ assessments|length }} > 0) ? '' : 'none';
 }
 
-function openLB(src) {
-  document.getElementById('lb-img').src = src;
-  document.getElementById('lb-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+function openLb(url) {
+  document.getElementById('poe-lb-img').src = url;
+  document.getElementById('poe-lb').style.display = 'flex';
 }
-function closeLB(e) {
-  if (e && e.target !== document.getElementById('lb-overlay') && e.target !== document.getElementById('lb-close') && !document.getElementById('lb-close').contains(e.target)) return;
-  document.getElementById('lb-overlay').classList.remove('open');
-  document.getElementById('lb-img').src = '';
-  document.body.style.overflow = '';
+function closeLb() {
+  document.getElementById('poe-lb').style.display = 'none';
+  document.getElementById('poe-lb-img').src = '';
 }
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLB({target: document.getElementById('lb-overlay')}); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLb(); });
 </script>
-{% endblock %}
-
 {% endblock %}

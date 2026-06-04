@@ -302,142 +302,102 @@ def marks():
 @cdacc_verifier_required
 def trainee_poe():
     import os
+    from datetime import date as _date
     db = get_service_client()
-    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
-    dept_id    = request.args.get("dept_id", "")
-    class_id   = request.args.get("class_id", "")
-    unit_id    = request.args.get("unit_id", "")
-    status_f   = request.args.get("status", "")
+    supabase_url  = os.environ.get("SUPABASE_URL", "").strip()
+
+    dept_filter   = request.args.get("department", "")
+    year_filter   = request.args.get("year", "")
+    class_filter  = request.args.get("class_id", "")
+    adm_filter    = request.args.get("admission_no", "").strip().upper()
+    status_filter = request.args.get("status", "")
 
     def _fmt_size(b):
-        if not b: return "0 B"
+        if not b: return ""
         for u in ["B", "KB", "MB", "GB"]:
             if b < 1024: return f"{b:.1f} {u}"
             b /= 1024
         return f"{b:.1f} GB"
 
-    rows = []
+    records = []
     departments = []
-    classes_opts = []
-    units_opts = []
+    classes = []
 
     try:
         departments = db.table("departments").select("id, name").order("name").execute().data or []
+        classes     = db.table("classes").select("id, name").order("name").limit(200).execute().data or []
 
         query = (db.table("assessments")
             .select("id, status, script_file_path, script_file_name, script_file_size, "
-                    "uploaded_at, assessment_type, assessment_no, term, year, "
+                    "uploaded_at, assessment_type, assessment_no, term, year, class_id, "
                     "student:user_profiles!assessments_student_id_fkey(full_name, admission_no), "
-                    "units(id, name, code, department_id, departments(name)), "
-                    "classes(id, name)")
+                    "units!inner(name, code, department_id, departments(name)), "
+                    "classes(name)")
             .order("uploaded_at", desc=True)
             .limit(1000))
 
-        if dept_id:
-            query = query.eq("units.department_id", dept_id)
-        if class_id:
-            query = query.eq("class_id", class_id)
-        if unit_id:
-            query = query.eq("unit_id", unit_id)
-        if status_f:
-            query = query.eq("status", status_f)
+        if dept_filter:
+            query = query.eq("units.department_id", dept_filter)
+        if class_filter:
+            query = query.eq("class_id", class_filter)
+        if status_filter:
+            query = query.eq("status", status_filter)
+        if year_filter:
+            try:
+                query = query.eq("year", int(year_filter))
+            except ValueError:
+                pass
 
-        rows = query.execute().data or []
+        records = query.execute().data or []
 
-        # Batch-fetch all evidence for these assessments
+        if adm_filter:
+            records = [r for r in records
+                       if adm_filter in (r.get("student") or {}).get("admission_no", "").upper()]
+
+        # Batch-fetch evidence (chunked to stay within Supabase limits)
         evidence_map = {}
-        if rows:
-            a_ids = [str(a["id"]) for a in rows if a.get("id")]
-            # Fetch in chunks of 400 to stay within Supabase limits
+        if records:
+            a_ids = [str(a["id"]) for a in records if a.get("id")]
             for i in range(0, len(a_ids), 400):
-                chunk = a_ids[i:i+400]
+                chunk = a_ids[i:i + 400]
                 ev_rows = (db.table("evidence")
-                             .select("id, assessment_id, file_path, file_name, file_type, file_size, caption")
+                             .select("assessment_id, file_path, file_name, file_type")
                              .in_("assessment_id", chunk)
                              .execute().data or [])
                 for ev in ev_rows:
-                    aid = str(ev.get("assessment_id", ""))
-                    ext = (ev.get("file_name") or "").rsplit(".", 1)[-1].lower()
+                    aid  = str(ev.get("assessment_id", ""))
+                    fp   = ev.get("file_path") or ""
+                    name = ev.get("file_name") or (fp.rsplit("/", 1)[-1] if fp else "file")
+                    ext  = name.rsplit(".", 1)[-1].lower() if "." in name else "bin"
                     ftype = ev.get("file_type") or ""
-                    # Determine media kind from file_type field or extension
-                    if ftype == "photo" or ext in ("jpg","jpeg","png","gif","webp","bmp"):
-                        kind = "photo"
-                    elif ftype == "video" or ext in ("mp4","mov","avi","mkv","webm"):
-                        kind = "video"
-                    elif ext in ("mp3","wav","ogg","m4a","aac","flac"):
-                        kind = "audio"
-                    else:
-                        kind = "file"
                     evidence_map.setdefault(aid, []).append({
-                        "id":      str(ev.get("id", "")),
-                        "name":    ev.get("file_name") or "Evidence",
-                        "caption": ev.get("caption") or "",
-                        "kind":    kind,
-                        "size":    _fmt_size(ev.get("file_size") or 0),
-                        "url":     f"{supabase_url}/storage/v1/object/public/assessment-evidence/{ev['file_path']}" if ev.get("file_path") else "",
+                        "url":  f"{supabase_url}/storage/v1/object/public/assessment-evidence/{fp}" if fp else "",
+                        "name": name,
+                        "ext":  ext,
+                        "type": ftype,
                     })
 
-        if dept_id:
-            classes_opts = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
-            units_opts   = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
-        else:
-            classes_opts = db.table("classes").select("id, name").order("name").limit(200).execute().data or []
-            units_opts   = db.table("units").select("id, name, code").order("name").limit(500).execute().data or []
+        # Attach script URL, size and evidence list to each record
+        for r in records:
+            fp = r.get("script_file_path") or ""
+            r["_script_url"]  = (f"{supabase_url}/storage/v1/object/public/assessment-scripts/{fp}"
+                                 if fp else "")
+            r["_script_size"] = _fmt_size(r.get("script_file_size"))
+            r["_evidence"]    = evidence_map.get(str(r.get("id", "")), [])
 
     except Exception as e:
         flash(f"Error loading trainee POE: {e}", "danger")
 
-    # Build dept → class → unit → files structure
-    folder_map = {}
-    for a in rows:
-        unit_obj  = a.get("units") or {}
-        dept_name = (unit_obj.get("departments") or {}).get("name") or "Unknown Dept"
-        cls_name  = (a.get("classes") or {}).get("name") or "Uncategorised"
-        unit_name = f"{unit_obj.get('code','?')} — {unit_obj.get('name','?')}" if unit_obj.get("name") else "Unknown Unit"
-        student   = a.get("student") or {}
-        fp        = a.get("script_file_path") or ""
-        aid       = str(a.get("id", ""))
-
-        file_obj = {
-            "id":             aid,
-            "name":           a.get("script_file_name") or f"{a.get('assessment_type','?')} #{a.get('assessment_no','?')}",
-            "url":            f"{supabase_url}/storage/v1/object/public/assessment-scripts/{fp}" if fp else "",
-            "status":         (a.get("status") or "pending").title(),
-            "admissionNumber": student.get("admission_no") or "N/A",
-            "studentName":    student.get("full_name") or "Unknown",
-            "formattedSize":  _fmt_size(a.get("script_file_size") or 0),
-            "assessmentType": a.get("assessment_type") or "",
-            "term":           str(a.get("term") or ""),
-            "year":           str(a.get("year") or ""),
-            "uploadedAt":     (a.get("uploaded_at") or "")[:10],
-            "className":      cls_name,
-            "unitName":       unit_name,
-            "evidence":       evidence_map.get(aid, []),
-        }
-        folder_map.setdefault(dept_name, {}).setdefault(cls_name, {}).setdefault(unit_name, []).append(file_obj)
-
-    # Build sorted hierarchy
-    depts_data = []
-    for dept_name in sorted(folder_map):
-        classes_data = []
-        for cls_name in sorted(folder_map[dept_name]):
-            units_list = []
-            for unit_name in sorted(folder_map[dept_name][cls_name]):
-                files = sorted(folder_map[dept_name][cls_name][unit_name],
-                               key=lambda f: (f["admissionNumber"] == "N/A", f["admissionNumber"]))
-                units_list.append({"name": unit_name, "files": files})
-            classes_data.append({"name": cls_name, "units": units_list})
-        depts_data.append({"name": dept_name, "classes": classes_data})
-
-    total_size = _fmt_size(sum(a.get("script_file_size") or 0 for a in rows))
+    cur_yr = _date.today().year
+    years  = [str(y) for y in range(cur_yr, 2021, -1)]
 
     return render_template("cdacc_verifier/trainee_poe.html",
-                           depts_data=depts_data,
-                           total_depts=len(folder_map),
-                           total_files=len(rows),
-                           total_size=total_size,
+                           assessments=records,
                            departments=departments,
-                           classes_opts=classes_opts,
-                           units_opts=units_opts,
-                           dept_id=dept_id, class_id=class_id,
-                           unit_id=unit_id, status_f=status_f)
+                           classes=classes,
+                           years=years,
+                           dept_filter=dept_filter,
+                           year_filter=year_filter,
+                           class_filter=class_filter,
+                           adm_filter=adm_filter,
+                           status_filter=status_filter)
