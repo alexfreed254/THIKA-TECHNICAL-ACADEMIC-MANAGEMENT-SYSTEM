@@ -2,180 +2,545 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Marks Report - THIKA TECHNICAL TRAINING INSTITUTE</title>
+  <title>Marks Report — {{ dept_name }} — {{ year }}</title>
   <style>
+    /* ── Print settings ── */
     @page {
       size: A4 landscape;
-      margin: 20mm;
+      margin: 15mm 18mm 20mm 18mm;
     }
+    @media print {
+      .no-print { display: none !important; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      font-family: Arial, sans-serif;
-      font-size: 11px;
-      line-height: 1.3;
+      font-family: 'Arial', 'Helvetica', sans-serif;
+      font-size: 10pt;
+      color: #0a0f1e;
+      background: #fff;
+      line-height: 1.4;
     }
-    .header {
+
+    /* ── Letterhead ── */
+    .letterhead {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding-bottom: 10px;
+      border-bottom: 4px solid #0a0f1e;
+      margin-bottom: 4px;
+    }
+    .letterhead img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .letterhead-text { flex: 1; }
+    .lh-title {
+      font-size: 17pt;
+      font-weight: 900;
+      color: #0a0f1e;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+    .lh-sub {
+      font-size: 9pt;
+      color: #374151;
+      margin-top: 3px;
+      letter-spacing: 0.03em;
+    }
+    .lh-right {
+      text-align: right;
+      font-size: 8pt;
+      color: #6b7280;
+      line-height: 1.7;
+      flex-shrink: 0;
+    }
+
+    /* ── Report title band ── */
+    .report-band {
+      background: #0a0f1e;
+      color: #fff;
       text-align: center;
-      margin-bottom: 15px;
-      border-bottom: 3px solid #1976d2;
-      padding-bottom: 12px;
-    }
-    .header img {
-      height: 50px;
-      margin-bottom: 8px;
-    }
-    .header h1 {
-      font-size: 18px;
-      margin: 0 0 4px 0;
-      color: #1976d2;
-    }
-    .header h2 {
-      font-size: 13px;
-      margin: 0;
-      font-weight: normal;
-      color: #333;
-    }
-    .info-section {
-      margin-bottom: 15px;
-      padding: 8px;
-      background: #f5f5f5;
+      padding: 8px 16px;
+      margin: 8px 0;
       border-radius: 4px;
     }
-    .info-section table {
-      width: 100%;
-      border-collapse: collapse;
+    .report-band h2 {
+      font-size: 13pt;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
-    .info-section td {
-      padding: 4px 8px;
+    .report-band p {
+      font-size: 9pt;
+      opacity: .8;
+      margin-top: 2px;
     }
-    .info-section td:first-child {
-      font-weight: bold;
-      width: 120px;
+
+    /* ── Meta grid ── */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
     }
-    table.marks-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 15px;
+    .meta-box {
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      padding: 7px 10px;
     }
-    table.marks-table th {
-      background: #1976d2;
-      color: white;
-      padding: 8px;
-      text-align: left;
-      font-weight: bold;
-      border: 1px solid #1976d2;
-      font-size: 10px;
+    .meta-lbl { font-size: 7.5pt; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+    .meta-val { font-size: 10pt; font-weight: 700; color: #0a0f1e; margin-top: 2px; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
     }
-    table.marks-table td {
-      padding: 6px 8px;
-      border: 1px solid #ddd;
-      font-size: 10px;
-    }
-    table.marks-table tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    .grade-M { color: #2e7d32; font-weight: bold; }
-    .grade-P { color: #1565c0; font-weight: bold; }
-    .grade-C { color: #f57c00; font-weight: bold; }
-    .grade-NYC { color: #c62828; font-weight: bold; }
-    .footer {
+    .stat-box {
+      flex: 1;
+      border-radius: 5px;
+      padding: 8px 12px;
       text-align: center;
-      margin-top: 25px;
-      padding-top: 12px;
-      border-top: 1px solid #ddd;
-      color: #666;
-      font-size: 9px;
     }
-    .signature-section {
-      margin-top: 35px;
+    .sb-total    { background: #dbeafe; border: 1px solid #93c5fd; }
+    .sb-pass     { background: #dcfce7; border: 1px solid #86efac; }
+    .sb-rate     { background: #fef3c7; border: 1px solid #fde68a; }
+    .sb-avg      { background: #ede9fe; border: 1px solid #c4b5fd; }
+    .stat-num    { font-size: 16pt; font-weight: 900; color: #0a0f1e; }
+    .stat-lbl    { font-size: 7pt;  font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── Marks table ── */
+    table.marks-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+      font-size: 9pt;
+    }
+    table.marks-tbl thead tr {
+      background: #0a0f1e;
+    }
+    table.marks-tbl th {
+      padding: 7px 8px;
+      text-align: left;
+      color: #fff;
+      font-weight: 700;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border: 1px solid #1e293b;
+      white-space: nowrap;
+    }
+    table.marks-tbl td {
+      padding: 6px 8px;
+      border: 1px solid #e5e7eb;
+      vertical-align: middle;
+    }
+    table.marks-tbl tbody tr:nth-child(even) td {
+      background: #f8f9fb;
+    }
+    table.marks-tbl tbody tr:hover td {
+      background: #eff6ff;
+    }
+    .row-num   { color: #9ca3af; font-size: 8pt; }
+    .adm-no    { font-family: monospace; font-size: 8.5pt; color: #374151; }
+    .stu-name  { font-weight: 700; color: #0a0f1e; }
+    .unit-code { display: inline-block; background: #dbeafe; color: #1d4ed8; font-size: 7.5pt; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
+    .score     { font-weight: 800; color: #0a0f1e; }
+    .score-max { color: #9ca3af; font-size: 8pt; }
+
+    /* ── Progress mini-bar ── */
+    .pct-wrap  { display: flex; align-items: center; gap: 5px; }
+    .pct-bar   { width: 44px; height: 5px; background: #e5e7eb; border-radius: 9999px; overflow: hidden; flex-shrink: 0; }
+    .pct-fill  { height: 100%; border-radius: 9999px; }
+    .pf-4 { background: #22c55e; }
+    .pf-3 { background: #3b82f6; }
+    .pf-2 { background: #f59e0b; }
+    .pf-1 { background: #ef4444; }
+    .pct-num   { font-size: 8.5pt; font-weight: 700; }
+
+    /* ── Grade badges ── */
+    .grade-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 8pt;
+      font-weight: 800;
+      text-align: center;
+      min-width: 28px;
+    }
+    .gb-4 { background: #dcfce7; color: #15803d; }
+    .gb-3 { background: #dbeafe; color: #1d4ed8; }
+    .gb-2 { background: #fef3c7; color: #b45309; }
+    .gb-1 { background: #fee2e2; color: #b91c1c; }
+
+    /* ── Grade scale legend ── */
+    .grade-legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      margin-bottom: 18px;
+      font-size: 8pt;
+    }
+    .gl-item { display: flex; align-items: center; gap: 6px; }
+    .gl-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .gd-4 { background: #22c55e; }
+    .gd-3 { background: #3b82f6; }
+    .gd-2 { background: #f59e0b; }
+    .gd-1 { background: #ef4444; }
+
+    /* ── Signature section ── */
+    .sig-section {
+      margin-top: 24px;
       display: flex;
       justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      page-break-inside: avoid;
     }
-    .signature-line {
-      width: 180px;
-      border-top: 1px solid #333;
-      padding-top: 8px;
+    .sig-block {
+      flex: 1;
+      max-width: 240px;
+    }
+    .sig-name-box {
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      padding: 8px 14px;
+      margin-bottom: 6px;
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0a0f1e;
+    }
+    .sig-line {
+      border-top: 1.5px solid #0a0f1e;
+      padding-top: 5px;
+      font-size: 8pt;
+      font-weight: 700;
+      color: #374151;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .sig-date-line {
+      border-top: 1.5px solid #0a0f1e;
+      padding-top: 5px;
+      font-size: 8pt;
+      font-weight: 700;
+      color: #374151;
+    }
+    .sig-stamp {
+      flex: 1;
+      max-width: 160px;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: .06em;
       text-align: center;
-      font-size: 10px;
     }
+
+    /* ── Footer ── */
+    .pdf-footer {
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 2px solid #0a0f1e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7.5pt;
+      color: #6b7280;
+    }
+    .footer-center { text-align: center; flex: 1; }
+
+    /* ── Print button (no-print) ── */
+    .print-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #0a0f1e;
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      z-index: 999;
+    }
+    .print-bar span { font-size: 13px; font-weight: 700; }
+    .btn-print {
+      padding: 8px 24px;
+      background: #fbbf24;
+      color: #0a0f1e;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .btn-print:hover { opacity: .9; }
+    .btn-close {
+      padding: 8px 16px;
+      background: rgba(255,255,255,.15);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    @media print { .print-bar { display: none !important; } }
+
+    body.has-toolbar { padding-top: 50px; }
   </style>
 </head>
-<body>
-  <div class="header">
-    <img src="{{ LOGO_URL }}" alt="Logo">
-    <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
-    <h2>DEPARTMENT HEAD - MARKS REPORT</h2>
+<body class="has-toolbar">
+
+  <!-- ── Print toolbar (hidden on print) ── -->
+  <div class="print-bar no-print">
+    <span>&#128462; Marks Report — {{ dept_name }}{% if term %}, Term {{ term }}{% endif %} {{ year }}</span>
+    <div style="display:flex;gap:8px">
+      <button class="btn-print" onclick="window.print()">
+        &#128424; Download / Print PDF
+      </button>
+      <a href="javascript:history.back()" class="btn-close">&#8592; Back</a>
+    </div>
   </div>
-  
-  <div class="info-section">
-    <table>
-      <tr>
-        <td>Academic Year:</td>
-        <td>{{ year }}</td>
-        <td>Term:</td>
-        <td>{% if term %}Term {{ term }}{% else %}All Terms{% endif %}</td>
-      </tr>
-      <tr>
-        <td>Date Generated:</td>
-        <td colspan="3">{{ 'now' | to_eat('%d %B %Y at %H:%M') }}</td>
-      </tr>
-    </table>
+
+  <!-- ══════════════════════════ DOCUMENT ══════════════════════════ -->
+
+  <!-- Letterhead -->
+  <div class="letterhead">
+    <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+    <div class="letterhead-text">
+      <div class="lh-title">Thika Technical Training Institute</div>
+      <div class="lh-sub">
+        P.O. Box 93 – 01000, Thika, Kenya &nbsp;|&nbsp;
+        Tel: +254 (0)67 22147 &nbsp;|&nbsp;
+        Accredited by TVET Authority of Kenya
+      </div>
+    </div>
+    <div class="lh-right">
+      <strong>{{ dept_name | upper }}</strong><br>
+      DEPARTMENT<br>
+      Academic Year: {{ year }}
+    </div>
   </div>
-  
+
+  <!-- Report title band -->
+  <div class="report-band">
+    <h2>&#9679; Formative Assessment — Marks Report &#9679;</h2>
+    <p>
+      {% if term %}Term {{ term }} &bull; {% endif %}
+      {% if class_name %}{{ class_name }} &bull; {% endif %}
+      {% if unit_name %}{{ unit_name }} &bull; {% endif %}
+      Academic Year {{ year }}
+    </p>
+  </div>
+
+  <!-- Metadata grid -->
+  <div class="meta-grid">
+    <div class="meta-box">
+      <div class="meta-lbl">Department</div>
+      <div class="meta-val">{{ dept_name or '—' }}</div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-lbl">Academic Year</div>
+      <div class="meta-val">{{ year }}</div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-lbl">Term</div>
+      <div class="meta-val">{% if term %}Term {{ term }}{% else %}All Terms{% endif %}</div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-lbl">Class / Unit</div>
+      <div class="meta-val" style="font-size:9pt">
+        {{ class_name or 'All Classes' }}{% if unit_name %} / {{ unit_name }}{% endif %}
+      </div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-lbl">Head of Department</div>
+      <div class="meta-val">{{ hod_name }}</div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-lbl">Date Generated</div>
+      <div class="meta-val" style="font-size:9pt">{{ generated_at }}</div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-lbl">Total Records</div>
+      <div class="meta-val">{{ total }}</div>
+    </div>
+    <div class="meta-box">
+      <div class="meta-lbl">Document Ref.</div>
+      <div class="meta-val" style="font-size:8.5pt;color:#6b7280">TTTI/{{ dept_name[:4]|upper }}/MR/{{ year }}</div>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-row">
+    <div class="stat-box sb-total">
+      <div class="stat-num">{{ total }}</div>
+      <div class="stat-lbl">Mark Entries</div>
+    </div>
+    <div class="stat-box sb-pass">
+      <div class="stat-num">{{ pass_count }}</div>
+      <div class="stat-lbl">Competent &amp; Above</div>
+    </div>
+    <div class="stat-box sb-rate">
+      <div class="stat-num">{{ pass_rate }}%</div>
+      <div class="stat-lbl">Pass Rate</div>
+    </div>
+    <div class="stat-box sb-avg">
+      <div class="stat-num">{{ avg_pct }}%</div>
+      <div class="stat-lbl">Average Score</div>
+    </div>
+  </div>
+
+  <!-- Marks table -->
   {% if marks %}
-  <table class="marks-table">
+  <table class="marks-tbl">
     <thead>
       <tr>
-        <th>Admission No</th>
+        <th style="width:28px">#</th>
+        <th style="width:90px">Adm. No.</th>
         <th>Student Name</th>
         <th>Class</th>
-        <th>Department</th>
-        <th>Unit Code</th>
+        <th style="width:65px">Unit Code</th>
         <th>Unit Name</th>
         <th>Assessment</th>
-        <th>Type</th>
-        <th>Marks</th>
-        <th>Grade</th>
+        <th style="width:64px">Type</th>
+        <th style="width:55px">Term</th>
+        <th style="width:70px">Score</th>
+        <th style="width:80px">Progress</th>
+        <th style="width:44px">Grade</th>
         <th>Trainer</th>
       </tr>
     </thead>
     <tbody>
-      {% for mark in marks %}
+      {% for m in marks %}
+      {% set pct = m.percentage %}
+      {% set pct_cls = 'pf-4' if pct >= 80 else ('pf-3' if pct >= 65 else ('pf-2' if pct >= 50 else 'pf-1')) %}
       <tr>
-        <td>{{ mark.student.admission_no }}</td>
-        <td>{{ mark.student.full_name }}</td>
-        <td>{{ mark.classes.name }}</td>
-        <td>{{ mark.classes.departments.name }}</td>
-        <td>{{ mark.units.code }}</td>
-        <td>{{ mark.units.name }}</td>
-        <td>{{ mark.assessment_name }}</td>
-        <td>{{ mark.assessment_type|title }}</td>
-        <td>{{ mark.marks_obtained }} / {{ mark.max_marks }}</td>
-        <td class="grade-{{ mark.grade }}">{{ mark.grade }}</td>
-        <td>{{ mark.trainer.full_name if mark.trainer else '' }}</td>
+        <td class="row-num">{{ loop.index }}</td>
+        <td class="adm-no">{{ m.student.get('admission_no','—') }}</td>
+        <td class="stu-name">{{ m.student.get('full_name','—') }}</td>
+        <td>{{ m.class_.get('name','—') }}</td>
+        <td><span class="unit-code">{{ m.unit.get('code','—') }}</span></td>
+        <td>{{ m.unit.get('name','—') }}</td>
+        <td style="font-weight:600">{{ m.assessment_name or '—' }}</td>
+        <td>{{ m.assessment_type or '—' }}</td>
+        <td style="text-align:center">{{ m.term or '—' }}</td>
+        <td>
+          <span class="score">{{ m.marks_obtained if m.marks_obtained is not none else '—' }}</span>
+          <span class="score-max"> / {{ m.max_marks | int }}</span>
+        </td>
+        <td>
+          <div class="pct-wrap">
+            <div class="pct-bar">
+              <div class="pct-fill {{ pct_cls }}" style="width:{{ pct }}%"></div>
+            </div>
+            <span class="pct-num">{{ pct }}%</span>
+          </div>
+        </td>
+        <td style="text-align:center">
+          <span class="grade-badge gb-{{ m.grade }}">{{ m.grade }}</span>
+        </td>
+        <td style="font-size:8.5pt;color:#6b7280">{{ m.trainer.get('full_name','—') }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p style="text-align: center; color: #999; padding: 20px;">No marks found for the selected criteria.</p>
+  <div style="text-align:center;padding:32px;color:#9ca3af;font-size:11pt;background:#f9fafb;border:1px solid #e5e7eb;border-radius:5px;margin-bottom:14px">
+    <strong>No marks records found</strong> for the selected filters.
+  </div>
   {% endif %}
-  
-  <div class="signature-section">
-    <div class="signature-line">Head of Department Signature</div>
-    <div class="signature-line">Date</div>
+
+  <!-- Grade legend -->
+  <div class="grade-legend">
+    <strong style="margin-right:4px;font-size:8pt;text-transform:uppercase;letter-spacing:.05em">Proficiency Scale:</strong>
+    <div class="gl-item"><div class="gl-dot gd-4"></div> <strong>Code 4 — Mastery</strong> &nbsp;80%–100%: Executed with excellence</div>
+    <div class="gl-item"><div class="gl-dot gd-3"></div> <strong>Code 3 — Proficiency</strong> &nbsp;65%–79%: Very good, high competence</div>
+    <div class="gl-item"><div class="gl-dot gd-2"></div> <strong>Code 2 — Competent</strong> &nbsp;50%–64%: Meets minimum requirements</div>
+    <div class="gl-item"><div class="gl-dot gd-1"></div> <strong>Code 1 — Not Yet Competent</strong> &nbsp;0%–49%: Does not meet requirements</div>
   </div>
-  
-  <div class="footer">
-    <p>THIKA TECHNICAL TRAINING INSTITUTE - Academic Management System</p>
-    <p>This document is an official record of student assessment marks.</p>
-    <p>Generated on: {{ 'now' | to_eat('%d %B %Y at %H:%M') }}</p>
+
+  <!-- ── Signature section ── -->
+  <div class="sig-section">
+
+    <!-- HOD signature -->
+    <div class="sig-block">
+      <div class="sig-name-box">
+        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">HEAD OF DEPARTMENT</span>
+        {{ hod_name }}
+      </div>
+      <div style="height:36px"></div>
+      <div class="sig-line">Signature</div>
+    </div>
+
+    <!-- Date -->
+    <div class="sig-block">
+      <div class="sig-name-box" style="background:#fff8ed;border-color:#fde68a">
+        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">DATE</span>
+        {{ generated_at.split(' at ')[0] }}
+      </div>
+      <div style="height:36px"></div>
+      <div class="sig-date-line">Date Signed</div>
+    </div>
+
+    <!-- Department stamp -->
+    <div class="sig-stamp">
+      OFFICIAL<br>DEPARTMENT<br>STAMP
+    </div>
+
+    <!-- Quality check -->
+    <div class="sig-block">
+      <div class="sig-name-box" style="background:#f0fdf4;border-color:#bbf7d0">
+        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">VERIFIED BY</span>
+        &nbsp;
+      </div>
+      <div style="height:36px"></div>
+      <div class="sig-line">Quality Assurance Officer</div>
+    </div>
+
   </div>
-  
+
+  <!-- Footer -->
+  <div class="pdf-footer">
+    <div>Ref: TTTI/{{ dept_name[:4]|upper }}/MR/{{ year }}</div>
+    <div class="footer-center">
+      <strong>THIKA TECHNICAL TRAINING INSTITUTE</strong> &nbsp;|&nbsp;
+      Official Academic Record &nbsp;|&nbsp;
+      This document must be signed and stamped to be valid
+    </div>
+    <div>Generated: {{ generated_at }}</div>
+  </div>
+
   <script>
-    window.onload = function() {
-      window.print();
-    };
+    /* Auto-trigger print after page loads (can be disabled by user) */
+    window.addEventListener('load', function() {
+      // Small delay to allow CSS to fully render
+      setTimeout(function() { window.print(); }, 600);
+    });
   </script>
 </body>
 </html>

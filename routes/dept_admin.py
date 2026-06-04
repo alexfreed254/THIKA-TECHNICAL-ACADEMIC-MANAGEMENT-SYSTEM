@@ -800,8 +800,9 @@ def marks():
 @dept_admin_bp.route("/marks/download-pdf")
 @dept_admin_required
 def download_marks_pdf():
-    db = get_service_client()
+    db         = get_service_client()
     dept_id    = _dept_id()
+    user       = current_user()
     year       = request.args.get("year",       str(datetime.now().year))
     term       = request.args.get("term",       "")
     class_id   = request.args.get("class_id",   "")
@@ -809,10 +810,43 @@ def download_marks_pdf():
     trainer_id = request.args.get("trainer_id", "")
 
     marks_list = _fetch_marks(db, dept_id, year, term, class_id, unit_id, trainer_id)
+
+    # Fetch department info
+    dept_info = db.table("departments").select("name").eq("id", dept_id).single().execute().data or {}
+    dept_name = dept_info.get("name", "")
+
+    # HOD full name
+    hod_name  = user.get("full_name", "Head of Department")
+
+    # Resolve class/unit names for report subtitle
+    class_name = ""
+    unit_name  = ""
+    if class_id:
+        c = db.table("classes").select("name").eq("id", class_id).limit(1).execute().data or []
+        class_name = c[0]["name"] if c else ""
+    if unit_id:
+        u = db.table("units").select("name", "code").eq("id", unit_id).limit(1).execute().data or []
+        if u:
+            unit_name = f"{u[0].get('code','')} — {u[0].get('name','')}"
+
+    generated_at = datetime.now().strftime("%d %B %Y at %H:%M")
+
+    # Stats
+    total        = len(marks_list)
+    pass_count   = sum(1 for m in marks_list if m.get("grade") in ("4","3","2"))
+    pass_rate    = round(pass_count / total * 100) if total else 0
+    avg_pct      = round(sum(m.get("percentage",0) for m in marks_list) / total, 1) if total else 0
+
     return render_template(
         "dept_admin/marks_pdf.html",
         marks=marks_list,
-        year=year, term=term, class_id=class_id, unit_id=unit_id,
+        year=year, term=term,
+        class_name=class_name, unit_name=unit_name,
+        dept_name=dept_name,
+        hod_name=hod_name,
+        generated_at=generated_at,
+        total=total, pass_count=pass_count,
+        pass_rate=pass_rate, avg_pct=avg_pct,
     )
 
 
