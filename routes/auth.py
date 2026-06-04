@@ -362,6 +362,95 @@ def student_register():
     return render_template("auth/student_register.html")
 
 
+# ── Industry Supervisor Self-Registration ────────────────────────────────────
+
+@auth_bp.route("/supervisor/register", methods=["POST"])
+def supervisor_register():
+    """Self-registration for industry supervisors."""
+    from werkzeug.security import generate_password_hash
+    from auth_utils import create_staff_auth_user
+    import uuid as _uuid
+
+    full_name        = (request.form.get("full_name") or "").strip()
+    email            = (request.form.get("email") or "").strip().lower()
+    mobile           = (request.form.get("mobile_number") or "").strip()
+    company_name     = (request.form.get("company_name") or "").strip()
+    role_in_company  = (request.form.get("role_in_company") or "").strip()
+    password         = request.form.get("password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    errors = []
+    if not all([full_name, email, mobile, company_name, role_in_company, password, confirm_password]):
+        errors.append("All fields are required.")
+    if password != confirm_password:
+        errors.append("Passwords do not match.")
+    if len(password) < 8:
+        errors.append("Password must be at least 8 characters.")
+
+    if errors:
+        for e in errors:
+            flash(e, "error")
+        return redirect(url_for("auth.login") + "?tab=supervisor")
+
+    db = get_service_client()
+
+    # Duplicate email check
+    if db.table("user_profiles").select("id").eq("email", email).limit(1).execute().data:
+        flash("An account with this email already exists. Please sign in.", "error")
+        return redirect(url_for("auth.login") + "?tab=supervisor")
+
+    try:
+        # Create the user account
+        user_id = create_staff_auth_user(
+            email=email,
+            password=password,
+            full_name=full_name,
+            role="industry_supervisor",
+            mobile_number=mobile,
+        )
+
+        # Create or find company
+        existing_co = (db.table("companies")
+                         .select("id")
+                         .ilike("name", company_name)
+                         .limit(1)
+                         .execute().data or [])
+        if existing_co:
+            company_id = existing_co[0]["id"]
+        else:
+            co_res = db.table("companies").insert({
+                "name":            company_name,
+                "contact_person":  full_name,
+                "contact_phone":   mobile,
+                "is_active":       True,
+                "available_slots": 10,
+                "created_by":      user_id,
+            }).execute()
+            company_id = co_res.data[0]["id"]
+
+        # Link supervisor to company via mentors table
+        db.table("mentors").insert({
+            "user_id":    user_id,
+            "company_id": company_id,
+        }).execute()
+
+        # Store role_in_company in user_profiles bio/notes field
+        db.table("user_profiles").update({
+            "bio": role_in_company
+        }).eq("id", user_id).execute()
+
+        flash(
+            f"Account created successfully! Welcome, {full_name}. "
+            "You can now sign in using the Staff / Admin tab.",
+            "success"
+        )
+    except Exception as exc:
+        print(f"[supervisor_register] {exc}")
+        flash(f"Registration failed: {exc}", "error")
+
+    return redirect(url_for("auth.login"))
+
+
 # ─────────────────────────────────────────────────────────────
 # UNIFIED USER PROFILE AND PASSWORD MANAGEMENT
 # ─────────────────────────────────────────────────────────────

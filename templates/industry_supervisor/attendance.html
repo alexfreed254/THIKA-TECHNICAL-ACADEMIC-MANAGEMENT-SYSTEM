@@ -1,0 +1,146 @@
+{% extends "industry_supervisor/base.html" %}
+{% block title %}Mark Attendance{% endblock %}
+{% block page_title %}Mark Trainee Attendance{% endblock %}
+
+{% block extra_style %}
+.page-wrap { padding: 24px; }
+.hdr-banner { background: linear-gradient(135deg,#0a0f1e,#0f1f40); color:#fff; border-radius:14px; padding:22px 26px; margin-bottom:24px; }
+.hdr-banner h2 { font-size:18px;font-weight:800;margin:0 0 4px; }
+.hdr-banner p  { font-size:13px;color:rgba(255,255,255,.65);margin:0; }
+
+.search-bar { background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end; }
+.search-bar input { flex:1;min-width:200px;padding:9px 14px;border:1px solid #d1d5db;border-radius:9px;font-size:14px;background:#f9fafb; }
+.search-bar input:focus { outline:none;border-color:#0a0f1e; }
+.btn-sm-dark { padding:9px 20px;background:#0a0f1e;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer; }
+.btn-reset { padding:9px 14px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:9px;font-size:14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px; }
+
+.trainee-card { background:#fff;border:1px solid #e5e7eb;border-radius:14px;margin-bottom:16px;overflow:hidden; }
+.tc-head { display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 20px;border-bottom:1px solid #f3f4f6;background:#fafbfe; }
+.tc-name { font-weight:700;font-size:15px;color:#111827; }
+.tc-adm  { font-size:12px;color:#9ca3af;margin-left:6px; }
+.tc-dates { font-size:12px;color:#6b7280; }
+
+.att-form { padding:16px 20px; }
+.att-grid { display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:12px; }
+@media(max-width:600px){ .att-grid { grid-template-columns:1fr; } }
+.fg label { display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px; }
+.fg input, .fg select { width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:#f9fafb; }
+.fg input:focus, .fg select:focus { outline:none;border-color:#0a0f1e;background:#fff; }
+.btn-mark { padding:10px 20px;background:#15803d;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px; }
+
+.att-history { padding:0 20px 16px; }
+.att-log { display:flex;flex-wrap:wrap;gap:8px; }
+.att-chip { display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700; }
+.att-present  { background:#dcfce7;color:#15803d; }
+.att-absent   { background:#fee2e2;color:#b91c1c; }
+.att-half-day { background:#fef3c7;color:#b45309; }
+.att-late     { background:#dbeafe;color:#1d4ed8; }
+
+.empty-state { padding:56px 24px;text-align:center;color:#9ca3af;background:#fff;border-radius:14px;border:1px solid #e5e7eb; }
+.empty-state i { font-size:40px;display:block;margin-bottom:12px; }
+
+.sql-note { background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;font-size:13px;color:#92400e;margin-bottom:20px; }
+.sql-note code { background:#fef3c7;padding:1px 6px;border-radius:4px;font-size:12px; }
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+
+  <div class="hdr-banner">
+    <h2><i class="fas fa-calendar-check" style="color:#fbbf24;margin-right:8px"></i>Mark Trainee Attendance</h2>
+    <p>Record daily attendance for trainees on industrial attachment at your company.</p>
+  </div>
+
+  <div class="sql-note">
+    <i class="fas fa-info-circle" style="margin-right:6px"></i>
+    <strong>Note:</strong> This feature requires the <code>supervisor_attendance</code> table. If you see errors, ask your system administrator to run the SQL migration.
+  </div>
+
+  <!-- Search -->
+  <form method="get" class="search-bar">
+    <input type="text" name="q" placeholder="&#xf002; Search trainee by name or admission number…" value="{{ search }}">
+    <button type="submit" class="btn-sm-dark"><i class="fas fa-search"></i> Search</button>
+    <a href="/industry-supervisor/attendance" class="btn-reset"><i class="fas fa-undo"></i> Reset</a>
+  </form>
+
+  {% if trainees %}
+  {% for t in trainees %}
+  {% set st = t.student or {} %}
+  {% set att_dates = att_map.get(t.id, {}) %}
+  <div class="trainee-card">
+
+    <div class="tc-head">
+      <div>
+        <span class="tc-name">{{ st.get('full_name','—') }}</span>
+        <span class="tc-adm"><i class="fas fa-id-card" style="font-size:9px;margin-right:3px"></i>{{ st.get('admission_no','—') }}</span>
+      </div>
+      <span class="tc-dates" style="margin-left:auto">
+        <i class="fas fa-calendar-alt" style="font-size:10px;margin-right:4px"></i>
+        {{ t.get('start_date','?') }} → {{ t.get('end_date','?') }}
+      </span>
+      {% if st.get('mobile_number') %}
+      <a href="tel:{{ st.mobile_number }}" style="font-size:12px;color:#0a0f1e;font-weight:600;text-decoration:none">
+        <i class="fas fa-phone" style="font-size:10px;margin-right:3px"></i>{{ st.mobile_number }}
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Mark attendance form -->
+    <div class="att-form">
+      <form method="POST" action="/industry-supervisor/attendance/mark">
+        <input type="hidden" name="attachment_id" value="{{ t.id }}">
+        <div class="att-grid">
+          <div class="fg">
+            <label>Date</label>
+            <input type="date" name="date" value="{{ today }}" max="{{ today }}" required>
+          </div>
+          <div class="fg">
+            <label>Attendance Status</label>
+            <select name="status">
+              <option value="present">✅ Present</option>
+              <option value="absent">❌ Absent</option>
+              <option value="half-day">🕐 Half Day</option>
+              <option value="late">⏰ Late</option>
+            </select>
+          </div>
+          <div>
+            <button type="submit" class="btn-mark"><i class="fas fa-save"></i> Save</button>
+          </div>
+        </div>
+        <div class="fg" style="margin-top:8px">
+          <label>Notes (optional)</label>
+          <input type="text" name="notes" placeholder="e.g. Left early for medical appointment…" maxlength="200">
+        </div>
+      </form>
+    </div>
+
+    <!-- Attendance history -->
+    {% if att_dates %}
+    <div class="att-history">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Recent Attendance</div>
+      <div class="att-log">
+        {% for date, status in (att_dates.items()|sort(reverse=true))[:14] %}
+        <span class="att-chip att-{{ status.replace(' ','-') }}">
+          {% if status=='present' %}<i class="fas fa-check"></i>
+          {% elif status=='absent' %}<i class="fas fa-times"></i>
+          {% elif status=='half-day' %}<i class="fas fa-adjust"></i>
+          {% else %}<i class="fas fa-clock"></i>{% endif %}
+          {{ date[5:] }} — {{ status|title }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-calendar-times"></i>
+    <p style="font-size:15px;font-weight:700;color:#374151;margin-bottom:6px">No Active Trainees</p>
+    <p style="font-size:13px">{% if search %}No trainees match "{{ search }}".{% else %}Trainees on active industrial attachment at your company will appear here.{% endif %}</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

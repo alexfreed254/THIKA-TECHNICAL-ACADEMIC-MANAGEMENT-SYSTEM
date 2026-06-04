@@ -168,6 +168,40 @@
       gap: 8px;
     }
 
+    /* ── Supervisor registration form ── */
+    .sup-form { display: none; gap: 14px; }
+    .sup-form.visible { display: grid; }
+    .sup-form .field input,
+    .sup-form .field select {
+      width: 100%; padding: 14px 18px 14px 46px;
+      border-radius: 16px; border: 1px solid #e2e8f0;
+      background: #f8fafc; color: #0f172a; font-size: 0.95rem; font-family: inherit;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .sup-form .field select { padding-left: 18px; }
+    .sup-form .field input:focus, .sup-form .field select:focus {
+      outline: none; border-color: #0a0f1e; box-shadow: 0 0 0 4px rgba(10,15,30,.1);
+    }
+    .sup-form .f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media(max-width:520px){ .sup-form .f-grid { grid-template-columns: 1fr; } }
+    .sup-divider { display: flex; align-items: center; gap: 10px; color: #94a3b8; font-size: 0.82rem; }
+    .sup-divider::before, .sup-divider::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+    .btn-supervisor {
+      width: 100%; padding: 16px 18px; border: none; border-radius: 999px;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+      background: linear-gradient(135deg, #0a0f1e 0%, #0f1f40 100%);
+      color: #fff; cursor: pointer;
+      box-shadow: 0 18px 40px rgba(10,15,30,.22);
+      transition: transform .2s, filter .2s;
+    }
+    .btn-supervisor:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .sup-note {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;
+      padding: 12px 16px; font-size: 0.85rem; color: #92400e;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .sup-note i { flex-shrink: 0; margin-top: 2px; }
+
     .tab {
       border: 1px solid #dbeafe;
       border-radius: 999px;
@@ -373,8 +407,9 @@
     <section class="login-panel">
       <div class="top">
         <div class="tabs">
-          <button type="button" class="tab {% if (request.form.get('login_type', 'staff') == 'staff' or request.form.get('origin') == 'employer') and not request.args.get('apply') %}active{% endif %}" data-type="staff">Staff / Admin / Employer</button>
+          <button type="button" class="tab {% if request.form.get('login_type','staff') != 'student' and request.args.get('tab') != 'supervisor' %}active{% endif %}" data-type="staff">Staff / Admin</button>
           <button type="button" class="tab {% if request.form.get('login_type') == 'student' %}active{% endif %}" data-type="student">Trainee</button>
+          <button type="button" class="tab {% if request.args.get('tab') == 'supervisor' %}active{% endif %}" data-type="supervisor">Industry Supervisor</button>
         </div>
         <h2 id="welcomeHeading">Welcome back</h2>
         <p id="welcomeSubtext">Sign in to your account to continue.</p>
@@ -436,28 +471,130 @@
       <div class="login-footer">
         <span id="employerRegisterSpan" style="display:none">New employer? <a href="/employer/register">Create employer account</a></span>
       </div>
+
+      <!-- ══ Industry Supervisor Registration Panel ══ -->
+      <form method="POST" action="/auth/supervisor/register" class="sup-form" id="supervisorPanel">
+
+        <div class="sup-note">
+          <i class="fas fa-hard-hat"></i>
+          <div>Create your <strong>Industry Supervisor</strong> account to review trainee logbooks, mark attendance, and evaluate trainees attached to your company.</div>
+        </div>
+
+        <div class="sup-divider">Personal Details</div>
+
+        <div class="field">
+          <label>Full Name <span style="color:#dc2626">*</span></label>
+          <div class="input-wrap">
+            <i class="fas fa-user"></i>
+            <input type="text" name="full_name" placeholder="e.g. John Kamau" required maxlength="120">
+          </div>
+        </div>
+
+        <div class="sup-form f-grid" style="display:grid">
+          <div class="field">
+            <label>Email Address <span style="color:#dc2626">*</span></label>
+            <div class="input-wrap">
+              <i class="fas fa-envelope"></i>
+              <input type="email" name="email" placeholder="you@company.com" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>Mobile Number <span style="color:#dc2626">*</span></label>
+            <div class="input-wrap">
+              <i class="fas fa-phone"></i>
+              <input type="tel" name="mobile_number" placeholder="+254 7XX XXX XXX" required maxlength="20">
+            </div>
+          </div>
+        </div>
+
+        <div class="sup-divider">Company Details</div>
+
+        <div class="field">
+          <label>Company Name <span style="color:#dc2626">*</span></label>
+          <div class="input-wrap">
+            <i class="fas fa-building"></i>
+            <input type="text" name="company_name" placeholder="e.g. Safaricom PLC" required maxlength="150">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Your Role / Position in Company <span style="color:#dc2626">*</span></label>
+          <div class="input-wrap" style="position:relative">
+            <i class="fas fa-id-badge" style="position:absolute;top:50%;left:16px;transform:translateY(-50%);color:#94a3b8"></i>
+            <select name="role_in_company" required style="padding-left:46px">
+              <option value="">— Select your role —</option>
+              <option>Human Resources Manager</option>
+              <option>Technical Supervisor</option>
+              <option>Department Manager</option>
+              <option>IT Manager</option>
+              <option>Workshop Supervisor</option>
+              <option>Site Engineer</option>
+              <option>Training Coordinator</option>
+              <option>Operations Manager</option>
+              <option>Director / CEO</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sup-divider">Set Password</div>
+
+        <div class="sup-form f-grid" style="display:grid">
+          <div class="field">
+            <label>Password <span style="color:#dc2626">*</span></label>
+            <div class="input-wrap">
+              <i class="fas fa-lock"></i>
+              <input type="password" name="password" placeholder="Min 8 characters" required minlength="8">
+            </div>
+          </div>
+          <div class="field">
+            <label>Confirm Password <span style="color:#dc2626">*</span></label>
+            <div class="input-wrap">
+              <i class="fas fa-lock"></i>
+              <input type="password" name="confirm_password" placeholder="Repeat password" required minlength="8">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-supervisor">
+          <i class="fas fa-user-plus"></i> &nbsp;Create Supervisor Account
+        </button>
+
+        <p style="text-align:center;font-size:0.84rem;color:#64748b;margin-top:4px">
+          Already have an account? Use the <strong>Staff / Admin</strong> tab to sign in.
+        </p>
+
+      </form>
+
     </section>
   </div>
 
   <script>
     const tabs = document.querySelectorAll('.tab');
-    const staffField = document.getElementById('staffField');
-    const studentField = document.getElementById('studentField');
-    const loginType = document.getElementById('loginType');
-    const origin = document.getElementById('origin');
-    const loginForm = document.getElementById('loginForm');
+    const staffField     = document.getElementById('staffField');
+    const studentField   = document.getElementById('studentField');
+    const loginType      = document.getElementById('loginType');
+    const origin         = document.getElementById('origin');
+    const loginForm      = document.getElementById('loginForm');
     const welcomeHeading = document.getElementById('welcomeHeading');
     const welcomeSubtext = document.getElementById('welcomeSubtext');
-    const staffIcon = document.getElementById('staffIcon');
-
-    function showLoginForms() {
-      loginForm.style.display = 'grid';
-      welcomeHeading.style.display = '';
-      welcomeSubtext.style.display = '';
-    }
-
-    const forgotPwdLink = document.getElementById('forgotPwdLink');
+    const staffIcon      = document.getElementById('staffIcon');
+    const supervisorPanel = document.getElementById('supervisorPanel');
+    const forgotPwdLink   = document.getElementById('forgotPwdLink');
     const employerRegisterSpan = document.getElementById('employerRegisterSpan');
+
+    function showLogin() {
+      loginForm.style.display = 'grid';
+      supervisorPanel.style.display = 'none';
+      welcomeHeading.textContent = 'Welcome back';
+      welcomeSubtext.textContent = 'Sign in to your account to continue.';
+    }
+    function showSupervisor() {
+      loginForm.style.display = 'none';
+      supervisorPanel.style.display = 'grid';
+      welcomeHeading.textContent = 'Industry Supervisor';
+      welcomeSubtext.textContent = 'Create your account to manage trainee attachments.';
+    }
 
     function setStaffMode() {
       origin.value = 'auth';
@@ -466,7 +603,6 @@
       forgotPwdLink.style.display = 'none';
       employerRegisterSpan.style.display = 'none';
     }
-
     function setEmployerMode() {
       origin.value = 'employer';
       staffIcon.className = 'fas fa-building';
@@ -475,15 +611,17 @@
       employerRegisterSpan.style.display = '';
     }
 
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(item => item.classList.remove('active'));
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        tabs.forEach(function(t) { t.classList.remove('active'); });
         tab.classList.add('active');
-        const type = tab.dataset.type;
+        var type = tab.dataset.type;
         loginType.value = type;
 
-        {
-          showLoginForms();
+        if (type === 'supervisor') {
+          showSupervisor();
+        } else {
+          showLogin();
           if (type === 'student') {
             staffField.style.display = 'none';
             studentField.style.display = 'grid';
@@ -491,24 +629,30 @@
           } else {
             staffField.style.display = 'grid';
             studentField.style.display = 'none';
-            // Preserve the currently selected staff/employer radio
-            const checked = document.querySelector('input[name="staff_type"]:checked');
+            var checked = document.querySelector('input[name="staff_type"]:checked');
             if (checked) checked.click();
           }
         }
       });
     });
 
-    // Init visibility on page load
+    // Init on page load
     (function initVisibility() {
-      const checked = document.querySelector('input[name="staff_type"]:checked');
+      var urlTab = new URLSearchParams(window.location.search).get('tab');
+      if (urlTab === 'supervisor') {
+        // activate supervisor tab
+        tabs.forEach(function(t) { t.classList.remove('active'); });
+        document.querySelector('[data-type="supervisor"]').classList.add('active');
+        showSupervisor();
+        return;
+      }
+      var checked = document.querySelector('input[name="staff_type"]:checked');
       if (checked && checked.value === 'employer') {
         setEmployerMode();
       } else {
         setStaffMode();
       }
     })();
-
   </script>
 </body>
 </html>
