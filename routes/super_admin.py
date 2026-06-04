@@ -595,33 +595,104 @@ def attendance():
                            class_filter=class_filter)
 
 
-# ── Assessments Overview ───────────────────────────────────────────────────────
+# ── Trainees POE ───────────────────────────────────────────────────────────────
 
 @super_admin_bp.route("/assessments")
 @super_admin_required
 def assessments():
+    import os
+    from datetime import date as _date
     db = _svc()
-    status_filter = request.args.get("status", "")
+    supabase_url  = os.environ.get("SUPABASE_URL", "").strip()
+
     dept_filter   = request.args.get("department", "")
+    year_filter   = request.args.get("year", "")
+    class_filter  = request.args.get("class_id", "")
+    adm_filter    = request.args.get("admission_no", "").strip().upper()
+    status_filter = request.args.get("status", "")
 
-    query = db.table("assessments").select(
-        "*, user_profiles!assessments_student_id_fkey(full_name, admission_no), "
-        "units(name, code, department_id), classes(name)"
-    ).order("uploaded_at", desc=True).limit(300)
+    query = (db.table("assessments")
+               .select("id, status, script_file_path, script_file_name, script_file_size, "
+                       "uploaded_at, assessment_type, assessment_no, term, year, class_id, "
+                       "student:user_profiles!assessments_student_id_fkey(full_name, admission_no), "
+                       "units!inner(name, code, department_id, departments(name)), "
+                       "classes(name)")
+               .order("uploaded_at", desc=True)
+               .limit(500))
 
+    if dept_filter:
+        query = query.eq("units.department_id", dept_filter)
+    if year_filter:
+        try:
+            query = query.eq("year", int(year_filter))
+        except ValueError:
+            pass
+    if class_filter:
+        query = query.eq("class_id", class_filter)
     if status_filter:
         query = query.eq("status", status_filter)
 
     records = query.execute().data or []
 
-    if dept_filter:
-        records = [r for r in records if r.get("units", {}).get("department_id") == dept_filter]
+    if adm_filter:
+        records = [r for r in records
+                   if adm_filter in (r.get("student") or {}).get("admission_no", "").upper()]
+
+    # Batch-fetch evidence for all returned assessments
+    evidence_map = {}
+    if records:
+        a_ids = [r["id"] for r in records if r.get("id")]
+        try:
+            ev_rows = (db.table("evidence")
+                         .select("assessment_id, file_path, file_name, file_type")
+                         .in_("assessment_id", a_ids)
+                         .execute().data or [])
+            for ev in ev_rows:
+                aid = ev.get("assessment_id")
+                if not aid:
+                    continue
+                fp  = ev.get("file_path") or ""
+                ext = fp.rsplit(".", 1)[-1].lower() if "." in fp else "bin"
+                evidence_map.setdefault(aid, []).append({
+                    "url":  f"{supabase_url}/storage/v1/object/public/assessment-evidence/{fp}" if fp else "",
+                    "name": ev.get("file_name") or (fp.rsplit("/", 1)[-1] if fp else "file"),
+                    "ext":  ext,
+                    "type": ev.get("file_type") or "",
+                })
+        except Exception as e:
+            print(f"[assessments] evidence fetch: {e}")
+
+    def _fmt_size(b):
+        if not b:
+            return ""
+        for u in ["B", "KB", "MB", "GB"]:
+            if b < 1024:
+                return f"{b:.1f} {u}"
+            b /= 1024
+        return f"{b:.1f} GB"
+
+    for r in records:
+        fp = r.get("script_file_path") or ""
+        r["_script_url"]  = (f"{supabase_url}/storage/v1/object/public/assessment-scripts/{fp}"
+                             if fp else "")
+        r["_script_size"] = _fmt_size(r.get("script_file_size"))
+        r["_evidence"]    = evidence_map.get(r["id"], [])
 
     departments = db.table("departments").select("id, name").order("name").execute().data or []
+    classes     = db.table("classes").select("id, name").order("name").execute().data or []
+    cur_yr      = _date.today().year
+    years       = [str(y) for y in range(cur_yr, 2021, -1)]
 
     return render_template("super_admin/assessments.html",
-                           assessments=records, departments=departments,
-                           status_filter=status_filter, dept_filter=dept_filter)
+                           assessments=records,
+                           departments=departments,
+                           classes=classes,
+                           years=years,
+                           dept_filter=dept_filter,
+                           year_filter=year_filter,
+                           class_filter=class_filter,
+                           adm_filter=adm_filter,
+                           status_filter=status_filter)
 
 
 # ── Marks Overview ─────────────────────────────────────────────────────────────
