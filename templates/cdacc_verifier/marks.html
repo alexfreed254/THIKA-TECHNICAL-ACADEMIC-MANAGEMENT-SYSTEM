@@ -101,7 +101,7 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 
       </div>
 
-      <!-- Row 2: Year, Term, Actions -->
+      <!-- Row 2: Year, Term, Admission No, Actions -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
 
         <div>
@@ -123,14 +123,22 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
           </select>
         </div>
 
-        <div class="flex gap-2 md:col-span-2 items-end">
+        <div>
+          <label class="fl">Admission Number</label>
+          <input type="text" name="admission_no" class="fi"
+                 placeholder="e.g. TTTI/2025/001"
+                 value="{{ admission_no or '' }}">
+        </div>
+
+        <div class="flex gap-2 items-end">
           <button type="submit"
                   class="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">
-            <i class="fas fa-search"></i> Apply Filters
+            <i class="fas fa-search"></i> Apply
           </button>
           <a href="/cdacc-verifier/marks"
-             class="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl text-sm transition">
-            <i class="fas fa-times text-xs"></i> Reset
+             class="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl text-sm transition"
+             title="Reset all filters">
+            <i class="fas fa-times text-xs"></i>
           </a>
         </div>
 

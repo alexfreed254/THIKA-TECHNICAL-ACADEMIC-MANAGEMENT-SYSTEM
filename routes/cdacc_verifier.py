@@ -18,7 +18,6 @@ cdacc_verifier_bp = Blueprint("cdacc_verifier", __name__)
 @cdacc_verifier_required
 def dashboard():
     db = get_service_client()
-    user = current_user()
     stats = {}
     pending_assessments = []
     recent_verified = []
@@ -185,12 +184,13 @@ def _grade(obtained, max_m):
 @cdacc_verifier_required
 def marks():
     db = get_service_client()
-    dept_id    = request.args.get("dept_id", "")
-    year       = request.args.get("year", str(datetime.now().year))
-    term       = request.args.get("term", "")
-    class_id   = request.args.get("class_id", "")
-    unit_id    = request.args.get("unit_id", "")
-    trainer_id = request.args.get("trainer_id", "")
+    dept_id      = request.args.get("dept_id", "")
+    year         = request.args.get("year", str(datetime.now().year))
+    term         = request.args.get("term", "")
+    class_id     = request.args.get("class_id", "")
+    unit_id      = request.args.get("unit_id", "")
+    trainer_id   = request.args.get("trainer_id", "")
+    admission_no = request.args.get("admission_no", "").strip()
 
     marks_list = []
     departments = []
@@ -258,6 +258,13 @@ def marks():
                     r["unit"].get("name", ""),
                 ))
 
+                # Filter by admission number (case-insensitive substring)
+                if admission_no:
+                    marks_list = [
+                        r for r in marks_list
+                        if admission_no.lower() in (r["student"].get("admission_no") or "").lower()
+                    ]
+
         # Filter dropdowns
         if dept_id:
             classes  = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
@@ -284,6 +291,7 @@ def marks():
                            units=units, trainers=trainers,
                            year=year, term=term, dept_id=dept_id,
                            class_id=class_id, unit_id=unit_id, trainer_id=trainer_id,
+                           admission_no=admission_no,
                            distinct_students=distinct_students, pass_rate=pass_rate)
 
 
