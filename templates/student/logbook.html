@@ -461,36 +461,40 @@
             </span>
           </div>
 
-          <!-- Evidence -->
-          {% set ev = entry.get('evidence_urls') or [] %}
-          {% if ev %}
-          <div class="evidence-gallery">
-            {% for path in ev %}
-            {% set ext = path.split('.')[-1].lower() %}
-            {% if ext in ('jpg','jpeg','png','webp') %}
-              <img class="ev-thumb"
-                   src="{{ SUPABASE_URL }}/storage/v1/object/public/assessment-evidence/{{ path }}"
-                   alt="Evidence photo"
-                   onclick="window.open(this.src,'_blank')">
-            {% elif ext in ('mp4','mov','avi','webm') %}
-              <a href="{{ SUPABASE_URL }}/storage/v1/object/public/assessment-evidence/{{ path }}"
-                 target="_blank" class="ev-video-badge">
-                <i class="fas fa-play-circle"></i> Video {{ loop.index }}
-              </a>
+          <!-- Evidence (horizontal row) -->
+          {% set ev = entry._evidence or [] %}
+          <div class="evidence-gallery" style="margin-top:10px;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-right:4px;flex-shrink:0"><i class="fas fa-paperclip"></i> Evidence</span>
+            {% if ev %}
+              {% for item in ev %}
+                {% if item.ext in ['jpg','jpeg','png','webp','gif'] %}
+                <a href="{{ item.url }}" target="_blank" onclick="window.open(this.href,'_blank');return true" title="{{ item.name }}">
+                  <img class="ev-thumb" src="{{ item.url }}" alt="{{ item.name }}" loading="lazy" onerror="this.style.display='none'">
+                </a>
+                {% elif item.ext in ['mp4','mov','avi','webm','mkv'] %}
+                <a href="{{ item.url }}" target="_blank" class="ev-video-badge" title="{{ item.name }}">
+                  <i class="fas fa-play-circle"></i> Video
+                </a>
+                {% elif item.ext in ['mp3','wav','ogg','m4a','aac','flac'] %}
+                <a href="{{ item.url }}" target="_blank" class="ev-video-badge" style="background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe" title="{{ item.name }}">
+                  <i class="fas fa-headphones"></i> Audio
+                </a>
+                {% elif item.ext == 'pdf' %}
+                <a href="{{ item.url }}" target="_blank" class="ev-pdf-badge" title="{{ item.name }}">
+                  <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                {% else %}
+                <a href="{{ item.url }}" target="_blank" class="ev-pdf-badge" style="background:#f3f4f6;color:#374151;border-color:#d1d5db" title="{{ item.name }}">
+                  <i class="fas fa-file"></i> File
+                </a>
+                {% endif %}
+              {% endfor %}
             {% else %}
-              <a href="{{ SUPABASE_URL }}/storage/v1/object/public/assessment-evidence/{{ path }}"
-                 target="_blank" class="ev-pdf-badge">
-                <i class="fas fa-file-alt"></i> File {{ loop.index }}
-              </a>
+            <span style="font-size:12px;color:#f59e0b">
+              <i class="fas fa-exclamation-triangle" style="margin-right:4px"></i>No evidence uploaded
+            </span>
             {% endif %}
-            {% endfor %}
           </div>
-          {% else %}
-          <div style="font-size:12px;color:#f59e0b;margin-top:8px">
-            <i class="fas fa-exclamation-triangle" style="margin-right:4px"></i>
-            No evidence uploaded for this entry
-          </div>
-          {% endif %}
 
           <!-- Supervisor / Trainer comments -->
           {% if entry.get('mentor_comments') %}

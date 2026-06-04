@@ -320,43 +320,44 @@
           {% endif %}
         </div>
 
-        <!-- Evidence -->
-        <div style="padding:10px 16px;border-top:1px solid #f9fafb;background:#fafbfc">
-          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
+        <!-- Evidence (horizontal row) -->
+        <div style="padding:10px 16px;border-top:1px solid #f9fafb;background:#fafbfd;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <span style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;margin-right:2px;flex-shrink:0">
             <i class="fas fa-paperclip"></i> Evidence
-            <span style="font-weight:400;color:#9ca3af">({{ ev_list|length }} file{{ 's' if ev_list|length!=1 }})</span>
-          </div>
+          </span>
           {% if ev_list %}
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">
             {% for ev in ev_list %}
               {% if ev.ext in ['jpg','jpeg','png','webp','gif'] %}
-              <a href="{{ ev.url }}" target="_blank">
+              <a href="{{ ev.url }}" target="_blank" onclick="openLbLightbox('{{ ev.url }}');return false" title="{{ ev.name }}">
                 <img src="{{ ev.url }}" alt="{{ ev.name }}"
-                     style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;cursor:pointer;transition:transform .15s"
-                     onmouseover="this.style.transform='scale(1.07)'" onmouseout="this.style.transform='scale(1)'"
-                     onclick="openLbLightbox('{{ ev.url }}');return false">
+                     style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;cursor:pointer;transition:transform .15s;flex-shrink:0"
+                     onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'"
+                     loading="lazy" onerror="this.style.display='none'">
               </a>
-              {% elif ev.ext in ['mp4','mov','avi','webm'] %}
-              <video src="{{ ev.url }}" controls
-                     style="width:160px;height:90px;border-radius:8px;border:1px solid #e5e7eb;background:#000"
-                     preload="metadata"></video>
-              {% elif ev.ext in ['mp3','wav','ogg','m4a'] %}
-              <audio src="{{ ev.url }}" controls style="width:220px"></audio>
+              {% elif ev.ext in ['mp4','mov','avi','webm','mkv'] %}
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
+                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;color:#15803d;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+                <i class="fas fa-play-circle"></i> Video
+              </a>
+              {% elif ev.ext in ['mp3','wav','ogg','m4a','aac','flac'] %}
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
+                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:7px;color:#6d28d9;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+                <i class="fas fa-headphones"></i> Audio
+              </a>
               {% elif ev.ext == 'pdf' %}
-              <a href="{{ ev.url }}" target="_blank"
-                 style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#b91c1c;font-size:12px;font-weight:700;text-decoration:none">
-                <i class="fas fa-file-pdf"></i> {{ ev.name[:18] }}{% if ev.name|length>18 %}…{% endif %}
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
+                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;color:#b91c1c;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+                <i class="fas fa-file-pdf"></i> PDF
               </a>
               {% else %}
-              <a href="{{ ev.url }}" target="_blank"
-                 style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;color:#374151;font-size:12px;font-weight:700;text-decoration:none">
-                <i class="fas fa-file"></i> {{ ev.name[:18] }}{% if ev.name|length>18 %}…{% endif %}
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
+                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:7px;color:#374151;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+                <i class="fas fa-file"></i> File
               </a>
               {% endif %}
             {% endfor %}
-          </div>
           {% else %}
-          <span style="font-size:12px;color:#d1d5db;font-style:italic"><i class="fas fa-image" style="margin-right:4px"></i>No evidence attached</span>
+          <span style="font-size:12px;color:#d1d5db;font-style:italic"><i class="fas fa-minus" style="font-size:10px;margin-right:3px"></i>No evidence attached</span>
           {% endif %}
         </div>
 

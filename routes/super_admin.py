@@ -928,18 +928,59 @@ def attachments():
 @super_admin_bp.route("/logbooks")
 @super_admin_required
 def logbooks():
+    import os
     db = _svc()
-    dept_filter = request.args.get("department", "")
+    supabase_url  = os.environ.get("SUPABASE_URL", "").strip()
+    dept_filter   = request.args.get("department", "")
+    status_filter = request.args.get("status", "")
+    adm_filter    = request.args.get("admission_no", "").strip().upper()
+
     query = (db.table("digital_logbook")
-               .select("*, user_profiles!digital_logbook_student_id_fkey(full_name, admission_no), "
-                       "units(name, code)")
+               .select("id, student_id, log_date, entry_time, tasks_performed, "
+                       "skills_applied, hours_worked, challenges_encountered, "
+                       "achievements, mentor_approval_status, mentor_comments, "
+                       "trainer_comments, evidence_urls, created_at, "
+                       "student:user_profiles!digital_logbook_student_id_fkey"
+                       "(full_name, admission_no), "
+                       "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
+                       "(companies(name))")
                .order("log_date", desc=True)
-               .limit(300))
+               .limit(500))
+
+    if status_filter:
+        query = query.eq("mentor_approval_status", status_filter)
+
     records = query.execute().data or []
+
+    # Department filter via enrolled students
+    if dept_filter:
+        enr = (db.table("enrollments")
+                 .select("student_id, classes!inner(department_id)")
+                 .eq("classes.department_id", dept_filter)
+                 .execute().data or [])
+        dept_sids = {e["student_id"] for e in enr}
+        records = [r for r in records if r.get("student_id") in dept_sids]
+
+    if adm_filter:
+        records = [r for r in records
+                   if adm_filter in (r.get("student") or {}).get("admission_no", "").upper()]
+
+    for entry in records:
+        ev_paths = entry.get("evidence_urls") or []
+        entry["_evidence"] = [
+            {
+                "url":  f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                "ext":  p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                "name": p.rsplit("/", 1)[-1],
+            }
+            for p in ev_paths if p
+        ]
+
     departments = db.table("departments").select("id, name").order("name").execute().data or []
     return render_template("super_admin/logbooks.html",
                            logbooks=records, departments=departments,
-                           dept_filter=dept_filter)
+                           dept_filter=dept_filter, status_filter=status_filter,
+                           adm_filter=adm_filter)
 
 
 # ── GIS Placements & Logbook (system-wide) ────────────────────────────────────

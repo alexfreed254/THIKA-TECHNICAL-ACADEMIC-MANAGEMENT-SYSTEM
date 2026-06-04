@@ -2343,6 +2343,9 @@ def logbook():
     weeks_grouped = {}  # week_start_str → { label, entries, week_status }
 
     if active_attachment:
+        import os as _os
+        _supabase_url = _os.environ.get("SUPABASE_URL", "").strip()
+
         logbooks = (db.table("digital_logbook")
                    .select("*")
                    .eq("student_id", student_id)
@@ -2350,6 +2353,17 @@ def logbook():
                    .order("log_date", desc=True)
                    .order("entry_time", desc=False)
                    .execute().data or [])
+
+        for entry in logbooks:
+            ev_paths = entry.get("evidence_urls") or []
+            entry["_evidence"] = [
+                {
+                    "url":  f"{_supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                    "ext":  p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                    "name": p.rsplit("/", 1)[-1],
+                }
+                for p in ev_paths if p
+            ]
 
         # Group by week (Monday–Sunday)
         week_buckets = defaultdict(list)
