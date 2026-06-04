@@ -429,15 +429,12 @@ def supervisor_register():
             company_id = co_res.data[0]["id"]
 
         # Link supervisor to company via mentors table
-        db.table("mentors").insert({
-            "user_id":    user_id,
-            "company_id": company_id,
-        }).execute()
-
-        # Store role_in_company in user_profiles bio/notes field
-        db.table("user_profiles").update({
-            "bio": role_in_company
-        }).eq("id", user_id).execute()
+        # Try to include role_in_company if the column exists, fall back silently
+        mentor_payload = {"user_id": user_id, "company_id": company_id}
+        try:
+            db.table("mentors").insert({**mentor_payload, "role_title": role_in_company}).execute()
+        except Exception:
+            db.table("mentors").insert(mentor_payload).execute()
 
         flash(
             f"Account created successfully! Welcome, {full_name}. "
