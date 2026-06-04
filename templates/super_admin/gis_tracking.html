@@ -1,101 +1,94 @@
-{% extends "dept_admin/base.html" %}
+{% extends "super_admin/base.html" %}
 {% block title %}GIS Placements & Logbook{% endblock %}
 {% block page_title %}GIS Placements & Industrial Attachments{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://cdn.tailwindcss.com"></script>
 {% endblock %}
 
 {% block extra_style %}
-<style>
-  #gis-app { font-family: 'Inter', sans-serif; }
+#gis-app { font-family: 'Inter', sans-serif; }
 
-  /* ── Tab nav ── */
-  .gtab-active { background:#1565c0 !important; color:#fff !important; border-color:#1565c0 !important; }
+.gtab-active { background:#1565c0 !important; color:#fff !important; border-color:#1565c0 !important; }
 
-  /* ── Stat chips ── */
-  .schip {
-    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-    padding:16px 20px; display:flex; align-items:center; gap:14px; flex:1; min-width:130px;
-  }
-  .schip-icon { width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
-  .schip-num  { font-size:26px;font-weight:800;color:#111827;line-height:1; }
-  .schip-lbl  { font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
+.schip {
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+  padding:16px 20px; display:flex; align-items:center; gap:14px; flex:1; min-width:130px;
+}
+.schip-icon { width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
+.schip-num  { font-size:26px;font-weight:800;color:#111827;line-height:1; }
+.schip-lbl  { font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
 
-  /* ── Map ── */
-  #map { height:480px; border-radius:12px; border:1px solid #e5e7eb; }
+#map { height:480px; border-radius:12px; border:1px solid #e5e7eb; }
 
-  /* ── Filters ── */
-  .filter-wrap {
-    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
-    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-    padding:16px 20px; margin-bottom:20px;
-  }
-  .filter-wrap input, .filter-wrap select {
-    padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
-    font-size:13px; background:#f9fafb; outline:none;
-    transition:border-color .2s;
-  }
-  .filter-wrap input:focus, .filter-wrap select:focus { border-color:#1565c0; background:#fff; }
-  .filter-wrap input[type=text] { min-width:200px; flex:1; }
+.filter-wrap {
+  display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+  padding:16px 20px; margin-bottom:20px;
+}
+.filter-wrap input, .filter-wrap select {
+  padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
+  font-size:13px; background:#f9fafb; outline:none; transition:border-color .2s;
+}
+.filter-wrap input:focus, .filter-wrap select:focus { border-color:#1565c0; background:#fff; }
+.filter-wrap input[type=text] { min-width:200px; flex:1; }
 
-  /* ── Table shared ── */
-  .data-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
-  .data-tbl  { width:100%; border-collapse:collapse; }
-  .data-tbl thead { background:#f0f7ff; }
-  .data-tbl th {
-    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
-    color:#1565c0; text-transform:uppercase; letter-spacing:.05em;
-    border-bottom:2px solid #dbeafe; white-space:nowrap;
-  }
-  .data-tbl td { padding:12px 14px; font-size:13px; color:#374151; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
-  .data-tbl tr:last-child td { border-bottom:none; }
-  .data-tbl tr:hover td { background:#f8fbff; }
-  .sname { font-weight:600; color:#111827; }
-  .sadm  { font-size:11px; color:#9ca3af; margin-top:2px; }
+.data-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+.data-tbl  { width:100%; border-collapse:collapse; }
+.data-tbl thead { background:#f0f7ff; }
+.data-tbl th {
+  padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+  color:#1565c0; text-transform:uppercase; letter-spacing:.05em;
+  border-bottom:2px solid #dbeafe; white-space:nowrap;
+}
+.data-tbl td { padding:12px 14px; font-size:13px; color:#374151; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+.data-tbl tr:last-child td { border-bottom:none; }
+.data-tbl tr:hover td { background:#f8fbff; }
+.sname { font-weight:600; color:#111827; }
+.sadm  { font-size:11px; color:#9ca3af; margin-top:2px; }
 
-  /* Status badges */
-  .badge { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
-  .b-active   { background:#dbeafe; color:#1d4ed8; }
-  .b-approved { background:#dcfce7; color:#15803d; }
-  .b-pending  { background:#fef3c7; color:#b45309; }
-  .b-terminated { background:#fee2e2; color:#b91c1c; }
-  .b-lb-approved { background:#dcfce7; color:#15803d; }
-  .b-lb-pending  { background:#fef3c7; color:#b45309; }
-  .b-lb-rejected { background:#fee2e2; color:#b91c1c; }
+.badge { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
+.b-active   { background:#dbeafe; color:#1d4ed8; }
+.b-approved { background:#dcfce7; color:#15803d; }
+.b-pending  { background:#fef3c7; color:#b45309; }
+.b-terminated { background:#fee2e2; color:#b91c1c; }
+.b-lb-approved { background:#dcfce7; color:#15803d; }
+.b-lb-pending  { background:#fef3c7; color:#b45309; }
+.b-lb-rejected { background:#fee2e2; color:#b91c1c; }
 
-  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
-  .dot-active   { background:#3b82f6; }
-  .dot-approved { background:#22c55e; }
-  .dot-pending  { background:#f59e0b; }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+.dot-active   { background:#3b82f6; }
+.dot-approved { background:#22c55e; }
+.dot-pending  { background:#f59e0b; }
 
-  /* Live location badge */
-  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;
-              animation:pulseDot 1.4s infinite; }
-  @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+.live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;
+            animation:pulseDot 1.4s infinite; }
+@keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
 
-  /* Logbook entry detail cell */
-  .lb-text { font-size:12px; color:#374151; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lb-text { font-size:12px; color:#374151; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.map-legend { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 16px; font-size:12px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+.legend-item { display:flex; align-items:center; gap:6px; font-weight:600; color:#374151; }
+.legend-circle-company { width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 2px #3b82f6; }
+.legend-circle-live    { width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px #ef4444; }
 
-  /* Map legend */
-  .map-legend { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 16px; font-size:12px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
-  .legend-item { display:flex; align-items:center; gap:6px; font-weight:600; color:#374151; }
-  .legend-circle-company { width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 2px #3b82f6; }
-  .legend-circle-live    { width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px #ef4444; }
+.empty-state { padding:48px 24px; text-align:center; color:#9ca3af; }
+.empty-state i { font-size:36px; display:block; margin-bottom:10px; }
 
-  .empty-state { padding:48px 24px; text-align:center; color:#9ca3af; }
-  .empty-state i { font-size:36px; display:block; margin-bottom:10px; }
+/* Export panel */
+.export-panel {
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+  padding:14px 20px; margin-bottom:20px;
+  display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
+}
+.export-panel label { font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:4px; }
+.export-panel select, .export-panel input { padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; background:#f9fafb; }
+.btn-export { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; }
+.btn-excel { background:#1a7f3c; color:#fff; }
+.btn-pdf   { background:#c0392b; color:#fff; }
 
-  /* Export panel */
-  .btn-export { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; }
-  .btn-excel { background:#1a7f3c; color:#fff; }
-  .btn-pdf   { background:#c0392b; color:#fff; }
-
-  @media(max-width:640px) {
-    .data-tbl th:nth-child(n+4), .data-tbl td:nth-child(n+4) { display:none; }
-  }
-</style>
+@media(max-width:640px) {
+  .data-tbl th:nth-child(n+5), .data-tbl td:nth-child(n+5) { display:none; }
+}
 {% endblock %}
 
 {% block content %}
@@ -125,7 +118,7 @@
     <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:24px">
       <div class="schip">
         <div class="schip-icon" style="background:#dbeafe"><i class="fas fa-users" style="color:#1d4ed8"></i></div>
-        <div><div class="schip-num">{{ total_students }}</div><div class="schip-lbl">Dept Students</div></div>
+        <div><div class="schip-num">{{ total_students }}</div><div class="schip-lbl">Total Students</div></div>
       </div>
       <div class="schip">
         <div class="schip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
@@ -154,13 +147,31 @@
 
     <!-- Filter bar -->
     <div class="filter-wrap">
-      <input type="text" id="gis-search" placeholder="Search student or company…" oninput="filterGIS()">
+      <input type="text" id="gis-search" placeholder="Search student, company or department…" oninput="filterGIS()">
+      <select id="gis-dept" onchange="filterGIS()">
+        <option value="all">All Departments</option>
+        {% for d in departments %}
+        <option value="{{ d.name|lower }}" {% if dept_filter == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
       <select id="gis-status" onchange="filterGIS()">
         <option value="all">All Statuses</option>
         <option value="active">Active</option>
         <option value="approved">Approved</option>
         <option value="pending">Pending</option>
       </select>
+      <!-- Reload with server-side dept filter -->
+      <form method="get" style="display:flex;gap:8px;align-items:flex-end">
+        <select name="department" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#f9fafb">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+          <option value="{{ d.id }}" {% if dept_filter == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" style="padding:8px 14px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+          <i class="fas fa-filter"></i> Filter Dept
+        </button>
+      </form>
     </div>
 
     <!-- Leaflet map -->
@@ -178,6 +189,7 @@
           <thead>
             <tr>
               <th>Trainee</th>
+              <th>Department</th>
               <th>Company</th>
               <th>City</th>
               <th>Unit</th>
@@ -191,11 +203,14 @@
             {% set co = p.companies or {} %}
             {% set st = p.student   or {} %}
             {% set un = p.units     or {} %}
-            <tr data-status="{{ p.status }}" data-search="{{ st.get('full_name','')|lower }} {{ co.get('name','')|lower }}">
+            <tr data-status="{{ p.status }}"
+                data-dept="{{ p._department|lower }}"
+                data-search="{{ st.get('full_name','')|lower }} {{ co.get('name','')|lower }} {{ p._department|lower }}">
               <td>
                 <div class="sname">{{ st.get('full_name','—') }}</div>
                 <div class="sadm">{{ st.get('admission_no','') }}</div>
               </td>
+              <td style="font-size:12px;color:#6b7280">{{ p._department or '—' }}</td>
               <td style="font-weight:600">{{ co.get('name','—') }}</td>
               <td style="color:#6b7280;font-size:12px">{{ co.get('city','') }}</td>
               <td>
@@ -216,7 +231,7 @@
         </table>
       </div>
       {% else %}
-      <div class="empty-state"><i class="fas fa-map-pin"></i><p>No placements found for your department.</p></div>
+      <div class="empty-state"><i class="fas fa-map-pin"></i><p>No active placements found.</p></div>
       {% endif %}
     </div>
   </section>
@@ -230,7 +245,6 @@
     </div>
     {% endif %}
 
-    <!-- Filter bar -->
     <div class="filter-wrap" style="align-items:flex-end">
       <input type="text"  id="lb-search"    placeholder="Search trainee name or admission no…" oninput="filterLogbook()" style="flex:2;min-width:200px">
       <select id="lb-status" onchange="filterLogbook()">
@@ -267,8 +281,6 @@
            data-status="{{ lb_st }}"
            data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}"
            data-date="{{ e.get('log_date','') }}">
-
-        <!-- Entry header -->
         <div style="padding:12px 16px;border-bottom:1px solid #f3f4f6;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between">
           <div>
             <div style="font-weight:700;font-size:14px;color:#111827">{{ st.get('full_name','Unknown') }}</div>
@@ -278,16 +290,8 @@
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">
               <span style="font-size:13px;font-weight:600;color:#374151"><i class="fas fa-calendar-day" style="color:#9ca3af;font-size:11px"></i> {{ e.get('log_date','—') }}</span>
-              {% if e.get('entry_time') %}
-              <span style="background:#ede9fe;color:#6d28d9;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700">
-                <i class="fas fa-clock"></i> {{ e.entry_time }}
-              </span>
-              {% endif %}
-              {% if e.get('hours_worked') %}
-              <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">
-                <i class="fas fa-hourglass-half"></i> {{ e.hours_worked }}h
-              </span>
-              {% endif %}
+              {% if e.get('entry_time') %}<span style="background:#ede9fe;color:#6d28d9;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700"><i class="fas fa-clock"></i> {{ e.entry_time }}</span>{% endif %}
+              {% if e.get('hours_worked') %}<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700"><i class="fas fa-hourglass-half"></i> {{ e.hours_worked }}h</span>{% endif %}
             </div>
           </div>
           <span class="badge b-lb-{{ lb_st }}">
@@ -295,8 +299,6 @@
             {{ lb_st|title }}
           </span>
         </div>
-
-        <!-- Activity fields -->
         <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div>
             <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-tasks" style="color:#6d28d9"></i> Tasks Performed</div>
@@ -319,95 +321,46 @@
           </div>
           {% endif %}
         </div>
-
-        <!-- Evidence -->
-        <div style="padding:10px 16px;border-top:1px solid #f9fafb;background:#fafbfc">
-          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
-            <i class="fas fa-paperclip"></i> Evidence
-            <span style="font-weight:400;color:#9ca3af">({{ ev_list|length }} file{{ 's' if ev_list|length!=1 }})</span>
-          </div>
-          {% if ev_list %}
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">
-            {% for ev in ev_list %}
-              {% if ev.ext in ['jpg','jpeg','png','webp','gif'] %}
-              <a href="{{ ev.url }}" target="_blank">
-                <img src="{{ ev.url }}" alt="{{ ev.name }}"
-                     style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;cursor:pointer;transition:transform .15s"
-                     onmouseover="this.style.transform='scale(1.07)'" onmouseout="this.style.transform='scale(1)'"
-                     onclick="openLbLightbox('{{ ev.url }}');return false">
-              </a>
-              {% elif ev.ext in ['mp4','mov','avi','webm'] %}
-              <video src="{{ ev.url }}" controls
-                     style="width:160px;height:90px;border-radius:8px;border:1px solid #e5e7eb;background:#000"
-                     preload="metadata"></video>
-              {% elif ev.ext in ['mp3','wav','ogg','m4a'] %}
-              <audio src="{{ ev.url }}" controls style="width:220px"></audio>
-              {% elif ev.ext == 'pdf' %}
-              <a href="{{ ev.url }}" target="_blank"
-                 style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#b91c1c;font-size:12px;font-weight:700;text-decoration:none">
-                <i class="fas fa-file-pdf"></i> {{ ev.name[:18] }}{% if ev.name|length>18 %}…{% endif %}
-              </a>
-              {% else %}
-              <a href="{{ ev.url }}" target="_blank"
-                 style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;color:#374151;font-size:12px;font-weight:700;text-decoration:none">
-                <i class="fas fa-file"></i> {{ ev.name[:18] }}{% if ev.name|length>18 %}…{% endif %}
-              </a>
-              {% endif %}
-            {% endfor %}
-          </div>
-          {% else %}
-          <span style="font-size:12px;color:#d1d5db;font-style:italic"><i class="fas fa-image" style="margin-right:4px"></i>No evidence attached</span>
-          {% endif %}
-        </div>
-
-        <!-- Mentor / trainer comments -->
         {% if e.get('mentor_comments') or e.get('trainer_comments') %}
         <div style="padding:8px 16px 12px;border-top:1px solid #f9fafb">
           {% if e.get('mentor_comments') %}
           <div style="font-size:12px;color:#6b7280;font-style:italic;margin-bottom:4px">
-            <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:4px"></i>
-            <strong>Supervisor:</strong> "{{ e.mentor_comments }}"
+            <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:4px"></i><strong>Supervisor:</strong> "{{ e.mentor_comments }}"
           </div>
           {% endif %}
           {% if e.get('trainer_comments') %}
           <div style="font-size:12px;color:#6b7280;font-style:italic">
-            <i class="fas fa-chalkboard-teacher" style="color:#6d28d9;margin-right:4px"></i>
-            <strong>Trainer:</strong> "{{ e.trainer_comments }}"
+            <i class="fas fa-chalkboard-teacher" style="color:#6d28d9;margin-right:4px"></i><strong>Trainer:</strong> "{{ e.trainer_comments }}"
           </div>
           {% endif %}
         </div>
         {% endif %}
-
       </div>
       {% endfor %}
     </div>
-
     <div id="lb-no-results" style="display:none" class="empty-state">
       <i class="fas fa-search"></i><p>No entries match your filters.</p>
     </div>
-
     {% else %}
     <div class="empty-state">
       <i class="fas fa-book"></i>
-      <p>No logbook entries found for trainees in your department.</p>
-      <p style="font-size:12px;margin-top:6px">Trainees submit entries from Trainee Dashboard &rarr; Digital Logbook every 3 hours.</p>
+      <p>No logbook entries found.</p>
     </div>
     {% endif %}
-
   </section>
 
   <!-- ══════════════════════════ EXPORT TAB ══════════════════════════ -->
   <section id="sec-export" class="hidden">
-    <div class="data-card" style="max-width:600px">
+    <div class="data-card" style="max-width:680px">
       <div style="padding:18px 22px;border-bottom:1px solid #f3f4f6">
         <div style="font-size:16px;font-weight:700;color:#0d2167"><i class="fas fa-file-download" style="color:#1565c0;margin-right:8px"></i>Export Attachment Report</div>
-        <div style="font-size:13px;color:#6b7280;margin-top:4px">Download your department's trainee attachment records for a specific period.</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px">Download trainee attachment records for a specific period as Excel or PDF.</div>
       </div>
-      <div style="padding:22px;display:flex;flex-direction:column;gap:16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <form id="export-form" style="padding:22px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
           <div>
             <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Attachment Period</label>
-            <select id="exp-period" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+            <select id="exp-period" name="period" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
               <option value="">Full Year</option>
               <option value="1">January – April</option>
               <option value="2">May – August</option>
@@ -416,18 +369,28 @@
           </div>
           <div>
             <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Year</label>
-            <select id="exp-year" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+            <select id="exp-year" name="year" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+              {% set cur_year = namespace(y=2026) %}
               {% for y in range(2024, 2028) %}
               <option value="{{ y }}" {% if y == 2026 %}selected{% endif %}>{{ y }}</option>
               {% endfor %}
             </select>
           </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Department</label>
+            <select id="exp-dept" name="department" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+              <option value="">All Departments</option>
+              {% for d in departments %}
+              <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
         <div style="display:flex;gap:12px;margin-top:4px">
-          <a href="#" onclick="doExport('excel')" class="btn-export btn-excel">
+          <a id="btn-excel" href="#" onclick="doExport('excel')" class="btn-export btn-excel">
             <i class="fas fa-file-excel"></i> Download Excel
           </a>
-          <a href="#" onclick="doExport('pdf')" class="btn-export btn-pdf">
+          <a id="btn-pdf" href="#" onclick="doExport('pdf')" class="btn-export btn-pdf">
             <i class="fas fa-file-pdf"></i> Download PDF
           </a>
         </div>
@@ -435,7 +398,7 @@
           <i class="fas fa-info-circle"></i>
           <strong>Columns included:</strong> Admission No, Full Name, Trainee Phone, Company Attached, Location/Address, Supervisor Name, Supervisor Phone, Start Date, End Date, Status.
         </div>
-      </div>
+      </form>
     </div>
   </section>
 
@@ -461,7 +424,10 @@ function gTab(tab) {
 function doExport(fmt) {
   var period = document.getElementById('exp-period').value;
   var year   = document.getElementById('exp-year').value;
-  window.location.href = '/dept-admin/gis-tracking/export?format=' + fmt + '&period=' + period + '&year=' + year;
+  var dept   = document.getElementById('exp-dept').value;
+  var url = '/super-admin/gis-tracking/export?format=' + fmt +
+            '&period=' + period + '&year=' + year + '&department=' + dept;
+  window.location.href = url;
   return false;
 }
 
@@ -469,15 +435,14 @@ function doExport(fmt) {
 var PLACEMENTS   = {{ placements    | tojson | safe }};
 var LIVE_LOCS    = {{ live_locations | tojson | safe }};
 
-var map = L.map('map').setView([-1.038, 37.083], 11);
+var map = L.map('map').setView([-1.038, 37.083], 9);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
 }).addTo(map);
 
-var bounds    = [];
+var bounds = [];
 var allMarkers = [];
 
-/* Company / placement site markers */
 PLACEMENTS.forEach(function(p) {
   var co  = p.companies || {};
   var st  = p.student   || {};
@@ -496,39 +461,33 @@ PLACEMENTS.forEach(function(p) {
 
   marker.bindPopup(
     '<div style="font-family:Inter,sans-serif;min-width:200px">' +
-    '<b style="font-size:14px">'+escHtml(co.name || '—')+'</b>' +
-    '<div style="color:#6b7280;font-size:12px;margin-top:2px">'+escHtml(co.city || '')+'</div>' +
+    '<b style="font-size:14px">'+escHtml(co.name||'—')+'</b>' +
+    '<div style="color:#6b7280;font-size:12px;margin-top:2px">'+escHtml(co.city||'')+' '+escHtml(co.address||'')+'</div>' +
     '<hr style="margin:8px 0;border-color:#f3f4f6">' +
     '<b>Student:</b> '+escHtml(st.full_name||'—')+' ('+escHtml(st.admission_no||'')+')<br>' +
+    '<b>Department:</b> '+escHtml(p._department||'—')+'<br>' +
     '<b>Unit:</b> '+escHtml(un.code||'')+' '+escHtml(un.name||'')+'<br>' +
     '<b>Status:</b> '+p.status+'<br>' +
     '<b>Period:</b> '+(p.start_date||'—')+' → '+(p.end_date||'—') +
     '</div>'
   );
   bounds.push([lat, lng]);
-  allMarkers.push({ marker: marker, status: p.status,
-                    search: (st.full_name||'').toLowerCase()+' '+(co.name||'').toLowerCase() });
+  allMarkers.push({ marker: marker, status: p.status, dept: (p._department||'').toLowerCase(),
+                    search: (st.full_name||'').toLowerCase()+' '+(co.name||'').toLowerCase()+' '+(p._department||'').toLowerCase() });
 });
-
-/* Live check-in markers */
-var liveByStudent = {};
-LIVE_LOCS.forEach(function(loc) { liveByStudent[loc.student_id] = loc; });
 
 LIVE_LOCS.forEach(function(loc) {
   var lat = parseFloat(loc.latitude);
   var lng = parseFloat(loc.longitude);
   if (!lat || !lng) return;
-  var st  = loc.student || {};
-
+  var st = loc.student || {};
   var liveIcon = L.divIcon({
     className: '',
     html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #ef4444;animation:pulseDot 1.4s infinite"></div>',
     iconSize: [16, 16], iconAnchor: [8, 8]
   });
-
   var ci = loc.check_in_time ? loc.check_in_time.replace('T',' ').slice(0,16) : '—';
   var co = loc.check_out_time ? loc.check_out_time.replace('T',' ').slice(0,16) : 'Still checked in';
-
   var m = L.marker([lat, lng], { icon: liveIcon }).addTo(map);
   m.bindPopup(
     '<div style="font-family:Inter,sans-serif;min-width:190px">' +
@@ -542,8 +501,6 @@ LIVE_LOCS.forEach(function(loc) {
     '</div>'
   );
   bounds.push([lat, lng]);
-
-  /* Populate "Last Check-in" column in table */
   var cell = document.getElementById('checkin-'+loc.student_id);
   if (cell) {
     cell.innerHTML = '<span style="color:#374151;font-weight:600">'+ci+'</span>' +
@@ -559,10 +516,12 @@ if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
 function filterGIS() {
   var q      = document.getElementById('gis-search').value.toLowerCase().trim();
   var status = document.getElementById('gis-status').value;
+  var dept   = document.getElementById('gis-dept').value;
   document.querySelectorAll('#placement-table tbody tr').forEach(function(row) {
     var ms = status === 'all' || row.dataset.status === status;
+    var md = dept   === 'all' || (row.dataset.dept || '').includes(dept);
     var mq = !q || (row.dataset.search || '').includes(q);
-    row.style.display = ms && mq ? '' : 'none';
+    row.style.display = ms && md && mq ? '' : 'none';
   });
 }
 
@@ -590,29 +549,11 @@ function filterLogbook() {
 }
 
 function clearLBFilters() {
-  ['lb-search','lb-date-from','lb-date-to'].forEach(function(id) {
-    document.getElementById(id).value = '';
-  });
+  ['lb-search','lb-date-from','lb-date-to'].forEach(function(id) { document.getElementById(id).value = ''; });
   document.getElementById('lb-status').value = 'all';
   filterLogbook();
 }
 
-/* ═══ LIGHTBOX (logbook images) ═══ */
-function openLbLightbox(url) {
-  var lb = document.getElementById('lb-lightbox');
-  if (!lb) {
-    lb = document.createElement('div');
-    lb.id = 'lb-lightbox';
-    lb.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;';
-    lb.innerHTML = '<span style="position:absolute;top:18px;right:26px;color:#fff;font-size:34px;cursor:pointer;line-height:1" onclick="this.parentElement.style.display=\'none\'">&times;</span><img id="lb-lb-img" style="max-width:90vw;max-height:90vh;border-radius:8px">';
-    lb.addEventListener('click', function(e){ if(e.target===lb) lb.style.display='none'; });
-    document.body.appendChild(lb);
-  }
-  document.getElementById('lb-lb-img').src = url;
-  lb.style.display = 'flex';
-}
-
-/* ═══ HELPER ═══ */
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }

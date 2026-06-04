@@ -4,7 +4,7 @@ Manages attachment placements, approves processes, monitors placement progress,
 coordinates supervisors and attachment records.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, Response
 from auth_utils import login_required, liaison_officer_required, current_user, write_audit_log
 from db import get_service_client
 from datetime import datetime
@@ -118,3 +118,152 @@ def logbooks():
                  .limit(200)
                  .execute().data or [])
     return render_template("liaison_officer/logbooks.html", logbooks=records)
+
+
+# ── Attachment Export ──────────────────────────────────────────────────────────
+
+def _get_period_range(year: int, period: str):
+    ranges = {
+        "1": (f"{year}-01-01", f"{year}-04-30"),
+        "2": (f"{year}-05-01", f"{year}-08-31"),
+        "3": (f"{year}-09-01", f"{year}-12-31"),
+    }
+    return ranges.get(period, (f"{year}-01-01", f"{year}-12-31"))
+
+
+def _period_label(period: str) -> str:
+    return {"1": "January–April", "2": "May–August", "3": "September–December"}.get(period, "Full Year")
+
+
+@liaison_officer_bp.route("/attachments/export")
+@login_required
+@liaison_officer_required
+def export_attachments():
+    import io
+    from datetime import date
+    db = get_service_client()
+    fmt    = request.args.get("format", "excel")
+    period = request.args.get("period", "")
+    year   = int(request.args.get("year", date.today().year))
+
+    start_date, end_date = _get_period_range(year, period)
+    rows_raw = (db.table("industrial_attachments")
+                  .select("id, student_id, start_date, end_date, status, "
+                          "student:user_profiles!industrial_attachments_student_id_fkey"
+                          "(full_name, admission_no, mobile_number), "
+                          "companies(name, address, contact_person, contact_phone)")
+                  .gte("start_date", start_date)
+                  .lte("start_date", end_date)
+                  .order("student_id")
+                  .execute().data or [])
+
+    rows = []
+    for r in rows_raw:
+        st = r.get("student") or {}
+        co = r.get("companies") or {}
+        rows.append({
+            "Admission No":       st.get("admission_no", ""),
+            "Full Name":          st.get("full_name", ""),
+            "Trainee Phone":      st.get("mobile_number", ""),
+            "Company Attached":   co.get("name", ""),
+            "Location / Address": co.get("address", ""),
+            "Supervisor Name":    co.get("contact_person", ""),
+            "Supervisor Phone":   co.get("contact_phone", ""),
+            "Start Date":         r.get("start_date", ""),
+            "End Date":           r.get("end_date", ""),
+            "Status":             (r.get("status") or "").title(),
+        })
+
+    label = _period_label(period)
+    title = "Industrial Attachments — All Departments"
+
+    if fmt == "pdf":
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                                leftMargin=15*mm, rightMargin=15*mm,
+                                topMargin=15*mm, bottomMargin=15*mm)
+        styles = getSampleStyleSheet()
+        navy = colors.HexColor("#1565C0")
+        title_style = ParagraphStyle("t", parent=styles["Heading1"], textColor=navy, fontSize=14, spaceAfter=4)
+        sub_style   = ParagraphStyle("s", parent=styles["Normal"], textColor=colors.grey, fontSize=9, spaceAfter=10)
+
+        col_headers = ["Adm No", "Full Name", "Phone", "Company", "Address", "Supervisor", "Sup. Phone", "Start", "End", "Status"]
+        keys = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
+                "Location / Address", "Supervisor Name", "Supervisor Phone", "Start Date", "End Date", "Status"]
+        data = [col_headers] + [[r.get(k, "") for k in keys] for r in rows]
+        col_widths_pt = [w * mm for w in [22, 48, 26, 48, 52, 40, 26, 20, 20, 18]]
+        tbl = Table(data, colWidths=col_widths_pt, repeatRows=1)
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND",   (0, 0), (-1, 0), navy),
+            ("TEXTCOLOR",    (0, 0), (-1, 0), colors.white),
+            ("FONTNAME",     (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE",     (0, 0), (-1, 0), 8),
+            ("FONTSIZE",     (0, 1), (-1, -1), 7.5),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
+            ("GRID",         (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
+            ("ALIGN",        (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING",   (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+            ("LEFTPADDING",  (0, 0), (-1, -1), 4),
+        ]))
+        story = [Paragraph(title, title_style),
+                 Paragraph(f"Period: {label} {year}  |  Total: {len(rows)}", sub_style),
+                 Spacer(1, 4), tbl]
+        doc.build(story)
+        buf.seek(0)
+        fname = f"attachments_{label.replace('–','-')}_{year}.pdf"
+        return Response(buf.read(), mimetype="application/pdf",
+                        headers={"Content-Disposition": f"attachment; filename={fname}"})
+
+    # Excel
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attachments"
+    hdr_fill = PatternFill("solid", fgColor="1565C0")
+    hdr_font = Font(color="FFFFFF", bold=True, size=11)
+    thin = Side(style="thin", color="CCCCCC")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    ws.merge_cells("A1:J1")
+    ws["A1"] = f"{title} — {label} {year}"
+    ws["A1"].font = Font(bold=True, size=13, color="0D2167")
+    ws["A1"].alignment = Alignment(horizontal="center")
+
+    headers = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
+               "Location / Address", "Supervisor Name", "Supervisor Phone",
+               "Start Date", "End Date", "Status"]
+    ws.append([])
+    ws.append(headers)
+    hdr_row = ws.max_row
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(row=hdr_row, column=col_idx)
+        cell.fill = hdr_fill
+        cell.font = hdr_font
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = border
+
+    for row in rows:
+        ws.append([row.get(h, "") for h in headers])
+        for col_idx in range(1, len(headers) + 1):
+            ws.cell(row=ws.max_row, column=col_idx).border = border
+
+    for i, w in enumerate([16, 28, 18, 28, 32, 24, 18, 14, 14, 12], 1):
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    fname = f"attachments_{label.replace('–','-')}_{year}.xlsx"
+    return Response(buf.read(),
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename={fname}"})

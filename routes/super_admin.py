@@ -869,3 +869,349 @@ def logbooks():
     return render_template("super_admin/logbooks.html",
                            logbooks=records, departments=departments,
                            dept_filter=dept_filter)
+
+
+# ── GIS Placements & Logbook (system-wide) ────────────────────────────────────
+
+@super_admin_bp.route("/gis-tracking")
+@super_admin_required
+def gis_tracking():
+    import os
+    db = _svc()
+    dept_filter = request.args.get("department", "")
+    departments = db.table("departments").select("id, name").order("name").execute().data or []
+
+    # All enrollments (optionally filtered by department)
+    enr_query = (db.table("enrollments")
+                   .select("student_id, classes!inner(department_id, departments(name))")
+                   .order("student_id"))
+    if dept_filter:
+        enr_query = enr_query.eq("classes.department_id", dept_filter)
+    enr = enr_query.execute().data or []
+    student_ids = list({e["student_id"] for e in enr})
+
+    # Build dept name lookup keyed by student_id
+    student_dept = {}
+    for e in enr:
+        sid = e["student_id"]
+        cls = e.get("classes") or {}
+        dpt = cls.get("departments") or {}
+        student_dept[sid] = dpt.get("name", "")
+
+    placements = []
+    if student_ids:
+        try:
+            placements = (db.table("industrial_attachments")
+                .select("id, student_id, status, start_date, end_date, "
+                        "companies(name, latitude, longitude, city, address, "
+                        "  industry_classification, geofence_radius_meters, "
+                        "  contact_person, contact_phone), "
+                        "units(name, code), "
+                        "student:user_profiles!industrial_attachments_student_id_fkey"
+                        "(full_name, admission_no, mobile_number)")
+                .in_("student_id", student_ids)
+                .in_("status", ["active", "approved", "pending"])
+                .order("created_at", desc=True)
+                .execute().data or [])
+        except Exception as e:
+            flash(f"Error loading placements: {e}", "warning")
+
+    # Attach dept name to each placement
+    for p in placements:
+        p["_department"] = student_dept.get(p.get("student_id"), "")
+
+    # Live locations
+    live_locations = []
+    if student_ids:
+        try:
+            loc_rows = (db.table("location_logs")
+                .select("student_id, latitude, longitude, check_in_time, "
+                        "check_out_time, accuracy_meters, is_within_geofence")
+                .in_("student_id", student_ids)
+                .not_.is_("latitude", "null")
+                .order("check_in_time", desc=True)
+                .execute().data or [])
+            seen = set()
+            for loc in loc_rows:
+                sid = loc["student_id"]
+                if sid not in seen:
+                    seen.add(sid)
+                    live_locations.append(loc)
+        except Exception as e:
+            print(f"[super_admin.gis_tracking] location_logs: {e}")
+
+    student_map = {p.get("student_id"): p.get("student") or {}
+                   for p in placements if p.get("student_id")}
+    for loc in live_locations:
+        loc["student"] = student_map.get(loc["student_id"], {})
+
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+    logbook_entries = []
+    logbook_error = None
+    if student_ids:
+        try:
+            logbook_entries = (db.table("digital_logbook")
+                .select("id, student_id, log_date, entry_time, tasks_performed, "
+                        "skills_applied, hours_worked, challenges_encountered, "
+                        "achievements, mentor_approval_status, mentor_comments, "
+                        "trainer_comments, evidence_urls, created_at, "
+                        "student:user_profiles!digital_logbook_student_id_fkey"
+                        "(full_name, admission_no), "
+                        "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
+                        "(companies(name))")
+                .in_("student_id", student_ids)
+                .order("log_date", desc=True)
+                .limit(500)
+                .execute().data or [])
+            for entry in logbook_entries:
+                ev_paths = entry.get("evidence_urls") or []
+                entry["_evidence"] = [
+                    {
+                        "url": f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                        "ext": p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                        "name": p.rsplit("/", 1)[-1],
+                    }
+                    for p in ev_paths if p
+                ]
+        except Exception as e:
+            logbook_error = str(e)
+
+    status_counts = {"active": 0, "approved": 0, "pending": 0}
+    for p in placements:
+        s = p.get("status", "")
+        if s in status_counts:
+            status_counts[s] += 1
+
+    return render_template(
+        "super_admin/gis_tracking.html",
+        placements=placements,
+        live_locations=live_locations,
+        logbook_entries=logbook_entries,
+        logbook_error=logbook_error,
+        status_counts=status_counts,
+        total_students=len(student_ids),
+        departments=departments,
+        dept_filter=dept_filter,
+    )
+
+
+# ── Attachment Export (Excel / PDF) ───────────────────────────────────────────
+
+def _get_period_range(year: int, period: str):
+    """Return (start, end) ISO date strings for the given period."""
+    ranges = {
+        "1": (f"{year}-01-01", f"{year}-04-30"),
+        "2": (f"{year}-05-01", f"{year}-08-31"),
+        "3": (f"{year}-09-01", f"{year}-12-31"),
+    }
+    return ranges.get(period, (f"{year}-01-01", f"{year}-12-31"))
+
+
+def _period_label(period: str) -> str:
+    return {"1": "January–April", "2": "May–August", "3": "September–December"}.get(period, "Full Year")
+
+
+def _build_export_rows(db, student_ids=None, dept_filter="",
+                       period="", year=0, dept_admin_dept_id=None):
+    """Fetch attachment rows for export. Returns list of dicts."""
+    from datetime import date
+    if not year:
+        year = date.today().year
+
+    start_date, end_date = _get_period_range(year, period)
+
+    select_str = (
+        "id, student_id, start_date, end_date, status, "
+        "student:user_profiles!industrial_attachments_student_id_fkey"
+        "(full_name, admission_no, mobile_number), "
+        "companies(name, address, contact_person, contact_phone)"
+    )
+    query = (db.table("industrial_attachments")
+               .select(select_str)
+               .gte("start_date", start_date)
+               .lte("start_date", end_date)
+               .order("student_id"))
+
+    if dept_admin_dept_id:
+        # Fetch student_ids for this dept if not supplied
+        if student_ids is None:
+            enr = (db.table("enrollments")
+                     .select("student_id, classes!inner(department_id)")
+                     .eq("classes.department_id", dept_admin_dept_id)
+                     .execute().data or [])
+            student_ids = list({e["student_id"] for e in enr})
+        if student_ids:
+            query = query.in_("student_id", student_ids)
+        else:
+            return []
+    elif student_ids is not None:
+        if student_ids:
+            query = query.in_("student_id", student_ids)
+        else:
+            return []
+
+    rows = query.execute().data or []
+
+    result = []
+    for r in rows:
+        st = r.get("student") or {}
+        co = r.get("companies") or {}
+        result.append({
+            "Admission No":              st.get("admission_no", ""),
+            "Full Name":                 st.get("full_name", ""),
+            "Trainee Phone":             st.get("mobile_number", ""),
+            "Company Attached":          co.get("name", ""),
+            "Location / Address":        co.get("address", ""),
+            "Supervisor Name":           co.get("contact_person", ""),
+            "Supervisor Phone":          co.get("contact_phone", ""),
+            "Start Date":                r.get("start_date", ""),
+            "End Date":                  r.get("end_date", ""),
+            "Status":                    (r.get("status") or "").title(),
+        })
+    return result
+
+
+def _export_excel(rows, title: str, period_label: str, year: int):
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from flask import Response
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attachments"
+
+    hdr_fill = PatternFill("solid", fgColor="1565C0")
+    hdr_font = Font(color="FFFFFF", bold=True, size=11)
+    thin = Side(style="thin", color="CCCCCC")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # Title row
+    ws.merge_cells("A1:J1")
+    ws["A1"] = f"{title} — {period_label} {year}"
+    ws["A1"].font = Font(bold=True, size=13, color="0D2167")
+    ws["A1"].alignment = Alignment(horizontal="center")
+
+    headers = ["Admission No", "Full Name", "Trainee Phone",
+               "Company Attached", "Location / Address",
+               "Supervisor Name", "Supervisor Phone",
+               "Start Date", "End Date", "Status"]
+    ws.append([])  # blank row
+    ws.append(headers)
+    hdr_row = ws.max_row
+    for col_idx, _ in enumerate(headers, 1):
+        cell = ws.cell(row=hdr_row, column=col_idx)
+        cell.fill = hdr_fill
+        cell.font = hdr_font
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = border
+
+    for row in rows:
+        ws.append([row.get(h, "") for h in headers])
+        for col_idx in range(1, len(headers) + 1):
+            ws.cell(row=ws.max_row, column=col_idx).border = border
+
+    col_widths = [16, 28, 18, 28, 32, 24, 18, 14, 14, 12]
+    for i, w in enumerate(col_widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"attachments_{period_label.replace('–', '-')}_{year}.xlsx"
+    return Response(buf.read(),
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+def _export_pdf(rows, title: str, period_label: str, year: int):
+    import io
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from flask import Response
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                            leftMargin=15*mm, rightMargin=15*mm,
+                            topMargin=15*mm, bottomMargin=15*mm)
+    styles = getSampleStyleSheet()
+    navy = colors.HexColor("#1565C0")
+
+    title_style = ParagraphStyle("title", parent=styles["Heading1"],
+                                 textColor=navy, fontSize=14, spaceAfter=4)
+    sub_style = ParagraphStyle("sub", parent=styles["Normal"],
+                               textColor=colors.grey, fontSize=9, spaceAfter=10)
+
+    col_headers = ["Adm No", "Full Name", "Phone", "Company",
+                   "Address", "Supervisor", "Sup. Phone", "Start", "End", "Status"]
+    keys = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
+            "Location / Address", "Supervisor Name", "Supervisor Phone",
+            "Start Date", "End Date", "Status"]
+
+    data = [col_headers] + [[r.get(k, "") for k in keys] for r in rows]
+
+    col_widths_mm = [22, 48, 26, 48, 52, 40, 26, 20, 20, 18]
+    col_widths_pt = [w * mm for w in col_widths_mm]
+
+    tbl = Table(data, colWidths=col_widths_pt, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",  (0, 0), (-1, 0), navy),
+        ("TEXTCOLOR",   (0, 0), (-1, 0), colors.white),
+        ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE",    (0, 0), (-1, 0), 8),
+        ("FONTSIZE",    (0, 1), (-1, -1), 7.5),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
+        ("GRID",        (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
+        ("ALIGN",       (0, 0), (-1, -1), "LEFT"),
+        ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",  (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    story = [
+        Paragraph(f"{title}", title_style),
+        Paragraph(f"Period: {period_label} {year}  |  Total records: {len(rows)}", sub_style),
+        Spacer(1, 4),
+        tbl,
+    ]
+    doc.build(story)
+    buf.seek(0)
+    filename = f"attachments_{period_label.replace('–', '-')}_{year}.pdf"
+    return Response(buf.read(), mimetype="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+@super_admin_bp.route("/gis-tracking/export")
+@super_admin_required
+def gis_tracking_export():
+    from datetime import date
+    db = _svc()
+    fmt    = request.args.get("format", "excel")
+    period = request.args.get("period", "")
+    year   = int(request.args.get("year", date.today().year))
+    dept_filter = request.args.get("department", "")
+
+    student_ids = None
+    if dept_filter:
+        enr = (db.table("enrollments")
+                 .select("student_id, classes!inner(department_id)")
+                 .eq("classes.department_id", dept_filter)
+                 .execute().data or [])
+        student_ids = list({e["student_id"] for e in enr})
+
+    rows = _build_export_rows(db, student_ids=student_ids,
+                              period=period, year=year)
+    label = _period_label(period)
+    dept_name = ""
+    if dept_filter:
+        depts = db.table("departments").select("name").eq("id", dept_filter).execute().data or []
+        dept_name = f" — {depts[0]['name']}" if depts else ""
+    title = f"Industrial Attachments{dept_name}"
+
+    if fmt == "pdf":
+        return _export_pdf(rows, title, label, year)
+    return _export_excel(rows, title, label, year)
