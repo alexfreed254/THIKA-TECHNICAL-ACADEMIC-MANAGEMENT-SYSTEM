@@ -13,6 +13,7 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import super_admin_required, write_audit_log, current_user
 from db import get_service_client
 from werkzeug.security import generate_password_hash
+from notifications import create_notification
 
 super_admin_bp = Blueprint("super_admin", __name__)
 
@@ -1433,3 +1434,127 @@ def gis_tracking_export():
     if fmt == "pdf":
         return _export_pdf(rows, title, label, year)
     return _export_excel(rows, title, label, year)
+
+
+# ── System Notices / Memos ────────────────────────────────────────────────────
+
+def _send_system_notifications(db, title, message, notice_type,
+                                action_url, department_id=None, class_id=None,
+                                target_role="student"):
+    """
+    Push in-app notifications to users.
+    target_role: 'student', 'trainer', 'all'
+    Filters by department and/or class when provided.
+    """
+    try:
+        if class_id:
+            enrolled = (db.table("enrollments")
+                          .select("student_id")
+                          .eq("class_id", class_id)
+                          .execute().data or [])
+            ids = [e["student_id"] for e in enrolled if e.get("student_id")]
+            if not ids:
+                return 0
+            query = db.table("user_profiles").select("id").in_("id", ids)
+        else:
+            query = db.table("user_profiles").select("id")
+            if target_role != "all":
+                query = query.eq("role", target_role)
+            if department_id:
+                query = query.eq("department_id", department_id)
+
+        users = query.execute().data or []
+        for u in users:
+            create_notification(
+                user_id=u["id"],
+                title=f"[Notice] {title}",
+                message=message,
+                notification_type=notice_type,
+                action_url=action_url or "/notifications"
+            )
+        return len(users)
+    except Exception as e:
+        print(f"[super_admin notices] notification error: {e}")
+        return 0
+
+
+@super_admin_bp.route("/notices")
+@super_admin_required
+def notices():
+    from datetime import datetime as _dt
+    db = _svc()
+    notices_list = []
+    departments  = db.table("departments").select("id, name").order("name").execute().data or []
+    classes      = db.table("classes").select("id, name, department_id").order("name").execute().data or []
+    dept_map     = {d["id"]: d["name"] for d in departments}
+    class_map    = {c["id"]: c["name"] for c in classes}
+
+    try:
+        # Fetch system-wide notices (dept_notices where sent_by is super admin)
+        # and all dept notices for visibility
+        notices_list = (db.table("dept_notices")
+                         .select("*, sender:user_profiles!dept_notices_sent_by_fkey(full_name, role)")
+                         .order("sent_at", desc=True)
+                         .limit(100)
+                         .execute().data or [])
+        for n in notices_list:
+            did = n.get("department_id")
+            cid = n.get("class_id")
+            n["dept_name"]  = dept_map.get(did, "All Departments") if did else "All Departments"
+            n["class_name"] = class_map.get(cid, "All Classes")    if cid else "All Trainees in Scope"
+    except Exception as e:
+        flash(f"Error loading notices: {e}", "danger")
+
+    return render_template("super_admin/notices.html",
+                           notices=notices_list,
+                           departments=departments,
+                           classes=classes)
+
+
+@super_admin_bp.route("/notices/send", methods=["POST"])
+@super_admin_required
+def send_notice():
+    from datetime import datetime as _dt
+    db   = _svc()
+    user = current_user()
+
+    title       = (request.form.get("title")        or "").strip()
+    message     = (request.form.get("message")      or "").strip()
+    ntype       = request.form.get("notice_type",   "info")
+    dept_id     = request.form.get("department_id") or None
+    class_id    = request.form.get("class_id")      or None
+    target_role = request.form.get("target_role",   "student")
+
+    if not title or not message:
+        flash("Title and message are required.", "warning")
+        return redirect(url_for("super_admin.notices"))
+    if ntype not in ("info", "warning", "success", "error"):
+        ntype = "info"
+    if target_role not in ("student", "trainer", "all"):
+        target_role = "student"
+
+    try:
+        db.table("dept_notices").insert({
+            "department_id": dept_id,
+            "sent_by":       user["id"],
+            "title":         title,
+            "message":       message,
+            "notice_type":   ntype,
+            "class_id":      class_id,
+            "sent_at":       _dt.now().isoformat(),
+        }).execute()
+
+        count = _send_system_notifications(
+            db, title, message, ntype,
+            action_url="/notifications",
+            department_id=dept_id,
+            class_id=class_id,
+            target_role=target_role,
+        )
+        write_audit_log(user["id"], "send_system_notice",
+                        f"Notice '{title}' sent to {count} users")
+        flash(f"Notice sent successfully to {count} recipient(s).", "success")
+    except Exception as e:
+        flash(f"Failed to send notice: {e}", "danger")
+
+    return redirect(url_for("super_admin.notices"))

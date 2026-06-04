@@ -1,0 +1,326 @@
+{% extends "super_admin/base.html" %}
+{% block title %}Notices & Memos{% endblock %}
+{% block page_title %}Notices & Memos{% endblock %}
+
+{% block extra_style %}
+.page-wrap { padding: 24px; }
+
+/* ── Header banner ── */
+.notices-hdr {
+  background: linear-gradient(135deg, #0a0f1e 0%, #0f1f40 100%);
+  border-radius: 14px; padding: 24px 28px; margin-bottom: 28px; color: #fff;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+}
+.notices-hdr h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+.notices-hdr p  { font-size: 13px; color: rgba(255,255,255,.65); margin: 0; }
+.btn-compose {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 22px; background: #fbbf24; color: #0a0f1e;
+  border: none; border-radius: 9px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: opacity .15s; white-space: nowrap;
+}
+.btn-compose:hover { opacity: .88; }
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.55); z-index: 1000;
+  align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #fff; border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; border-bottom: 1px solid #f3f4f6;
+  position: sticky; top: 0; background: #fff; z-index: 1;
+}
+.modal-head h2 { font-size: 16px; font-weight: 700; color: #111827; margin: 0; }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #9ca3af; line-height: 1; }
+.modal-close:hover { color: #374151; }
+.modal-body { padding: 24px; }
+
+/* ── Form fields ── */
+.f-group { margin-bottom: 18px; }
+.f-label { display: block; font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.f-req   { color: #dc2626; }
+.f-input, .f-select, .f-textarea {
+  width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 9px;
+  font-size: 14px; font-family: inherit; color: #111827; background: #f9fafb;
+  transition: border-color .18s, box-shadow .18s;
+}
+.f-input:focus, .f-select:focus, .f-textarea:focus {
+  outline: none; border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251,191,36,.15); background: #fff;
+}
+.f-textarea { resize: vertical; min-height: 110px; }
+.f-hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+.f-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:540px){ .f-grid-2 { grid-template-columns: 1fr; } }
+
+/* ── Type pills ── */
+.type-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.type-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border: 2px solid #e5e7eb; border-radius: 9999px;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+  background: #fff; color: #374151;
+}
+.type-pill input[type=radio] { position: absolute; opacity: 0; pointer-events: none; }
+.type-pill.selected-info    { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+.type-pill.selected-warning { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
+.type-pill.selected-success { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
+.type-pill.selected-error   { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
+
+/* ── Action buttons ── */
+.modal-actions { display: flex; gap: 10px; padding: 16px 24px; border-top: 1px solid #f3f4f6; }
+.btn-send {
+  flex: 1; padding: 11px; background: linear-gradient(135deg,#0a0f1e,#0f1f40);
+  color: #fff; border: none; border-radius: 9px; font-size: 14px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.btn-send:hover { opacity: .9; }
+.btn-cancel {
+  padding: 11px 20px; background: #f3f4f6; color: #374151;
+  border: 1px solid #e5e7eb; border-radius: 9px; font-size: 14px; font-weight: 600;
+  cursor: pointer;
+}
+.btn-cancel:hover { background: #e5e7eb; }
+
+/* ── Notices list ── */
+.notices-list-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;
+}
+.notices-list-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px; border-bottom: 1px solid #f3f4f6;
+}
+.notices-list-hdr h2 { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+
+.notice-item {
+  display: flex; gap: 14px; padding: 18px 22px;
+  border-bottom: 1px solid #f9fafb; transition: background .12s;
+}
+.notice-item:last-child { border-bottom: none; }
+.notice-item:hover { background: #fafbfe; }
+.notice-item.type-info    { border-left: 4px solid #3b82f6; }
+.notice-item.type-warning { border-left: 4px solid #f59e0b; }
+.notice-item.type-success { border-left: 4px solid #22c55e; }
+.notice-item.type-error   { border-left: 4px solid #ef4444; }
+
+.notice-icon {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.notice-icon.info    { background: #dbeafe; color: #1d4ed8; }
+.notice-icon.warning { background: #fef3c7; color: #b45309; }
+.notice-icon.success { background: #dcfce7; color: #15803d; }
+.notice-icon.error   { background: #fee2e2; color: #b91c1c; }
+
+.notice-body { flex: 1; min-width: 0; }
+.notice-title { font-weight: 700; font-size: 14px; color: #111827; margin-bottom: 4px; }
+.notice-msg   { font-size: 13px; color: #4b5563; margin-bottom: 8px; line-height: 1.5; }
+.notice-meta  { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #9ca3af; }
+.notice-meta span { display: flex; align-items: center; gap: 4px; }
+.notice-badge {
+  display: inline-block; padding: 2px 9px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+}
+.nb-info    { background: #dbeafe; color: #1d4ed8; }
+.nb-warning { background: #fef3c7; color: #b45309; }
+.nb-success { background: #dcfce7; color: #15803d; }
+.nb-error   { background: #fee2e2; color: #b91c1c; }
+
+.empty-notices { padding: 64px 24px; text-align: center; }
+.empty-notices i { font-size: 48px; color: #d1d5db; display: block; margin-bottom: 14px; }
+.empty-notices h3 { font-size: 16px; font-weight: 700; color: #374151; margin: 0 0 8px; }
+.empty-notices p  { font-size: 13px; color: #9ca3af; margin: 0 0 20px; }
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="notices-hdr">
+    <div>
+      <h1><i class="fas fa-bullhorn" style="margin-right:10px;color:#fbbf24"></i>Notices &amp; Memos</h1>
+      <p>Broadcast official notices to trainees, trainers, or the entire institute.</p>
+    </div>
+    <button class="btn-compose" onclick="openModal()">
+      <i class="fas fa-paper-plane"></i> Compose Notice
+    </button>
+  </div>
+
+  <!-- Notices list -->
+  <div class="notices-list-card">
+    <div class="notices-list-hdr">
+      <h2><i class="fas fa-history" style="color:#fbbf24;margin-right:8px"></i>All Sent Notices
+        <span style="margin-left:8px;background:#f3f4f6;color:#6b7280;font-size:12px;font-weight:700;padding:2px 9px;border-radius:9999px">{{ notices|length }}</span>
+      </h2>
+    </div>
+
+    {% if notices %}
+    {% for n in notices %}
+    {% set nt = n.get('notice_type','info') %}
+    {% set icon_map = {'info':'info-circle','warning':'exclamation-triangle','success':'check-circle','error':'exclamation-circle'} %}
+    <div class="notice-item type-{{ nt }}">
+      <div class="notice-icon {{ nt }}">
+        <i class="fas fa-{{ icon_map.get(nt,'info-circle') }}"></i>
+      </div>
+      <div class="notice-body">
+        <div class="notice-title">
+          {{ n.title }}
+          <span class="notice-badge nb-{{ nt }}" style="margin-left:8px">{{ nt|title }}</span>
+        </div>
+        <div class="notice-msg">{{ n.message }}</div>
+        <div class="notice-meta">
+          <span><i class="fas fa-sitemap"></i> {{ n.dept_name }}</span>
+          <span><i class="fas fa-users"></i> {{ n.class_name }}</span>
+          {% set sender = n.sender or {} %}
+          <span><i class="fas fa-user-shield"></i> {{ sender.get('full_name','Super Admin') }}</span>
+          <span><i class="fas fa-clock"></i> {{ n.get('sent_at','')[:16].replace('T',' ') if n.get('sent_at') else '—' }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-notices">
+      <i class="fas fa-bullhorn"></i>
+      <h3>No Notices Sent Yet</h3>
+      <p>Compose a notice to broadcast it to trainees, trainers, or the entire institute.</p>
+      <button class="btn-compose" onclick="openModal()">
+        <i class="fas fa-paper-plane"></i> Compose Your First Notice
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Compose Modal -->
+<div class="modal-overlay" id="composeModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2><i class="fas fa-bullhorn" style="color:#fbbf24;margin-right:8px"></i>Compose Notice / Memo</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+
+    <form method="POST" action="/super-admin/notices/send">
+      <div class="modal-body">
+
+        <!-- Title -->
+        <div class="f-group">
+          <label class="f-label">Notice Title <span class="f-req">*</span></label>
+          <input type="text" name="title" class="f-input" required maxlength="200"
+                 placeholder="e.g. Exam Schedule Update, Fee Deadline Reminder…">
+        </div>
+
+        <!-- Message -->
+        <div class="f-group">
+          <label class="f-label">Message <span class="f-req">*</span></label>
+          <textarea name="message" class="f-textarea" required maxlength="2000"
+                    placeholder="Write the full notice or memo here…"></textarea>
+          <div class="f-hint">Max 2000 characters</div>
+        </div>
+
+        <!-- Notice type -->
+        <div class="f-group">
+          <label class="f-label">Notice Type</label>
+          <div class="type-pills" id="type-pills">
+            {% for val, icon, label, cls in [
+              ('info',    'info-circle',          'Information',    'info'),
+              ('warning', 'exclamation-triangle',  'Warning / Urgent','warning'),
+              ('success', 'check-circle',          'Announcement',   'success'),
+              ('error',   'exclamation-circle',    'Critical Alert', 'error')
+            ] %}
+            <label class="type-pill {% if val=='info' %}selected-info{% endif %}" id="pill-{{ val }}">
+              <input type="radio" name="notice_type" value="{{ val }}" {% if val=='info' %}checked{% endif %}
+                     onchange="selectPill('{{ val }}')">
+              <i class="fas fa-{{ icon }}"></i> {{ label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Recipients -->
+        <div class="f-group">
+          <label class="f-label">Send To</label>
+          <select name="target_role" class="f-select" id="target-role" onchange="updateRecipientUI()">
+            <option value="student">All Trainees</option>
+            <option value="trainer">All Trainers</option>
+            <option value="all">Everyone (All Users)</option>
+          </select>
+        </div>
+
+        <!-- Department + Class (shown for non-global) -->
+        <div id="scope-fields">
+          <div class="f-grid-2">
+            <div class="f-group" style="margin-bottom:0">
+              <label class="f-label">Department <span style="font-weight:400;text-transform:none;font-size:11px;color:#9ca3af">(optional)</span></label>
+              <select name="department_id" class="f-select" id="dept-sel" onchange="filterClasses()">
+                <option value="">All Departments</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="f-group" style="margin-bottom:0">
+              <label class="f-label">Class <span style="font-weight:400;text-transform:none;font-size:11px;color:#9ca3af">(optional)</span></label>
+              <select name="class_id" class="f-select" id="class-sel">
+                <option value="">All Classes</option>
+                {% for c in classes %}
+                <option value="{{ c.id }}" data-dept="{{ c.department_id }}">{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="f-hint" style="margin-top:6px"><i class="fas fa-info-circle"></i> Leave both blank to send to all trainees/staff system-wide.</div>
+        </div>
+
+      </div>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn-send">
+          <i class="fas fa-paper-plane"></i> Send Notice
+        </button>
+        <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openModal()  { document.getElementById('composeModal').classList.add('open'); }
+function closeModal() { document.getElementById('composeModal').classList.remove('open'); }
+
+/* Type pill selection */
+function selectPill(val) {
+  document.querySelectorAll('.type-pill').forEach(function(p) {
+    p.className = 'type-pill';
+  });
+  document.getElementById('pill-' + val).classList.add('selected-' + val);
+}
+
+/* Show/hide department scope when target_role changes */
+function updateRecipientUI() {
+  /* For "all" / trainer, dept filter still useful */
+}
+
+/* Filter class dropdown by selected department */
+function filterClasses() {
+  var deptId = document.getElementById('dept-sel').value;
+  var classEl = document.getElementById('class-sel');
+  Array.from(classEl.options).forEach(function(opt) {
+    if (!opt.value) { opt.style.display = ''; return; }
+    opt.style.display = (!deptId || opt.dataset.dept === deptId) ? '' : 'none';
+  });
+  classEl.value = '';
+}
+
+/* Close on Esc */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+{% endblock %}
