@@ -397,7 +397,7 @@
   </section>
 
   <!-- ══════════════════════════ EXPORT TAB ══════════════════════════ -->
-  <section id="sec-export" class="hidden">
+  <section id="sec-export" style="display:none">
     <div class="data-card" style="max-width:600px">
       <div style="padding:18px 22px;border-bottom:1px solid #f3f4f6">
         <div style="font-size:16px;font-weight:700;color:#0d2167"><i class="fas fa-file-download" style="color:#1565c0;margin-right:8px"></i>Export Attachment Report</div>
@@ -424,12 +424,12 @@
           </div>
         </div>
         <div style="display:flex;gap:12px;margin-top:4px">
-          <a href="#" onclick="doExport('excel')" class="btn-export btn-excel">
+          <button type="button" onclick="doExport('excel')" class="btn-export btn-excel">
             <i class="fas fa-file-excel"></i> Download Excel
-          </a>
-          <a href="#" onclick="doExport('pdf')" class="btn-export btn-pdf">
+          </button>
+          <button type="button" onclick="doExport('pdf')" class="btn-export btn-pdf">
             <i class="fas fa-file-pdf"></i> Download PDF
-          </a>
+          </button>
         </div>
         <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:12px;color:#1d4ed8">
           <i class="fas fa-info-circle"></i>
@@ -447,7 +447,7 @@
 /* ═══ TAB SWITCHING ═══ */
 function gTab(tab) {
   ['gis','logbook','export'].forEach(function(t) {
-    document.getElementById('sec-'+t).classList.toggle('hidden', t !== tab);
+    document.getElementById('sec-'+t).style.display = (t === tab) ? '' : 'none';
     var btn = document.getElementById('tab-'+t);
     if (t === tab) {
       btn.className = 'gtab-active px-6 py-2.5 rounded-xl text-sm font-bold border flex items-center gap-2';

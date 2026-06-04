@@ -237,7 +237,7 @@
   </section>
 
   <!-- ══════════════════════════ LOGBOOK TAB ══════════════════════════ -->
-  <section id="sec-logbook" class="hidden">
+  <section id="sec-logbook" style="display:none">
 
     {% if logbook_error %}
     <div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:14px 20px;border-radius:10px;margin-bottom:20px;font-size:13px">
@@ -350,17 +350,17 @@
   </section>
 
   <!-- ══════════════════════════ EXPORT TAB ══════════════════════════ -->
-  <section id="sec-export" class="hidden">
+  <section id="sec-export" style="display:none">
     <div class="data-card" style="max-width:680px">
       <div style="padding:18px 22px;border-bottom:1px solid #f3f4f6">
         <div style="font-size:16px;font-weight:700;color:#0d2167"><i class="fas fa-file-download" style="color:#1565c0;margin-right:8px"></i>Export Attachment Report</div>
         <div style="font-size:13px;color:#6b7280;margin-top:4px">Download trainee attachment records for a specific period as Excel or PDF.</div>
       </div>
-      <form id="export-form" style="padding:22px;display:flex;flex-direction:column;gap:16px">
+      <div style="padding:22px;display:flex;flex-direction:column;gap:16px">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
           <div>
             <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Attachment Period</label>
-            <select id="exp-period" name="period" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+            <select id="exp-period" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
               <option value="">Full Year</option>
               <option value="1">January – April</option>
               <option value="2">May – August</option>
@@ -369,8 +369,7 @@
           </div>
           <div>
             <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Year</label>
-            <select id="exp-year" name="year" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
-              {% set cur_year = namespace(y=2026) %}
+            <select id="exp-year" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
               {% for y in range(2024, 2028) %}
               <option value="{{ y }}" {% if y == 2026 %}selected{% endif %}>{{ y }}</option>
               {% endfor %}
@@ -378,7 +377,7 @@
           </div>
           <div>
             <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Department</label>
-            <select id="exp-dept" name="department" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+            <select id="exp-dept" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
               <option value="">All Departments</option>
               {% for d in departments %}
               <option value="{{ d.id }}">{{ d.name }}</option>
@@ -387,18 +386,18 @@
           </div>
         </div>
         <div style="display:flex;gap:12px;margin-top:4px">
-          <a id="btn-excel" href="#" onclick="doExport('excel')" class="btn-export btn-excel">
+          <button type="button" onclick="doExport('excel')" class="btn-export btn-excel">
             <i class="fas fa-file-excel"></i> Download Excel
-          </a>
-          <a id="btn-pdf" href="#" onclick="doExport('pdf')" class="btn-export btn-pdf">
+          </button>
+          <button type="button" onclick="doExport('pdf')" class="btn-export btn-pdf">
             <i class="fas fa-file-pdf"></i> Download PDF
-          </a>
+          </button>
         </div>
         <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:12px;color:#1d4ed8">
           <i class="fas fa-info-circle"></i>
           <strong>Columns included:</strong> Admission No, Full Name, Trainee Phone, Company Attached, Location/Address, Supervisor Name, Supervisor Phone, Start Date, End Date, Status.
         </div>
-      </form>
+      </div>
     </div>
   </section>
 
@@ -410,12 +409,14 @@
 /* ═══ TAB SWITCHING ═══ */
 function gTab(tab) {
   ['gis','logbook','export'].forEach(function(t) {
-    document.getElementById('sec-'+t).classList.toggle('hidden', t !== tab);
+    document.getElementById('sec-'+t).style.display = (t === tab) ? '' : 'none';
     var btn = document.getElementById('tab-'+t);
     if (t === tab) {
-      btn.className = 'gtab-active px-6 py-2.5 rounded-xl text-sm font-bold border flex items-center gap-2';
+      btn.style.background = '#1565c0';
+      btn.style.color      = '#fff';
     } else {
-      btn.className = 'px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-transparent hover:bg-slate-50 flex items-center gap-2';
+      btn.style.background = '';
+      btn.style.color      = '';
     }
   });
 }
