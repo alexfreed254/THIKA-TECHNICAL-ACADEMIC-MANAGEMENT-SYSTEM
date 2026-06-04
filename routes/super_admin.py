@@ -695,36 +695,142 @@ def assessments():
                            status_filter=status_filter)
 
 
-# ── Marks Overview ─────────────────────────────────────────────────────────────
+# ── Marks Report ───────────────────────────────────────────────────────────────
+
+def _sa_compute_grade(obtained, max_m):
+    try:
+        pct = round(float(obtained) / float(max_m) * 100, 1) if max_m else 0
+    except (TypeError, ZeroDivisionError):
+        pct = 0
+    if pct >= 80:   grade = "4"
+    elif pct >= 65: grade = "3"
+    elif pct >= 50: grade = "2"
+    else:           grade = "1"
+    return pct, grade
+
+
+def _fetch_marks_all(db, dept_id, year, term, class_id, unit_id, adm_filter):
+    unit_q = db.table("units").select("id")
+    if dept_id:
+        unit_q = unit_q.eq("department_id", dept_id)
+    unit_ids = [u["id"] for u in (unit_q.execute().data or [])]
+    if not unit_ids:
+        return []
+
+    # Chunk unit_ids to avoid query size limits
+    all_fas = []
+    for i in range(0, len(unit_ids), 200):
+        chunk = unit_ids[i:i+200]
+        fa_q = (db.table("formative_assessments")
+                .select("id, unit_id, class_id, trainer_id, assessment_type, "
+                        "assessment_name, max_marks, year, term, created_at, "
+                        "units(name, code, departments(name)), classes(name), "
+                        "trainer:user_profiles!formative_assessments_trainer_id_fkey(full_name)")
+                .in_("unit_id", chunk)
+                .eq("year", int(year)))
+        if term:     fa_q = fa_q.eq("term",     int(term))
+        if class_id: fa_q = fa_q.eq("class_id", class_id)
+        if unit_id:  fa_q = fa_q.eq("unit_id",  unit_id)
+        try:
+            all_fas.extend(fa_q.order("created_at", desc=True).execute().data or [])
+        except Exception as e:
+            print(f"[marks_all] formative_assessments: {e}")
+
+    if not all_fas:
+        return []
+
+    fa_map = {a["id"]: a for a in all_fas}
+    a_ids  = list(fa_map.keys())
+
+    all_fm = []
+    for i in range(0, len(a_ids), 400):
+        chunk = a_ids[i:i+400]
+        try:
+            all_fm.extend(
+                db.table("formative_marks")
+                  .select("assessment_id, student_id, marks_obtained, "
+                          "student:user_profiles!formative_marks_student_id_fkey"
+                          "(full_name, admission_no)")
+                  .in_("assessment_id", chunk)
+                  .execute().data or []
+            )
+        except Exception as e:
+            print(f"[marks_all] formative_marks: {e}")
+
+    rows = []
+    for m in all_fm:
+        fa  = fa_map.get(m["assessment_id"], {})
+        pct, grade = _sa_compute_grade(m.get("marks_obtained"), fa.get("max_marks", 100))
+        un = fa.get("units") or {}
+        rows.append({
+            "student":         m.get("student") or {},
+            "unit":            un,
+            "dept_name":       (un.get("departments") or {}).get("name", ""),
+            "class_":          fa.get("classes") or {},
+            "trainer":         fa.get("trainer") or {},
+            "assessment_name": fa.get("assessment_name", ""),
+            "assessment_type": fa.get("assessment_type", ""),
+            "max_marks":       fa.get("max_marks", 100),
+            "marks_obtained":  m.get("marks_obtained"),
+            "percentage":      pct,
+            "grade":           grade,
+            "year":            fa.get("year"),
+            "term":            fa.get("term"),
+        })
+
+    if adm_filter:
+        rows = [r for r in rows
+                if adm_filter.upper() in (r["student"].get("admission_no") or "").upper()]
+
+    rows.sort(key=lambda r: (
+        r["dept_name"],
+        r["class_"].get("name", ""),
+        r["student"].get("full_name", ""),
+        r["unit"].get("name", ""),
+        r["assessment_name"],
+    ))
+    return rows
+
 
 @super_admin_bp.route("/marks")
 @super_admin_required
 def marks():
     from datetime import datetime as _dt
     db = _svc()
-    year        = request.args.get("year", str(_dt.now().year))
-    term        = request.args.get("term", "")
+    year        = request.args.get("year",       str(_dt.now().year))
+    term        = request.args.get("term",       "")
     dept_filter = request.args.get("department", "")
+    class_filter = request.args.get("class_id",  "")
+    unit_filter  = request.args.get("unit_id",   "")
+    adm_filter   = request.args.get("admission_no", "").strip()
 
-    query = db.table("marks").select(
-        "*, units(name, code, department_id), "
-        "user_profiles!marks_student_id_fkey(full_name, admission_no), "
-        "classes(name)"
-    ).eq("year", int(year)).order("created_at", desc=True).limit(500)
+    marks_list = _fetch_marks_all(db, dept_filter, year, term,
+                                  class_filter, unit_filter, adm_filter)
 
-    if term:
-        query = query.eq("term", term)
+    distinct_students = len({r["student"].get("admission_no")
+                             for r in marks_list if r["student"].get("admission_no")})
+    pass_count = sum(1 for r in marks_list if r["grade"] in ("4", "3", "2"))
+    pass_rate  = round(pass_count / len(marks_list) * 100) if marks_list else 0
 
-    records = query.execute().data or []
-
-    if dept_filter:
-        records = [r for r in records if r.get("units", {}).get("department_id") == dept_filter]
-
+    cur_yr      = _dt.now().year
     departments = db.table("departments").select("id, name").order("name").execute().data or []
+    classes     = db.table("classes").select("id, name").order("name").execute().data or []
+    units       = db.table("units").select("id, name, code").order("name").execute().data or []
+    years       = [str(y) for y in range(2023, cur_yr + 2)]
 
     return render_template("super_admin/marks.html",
-                           marks=records, departments=departments,
-                           year=year, term=term, dept_filter=dept_filter)
+                           marks=marks_list,
+                           departments=departments,
+                           classes=classes,
+                           units=units,
+                           years=years,
+                           year=year, term=term,
+                           dept_filter=dept_filter,
+                           class_filter=class_filter,
+                           unit_filter=unit_filter,
+                           adm_filter=adm_filter,
+                           distinct_students=distinct_students,
+                           pass_rate=pass_rate)
 
 
 # ── Job Postings ───────────────────────────────────────────────────────────────

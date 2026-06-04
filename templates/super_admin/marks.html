@@ -1,64 +1,362 @@
 {% extends "super_admin/base.html" %}
-{% block title %}Marks{% endblock %}
-{% block page_title %}Marks &amp; Results{% endblock %}
+{% block title %}Marks Report{% endblock %}
+{% block page_title %}Marks Report{% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}
-.filter-bar{background:#fff;border-radius:12px;padding:14px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-.filter-bar label{font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px}
-.filter-bar select,.filter-bar input{padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px}
-.btn-sm{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700}
-.btn-primary{background:#1565c0;color:#fff}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:11px;color:#666;border-bottom:2px solid #eee;text-transform:uppercase}
-td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px}
-.grade{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
-.grade-M{background:#e8f5e9;color:#1b5e20}
-.grade-P{background:#e3f2fd;color:#0d47a1}
-.grade-C{background:#fff3e0;color:#e65100}
-.grade-NYC{background:#ffebee;color:#c62828}
+<style>
+  .mr-wrap { padding: 24px; }
+
+  /* ── Summary chips ── */
+  .summary-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; }
+  .chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 20px; border-radius: 12px; background: #fff;
+    border: 1px solid #e5e7eb; flex: 1; min-width: 140px;
+  }
+  .chip-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .chip-num  { font-size: 22px; font-weight: 800; color: #111827; }
+  .chip-lbl  { font-size: 12px; color: #6b7280; font-weight: 500; }
+
+  /* ── Filter card ── */
+  .filter-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 24px;
+  }
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px; margin-bottom: 14px;
+  }
+  .fg label {
+    display: block; font-size: 11px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px;
+  }
+  .fg select, .fg input {
+    width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; background: #f9fafb;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .fg select:focus, .fg input:focus {
+    outline: none; border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21,101,192,.1); background: #fff;
+  }
+  .filter-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-apply {
+    padding: 9px 22px; background: linear-gradient(135deg,#1565c0,#0d47a1);
+    color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-apply:hover { opacity: .9; }
+  .btn-reset {
+    padding: 9px 14px; background: #f3f4f6; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-reset:hover { background: #e5e7eb; }
+
+  /* ── Table ── */
+  .table-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+  .table-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid #f3f4f6; flex-wrap: wrap; gap: 10px;
+  }
+  .table-hdr h2 { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+  .record-count { font-size: 12px; color: #9ca3af; }
+
+  .marks-tbl { width: 100%; border-collapse: collapse; min-width: 1000px; }
+  .marks-tbl thead { background: #f0f7ff; position: sticky; top: 0; z-index: 5; }
+  .marks-tbl th {
+    padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700;
+    color: #1565c0; text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 2px solid #dbeafe; white-space: nowrap;
+  }
+  .marks-tbl td {
+    padding: 11px 14px; font-size: 13px; color: #374151;
+    border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+  }
+  .marks-tbl tr:last-child td { border-bottom: none; }
+  .marks-tbl tr:hover td { background: #f8fbff; }
+
+  .student-name { font-weight: 600; color: #111827; }
+  .adm-no       { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+  .unit-name    { font-weight: 600; color: #0d2167; font-size: 13px; }
+  .unit-code    { display: inline-block; background: #dbeafe; color: #1d4ed8; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  .dept-tag     { font-size: 11px; color: #6b7280; }
+
+  .type-badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+  .type-Oral      { background: #ede9fe; color: #6d28d9; }
+  .type-Practical { background: #fef3c7; color: #b45309; }
+  .type-Theory    { background: #dbeafe; color: #1d4ed8; }
+
+  .marks-cell { font-weight: 700; font-size: 14px; color: #111827; }
+  .max-marks  { font-size: 11px; color: #9ca3af; }
+  .pct-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .pct-bar  { width: 60px; height: 5px; background: #e5e7eb; border-radius: 9999px; overflow: hidden; }
+  .pct-fill { height: 100%; border-radius: 9999px; }
+  .pct-good { background: #22c55e; }
+  .pct-ok   { background: #3b82f6; }
+  .pct-warn { background: #f59e0b; }
+  .pct-fail { background: #ef4444; }
+  .pct-lbl  { font-size: 12px; font-weight: 600; color: #374151; }
+
+  .grade-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 9999px;
+    font-size: 11px; font-weight: 800; min-width: 36px; text-align: center;
+  }
+  .grade-4 { background: #dcfce7; color: #15803d; }
+  .grade-3 { background: #dbeafe; color: #1d4ed8; }
+  .grade-2 { background: #fef3c7; color: #b45309; }
+  .grade-1 { background: #fee2e2; color: #b91c1c; }
+
+  .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; margin: 0; }
+</style>
 {% endblock %}
+
 {% block content %}
-<div class="page-wrap">
-  <form method="get" class="filter-bar">
-    <div><label>Year</label><input type="number" name="year" value="{{ year }}" min="2020" max="2099" style="width:90px"></div>
-    <div><label>Term</label>
-      <select name="term">
-        <option value="">All Terms</option>
-        {% for t in ['1','2','3'] %}<option value="{{ t }}" {% if t==term %}selected{% endif %}>Term {{ t }}</option>{% endfor %}
-      </select>
-    </div>
-    <div><label>Department</label>
-      <select name="department">
-        <option value="">All Departments</option>
-        {% for d in departments %}<option value="{{ d.id }}" {% if d.id==dept_filter %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
-      </select>
-    </div>
-    <button type="submit" class="btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
-  </form>
-  <div class="card">
-    <div class="card-header"><i class="fas fa-chart-line"></i> Marks — {{ year }}{% if term %}, Term {{ term }}{% endif %} ({{ marks|length }} records)</div>
-    <table>
-      <thead><tr><th>Student</th><th>Unit</th><th>Class</th><th>Assessment</th><th>Type</th><th>Term</th><th>Marks</th><th>Grade</th><th>Trainer</th></tr></thead>
-      <tbody>
-        {% for m in marks %}
-        <tr>
-          <td>{{ m.get('user_profiles',{}).get('full_name','—') }}<br><small style="color:#aaa">{{ m.get('user_profiles',{}).get('admission_no','') }}</small></td>
-          <td>{{ m.get('units',{}).get('name','—') }}</td>
-          <td>{{ m.get('classes',{}).get('name','—') }}</td>
-          <td>{{ m.get('assessment_name','—') }}</td>
-          <td>{{ m.get('assessment_type','—') }}</td>
-          <td>{{ m.get('term','—') }}</td>
-          <td><strong>{{ m.get('marks_obtained','—') }}</strong>/{{ m.get('max_marks',100) }}</td>
-          <td><span class="grade grade-{{ m.get('grade','NYC') }}">{{ m.get('grade','—') }}</span></td>
-          <td>{{ m.get('user_profiles',{}).get('full_name','—') if m.get('user_profiles') else '—' }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="9" style="text-align:center;color:#aaa;padding:32px">No marks found for the selected filters.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="mr-wrap">
+
+  <div style="margin-bottom:20px">
+    <h1 style="font-size:22px;font-weight:800;color:#0d2167;margin:0 0 4px">
+      <i class="fas fa-chart-line" style="color:#1565c0;margin-right:8px"></i>Marks Report
+    </h1>
+    <p style="color:#6b7280;font-size:13px;margin:0">
+      All formative assessment marks for all trainees across every department.
+    </p>
   </div>
+
+  <!-- ── Summary chips ── -->
+  <div class="summary-row">
+    <div class="chip">
+      <div class="chip-icon" style="background:#dbeafe"><i class="fas fa-list-ol" style="color:#1d4ed8"></i></div>
+      <div><div class="chip-num">{{ marks|length }}</div><div class="chip-lbl">Mark Entries</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#ede9fe"><i class="fas fa-user-graduate" style="color:#6d28d9"></i></div>
+      <div><div class="chip-num">{{ distinct_students }}</div><div class="chip-lbl">Students Assessed</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
+      <div><div class="chip-num">{{ pass_rate }}%</div><div class="chip-lbl">Competent &amp; Above</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#fef3c7"><i class="fas fa-sitemap" style="color:#b45309"></i></div>
+      <div><div class="chip-num">{{ departments|length }}</div><div class="chip-lbl">Departments</div></div>
+    </div>
+  </div>
+
+  <!-- ── Filters ── -->
+  <div class="filter-card">
+    <form method="get" action="/super-admin/marks">
+      <div class="filter-grid">
+        <div class="fg">
+          <label>Year</label>
+          <select name="year">
+            {% for y in years %}
+            <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label>Term</label>
+          <select name="term">
+            <option value="">All Terms</option>
+            {% for t in [1,2,3] %}
+            <option value="{{ t }}" {% if term == t|string %}selected{% endif %}>Term {{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label>Department</label>
+          <select name="department">
+            <option value="">All Departments</option>
+            {% for d in departments %}
+            <option value="{{ d.id }}" {% if dept_filter == d.id %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label>Class</label>
+          <select name="class_id">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}" {% if class_filter == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label>Unit</label>
+          <select name="unit_id">
+            <option value="">All Units</option>
+            {% for u in units %}
+            <option value="{{ u.id }}" {% if unit_filter == u.id %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg">
+          <label>Admission No.</label>
+          <input type="text" name="admission_no" placeholder="e.g. TT/ICT/001"
+                 value="{{ adm_filter }}">
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn-apply"><i class="fas fa-filter"></i> Apply Filters</button>
+        <a href="/super-admin/marks" class="btn-reset"><i class="fas fa-undo"></i> Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Marks table ── -->
+  <div class="table-card">
+    <div class="table-hdr">
+      <h2><i class="fas fa-table" style="color:#1565c0;margin-right:6px"></i>Student Marks</h2>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="record-count">{{ marks|length }} record{{ 's' if marks|length != 1 }}</span>
+        <input type="text" id="quick-search" placeholder="&#xf002; Quick search…"
+               oninput="doSearch()"
+               style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;
+                      font-size:13px;background:#f9fafb;min-width:190px;outline:none">
+      </div>
+    </div>
+
+    {% if marks %}
+    <div style="overflow-x:auto">
+      <table class="marks-tbl" id="marks-tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student</th>
+            <th>Department</th>
+            <th>Class</th>
+            <th>Unit</th>
+            <th>Assessment</th>
+            <th>Type</th>
+            <th>Term</th>
+            <th>Score</th>
+            <th>Progress</th>
+            <th>Grade</th>
+            <th>Trainer</th>
+          </tr>
+        </thead>
+        <tbody id="marks-tbody">
+          {% for m in marks %}
+          {% set pct     = m.percentage %}
+          {% set pct_cls = 'pct-good' if pct >= 80 else ('pct-ok' if pct >= 65 else ('pct-warn' if pct >= 50 else 'pct-fail')) %}
+          <tr data-search="{{ m.student.get('full_name','')|lower }} {{ m.student.get('admission_no','')|lower }} {{ m.dept_name|lower }} {{ m.class_.get('name','')|lower }}">
+            <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
+
+            <!-- Student -->
+            <td>
+              <div class="student-name">{{ m.student.get('full_name','—') }}</div>
+              <div class="adm-no">{{ m.student.get('admission_no','') }}</div>
+            </td>
+
+            <!-- Department -->
+            <td class="dept-tag">{{ m.dept_name or '—' }}</td>
+
+            <!-- Class -->
+            <td style="font-size:13px;color:#6b7280">{{ m.class_.get('name','—') }}</td>
+
+            <!-- Unit -->
+            <td>
+              <div class="unit-name">{{ m.unit.get('name','—') }}</div>
+              {% if m.unit.get('code') %}
+              <span class="unit-code">{{ m.unit.code }}</span>
+              {% endif %}
+            </td>
+
+            <!-- Assessment -->
+            <td style="font-size:13px;font-weight:600;color:#374151;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              {{ m.assessment_name or '—' }}
+            </td>
+
+            <!-- Type -->
+            <td>
+              <span class="type-badge type-{{ m.assessment_type }}">{{ m.assessment_type or '—' }}</span>
+            </td>
+
+            <!-- Term -->
+            <td style="text-align:center;color:#6b7280">{{ m.term or '—' }}</td>
+
+            <!-- Score -->
+            <td>
+              <span class="marks-cell">{{ m.marks_obtained if m.marks_obtained is not none else '—' }}</span>
+              <span class="max-marks"> / {{ m.max_marks | int }}</span>
+            </td>
+
+            <!-- Progress bar -->
+            <td>
+              <div class="pct-bar-wrap">
+                <div class="pct-bar">
+                  <div class="pct-fill {{ pct_cls }}" style="width:{{ pct }}%"></div>
+                </div>
+                <span class="pct-lbl">{{ pct }}%</span>
+              </div>
+            </td>
+
+            <!-- Grade -->
+            <td><span class="grade-badge grade-{{ m.grade }}">{{ m.grade }}</span></td>
+
+            <!-- Trainer -->
+            <td style="font-size:12px;color:#6b7280">{{ m.trainer.get('full_name','—') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div id="no-results" style="display:none" class="empty-state">
+      <i class="fas fa-search"></i><p>No records match your search.</p>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-chart-bar"></i>
+      <p>No marks found for the selected filters.<br>
+        <span style="font-size:12px">Trainers enter marks via <strong>Marks Entry</strong> in the Trainer Portal.</span>
+      </p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Grade key -->
+  <div style="margin-top:16px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 20px">
+    <p style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin:0 0 10px">Proficiency Scale</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grade-badge grade-4">Code 4</span>
+        <span style="font-size:12px;color:#374151"><strong>Mastery</strong> — 80%–100%: Executed with excellence and complete mastery.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grade-badge grade-3">Code 3</span>
+        <span style="font-size:12px;color:#374151"><strong>Proficiency</strong> — 65%–79%: Very good, high competence.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grade-badge grade-2">Code 2</span>
+        <span style="font-size:12px;color:#374151"><strong>Competent</strong> — 50%–64%: Meets minimum requirements.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grade-badge grade-1">Code 1</span>
+        <span style="font-size:12px;color:#374151"><strong>Not Yet Competent</strong> — 0%–49%: Does not meet requirements.</span>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+function doSearch() {
+  var q = document.getElementById('quick-search').value.toLowerCase().trim();
+  var rows = document.querySelectorAll('#marks-tbody tr');
+  var vis = 0;
+  rows.forEach(function(r) {
+    var show = !q || (r.dataset.search || '').includes(q);
+    r.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  document.getElementById('no-results').style.display =
+    (vis === 0 && {{ marks|length }} > 0) ? '' : 'none';
+}
+</script>
 {% endblock %}
