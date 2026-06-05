@@ -1769,6 +1769,59 @@ def logbooks():
                            adm_filter=adm_filter)
 
 
+@dept_admin_bp.route("/logbooks/<log_id>/review", methods=["POST"])
+@dept_admin_required
+def review_logbook(log_id):
+    db      = get_service_client()
+    user    = current_user()
+    dept_id = _dept_id()
+    action  = request.form.get("action", "")
+    comment = (request.form.get("comment") or "").strip()
+
+    if action not in ("approve", "reject"):
+        flash("Invalid action.", "error")
+        return redirect(url_for("dept_admin.logbooks"))
+
+    # Enforce dept isolation
+    log_row = (db.table("digital_logbook")
+                 .select("id, student_id")
+                 .eq("id", log_id)
+                 .limit(1)
+                 .execute().data or [])
+    if not log_row:
+        flash("Log entry not found.", "error")
+        return redirect(url_for("dept_admin.logbooks"))
+
+    student_ok = (db.table("user_profiles")
+                    .select("id")
+                    .eq("id", log_row[0]["student_id"])
+                    .eq("department_id", dept_id)
+                    .limit(1)
+                    .execute().data or [])
+    if not student_ok:
+        abort(403)
+
+    new_status = "approved" if action == "approve" else "rejected"
+    payload = {
+        "mentor_approval_status": new_status,
+        "mentor_approved_by":     user["id"],
+        "mentor_approved_at":     datetime.utcnow().isoformat(),
+    }
+    if comment:
+        payload["mentor_comments"] = comment
+
+    try:
+        db.table("digital_logbook").update(payload).eq("id", log_id).execute()
+        write_audit_log("review_logbook", target=f"log:{log_id}",
+                        detail={"action": action})
+        flash(f"Log entry {new_status}.", "success")
+    except Exception as exc:
+        flash(f"Error: {exc}", "error")
+
+    return redirect(url_for("dept_admin.logbooks",
+                            status=request.form.get("status_filter", "")))
+
+
 # ── GIS Placement Tracking & Digital Logbook ─────────────────────────────────
 
 @dept_admin_bp.route("/gis-tracking")

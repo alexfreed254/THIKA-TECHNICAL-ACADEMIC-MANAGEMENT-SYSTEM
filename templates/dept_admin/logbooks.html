@@ -73,6 +73,15 @@
 .ev-pdf   { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
 .ev-file  { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
 .lb-comments { padding: 8px 16px 12px; font-size: 12px; color: #6b7280; border-top: 1px solid #f3f4f6; }
+.lb-action-bar { padding: 10px 16px 14px; border-top: 2px solid #fef3c7; background: #fffbeb; }
+.lb-action-label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.lb-comment-input { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12.5px; font-family: inherit; resize: none; min-height: 50px; margin-bottom: 8px; }
+.lb-comment-input:focus { outline: none; border-color: #fbbf24; }
+.lb-action-btns { display: flex; gap: 8px; }
+.btn-approve { padding: 7px 18px; background: #16a34a; color: #fff; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background .15s; }
+.btn-approve:hover { background: #15803d; }
+.btn-reject  { padding: 7px 18px; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background .15s; }
+.btn-reject:hover  { background: #b91c1c; }
 .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; background: #fff; }
 .empty-state i { font-size: 40px; display: block; margin-bottom: 12px; }
 #lb-lightbox { display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center; }
@@ -215,13 +224,27 @@
         <div class="lb-comments">
           {% if e.get('mentor_comments') %}
           <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:4px"></i>
-          <strong>Supervisor:</strong> "{{ e.mentor_comments }}"
+          <strong>Comment:</strong> "{{ e.mentor_comments }}"
           {% if e.get('trainer_comments') %} &nbsp;|&nbsp; {% endif %}
           {% endif %}
           {% if e.get('trainer_comments') %}
           <i class="fas fa-chalkboard-teacher" style="color:#6d28d9;margin-right:4px"></i>
           <strong>Trainer:</strong> "{{ e.trainer_comments }}"
           {% endif %}
+        </div>
+        {% endif %}
+
+        {% if lb_st == 'pending' %}
+        <div class="lb-action-bar">
+          <div class="lb-action-label"><i class="fas fa-gavel" style="margin-right:4px"></i>Review this entry</div>
+          <form method="POST" action="/dept-admin/logbooks/{{ e.id }}/review">
+            <input type="hidden" name="status_filter" value="{{ status_filter }}">
+            <textarea name="comment" class="lb-comment-input" rows="2" placeholder="Optional comment for the trainee…"></textarea>
+            <div class="lb-action-btns">
+              <button type="submit" name="action" value="approve" class="btn-approve"><i class="fas fa-check"></i> Approve</button>
+              <button type="submit" name="action" value="reject"  class="btn-reject"><i class="fas fa-times"></i> Reject</button>
+            </div>
+          </form>
         </div>
         {% endif %}
       </div>

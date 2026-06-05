@@ -154,6 +154,39 @@ def logbooks():
                            adm_filter=adm_filter)
 
 
+@liaison_officer_bp.route("/logbooks/<log_id>/review", methods=["POST"])
+@login_required
+@liaison_officer_required
+def review_logbook(log_id):
+    db  = get_service_client()
+    user = current_user()
+    action  = request.form.get("action", "")
+    comment = (request.form.get("comment") or "").strip()
+
+    if action not in ("approve", "reject"):
+        flash("Invalid action.", "error")
+        return redirect(url_for("liaison_officer.logbooks"))
+
+    new_status = "approved" if action == "approve" else "rejected"
+    payload = {
+        "mentor_approval_status": new_status,
+        "mentor_approved_by":     user["id"],
+        "mentor_approved_at":     datetime.utcnow().isoformat(),
+    }
+    if comment:
+        payload["mentor_comments"] = comment
+
+    try:
+        db.table("digital_logbook").update(payload).eq("id", log_id).execute()
+        write_audit_log(user["id"], f"{action}_logbook", f"Log {log_id}")
+        flash(f"Log entry {new_status}.", "success")
+    except Exception as exc:
+        flash(f"Error: {exc}", "error")
+
+    return redirect(url_for("liaison_officer.logbooks",
+                            status=request.form.get("status_filter", "")))
+
+
 # ── Attachment Export ──────────────────────────────────────────────────────────
 
 def _get_period_range(year: int, period: str):
