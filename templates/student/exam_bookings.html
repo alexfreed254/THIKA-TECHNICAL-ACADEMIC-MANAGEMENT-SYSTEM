@@ -1,99 +1,294 @@
 {% extends "student/base.html" %}
-
-{% block page_title %}Exam Bookings{% endblock %}
+{% block title %}Exam Booking Forms{% endblock %}
+{% block page_title %}Exam Booking Forms{% endblock %}
 
 {% block extra_style %}
-<style>
-  .booking-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .status-pending { background: #fff3e0; color: #f57c00; }
-  .status-approved { background: #e8f5e9; color: #2e7d32; }
-  .status-rejected { background: #ffebee; color: #c62828; }
-  .status-completed { background: #e3f2fd; color: #1565c0; }
-  .btn-download {
-    background: #1565c0;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 14px;
-  }
-  .btn-download:hover { background: #0d47a1; }
-  .btn-download:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-</style>
+.eb-wrap { padding: 24px; max-width: 960px; margin: 0 auto; }
+
+/* Page header */
+.eb-page-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 28px;
+}
+.eb-page-title { font-size: 20px; font-weight: 800; color: #0f172a; }
+.btn-new-booking {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px; background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: #fff; border-radius: 11px; font-size: 13.5px; font-weight: 700;
+  text-decoration: none; transition: all .2s;
+}
+.btn-new-booking:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15,44,84,.3); color: #fff; }
+
+/* Submission group card */
+.eb-group {
+  background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;
+  margin-bottom: 24px; overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+.eb-group-head {
+  padding: 16px 22px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.eb-group-head.st-pending  { background: linear-gradient(135deg,#fffbeb,#fefce8); }
+.eb-group-head.st-approved { background: linear-gradient(135deg,#f0fdf4,#dcfce7); }
+.eb-group-head.st-rejected { background: linear-gradient(135deg,#fef2f2,#fee2e2); }
+.eb-group-head.st-completed{ background: linear-gradient(135deg,#f8fafc,#f1f5f9); }
+
+.eb-serial {
+  font-size: 13px; font-weight: 800; color: #1e293b;
+  display: flex; align-items: center; gap: 7px;
+}
+.eb-serial i { color: #64748b; font-size: 12px; }
+
+.eb-meta { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 5px; }
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700;
+}
+.sp-pending  { background:#fef3c7;color:#92400e;border:1px solid #fde68a; }
+.sp-approved { background:#dcfce7;color:#15803d;border:1px solid #bbf7d0; }
+.sp-rejected { background:#fee2e2;color:#991b1b;border:1px solid #fecaca; }
+.sp-completed{ background:#f1f5f9;color:#475569;border:1px solid #e2e8f0; }
+
+/* HOD instruction banner */
+.hod-banner {
+  margin: 14px 22px; padding: 14px 18px;
+  border-radius: 12px; display: flex; align-items: flex-start; gap: 12px;
+}
+.hod-banner.pending  { background:#fffbeb;border:1.5px solid #fde68a; }
+.hod-banner.approved { background:#f0fdf4;border:1.5px solid #bbf7d0; }
+.hod-banner.rejected { background:#fef2f2;border:1.5px solid #fecaca; }
+.hod-banner-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+.hod-banner.pending  .hod-banner-icon { color: #d97706; }
+.hod-banner.approved .hod-banner-icon { color: #16a34a; }
+.hod-banner.rejected .hod-banner-icon { color: #dc2626; }
+.hod-banner-text { flex: 1; }
+.hod-banner-title { font-size: 13.5px; font-weight: 700; color: #1e293b; margin-bottom: 3px; }
+.hod-banner-sub   { font-size: 12.5px; color: #64748b; line-height: 1.5; }
+
+/* Download / print button */
+.btn-print {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; border-radius: 10px; font-size: 13.5px;
+  font-weight: 700; text-decoration: none; transition: all .18s; flex-shrink: 0;
+  background: linear-gradient(135deg,#d97706,#b45309);
+  color: #fff; box-shadow: 0 4px 12px rgba(217,119,6,.25);
+}
+.btn-print:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(217,119,6,.35); color: #fff; }
+
+.btn-dl-approved {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; border-radius: 10px; font-size: 13.5px;
+  font-weight: 700; text-decoration: none; transition: all .18s;
+  background: linear-gradient(135deg,#16a34a,#15803d);
+  color: #fff; box-shadow: 0 4px 12px rgba(22,163,74,.25);
+}
+.btn-dl-approved:hover { transform: translateY(-1px); color: #fff; }
+
+/* Steps list */
+.steps-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.step-item {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; color: #64748b;
+}
+.step-num {
+  width: 20px; height: 20px; border-radius: 50%; background: #fde68a;
+  color: #92400e; font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-arrow { color: #cbd5e1; font-size: 10px; }
+
+/* Units table */
+.units-tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin: 0 0 4px; }
+.units-tbl th {
+  padding: 9px 16px; text-align: left; font-size: 11px; font-weight: 700;
+  color: #64748b; text-transform: uppercase; letter-spacing: .05em;
+  background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+}
+.units-tbl td { padding: 11px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.units-tbl tr:last-child td { border-bottom: none; }
+
+.unit-nm  { font-weight: 600; color: #0f172a; }
+.unit-cd  { display: inline-block; padding: 1px 7px; background: #eff6ff; color: #1d4ed8; border-radius: 5px; font-size: 11px; font-weight: 700; margin-top: 2px; }
+.at-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 6px; font-size: 11px; font-weight: 700;
+}
+.at-first   { background:#e0f2fe;color:#0369a1; }
+.at-retake  { background:#fef2f2;color:#b91c1c; }
+.at-missing { background:#f5f3ff;color:#6d28d9; }
+
+.prev-grd { font-size: 11px; color: #64748b; margin-top: 2px; }
+.grd-nyc  { background:#fef2f2;color:#b91c1c;padding:1px 6px;border-radius:4px;font-weight:700; }
+.grd-c    { background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700; }
+.grd-p    { background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-weight:700; }
+.grd-m    { background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px;font-weight:700; }
+
+/* Empty state */
+.empty-wrap { text-align: center; padding: 64px 24px; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; }
+.empty-wrap i { font-size: 52px; color: #cbd5e1; display: block; margin-bottom: 16px; }
+.empty-wrap h3 { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+.empty-wrap p  { font-size: 14px; color: #64748b; margin-bottom: 20px; }
 {% endblock %}
 
 {% block content %}
-<div class="content-header">
-  <h2>Exam Bookings</h2>
-</div>
+<div class="eb-wrap">
 
-{% if not bookings %}
-<div class="empty-state">
-  <i class="fas fa-calendar-plus"></i>
-  <p>No exam bookings yet. <a href="{{ url_for('student.exam_booking_form') }}">Create your first booking</a>.</p>
-</div>
-{% else %}
-{% for booking in bookings %}
-<div class="booking-card">
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-    <div>
-      <h3 style="margin: 0 0 8px 0;">{{ booking.units.name }} ({{ booking.units.code }})</h3>
-      <div style="color: #666; font-size: 14px;">
-        <i class="fas fa-calendar"></i> {{ booking.exam_date | to_eat('%d %b %Y') }}
-        <span style="margin: 0 10px;">|</span>
-        <i class="fas fa-clock"></i> {{ booking.exam_session|title }}
-        {% if booking.exam_venue %}
-        <span style="margin: 0 10px;">|</span>
-        <i class="fas fa-map-marker-alt"></i> {{ booking.exam_venue }}
-        {% endif %}
+  <!-- Page header -->
+  <div class="eb-page-hdr">
+    <div class="eb-page-title"><i class="fas fa-file-alt" style="color:#1e5a9f;margin-right:10px"></i>Exam Booking Forms</div>
+    <a href="/student/exam-booking-form" class="btn-new-booking">
+      <i class="fas fa-plus"></i> New Booking
+    </a>
+  </div>
+
+  {% if not booking_groups %}
+  <div class="empty-wrap">
+    <i class="fas fa-calendar-plus"></i>
+    <h3>No exam bookings yet</h3>
+    <p>Register for your exams by creating your first booking form.</p>
+    <a href="/student/exam-booking-form" class="btn-new-booking">
+      <i class="fas fa-plus"></i> Create Booking Form
+    </a>
+  </div>
+
+  {% else %}
+  {% for grp in booking_groups %}
+  {% set st = grp.status %}
+
+  <div class="eb-group">
+
+    <!-- Card header -->
+    <div class="eb-group-head st-{{ st }}">
+      <div class="eb-serial">
+        <i class="fas fa-barcode"></i>
+        {{ grp.serial_number }}
+      </div>
+      <div class="eb-meta">
+        <i class="fas fa-calendar-day"></i>
+        Submitted {{ grp.created_at[:10] if grp.created_at else '—' }}
+      </div>
+      {% if grp.exam_session %}
+      <div class="eb-meta"><i class="fas fa-clock"></i> {{ grp.exam_session }}</div>
+      {% endif %}
+      <div style="margin-left:auto">
+        <span class="status-pill sp-{{ st }}">
+          {% if st == 'pending' %}<i class="fas fa-hourglass-half"></i>
+          {% elif st == 'approved' %}<i class="fas fa-check-circle"></i>
+          {% elif st == 'rejected' %}<i class="fas fa-times-circle"></i>
+          {% else %}<i class="fas fa-flag-checkered"></i>{% endif %}
+          {{ st | title }}
+        </span>
       </div>
     </div>
-    <span class="status-badge status-{{ booking.status }}">{{ booking.status|title }}</span>
-  </div>
-  
-  <div style="margin-bottom: 15px;">
-    <strong>Purpose:</strong> {{ booking.purpose }}
-    {% if booking.special_requirements %}
-    <br><strong>Special Requirements:</strong> {{ booking.special_requirements }}
-    {% endif %}
-  </div>
-  
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <div style="font-size: 12px; color: #999;">
-      Submitted: {{ booking.created_at | to_eat('%d %b %Y %H:%M') }}
-      {% if booking.approved_at %}
-      <br>Approved: {{ booking.approved_at | to_eat('%d %b %Y %H:%M') }} by {{ booking.user_profiles.full_name }}
-      {% endif %}
+
+    <!-- Status-specific instruction banner -->
+    {% if st == 'pending' %}
+    <div class="hod-banner pending" style="align-items:center;flex-wrap:wrap;gap:14px">
+      <div class="hod-banner-icon"><i class="fas fa-print"></i></div>
+      <div class="hod-banner-text">
+        <div class="hod-banner-title">Action Required — Print & Take to HOD</div>
+        <div class="hod-banner-sub">
+          Download and print this form, then take it to the Head of Department for signature and stamp.
+          The HOD will then approve the booking in the system.
+        </div>
+        <div class="steps-list" style="margin-top:8px">
+          <span class="step-item"><span class="step-num">1</span> Download & Print</span>
+          <span class="step-arrow"><i class="fas fa-arrow-right"></i></span>
+          <span class="step-item"><span class="step-num">2</span> HOD Signs & Stamps</span>
+          <span class="step-arrow"><i class="fas fa-arrow-right"></i></span>
+          <span class="step-item"><span class="step-num">3</span> HOD Approves in System</span>
+          <span class="step-arrow"><i class="fas fa-arrow-right"></i></span>
+          <span class="step-item"><span class="step-num">4</span> Cleared for Exams</span>
+        </div>
+      </div>
+      <a href="/student/exam-bookings/{{ grp.bookings[0].id }}/download"
+         target="_blank" class="btn-print">
+        <i class="fas fa-print"></i> Download &amp; Print
+      </a>
     </div>
-    {% if booking.status == 'approved' %}
-    <a href="{{ url_for('student.download_exam_booking', booking_id=booking.id) }}" class="btn-download">
-      <i class="fas fa-download"></i> Download Form
-    </a>
+
+    {% elif st == 'approved' %}
+    <div class="hod-banner approved" style="align-items:center;flex-wrap:wrap;gap:14px">
+      <div class="hod-banner-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="hod-banner-text">
+        <div class="hod-banner-title">Approved — You are cleared for exams</div>
+        <div class="hod-banner-sub">
+          Approved
+          {% if grp.reviewer %} by <strong>{{ grp.reviewer }}</strong>{% endif %}
+          {% if grp.approved_at %} on {{ grp.approved_at[:10] }}{% endif %}.
+        </div>
+      </div>
+      <a href="/student/exam-bookings/{{ grp.bookings[0].id }}/download"
+         target="_blank" class="btn-dl-approved">
+        <i class="fas fa-download"></i> Download Approved Form
+      </a>
+    </div>
+
+    {% elif st == 'rejected' %}
+    <div class="hod-banner rejected">
+      <div class="hod-banner-icon"><i class="fas fa-times-circle"></i></div>
+      <div class="hod-banner-text">
+        <div class="hod-banner-title">Booking Rejected</div>
+        {% if grp.rejection_reason %}
+        <div class="hod-banner-sub"><strong>Reason:</strong> {{ grp.rejection_reason }}</div>
+        {% endif %}
+        <div class="hod-banner-sub" style="margin-top:6px">
+          Please contact your department office or
+          <a href="/student/exam-booking-form" style="color:#b91c1c;font-weight:700">submit a new booking</a>.
+        </div>
+      </div>
+    </div>
     {% endif %}
+
+    <!-- Units list -->
+    <div style="overflow-x:auto">
+      <table class="units-tbl">
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th>Unit of Competency</th>
+            <th>Attempt Type</th>
+            <th>Unit Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in grp.bookings %}
+          {% set unit = b.get('units') or {} %}
+          {% set at = b.get('attempt_type','first_attempt') %}
+          <tr>
+            <td style="color:#94a3b8;font-weight:700;font-size:12px">{{ loop.index }}</td>
+            <td>
+              <div class="unit-nm">{{ unit.get('name','—') }}</div>
+              {% if unit.get('code') %}<span class="unit-cd">{{ unit.code }}</span>{% endif %}
+              {% if b.get('previous_grade') and at != 'first_attempt' %}
+              <div class="prev-grd">
+                Prev: <span class="grd-{{ b.previous_grade|lower }}">{{ b.previous_grade }}</span>
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              {% if at == 'retake' %}
+              <span class="at-badge at-retake"><i class="fas fa-redo" style="font-size:9px"></i> Retake</span>
+              {% elif at == 'missing_unit' %}
+              <span class="at-badge at-missing"><i class="fas fa-minus-circle" style="font-size:9px"></i> Missed Unit</span>
+              {% else %}
+              <span class="at-badge at-first"><i class="fas fa-star" style="font-size:9px"></i> First Attempt</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12.5px;color:#64748b">
+              {{ (b.get('purpose','') or '').split('—')[0].strip() or '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
   </div>
-  
-  {% if booking.status == 'rejected' and booking.rejection_reason %}
-  <div style="margin-top: 15px; padding: 10px; background: #ffebee; border-radius: 4px; color: #c62828; font-size: 14px;">
-    <strong>Rejection Reason:</strong> {{ booking.rejection_reason }}
-  </div>
+  {% endfor %}
   {% endif %}
+
 </div>
-{% endfor %}
-{% endif %}
 {% endblock %}

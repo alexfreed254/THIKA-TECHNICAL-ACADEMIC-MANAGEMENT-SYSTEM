@@ -1251,18 +1251,37 @@ def poe_upload():
 @student_bp.route("/exam-bookings")
 @student_required
 def exam_bookings():
-    """View all exam bookings for the student."""
+    """View all exam bookings for the student, grouped by serial number (submission batch)."""
     db = get_service_client()
     user = current_user()
     student_id = user["id"]
-    
+
     bookings = (db.table("exam_bookings")
                 .select("*, units(name, code), user_profiles!exam_bookings_approved_by_fkey(full_name)")
                 .eq("student_id", student_id)
                 .order("created_at", desc=True)
                 .execute().data or [])
-    
-    return render_template("student/exam_bookings.html", bookings=bookings)
+
+    # Group by serial_number so all units submitted together show as one form
+    from collections import OrderedDict
+    groups = OrderedDict()
+    for b in bookings:
+        sn = b.get("serial_number") or b["id"]
+        if sn not in groups:
+            groups[sn] = {
+                "serial_number": sn,
+                "created_at":    b.get("created_at", ""),
+                "exam_session":  b.get("exam_session", ""),
+                "status":        b.get("status", "pending"),
+                "approved_at":   b.get("approved_at", ""),
+                "rejection_reason": b.get("rejection_reason", ""),
+                "reviewer":      (b.get("user_profiles") or {}).get("full_name", ""),
+                "bookings":      [],
+            }
+        groups[sn]["bookings"].append(b)
+
+    return render_template("student/exam_bookings.html",
+                           booking_groups=list(groups.values()))
 
 
 @student_bp.route("/exam-bookings/new", methods=["GET", "POST"])
@@ -1759,26 +1778,50 @@ def exam_booking_submit():
 @student_bp.route("/exam-bookings/<booking_id>/download")
 @student_required
 def download_exam_booking(booking_id):
-    """Download approved exam booking form."""
+    """Serve the exam booking PDF for printing — available for pending and approved bookings."""
     db = get_service_client()
     user = current_user()
     student_id = user["id"]
-    
+
     booking = (db.table("exam_bookings")
-               .select("*, units(name, code), user_profiles!exam_bookings_approved_by_fkey(full_name), user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, classes(name, departments(name)))")
-               .eq("id", booking_id)
-               .eq("student_id", student_id)
-               .single()
-               .execute().data)
-    
+                 .select("id, status, serial_number, student_id")
+                 .eq("id", booking_id)
+                 .eq("student_id", student_id)
+                 .limit(1)
+                 .execute().data or [])
+
     if not booking:
         abort(404)
-    
-    if booking["status"] != "approved":
-        flash('Only approved bookings can be downloaded.', 'warning')
+
+    booking = booking[0]
+
+    if booking["status"] == "rejected":
+        flash("Rejected bookings cannot be downloaded.", "warning")
         return redirect(url_for("student.exam_bookings"))
-    
-    return render_template("student/exam_booking_form.html", booking=booking)
+
+    serial_number = booking.get("serial_number", "")
+    if not serial_number:
+        flash("No form PDF found for this booking.", "warning")
+        return redirect(url_for("student.exam_bookings"))
+
+    pdf_path = f"exam_bookings/{student_id}_{serial_number}.pdf"
+
+    try:
+        storage = get_service_client().storage
+        pdf_data = storage.from_("exam-bookings").download(pdf_path)
+        resp = make_response(pdf_data)
+        resp.headers["Content-Type"] = "application/pdf"
+        # inline = opens in browser so student can print; attachment = forces download
+        resp.headers["Content-Disposition"] = f'inline; filename="ExamBooking_{serial_number}.pdf"'
+        return resp
+    except Exception:
+        # Fall back to public URL redirect if direct download fails
+        try:
+            url = get_service_client().storage.from_("exam-bookings").get_public_url(pdf_path)
+            return redirect(url)
+        except Exception as exc:
+            flash(f"Could not retrieve the form PDF: {exc}", "error")
+            return redirect(url_for("student.exam_bookings"))
 
 
 # ── Marks Viewing ─────────────────────────────────────────────────────────────
