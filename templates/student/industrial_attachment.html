@@ -274,7 +274,7 @@
       </div>
       {% if current_attachment.get('trainee_role') %}
       <div class="info-item">
-        <div class="info-label">My Role</div>
+        <div class="info-label">Supervisor Role</div>
         <div class="info-value">{{ current_attachment.get('trainee_role') }}</div>
       </div>
       {% endif %}
@@ -440,7 +440,7 @@
           <th>Year</th>
           <th>Company</th>
           <th>Location</th>
-          <th>My Role</th>
+          <th>Supervisor Role</th>
           <th>Supervisor</th>
           <th>Start Date</th>
           <th>End Date</th>
@@ -569,11 +569,11 @@
 
       {# ── TRAINEE ROLE ── #}
       <div class="form-section-hdr">
-        <i class="fas fa-id-badge"></i> Your Role at the Company
+        <i class="fas fa-hard-hat"></i> Industry Supervisor Role
       </div>
       <div style="margin-bottom:24px">
         <div class="f-field">
-          <label class="f-label">Trainee Role / Position <span class="req">*</span></label>
+          <label class="f-label">Industry Supervisor Role <span class="req">*</span></label>
           <select class="f-select" name="trainee_role" required>
             <option value="">— Select Your Role —</option>
             <option>Human Resources Manager</option>

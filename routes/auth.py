@@ -212,7 +212,7 @@ def logout():
     # Clear all session data
     session.clear()
     
-    flash("You have been logged out", "info")
+    flash("You have been logged out successfully.", "success")
     return redirect(url_for("main.index"))
 
 

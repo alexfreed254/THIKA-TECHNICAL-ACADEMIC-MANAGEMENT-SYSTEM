@@ -381,8 +381,8 @@
       {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-        <div class="alert">
-          <i class="fas fa-exclamation-circle"></i>
+        <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category in ('error','danger') else 'warning' if category == 'warning' else 'success' if category == 'info' else 'info' }}">
+          <i class="fas fa-{{ 'check-circle' if category in ('success','info') else 'exclamation-triangle' if category == 'warning' else 'exclamation-circle' }}"></i>
           {{ message }}
         </div>
         {% endfor %}
