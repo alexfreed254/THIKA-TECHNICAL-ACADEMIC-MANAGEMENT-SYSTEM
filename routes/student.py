@@ -2114,13 +2114,14 @@ def request_attachment():
     try:
         # 1. Create company record from trainee-supplied info
         company_payload = {
-            "name":             company_name,
-            "address":          company_address,
-            "contact_person":   supervisor_name,
-            "contact_phone":    supervisor_contact,
-            "is_active":        True,
-            "available_slots":  1,
-            "created_by":       student_id,
+            "name":                    company_name,
+            "industry_classification": "Other",
+            "address":                 company_address,
+            "contact_person":          supervisor_name,
+            "contact_phone":           supervisor_contact,
+            "is_active":               True,
+            "available_slots":         1,
+            "created_by":              student_id,
         }
         company_res = db.table("companies").insert(company_payload).execute()
         company_id  = company_res.data[0]["id"]
