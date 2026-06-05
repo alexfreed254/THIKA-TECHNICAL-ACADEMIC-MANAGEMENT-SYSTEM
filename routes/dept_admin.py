@@ -619,6 +619,191 @@ def exam_bookings():
                            counts=counts)
 
 
+@dept_admin_bp.route("/exam-bookings/export")
+@dept_admin_required
+def export_exam_bookings():
+    """Export exam bookings per class as a styled Excel workbook."""
+    import io
+    db      = get_service_client()
+    dept_id = _dept_id()
+
+    status_filter = request.args.get("status", "")   # blank = all
+    class_filter  = request.args.get("class_id", "")  # blank = all classes
+
+    # Get all enrollments for this department
+    enr = (db.table("enrollments")
+             .select("student_id, classes!inner(id, department_id, name)")
+             .eq("classes.department_id", dept_id)
+             .execute().data or [])
+
+    student_class = {}
+    for e in enr:
+        sid = e.get("student_id")
+        cls = e.get("classes") or {}
+        if sid and sid not in student_class:
+            student_class[sid] = {"class_id": cls.get("id"), "class_name": cls.get("name", "Unknown")}
+
+    student_ids = list(student_class.keys())
+    if not student_ids:
+        flash("No students found in your department.", "warning")
+        return redirect(url_for("dept_admin.exam_bookings"))
+
+    query = (db.table("exam_bookings")
+               .select("id, student_id, unit_id, exam_session, serial_number, status, "
+                       "attempt_type, previous_grade, created_at, "
+                       "units(name, code), "
+                       "student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, mobile_number)")
+               .in_("student_id", student_ids)
+               .order("student_id")
+               .order("created_at"))
+
+    if status_filter and status_filter != "all":
+        query = query.eq("status", status_filter)
+
+    bookings = query.execute().data or []
+
+    if not bookings:
+        flash("No bookings found for the selected filters.", "info")
+        return redirect(url_for("dept_admin.exam_bookings"))
+
+    # Attach class info
+    for b in bookings:
+        b["_cls"] = student_class.get(b.get("student_id"), {}).get("class_name", "Unknown")
+
+    # Filter by class if requested
+    if class_filter:
+        bookings = [b for b in bookings if student_class.get(b.get("student_id"), {}).get("class_id") == class_filter]
+
+    # Group by class name
+    from collections import OrderedDict
+    by_class = OrderedDict()
+    for b in bookings:
+        cn = b["_cls"]
+        by_class.setdefault(cn, []).append(b)
+
+    # ── Build Excel ──────────────────────────────────────────────────────────────
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    navy    = PatternFill("solid", fgColor="0F2C54")
+    alt     = PatternFill("solid", fgColor="EFF6FF")
+    pending = PatternFill("solid", fgColor="FEF3C7")
+    approved= PatternFill("solid", fgColor="DCFCE7")
+    rejected= PatternFill("solid", fgColor="FEE2E2")
+    thin    = Side(style="thin", color="B0C4D8")
+    border  = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    HEADERS = ["S/N", "Admission No.", "Full Name", "Phone",
+               "Unit Code", "Unit Name", "Attempt Type", "Prev. Grade",
+               "Serial No.", "Session / Term", "Submitted", "Status"]
+    WIDTHS  = [6, 16, 28, 16, 12, 34, 20, 12, 24, 22, 14, 12]
+
+    AT_LABELS = {
+        "first_attempt": "First Attempt",
+        "retake":        "Retake (NYC/Fail)",
+        "missing_unit":  "Missed Unit",
+    }
+
+    for cls_name, rows in by_class.items():
+        ws = wb.create_sheet(title=cls_name[:31])
+
+        # ── Title ────────────────────────────────────────────────────────────────
+        ws.merge_cells(f"A1:L1")
+        ws["A1"] = f"THIKA TECHNICAL — {cls_name} — Exam Booking List"
+        ws["A1"].font = Font(bold=True, size=13, color="0F2C54")
+        ws["A1"].alignment = Alignment(horizontal="center")
+
+        ws.merge_cells("A2:L2")
+        ws["A2"] = (f"Generated: {datetime.now().strftime('%d %B %Y')}    |    "
+                    f"Total Entries: {len(rows)}    |    "
+                    f"Status Filter: {status_filter.upper() if status_filter else 'ALL'}")
+        ws["A2"].font = Font(italic=True, size=10, color="64748B")
+        ws["A2"].alignment = Alignment(horizontal="center")
+
+        ws.append([])
+
+        # ── Headers ──────────────────────────────────────────────────────────────
+        ws.append(HEADERS)
+        hdr_row = ws.max_row
+        for ci in range(1, len(HEADERS) + 1):
+            c = ws.cell(row=hdr_row, column=ci)
+            c.fill = navy
+            c.font = Font(color="FFFFFF", bold=True, size=10)
+            c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            c.border = border
+        ws.row_dimensions[hdr_row].height = 26
+
+        # ── Group by student ─────────────────────────────────────────────────────
+        by_student = OrderedDict()
+        for b in rows:
+            st  = b.get("student") or {}
+            adm = st.get("admission_no", b["student_id"])
+            by_student.setdefault(adm, {"student": st, "rows": []})["rows"].append(b)
+
+        sn = 1
+        for adm, data in by_student.items():
+            st = data["student"]
+            for b in data["rows"]:
+                unit = b.get("units") or {}
+                at   = b.get("attempt_type") or "first_attempt"
+                status = (b.get("status") or "pending").lower()
+
+                row_vals = [
+                    sn,
+                    st.get("admission_no", ""),
+                    st.get("full_name", ""),
+                    st.get("mobile_number", ""),
+                    unit.get("code", ""),
+                    unit.get("name", ""),
+                    AT_LABELS.get(at, at),
+                    b.get("previous_grade", ""),
+                    b.get("serial_number", ""),
+                    b.get("exam_session", ""),
+                    (b.get("created_at") or "")[:10],
+                    status.upper(),
+                ]
+                ws.append(row_vals)
+                dr = ws.max_row
+
+                # Status colour on last cell
+                stat_fill = {"approved": approved, "rejected": rejected, "pending": pending}.get(status)
+                row_fill  = alt if sn % 2 == 0 else None
+
+                for ci in range(1, len(HEADERS) + 1):
+                    c = ws.cell(row=dr, column=ci)
+                    if ci == len(HEADERS) and stat_fill:
+                        c.fill = stat_fill
+                    elif row_fill:
+                        c.fill = row_fill
+                    c.border = border
+                    c.alignment = Alignment(vertical="center", wrap_text=True)
+
+                sn += 1
+
+        # ── Column widths + freeze ────────────────────────────────────────────────
+        for ci, w in enumerate(WIDTHS, 1):
+            ws.column_dimensions[ws.cell(row=1, column=ci).column_letter].width = w
+        ws.freeze_panes = ws.cell(row=hdr_row + 1, column=1)
+
+    if not wb.sheetnames:
+        flash("No data to export.", "info")
+        return redirect(url_for("dept_admin.exam_bookings"))
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    fname = f"ExamBookings_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    from flask import Response as _Resp
+    return _Resp(
+        buf.read(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={fname}"}
+    )
+
+
 @dept_admin_bp.route("/exam-bookings/<booking_id>/approve", methods=["POST"])
 @dept_admin_required
 def approve_exam_booking(booking_id):
