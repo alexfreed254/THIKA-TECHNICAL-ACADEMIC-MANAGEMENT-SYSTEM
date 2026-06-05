@@ -913,7 +913,8 @@ def attendance_weekly_export():
             entry = att.get(sid, {}).get((w, l))
             if entry:
                 st, ts = entry
-                row.append(f"{'P' if st=='present' else 'A'}\n{ts}" if ts else ('P' if st=='present' else 'A'))
+                sym = "✔" if st == "present" else "✘"  # ✔ or ✘
+                row.append(f"{sym}\n{ts}" if ts else sym)
                 if st == "present": tot_p += 1
                 else: tot_a += 1
             else:
@@ -933,12 +934,12 @@ def attendance_weekly_export():
             # Colour status cells
             if n_fix < ci <= n_fix + n_ses:
                 v = str(c.value or "")
-                if v.startswith("P"):
+                if v.startswith("✔"):
                     c.fill = GREEN
-                    c.font = Font(bold=True, size=9, color="15803D")
-                elif v.startswith("A"):
+                    c.font = Font(bold=True, size=11, color="15803D")
+                elif v.startswith("✘"):
                     c.fill = RED
-                    c.font = Font(bold=True, size=9, color="B91C1C")
+                    c.font = Font(bold=True, size=11, color="B91C1C")
             elif ci <= n_fix and idx % 2 == 0:
                 c.fill = ALT
 
