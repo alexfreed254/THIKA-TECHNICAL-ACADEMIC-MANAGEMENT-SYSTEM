@@ -1829,38 +1829,87 @@ def download_exam_booking(booking_id):
 @student_bp.route("/marks")
 @student_required
 def marks():
-    """View all marks for the student."""
+    """Marks & Transcript — grouped by unit with per-unit grade summary."""
     db = get_service_client()
     user = current_user()
     student_id = user["id"]
-    
-    # Get filter parameters
+
     year = request.args.get("year", str(datetime.now().year))
     term = request.args.get("term", "").strip()
-    
-    # Build query
+
+    # Student profile + class/department info
+    profile = db.table("user_profiles").select("full_name, admission_no, mobile_number").eq("id", student_id).limit(1).execute().data or []
+    profile = profile[0] if profile else {}
+
+    enrollment = (db.table("enrollments")
+                    .select("class_id, classes(name, departments(name))")
+                    .eq("student_id", student_id)
+                    .limit(1)
+                    .execute().data or [])
+    class_name = dept_name = ""
+    if enrollment:
+        cls  = enrollment[0].get("classes") or {}
+        dept = cls.get("departments") or {}
+        class_name = cls.get("name", "")
+        dept_name  = dept.get("name", "")
+
     query = (db.table("marks")
-             .select("*, units(name, code), user_profiles!marks_trainer_id_fkey(full_name), classes(name)")
-             .eq("student_id", student_id)
-             .eq("year", int(year)))
-    
+               .select("id, unit_id, assessment_name, assessment_type, term, cycle, year, "
+                       "marks_obtained, max_marks, grade, remarks, created_at, "
+                       "units(name, code), "
+                       "trainer:user_profiles!marks_trainer_id_fkey(full_name)")
+               .eq("student_id", student_id)
+               .eq("year", int(year)))
     if term:
         query = query.eq("term", term)
-    
-    marks_list = query.order("created_at", desc=True).execute().data or []
-    
-    # Calculate average marks
-    if marks_list:
-        total_marks = sum(m["marks_obtained"] for m in marks_list)
-        average = total_marks / len(marks_list)
+
+    marks_list = query.order("unit_id").order("created_at").execute().data or []
+
+    # Group by unit — ordered by first occurrence
+    from collections import OrderedDict
+    by_unit = OrderedDict()
+    for m in marks_list:
+        uid = m.get("unit_id") or m.get("id")
+        if uid not in by_unit:
+            by_unit[uid] = {
+                "unit":        m.get("units") or {},
+                "assessments": [],
+                "term":        m.get("term"),
+            }
+        by_unit[uid]["assessments"].append(m)
+
+    # Calculate per-unit summary
+    units_data = []
+    for uid, data in by_unit.items():
+        asmts = data["assessments"]
+        total_obt = round(sum(a["marks_obtained"] for a in asmts), 1)
+        total_max = round(sum(a.get("max_marks") or 100 for a in asmts), 1)
+        pct = round(total_obt / total_max * 100, 1) if total_max else 0
+        if pct >= 85:   final = "M"
+        elif pct >= 70: final = "P"
+        elif pct >= 50: final = "C"
+        else:           final = "NYC"
+        data.update({"total_obt": total_obt, "total_max": total_max,
+                     "pct": pct, "final_grade": final})
+        units_data.append(data)
+
+    # Overall stats
+    if units_data:
+        all_pcts  = [u["pct"] for u in units_data]
+        overall   = round(sum(all_pcts) / len(all_pcts), 1)
+        passed    = sum(1 for u in units_data if u["final_grade"] in ("M", "P", "C"))
     else:
-        average = 0
-    
+        overall = passed = 0
+
     return render_template("student/marks.html",
-                          marks=marks_list,
-                          year=year,
-                          term=term,
-                          average=round(average, 2))
+                           units_data=units_data,
+                           profile=profile,
+                           class_name=class_name,
+                           dept_name=dept_name,
+                           year=year,
+                           term=term,
+                           overall=overall,
+                           passed=passed)
 
 
 # ── Result Slip PDF Download ─────────────────────────────────────────────────────
