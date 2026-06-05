@@ -168,6 +168,33 @@
 .type-radio input[type=radio] { accent-color: #1e5a9f; }
 .cost-input { width: 90px; padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; }
 
+/* ── Attempt type & previous result ───────────────── */
+.prev-result {
+  display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  margin-top: 5px; font-size: 11px; color: #64748b;
+  padding: 3px 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;
+}
+.fg-nyc  { background:#fef2f2;color:#b91c1c;padding:1px 6px;border-radius:4px;font-weight:700;font-size:11px; }
+.fg-c    { background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700;font-size:11px; }
+.fg-p    { background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-weight:700;font-size:11px; }
+.fg-m    { background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px;font-weight:700;font-size:11px; }
+.fg-none { background:#f3f4f6;color:#6b7280;padding:1px 6px;border-radius:4px;font-weight:700;font-size:11px; }
+
+.attempt-type-group { display:flex; gap:5px; flex-wrap:wrap; margin-top:8px; }
+.at-label { cursor:pointer; }
+.at-label input[type=radio] { display:none; }
+.at-chip {
+  display:inline-block; padding:3px 9px; border-radius:6px;
+  font-size:11px; font-weight:700; border:1.5px solid transparent; cursor:pointer;
+  transition:all .15s;
+}
+.at-first  { background:#e0f2fe;color:#0369a1;border-color:#bae6fd; }
+.at-retake { background:#fef2f2;color:#b91c1c;border-color:#fecaca; }
+.at-missing{ background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe; }
+.at-label input[type=radio]:checked + .at-first  { border-color:#0369a1;background:#bae6fd;box-shadow:0 0 0 2px rgba(3,105,161,.15); }
+.at-label input[type=radio]:checked + .at-retake { border-color:#b91c1c;background:#fecaca;box-shadow:0 0 0 2px rgba(185,28,28,.15); }
+.at-label input[type=radio]:checked + .at-missing{ border-color:#6d28d9;background:#ddd6fe;box-shadow:0 0 0 2px rgba(109,40,217,.15); }
+
 /* Status banner */
 .status-banner {
   border-radius: 14px; padding: 20px 24px;
@@ -495,6 +522,7 @@
             <tbody>
               {% for u in units %}
               {% set unit = u.units %}
+              {% set prev = marks_by_unit.get(unit.id) if marks_by_unit else none %}
               <tr class="unit-row" id="row-{{ unit.id }}">
                 <td style="text-align:center">
                   <input class="unit-cb" type="checkbox"
@@ -506,6 +534,36 @@
                 <td>
                   <div class="unit-name">{{ unit.name }}</div>
                   <span class="unit-code-tag">{{ unit.code }}</span>
+
+                  {# ── Most recent academic result ── #}
+                  {% if prev %}
+                  <input type="hidden" name="prev_marks_{{ unit.id }}" value="{{ prev.id }}">
+                  <input type="hidden" name="prev_grade_{{ unit.id }}" value="{{ prev.grade or '' }}">
+                  <div class="prev-result">
+                    <i class="fas fa-history" style="font-size:9px;color:#94a3b8"></i>
+                    Last result:
+                    <span class="fg-{{ (prev.grade or 'none')|lower }}">{{ prev.grade or '—' }}</span>
+                    {{ prev.marks_obtained or '—' }}% &middot; Term {{ prev.term }}/{{ prev.year }}
+                  </div>
+                  {% endif %}
+
+                  {# ── Attempt type selector ── #}
+                  <div class="attempt-type-group">
+                    <label class="at-label">
+                      <input type="radio" name="attempt_type_{{ unit.id }}" value="first_attempt"
+                             {% if not prev or prev.grade not in ('NYC',) %}checked{% endif %}>
+                      <span class="at-chip at-first"><i class="fas fa-star" style="font-size:9px"></i> First Attempt</span>
+                    </label>
+                    <label class="at-label">
+                      <input type="radio" name="attempt_type_{{ unit.id }}" value="retake"
+                             {% if prev and prev.grade == 'NYC' %}checked{% endif %}>
+                      <span class="at-chip at-retake"><i class="fas fa-redo" style="font-size:9px"></i> Retake — NYC/Fail</span>
+                    </label>
+                    <label class="at-label">
+                      <input type="radio" name="attempt_type_{{ unit.id }}" value="missing_unit">
+                      <span class="at-chip at-missing"><i class="fas fa-minus-circle" style="font-size:9px"></i> Missed Unit</span>
+                    </label>
+                  </div>
                 </td>
                 <td>
                   <div class="type-radio">

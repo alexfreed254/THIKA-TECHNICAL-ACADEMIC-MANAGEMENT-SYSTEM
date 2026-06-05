@@ -179,6 +179,7 @@
         <tr>
           <th>Trainee</th>
           <th>Unit</th>
+          <th>Attempt</th>
           <th>Session / Date</th>
           <th>Serial No.</th>
           <th>Purpose</th>
@@ -210,6 +211,23 @@
           <td>
             <div class="unit-name">{{ unit.get('name','—') }}</div>
             {% if unit.get('code') %}<span class="unit-code">{{ unit.code }}</span>{% endif %}
+          </td>
+
+          <!-- Attempt type -->
+          <td>
+            {% set at = b.get('attempt_type','first_attempt') %}
+            {% if at == 'retake' %}
+            <span class="badge" style="background:#fef2f2;color:#b91c1c"><i class="fas fa-redo"></i> Retake</span>
+            {% elif at == 'missing_unit' %}
+            <span class="badge" style="background:#f5f3ff;color:#6d28d9"><i class="fas fa-minus-circle"></i> Missed</span>
+            {% else %}
+            <span class="badge" style="background:#e0f2fe;color:#0369a1"><i class="fas fa-star"></i> First</span>
+            {% endif %}
+            {% if b.get('previous_grade') and at != 'first_attempt' %}
+            <div style="font-size:11px;color:#64748b;margin-top:3px">
+              Prev: <strong>{{ b.previous_grade }}</strong>
+            </div>
+            {% endif %}
           </td>
 
           <!-- Session -->

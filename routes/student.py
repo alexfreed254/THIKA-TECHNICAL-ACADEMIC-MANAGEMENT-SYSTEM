@@ -1308,7 +1308,27 @@ def exam_booking_form():
                    .eq("class_id", class_id)
                    .execute().data or [])
         units = cu_rows
-    
+
+    # Fetch most recent marks per unit — used to pre-fill attempt type
+    marks_by_unit = {}
+    if units:
+        unit_ids = [u["units"]["id"] for u in units if u.get("units")]
+        if unit_ids:
+            try:
+                all_marks = (db.table("marks")
+                               .select("id, unit_id, grade, marks_obtained, term, year")
+                               .eq("student_id", student_id)
+                               .in_("unit_id", unit_ids)
+                               .order("year", desc=True)
+                               .order("created_at", desc=True)
+                               .execute().data or [])
+                for m in all_marks:
+                    uid = m["unit_id"]
+                    if uid not in marks_by_unit:
+                        marks_by_unit[uid] = m
+            except Exception:
+                pass
+
     # Get uploaded documents
     documents_data = db.table("trainee_documents").select("*").eq("student_id", student_id).execute().data or []
     documents = {doc["document_type"]: doc for doc in documents_data}
@@ -1336,7 +1356,8 @@ def exam_booking_form():
                           documents=documents,
                           missing_documents=missing_documents,
                           can_download=can_download,
-                          existing_bookings=existing_bookings)
+                          existing_bookings=existing_bookings,
+                          marks_by_unit=marks_by_unit)
 
 
 @student_bp.route("/exam-booking-submit", methods=["POST"])
@@ -1428,18 +1449,25 @@ def exam_booking_submit():
 
     # Create exam booking records for each selected unit
     for unit_data in units_data:
-        unit_cost_raw = request.form.get(f"unit_cost_{unit_data['unit']['id']}", "")
-        unit_cost = float(unit_cost_raw) if unit_cost_raw else None
-        db.table("exam_bookings").insert({
+        uid = unit_data["unit"]["id"]
+        attempt_type  = request.form.get(f"attempt_type_{uid}", "first_attempt")
+        prev_grade    = request.form.get(f"prev_grade_{uid}", "") or None
+        prev_marks_id = request.form.get(f"prev_marks_{uid}", "") or None
+
+        insert_data = {
             "student_id":   student_id,
-            "unit_id":      unit_data["unit"]["id"],
+            "unit_id":      uid,
             "exam_date":    datetime.now().date(),
             "exam_session": f"Series {series} — Term {term}",
             "purpose":      f"{unit_data['type']} — {form_data.get('module_level','')}",
             "status":       "pending",
             "serial_number": serial_number,
             "special_requirements": form_data.get("pwd_status", "N/A"),
-        }).execute()
+            "attempt_type": attempt_type,
+        }
+        if prev_grade:    insert_data["previous_grade"]    = prev_grade
+        if prev_marks_id: insert_data["previous_marks_id"] = prev_marks_id
+        db.table("exam_bookings").insert(insert_data).execute()
     
     write_audit_log("create_exam_booking", target=f"booking:{serial_number}", detail={"units": len(units_data)})
     
