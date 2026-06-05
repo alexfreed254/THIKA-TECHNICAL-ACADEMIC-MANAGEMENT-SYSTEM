@@ -2106,6 +2106,14 @@ def request_attachment():
     start_date         = (request.form.get("start_date") or "").strip()
     end_date           = (request.form.get("end_date") or "").strip()
 
+    lat_raw = request.form.get("latitude", "").strip()
+    lng_raw = request.form.get("longitude", "").strip()
+    try:
+        latitude  = float(lat_raw) if lat_raw else None
+        longitude = float(lng_raw) if lng_raw else None
+    except ValueError:
+        latitude = longitude = None
+
     if not all([company_name, company_address, supervisor_name, supervisor_contact,
                 trainee_role, attachment_term, start_date, end_date]):
         flash("All required fields must be filled in.", "error")
@@ -2123,6 +2131,9 @@ def request_attachment():
             "available_slots":         1,
             "created_by":              student_id,
         }
+        if latitude  is not None: company_payload["latitude"]  = latitude
+        if longitude is not None: company_payload["longitude"] = longitude
+
         company_res = db.table("companies").insert(company_payload).execute()
         company_id  = company_res.data[0]["id"]
 
@@ -2154,6 +2165,48 @@ def request_attachment():
         flash("Attachment request submitted successfully. Awaiting department approval.", "success")
     except Exception as e:
         flash(f"Error submitting attachment request: {e}", "error")
+
+    return redirect(url_for("student.industrial_attachment"))
+
+
+# ── Delete Pending Attachment ─────────────────────────────────────────────────
+
+@student_bp.route("/industrial-attachment/<att_id>/delete", methods=["POST"])
+@student_required
+def delete_attachment(att_id):
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    row = (db.table("industrial_attachments")
+             .select("id, status, company_id, created_by")
+             .eq("id", att_id)
+             .eq("student_id", student_id)
+             .limit(1)
+             .execute().data or [])
+
+    if not row:
+        flash("Attachment not found.", "error")
+        return redirect(url_for("student.industrial_attachment"))
+
+    att = row[0]
+    if att.get("status") not in ("pending", "rejected"):
+        flash("Only pending or rejected attachments can be deleted.", "error")
+        return redirect(url_for("student.industrial_attachment"))
+
+    try:
+        company_id = att.get("company_id")
+        db.table("industrial_attachments").delete().eq("id", att_id).execute()
+        # Clean up the company record if it was created by this student
+        if company_id:
+            try:
+                db.table("companies").delete().eq("id", company_id).eq("created_by", student_id).execute()
+            except Exception:
+                pass
+        write_audit_log("delete_attachment", target=f"attachment:{att_id}")
+        flash("Attachment registration deleted.", "success")
+    except Exception as e:
+        flash(f"Could not delete attachment: {e}", "error")
 
     return redirect(url_for("student.industrial_attachment"))
 

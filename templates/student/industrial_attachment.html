@@ -203,6 +203,16 @@
 .pill-completed{ background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
 .pill-rejected { background:#fef2f2;color:#991b1b;border:1px solid #fecaca; }
 
+/* Delete button */
+.btn-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: none; border-radius: 8px;
+  background: #fef2f2; color: #dc2626; cursor: pointer;
+  font-size: 13px; transition: all .18s; flex-shrink: 0;
+}
+.btn-del:hover { background: #dc2626; color: #fff; transform: scale(1.1); }
+.btn-del:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
 /* Term badge */
 .term-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -446,6 +456,7 @@
           <th>End Date</th>
           <th>Status</th>
           <th>Grade</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="histTableBody">
@@ -469,6 +480,20 @@
           <td style="white-space:nowrap;font-size:12.5px">{{ att.get('end_date','—') }}</td>
           <td><span class="pill pill-{{ att.get('status','pending') }}">{{ att.get('status','pending')|title }}</span></td>
           <td style="font-weight:700;color:#1e5a9f">{{ att.get('final_grade','—') }}</td>
+          <td>
+            {% if att.get('status') in ('pending','rejected') %}
+            <form method="POST" action="/student/industrial-attachment/{{ att.get('id') }}/delete"
+                  onsubmit="return confirmDel(event)">
+              <button type="submit" class="btn-del" title="Delete this registration">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </form>
+            {% else %}
+            <button class="btn-del" disabled title="Cannot delete — attachment is {{ att.get('status','') }}">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -564,6 +589,34 @@
           <label class="f-label">Location / Address <span class="req">*</span></label>
           <input class="f-input" type="text" name="company_address" required
                  placeholder="e.g. Industrial Area, Nairobi / Thika Town">
+        </div>
+      </div>
+
+      {# ── GPS LOCATION ── #}
+      <div class="form-section-hdr">
+        <i class="fas fa-map-marker-alt"></i> Company / Site GPS Location
+      </div>
+      <div style="margin-bottom:24px">
+        <div class="coords-row" style="margin-bottom:12px">
+          <div class="f-field">
+            <label class="f-label">Latitude</label>
+            <input class="f-input" type="number" step="any" name="latitude" id="regLat"
+                   placeholder="e.g. -1.0332">
+          </div>
+          <div class="f-field">
+            <label class="f-label">Longitude</label>
+            <input class="f-input" type="number" step="any" name="longitude" id="regLng"
+                   placeholder="e.g. 37.0694">
+          </div>
+          <button type="button" class="btn-gps" onclick="detectForForm()">
+            <i class="fas fa-crosshairs"></i> Detect GPS
+          </button>
+        </div>
+        <div id="regGpsStatus" style="font-size:12.5px;color:#64748b;margin-bottom:12px"></div>
+        <div id="regMap" class="map-container"></div>
+        <div class="map-instructions">
+          <i class="fas fa-info-circle" style="color:#0891b2"></i>
+          Click the map to pin the company location, or use the Detect GPS button above.
         </div>
       </div>
 
@@ -663,6 +716,41 @@ document.addEventListener('DOMContentLoaded', function () {
     {% endif %}
     {% endif %}
   }
+
+  /* ── Registration form map (click-to-set) ───────────────── */
+  var regMapEl = document.getElementById('regMap');
+  if (regMapEl) {
+    var defaultLat = -1.0332, defaultLng = 37.0694; // Thika
+    var regMap = L.map('regMap').setView([defaultLat, defaultLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(regMap);
+
+    var regMarker = null;
+
+    function setMapPoint(lat, lng) {
+      document.getElementById('regLat').value = lat.toFixed(6);
+      document.getElementById('regLng').value = lng.toFixed(6);
+      if (regMarker) {
+        regMarker.setLatLng([lat, lng]);
+      } else {
+        regMarker = L.marker([lat, lng], { draggable: true }).addTo(regMap);
+        regMarker.on('dragend', function (e) {
+          var pos = e.target.getLatLng();
+          document.getElementById('regLat').value = pos.lat.toFixed(6);
+          document.getElementById('regLng').value = pos.lng.toFixed(6);
+        });
+      }
+      regMap.setView([lat, lng], 15);
+    }
+
+    regMap.on('click', function (e) { setMapPoint(e.latlng.lat, e.latlng.lng); });
+    window._setRegMapPoint = setMapPoint;
+
+    var initLat = parseFloat(document.getElementById('regLat').value);
+    var initLng = parseFloat(document.getElementById('regLng').value);
+    if (!isNaN(initLat) && !isNaN(initLng)) setMapPoint(initLat, initLng);
+  }
 });
 
 /* ── Date validation ───────────────────────────────────── */
@@ -673,6 +761,35 @@ if (startDate && endDate) {
     endDate.min = this.value;
     if (endDate.value && endDate.value < this.value) endDate.value = '';
   });
+}
+
+/* ── GPS detection (registration form) ──────────────── */
+function detectForForm() {
+  var status = document.getElementById('regGpsStatus');
+  if (!navigator.geolocation) {
+    status.innerHTML = '<span style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Geolocation not supported.</span>';
+    return;
+  }
+  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting location…';
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    document.getElementById('regLat').value = lat.toFixed(6);
+    document.getElementById('regLng').value = lng.toFixed(6);
+    status.innerHTML = '<span style="color:#16a34a"><i class="fas fa-check-circle"></i> Location captured — accuracy: ' + Math.round(pos.coords.accuracy) + 'm</span>';
+    if (window._setRegMapPoint) window._setRegMapPoint(lat, lng);
+  }, function (err) {
+    var msgs = { 1: 'Permission denied.', 2: 'GPS unavailable.', 3: 'Request timed out.' };
+    status.innerHTML = '<span style="color:#d97706"><i class="fas fa-exclamation-triangle"></i> ' + (msgs[err.code] || 'GPS error.') + ' Enter coordinates manually or click the map.</span>';
+  }, { enableHighAccuracy: true, timeout: 12000 });
+}
+
+/* ── Delete confirmation ─────────────────────────────── */
+function confirmDel(e) {
+  if (!confirm('Delete this attachment registration? This cannot be undone.')) {
+    e.preventDefault();
+    return false;
+  }
+  return true;
 }
 
 /* ── GPS detection (check-in form) ───────────────────── */
