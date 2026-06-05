@@ -170,7 +170,7 @@
     <div class="tr-hdr-title">Thika Technical Training Institute</div>
     <div class="tr-hdr-sub">Academic Marks & Transcript</div>
     <div class="tr-hdr-meta">
-      <span class="tr-hdr-item"><i class="fas fa-user"></i> {{ profile.get('full_name', user.get('full_name','—')) }}</span>
+      <span class="tr-hdr-item"><i class="fas fa-user"></i> {{ profile.get('full_name','—') }}</span>
       <span class="tr-hdr-item"><i class="fas fa-id-card"></i> {{ profile.get('admission_no','—') }}</span>
       {% if class_name %}<span class="tr-hdr-item"><i class="fas fa-door-open"></i> {{ class_name }}</span>{% endif %}
       {% if dept_name  %}<span class="tr-hdr-item"><i class="fas fa-sitemap"></i> {{ dept_name }}</span>{% endif %}
