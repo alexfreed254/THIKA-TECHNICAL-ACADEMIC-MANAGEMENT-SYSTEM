@@ -713,6 +713,260 @@ def view_session():
                            trainer={"name": user.get("full_name", "")})
 
 
+# ── Correct single attendance record ─────────────────────────────────────────
+
+@trainer_bp.route("/attendance/<record_id>/correct", methods=["POST"])
+@trainer_required
+def correct_attendance(record_id):
+    """Change one trainee's status for an already-submitted session without touching others."""
+    db   = get_service_client()
+    user = current_user()
+
+    new_status = (request.form.get("new_status") or "").strip()
+    if new_status not in ("present", "absent"):
+        flash("Invalid status value.", "error")
+        return redirect(request.referrer or url_for("trainer.attendance"))
+
+    # Verify the record belongs to this trainer
+    rec = (db.table("attendance")
+             .select("id, trainer_id, student_id, status")
+             .eq("id", record_id)
+             .eq("trainer_id", user["id"])
+             .limit(1)
+             .execute().data or [])
+    if not rec:
+        flash("Record not found or you do not have permission to edit it.", "error")
+        return redirect(request.referrer or url_for("trainer.attendance"))
+
+    old_status = rec[0]["status"]
+    if old_status == new_status:
+        flash("Status is already set to that value — no change made.", "info")
+        return redirect(request.referrer or url_for("trainer.attendance"))
+
+    try:
+        db.table("attendance").update({"status": new_status}).eq("id", record_id).execute()
+        write_audit_log("correct_attendance", target=f"attendance:{record_id}",
+                        detail={"old": old_status, "new": new_status,
+                                "student_id": rec[0]["student_id"]})
+        flash(f"Attendance corrected: {old_status} → {new_status}.", "success")
+    except Exception as exc:
+        flash(f"Error correcting attendance: {exc}", "error")
+
+    return redirect(request.referrer or url_for("trainer.view_session"))
+
+
+# ── 10-Week attendance export (Excel) ─────────────────────────────────────────
+
+@trainer_bp.route("/attendance/weekly-export")
+@trainer_required
+def attendance_weekly_export():
+    """Download a horizontal 10-week attendance sheet per unit/class as Excel."""
+    import io
+    from itertools import groupby as _groupby
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    import pytz
+
+    db   = get_service_client()
+    user = current_user()
+
+    class_id   = request.args.get("class_id", "")
+    unit_id    = request.args.get("unit_id", "")
+    year       = request.args.get("year",       datetime.now().year, type=int)
+    term       = request.args.get("term",       1,                   type=int)
+    week_start = request.args.get("week_start", 1,                   type=int)
+    week_end   = request.args.get("week_end",   10,                  type=int)
+
+    if not (class_id and unit_id):
+        flash("Class and Unit are required for export.", "error")
+        return redirect(url_for("trainer.attendance"))
+
+    # Access check
+    cu = (db.table("class_units").select("id")
+            .eq("class_id", class_id).eq("unit_id", unit_id)
+            .eq("trainer_id", user["id"]).limit(1).execute().data or [])
+    if not cu:
+        flash("Access denied.", "error")
+        return redirect(url_for("trainer.attendance"))
+
+    cls  = db.table("classes").select("name").eq("id", class_id).single().execute().data or {}
+    unit = db.table("units").select("code, name").eq("id", unit_id).single().execute().data or {}
+
+    students = (db.table("enrollments")
+                  .select("student_id, user_profiles(full_name, admission_no)")
+                  .eq("class_id", class_id)
+                  .order("student_id")
+                  .execute().data or [])
+    student_ids = [s["student_id"] for s in students]
+
+    att_rows = []
+    if student_ids:
+        att_rows = (db.table("attendance")
+                      .select("student_id, week, lesson, status, attendance_date")
+                      .eq("unit_id", unit_id)
+                      .in_("student_id", student_ids)
+                      .eq("year", year).eq("term", term)
+                      .gte("week", week_start).lte("week", week_end)
+                      .order("week").order("lesson")
+                      .execute().data or [])
+
+    # All distinct sessions ordered (week, lesson)
+    sessions = sorted({(r["week"], r["lesson"]) for r in att_rows}, key=lambda x: (x[0], x[1]))
+    if not sessions:
+        sessions = [(w, "L1") for w in range(week_start, min(week_end, week_start + 9) + 1)]
+
+    # Lookup {student_id: {(week,lesson): (status, ts_str)}}
+    EAT = pytz.timezone("Africa/Nairobi")
+    att = {}
+    for r in att_rows:
+        ts_str = ""
+        if r.get("attendance_date"):
+            try:
+                from datetime import datetime as _dt
+                dt = _dt.fromisoformat(str(r["attendance_date"]).replace("Z", "+00:00"))
+                ts_str = dt.astimezone(EAT).strftime("%H:%M")
+            except Exception:
+                ts_str = str(r["attendance_date"])[11:16]
+        att.setdefault(r["student_id"], {})[(r["week"], r["lesson"])] = (r["status"], ts_str)
+
+    # ── Build workbook ────────────────────────────────────────────────────────
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attendance"
+
+    NAVY    = PatternFill("solid", fgColor="0F2C54")
+    DARK    = PatternFill("solid", fgColor="1A3D6E")
+    GREEN   = PatternFill("solid", fgColor="DCFCE7")
+    RED     = PatternFill("solid", fgColor="FEE2E2")
+    ALT     = PatternFill("solid", fgColor="EFF6FF")
+    thin    = Side(style="thin", color="B0C4D8")
+    border  = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    n_fix = 3          # S/N, Adm No, Name
+    n_ses = len(sessions)
+    n_sum = 3          # Total P, Total A, %
+    n_tot = n_fix + n_ses + n_sum
+
+    def hdr_cell(row, col, val, fill=NAVY, font_size=10, wrap=False):
+        c = ws.cell(row=row, column=col, value=val)
+        c.fill = fill
+        c.font = Font(color="FFFFFF", bold=True, size=font_size)
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=wrap)
+        c.border = border
+        return c
+
+    # Row 1 — Title
+    ws.merge_cells(f"A1:{get_column_letter(n_tot)}1")
+    ws["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE — ATTENDANCE REPORT"
+    ws["A1"].font = Font(bold=True, size=13, color="0F2C54")
+    ws["A1"].alignment = Alignment(horizontal="center")
+
+    # Row 2 — Sub-title
+    ws.merge_cells(f"A2:{get_column_letter(n_tot)}2")
+    ws["A2"] = (f"Class: {cls.get('name','')}  |  Unit: {unit.get('code','')} — {unit.get('name','')}  |  "
+                f"Year: {year}  Term: {term}  |  Weeks {week_start}–{week_end}  |  "
+                f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
+    ws["A2"].font = Font(italic=True, size=9, color="374151")
+    ws["A2"].alignment = Alignment(horizontal="center")
+
+    ws.append([])  # blank row 3
+
+    # Row 4 — Week group headers (merged per week)
+    ws.append([])
+    week_row = ws.max_row
+    for ci in range(1, n_fix + 1):
+        hdr_cell(week_row, ci, "")
+    # Merge cells per week
+    col = n_fix + 1
+    for wk, grp in _groupby(sessions, key=lambda x: x[0]):
+        grp_list = list(grp)
+        span = len(grp_list)
+        if span > 1:
+            ws.merge_cells(start_row=week_row, start_column=col,
+                           end_row=week_row, end_column=col + span - 1)
+        hdr_cell(week_row, col, f"WEEK {wk}")
+        col += span
+    for i, lbl in enumerate(["Total P", "Total A", "%"], col):
+        hdr_cell(week_row, i, lbl, fill=DARK)
+    ws.row_dimensions[week_row].height = 22
+
+    # Row 5 — Sub-header (S/N, Adm, Name, lesson labels, summary)
+    sub_row = week_row + 1
+    hdr_cell(sub_row, 1, "S/N", fill=DARK)
+    hdr_cell(sub_row, 2, "Adm. No.", fill=DARK)
+    hdr_cell(sub_row, 3, "Student Name", fill=DARK)
+    for i, (w, l) in enumerate(sessions, n_fix + 1):
+        hdr_cell(sub_row, i, l, fill=DARK, wrap=True)
+    for i, lbl in enumerate(["Total P", "Total A", "%"], n_fix + n_ses + 1):
+        hdr_cell(sub_row, i, lbl, fill=DARK)
+    ws.row_dimensions[sub_row].height = 22
+
+    # Data rows
+    for idx, stu in enumerate(students, 1):
+        sid  = stu["student_id"]
+        prof = stu.get("user_profiles") or {}
+        row  = [idx, prof.get("admission_no", ""), prof.get("full_name", "")]
+        tot_p = tot_a = 0
+
+        for w, l in sessions:
+            entry = att.get(sid, {}).get((w, l))
+            if entry:
+                st, ts = entry
+                row.append(f"{'P' if st=='present' else 'A'}\n{ts}" if ts else ('P' if st=='present' else 'A'))
+                if st == "present": tot_p += 1
+                else: tot_a += 1
+            else:
+                row.append("")
+
+        total = tot_p + tot_a
+        row += [tot_p, tot_a, f"{round(tot_p/total*100)}%" if total else "—"]
+        ws.append(row)
+
+        dr = ws.max_row
+        ws.row_dimensions[dr].height = 30
+
+        for ci in range(1, n_tot + 1):
+            c = ws.cell(row=dr, column=ci)
+            c.border = border
+            c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            # Colour status cells
+            if n_fix < ci <= n_fix + n_ses:
+                v = str(c.value or "")
+                if v.startswith("P"):
+                    c.fill = GREEN
+                    c.font = Font(bold=True, size=9, color="15803D")
+                elif v.startswith("A"):
+                    c.fill = RED
+                    c.font = Font(bold=True, size=9, color="B91C1C")
+            elif ci <= n_fix and idx % 2 == 0:
+                c.fill = ALT
+
+    # Column widths
+    ws.column_dimensions["A"].width = 5
+    ws.column_dimensions["B"].width = 16
+    ws.column_dimensions["C"].width = 26
+    for ci in range(n_fix + 1, n_fix + n_ses + 1):
+        ws.column_dimensions[get_column_letter(ci)].width = 9
+    for ci in range(n_fix + n_ses + 1, n_tot + 1):
+        ws.column_dimensions[get_column_letter(ci)].width = 9
+
+    ws.freeze_panes = ws.cell(row=sub_row + 1, column=n_fix + 1)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    safe_cls  = (cls.get("name","Class") or "Class").replace("/", "-").replace(" ", "_")
+    safe_unit = (unit.get("code","Unit") or "Unit").replace("/", "-")
+    fname = f"Attendance_{safe_cls}_{safe_unit}_Wk{week_start}-{week_end}_Yr{year}T{term}.xlsx"
+
+    from flask import Response as _R
+    return _R(buf.read(),
+              mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              headers={"Content-Disposition": f"attachment; filename={fname}"})
+
+
 # ── Session PDF (print-ready attendance for one session) ─────────────────────
 
 @trainer_bp.route("/session-pdf")

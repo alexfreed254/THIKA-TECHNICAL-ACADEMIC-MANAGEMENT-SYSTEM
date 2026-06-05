@@ -17,23 +17,86 @@
 .event-box i { font-size:22px; flex-shrink:0; }
 .stat-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
 .stat-chip { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; }
+
+/* Correction form */
+.correct-toggle {
+  padding:4px 10px; border:none; border-radius:6px;
+  font-size:11px; font-weight:700; cursor:pointer;
+  background:#fef3c7; color:#92400e; transition:background .15s;
+}
+.correct-toggle:hover { background:#fde68a; }
+.correct-form {
+  display:none; margin-top:6px; background:#fffbeb;
+  border:1px solid #fde68a; border-radius:8px;
+  padding:8px 12px; display:none; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.correct-form.open { display:flex; }
+.correct-select {
+  padding:5px 10px; border:1px solid #d1d5db; border-radius:6px;
+  font-size:12.5px; background:#fff; cursor:pointer;
+}
+.correct-btn {
+  padding:5px 14px; background:#1e5a9f; color:#fff;
+  border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;
+}
+.correct-btn:hover { background:#154a8a; }
+
+/* Download panel */
+.dl-panel {
+  background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:12px;
+  padding:16px 20px; margin-bottom:18px;
+}
 {% endblock %}
 
 {% block content %}
 <div class="page-wrap">
 
-  <!-- Back & PDF buttons -->
+  <!-- Back / PDF / Download buttons -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
     <a href="/trainer/attendance?class_id={{ class_id }}&unit_id={{ unit_id }}&week={{ week }}&lesson={{ lesson }}&year={{ year }}&term={{ term }}"
        class="btn" style="background:#e3f2fd;color:#1e5a9f;font-weight:600;">
       <i class="fas fa-arrow-left"></i> Back to Capture
     </a>
-    {% if records %}
-    <a href="/trainer/session-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&week={{ week }}&lesson={{ lesson }}&year={{ year }}&term={{ term }}"
-       target="_blank" class="btn" style="background:#c62828;color:#fff;font-weight:600;">
-      <i class="fas fa-file-pdf"></i> Download PDF
-    </a>
-    {% endif %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      {% if records %}
+      <a href="/trainer/session-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&week={{ week }}&lesson={{ lesson }}&year={{ year }}&term={{ term }}"
+         target="_blank" class="btn" style="background:#c62828;color:#fff;font-weight:600;">
+        <i class="fas fa-file-pdf"></i> Session PDF
+      </a>
+      {% endif %}
+      <button onclick="document.getElementById('dl-panel').classList.toggle('hidden')"
+              class="btn" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-weight:600;border:none;cursor:pointer;">
+        <i class="fas fa-file-excel"></i> Download Weekly Report
+      </button>
+    </div>
+  </div>
+
+  <!-- 10-week download panel -->
+  <div id="dl-panel" class="dl-panel hidden">
+    <div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:10px">
+      <i class="fas fa-table" style="margin-right:6px"></i>Download 10-Week Attendance (Excel)
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:3px">Start Week</label>
+        <input id="dl-wk-start" type="number" min="1" max="52" value="1"
+               style="width:70px;padding:7px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:13px">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:3px">End Week</label>
+        <input id="dl-wk-end" type="number" min="1" max="52" value="10"
+               style="width:70px;padding:7px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:13px">
+      </div>
+      <a href="#" onclick="doWeeklyExport();return false"
+         style="display:inline-flex;align-items:center;gap:7px;padding:9px 20px;
+                background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+                border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">
+        <i class="fas fa-download"></i> Export Excel
+      </a>
+      <span style="font-size:12px;color:#64748b;align-self:center">
+        One row per student · All sessions across selected weeks
+      </span>
+    </div>
   </div>
 
   <!-- Info bar -->
@@ -101,7 +164,8 @@
             {% if active_event %}
             <th style="padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee;">Note</th>
             {% endif %}
-            <th style="padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee;">Date</th>
+            <th style="padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee;">Date &amp; Time</th>
+            <th style="padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee;">Correct</th>
           </tr>
         </thead>
         <tbody>
@@ -123,7 +187,27 @@
             </td>
             {% endif %}
             <td style="padding:10px 14px;font-size:12px;color:#888;white-space:nowrap;">
-              {{ r.attendance_date | to_eat('%d %b %Y') if r.attendance_date else '—' }}
+              {{ r.attendance_date | to_eat('%d %b %Y %H:%M') if r.attendance_date else '—' }}
+            </td>
+            <!-- Correction cell -->
+            <td style="padding:8px 14px;">
+              <button class="correct-toggle" onclick="toggleCorrect('{{ r.id }}')">
+                <i class="fas fa-edit"></i> Correct
+              </button>
+              <form id="cf-{{ r.id }}" class="correct-form"
+                    method="POST" action="/trainer/attendance/{{ r.id }}/correct">
+                <select name="new_status" class="correct-select">
+                  <option value="present" {% if r.status == 'present' %}selected{% endif %}>Present</option>
+                  <option value="absent"  {% if r.status == 'absent'  %}selected{% endif %}>Absent</option>
+                </select>
+                <button type="submit" class="correct-btn">
+                  <i class="fas fa-save"></i> Save
+                </button>
+                <button type="button" onclick="toggleCorrect('{{ r.id }}')"
+                        style="padding:5px 10px;background:#e5e7eb;color:#374151;border:none;border-radius:6px;font-size:12px;cursor:pointer;">
+                  Cancel
+                </button>
+              </form>
             </td>
           </tr>
           {% endfor %}
@@ -146,4 +230,20 @@
   </div>
 
 </div>
+
+<style>.hidden{display:none!important}</style>
+<script>
+function toggleCorrect(id) {
+  var f = document.getElementById('cf-' + id);
+  f.classList.toggle('open');
+}
+function doWeeklyExport() {
+  var ws = document.getElementById('dl-wk-start').value || 1;
+  var we = document.getElementById('dl-wk-end').value   || 10;
+  window.location.href = '/trainer/attendance/weekly-export'
+    + '?class_id={{ class_id }}&unit_id={{ unit_id }}'
+    + '&year={{ year }}&term={{ term }}'
+    + '&week_start=' + ws + '&week_end=' + we;
+}
+</script>
 {% endblock %}
