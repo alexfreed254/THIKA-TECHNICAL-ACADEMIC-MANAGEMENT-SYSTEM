@@ -444,7 +444,28 @@ def my_documents():
                 write_audit_log("update_profile", target=f"user:{student_id}", detail=updates)
                 flash('Personal information updated successfully.', 'success')
             except Exception as e:
-                flash(f'Error updating profile: {e}', 'danger')
+                err_msg = str(e)
+                # If specific columns are missing in DB, retry with only known-safe columns
+                if "PGRST204" in err_msg or "schema cache" in err_msg:
+                    safe = {k: v for k, v in updates.items()
+                            if k in ("mobile_number", "gender", "date_of_birth",
+                                     "national_id_no", "county", "sub_county", "village")}
+                    try:
+                        # Try removing whichever field triggered the error and retry
+                        import re as _re
+                        bad_col = _re.search(r"'(\w+)' column", err_msg)
+                        if bad_col:
+                            safe.pop(bad_col.group(1), None)
+                        if safe:
+                            db.table("user_profiles").update(safe).eq("id", student_id).execute()
+                            flash('Profile updated (some fields require a DB migration to save). '
+                                  'Please ask admin to run the migration.', 'warning')
+                        else:
+                            flash('Profile could not be saved — DB migration required.', 'warning')
+                    except Exception as e2:
+                        flash(f'Error updating profile: {e2}', 'danger')
+                else:
+                    flash(f'Error updating profile: {e}', 'danger')
             return redirect(url_for("student.my_documents"))
 
         # ── Handle document uploads ───────────────────────────────────────────
