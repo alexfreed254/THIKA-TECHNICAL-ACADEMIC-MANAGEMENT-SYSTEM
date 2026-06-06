@@ -500,8 +500,8 @@ def my_documents():
                 )
                 public_url = storage_client.from_("assessment-evidence").get_public_url(storage_path)
 
-                # 2. Upsert into trainee_documents
-                existing = (db.table("trainee_documents")
+                # 2. Upsert into student_personal_documents
+                existing = (db.table("student_personal_documents")
                               .select("id")
                               .eq("student_id", student_id)
                               .eq("document_type", doc_type)
@@ -518,9 +518,9 @@ def my_documents():
                 }
 
                 if existing:
-                    db.table("trainee_documents").update(payload).eq("id", existing[0]["id"]).execute()
+                    db.table("student_personal_documents").update(payload).eq("id", existing[0]["id"]).execute()
                 else:
-                    db.table("trainee_documents").insert({
+                    db.table("student_personal_documents").insert({
                         "student_id":    student_id,
                         "document_type": doc_type,
                         **payload,
@@ -557,7 +557,7 @@ def my_documents():
             department_name = course.get("departments", {}).get("name", "")
     
     # Get uploaded documents
-    documents_data = db.table("trainee_documents").select("*").eq("student_id", student_id).execute().data or []
+    documents_data = db.table("student_personal_documents").select("*").eq("student_id", student_id).execute().data or []
     documents = {doc["document_type"]: doc for doc in documents_data}
     
     return render_template("student/my_documents.html", 
