@@ -477,54 +477,79 @@ def my_documents():
         ]
         
         uploaded_count = 0
+        upload_errors  = []
+
         for doc_type in document_types:
-            if doc_type in request.files:
-                file = request.files[doc_type]
-                if file and file.filename:
+            if doc_type not in request.files:
+                continue
+            file = request.files[doc_type]
+            if not file or not file.filename:
+                continue
+
+            doc_label = doc_type.replace("_", " ").title()
+            try:
+                ext        = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'pdf'
+                filename   = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
+                file_bytes = file.read()
+                content_type = "application/pdf" if ext == 'pdf' else f"image/{ext}"
+
+                # 1. Upload to Supabase Storage
+                storage_client = get_service_client().storage
+                storage_client.from_("assessment-evidence").upload(
+                    filename, file_bytes, {"content-type": content_type}
+                )
+                public_url = storage_client.from_("assessment-evidence").get_public_url(filename)
+
+                # 2. Check for existing record
+                existing = (db.table("trainee_documents")
+                              .select("id")
+                              .eq("student_id", student_id)
+                              .eq("document_type", doc_type)
+                              .limit(1)
+                              .execute().data or [])
+
+                # 3. Core payload — only columns guaranteed in schema
+                core = {
+                    "document_name": doc_label,
+                    "file_url":      public_url,
+                    "file_name":     file.filename,
+                    "file_size":     len(file_bytes),
+                }
+
+                if existing:
+                    db.table("trainee_documents").update(core).eq("id", existing[0]["id"]).execute()
+                    rec_id = existing[0]["id"]
+                else:
+                    res = db.table("trainee_documents").insert({
+                        "student_id":    student_id,
+                        "document_type": doc_type,
+                        **core,
+                    }).execute()
+                    rec_id = (res.data or [{}])[0].get("id")
+
+                # 4. Try to also save file_path and status (only if those columns exist)
+                if rec_id:
                     try:
-                        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'pdf'
-                        filename = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
-                        file_bytes = file.read()  # read once — reuse for size
-                        content_type = "application/pdf" if ext == 'pdf' else f"image/{ext}"
-                        doc_display  = doc_type.replace("_", " ").title()
+                        db.table("trainee_documents").update({
+                            "file_path": filename,
+                            "status":    "pending",
+                        }).eq("id", rec_id).execute()
+                    except Exception:
+                        pass  # columns not yet migrated — non-fatal
 
-                        storage_client = get_service_client().storage
-                        storage_client.from_("assessment-evidence").upload(
-                            filename, file_bytes, {"content-type": content_type}
-                        )
-                        public_url = storage_client.from_("assessment-evidence").get_public_url(filename)
+                uploaded_count += 1
 
-                        existing = (db.table("trainee_documents")
-                                      .select("id")
-                                      .eq("student_id", student_id)
-                                      .eq("document_type", doc_type)
-                                      .limit(1)
-                                      .execute().data or [])
+            except Exception as e:
+                err = str(e)
+                if "23514" in err or "violates check constraint" in err.lower():
+                    upload_errors.append(
+                        f"{doc_label}: document_type not allowed in DB — run the SQL migration."
+                    )
+                else:
+                    upload_errors.append(f"{doc_label}: {err}")
 
-                        if existing:
-                            db.table("trainee_documents").update({
-                                "document_name": doc_display,
-                                "file_path":     filename,
-                                "file_url":      public_url,
-                                "file_name":     file.filename,
-                                "file_size":     len(file_bytes),
-                                "status":        "pending",
-                            }).eq("id", existing[0]["id"]).execute()
-                        else:
-                            db.table("trainee_documents").insert({
-                                "student_id":    student_id,
-                                "document_type": doc_type,
-                                "document_name": doc_display,
-                                "file_path":     filename,
-                                "file_url":      public_url,
-                                "file_name":     file.filename,
-                                "file_size":     len(file_bytes),
-                                "status":        "pending",
-                            }).execute()
-
-                        uploaded_count += 1
-                    except Exception as e:
-                        flash(f'Error uploading {doc_type.replace("_", " ").title()}: {e}', 'danger')
+        for err in upload_errors:
+            flash(err, 'danger')
         
         if uploaded_count > 0:
             write_audit_log("upload_documents", target=f"user:{student_id}", detail={"count": uploaded_count})
