@@ -2240,41 +2240,312 @@ def marks():
 @student_bp.route("/marks/download-result-slip")
 @student_required
 def download_result_slip():
-    """Download termly academic result slip as PDF."""
-    db = get_service_client()
-    user = current_user()
+    """Generate and stream the academic result slip as a proper PDF."""
+    db         = get_service_client()
+    user       = current_user()
     student_id = user["id"]
-    
+
     year = request.args.get("year", str(datetime.now().year))
     term = request.args.get("term", "").strip()
-    
-    # Get all marks for the student in the selected period
+
+    # ── Fetch data ────────────────────────────────────────────────────────────
     query = (db.table("marks")
-             .select("*, units(name, code), user_profiles!marks_trainer_id_fkey(full_name), classes(name, departments(name))")
-             .eq("student_id", student_id)
-             .eq("year", int(year)))
-    
+               .select("id, unit_id, assessment_name, assessment_type, term, cycle, year, "
+                       "marks_obtained, max_marks, grade, remarks, created_at, "
+                       "units(name, code), "
+                       "trainer:user_profiles!marks_trainer_id_fkey(full_name)")
+               .eq("student_id", student_id)
+               .eq("year", int(year)))
     if term:
         query = query.eq("term", term)
-    
-    marks_list = query.order("units(code)", desc=True).execute().data or []
-    
-    # Get student details
-    student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
-    
-    # Calculate average
-    if marks_list:
-        total_marks = sum(m["marks_obtained"] for m in marks_list)
-        average = total_marks / len(marks_list)
-    else:
-        average = 0
-    
-    return render_template("student/result_slip_pdf.html",
-                          marks=marks_list,
-                          student=student,
-                          year=year,
-                          term=term,
-                          average=round(average, 2))
+    marks_list = query.order("unit_id").order("created_at").execute().data or []
+
+    student    = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
+    enrollment = (db.table("enrollments")
+                    .select("class_id, classes(name, departments(name))")
+                    .eq("student_id", student_id).limit(1).execute().data or [])
+    class_name = dept_name = ""
+    if enrollment:
+        cls  = enrollment[0].get("classes") or {}
+        dept = cls.get("departments") or {}
+        class_name = cls.get("name", "")
+        dept_name  = dept.get("name", "")
+
+    # ── Group by unit ─────────────────────────────────────────────────────────
+    from collections import OrderedDict
+    by_unit = OrderedDict()
+    for m in marks_list:
+        uid = m.get("unit_id") or m.get("id")
+        if uid not in by_unit:
+            by_unit[uid] = {"unit": m.get("units") or {}, "rows": []}
+        by_unit[uid]["rows"].append(m)
+
+    # ── Build PDF ─────────────────────────────────────────────────────────────
+    try:
+        import io as _io, os as _os
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, HRFlowable, Image as RLImage)
+
+        buf = _io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4,
+                                leftMargin=18*mm, rightMargin=18*mm,
+                                topMargin=14*mm,  bottomMargin=14*mm)
+        W       = A4[0] - 36*mm
+        styles  = getSampleStyleSheet()
+        title_s = ParagraphStyle('T', parent=styles['Normal'], fontSize=14,
+                                 fontName='Helvetica-Bold', alignment=TA_CENTER)
+        sub_s   = ParagraphStyle('S', parent=styles['Normal'], fontSize=10,
+                                 fontName='Helvetica-Bold', alignment=TA_CENTER)
+        ref_s   = ParagraphStyle('R', parent=styles['Normal'], fontSize=8,
+                                 fontName='Helvetica', alignment=TA_CENTER)
+        sect_s  = ParagraphStyle('SC', parent=styles['Normal'], fontSize=9,
+                                 fontName='Helvetica-Bold')
+        norm_s  = ParagraphStyle('N', parent=styles['Normal'], fontSize=8.5,
+                                 fontName='Helvetica')
+        norm_c  = ParagraphStyle('NC', parent=styles['Normal'], fontSize=8.5,
+                                 fontName='Helvetica', alignment=TA_CENTER)
+
+        TYPE_COLORS = {
+            'ORAL':      colors.HexColor('#fff7ed'),
+            'PRACTICAL': colors.HexColor('#eff6ff'),
+            'WRITTEN':   colors.HexColor('#f5f3ff'),
+            'CA':        colors.HexColor('#f0fdf4'),
+            'IA':        colors.HexColor('#fef9c3'),
+        }
+        GRADE_COLORS = {
+            'M':   colors.HexColor('#dcfce7'),
+            'P':   colors.HexColor('#dbeafe'),
+            'C':   colors.HexColor('#fef3c7'),
+            'NYC': colors.HexColor('#fee2e2'),
+        }
+
+        story = []
+
+        # ── Header ──────────────────────────────────────────────────────────
+        logo_path = _os.path.join(_os.path.dirname(__file__), '..', 'static', 'assets', 'THIKATTILOGO.jpg')
+        logo_cell = Paragraph("", norm_s)
+        if _os.path.exists(logo_path):
+            try:
+                logo_cell = RLImage(logo_path, width=0.8*37.8, height=0.8*37.8)
+            except Exception:
+                pass
+
+        hdr_text = [
+            Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title_s),
+            Paragraph("ACADEMIC MARKS & RESULT SLIP", sub_s),
+            Paragraph("TTTI — Official Assessment Record", ref_s),
+        ]
+        hdr_tbl = Table([[logo_cell, hdr_text]], colWidths=[0.95*37.8, W - 0.95*37.8])
+        hdr_tbl.setStyle(TableStyle([
+            ('VALIGN', (0,0),(-1,-1),'MIDDLE'),
+            ('ALIGN',  (1,0),(1,0),'CENTER'),
+            ('TOPPADDING',(0,0),(-1,-1),0),
+            ('BOTTOMPADDING',(0,0),(-1,-1),0),
+        ]))
+        story.append(hdr_tbl)
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0f2c54'), spaceAfter=5))
+
+        # ── Student info band ────────────────────────────────────────────────
+        info_rows = [[
+            Paragraph(f"<b>Name:</b> {student.get('full_name','—')}", norm_s),
+            Paragraph(f"<b>Adm No:</b> {student.get('admission_no','—')}", norm_s),
+            Paragraph(f"<b>Class:</b> {class_name or '—'}", norm_s),
+            Paragraph(f"<b>Dept:</b> {dept_name or '—'}", norm_s),
+            Paragraph(f"<b>Year:</b> {year}  <b>Term:</b> {'All' if not term else 'Term '+term}", norm_s),
+        ]]
+        info_tbl = Table(info_rows, colWidths=[W*0.24]*4 + [W*0.04])
+        info_tbl.setStyle(TableStyle([
+            ('BACKGROUND',(0,0),(-1,-1),colors.HexColor('#f8fafc')),
+            ('BOX',(0,0),(-1,-1),0.5,colors.HexColor('#e2e8f0')),
+            ('TOPPADDING',(0,0),(-1,-1),5),
+            ('BOTTOMPADDING',(0,0),(-1,-1),5),
+            ('LEFTPADDING',(0,0),(-1,-1),6),
+        ]))
+        story += [info_tbl, Spacer(1, 8)]
+
+        # ── Per-unit tables ───────────────────────────────────────────────────
+        type_order = ['ORAL', 'PRACTICAL', 'WRITTEN', 'CA', 'IA']
+
+        for uid, ud in by_unit.items():
+            unit   = ud["unit"]
+            rows   = ud["rows"]
+
+            # Unit heading bar
+            unit_hdr = Table([[
+                Paragraph(f"{unit.get('code','—')}  {unit.get('name','Unknown Unit')}", sect_s),
+                Paragraph(f"{len(rows)} assessment(s)", norm_s),
+            ]], colWidths=[W*0.75, W*0.25])
+            unit_hdr.setStyle(TableStyle([
+                ('BACKGROUND',(0,0),(-1,-1),colors.HexColor('#0f2c54')),
+                ('TEXTCOLOR',(0,0),(-1,-1),colors.white),
+                ('TOPPADDING',(0,0),(-1,-1),6),
+                ('BOTTOMPADDING',(0,0),(-1,-1),6),
+                ('LEFTPADDING',(0,0),(0,0),10),
+                ('ALIGN',(1,0),(1,0),'RIGHT'),
+                ('RIGHTPADDING',(1,0),(1,0),10),
+            ]))
+            story.append(unit_hdr)
+
+            # Group rows by type
+            by_type = OrderedDict()
+            for r in rows:
+                t = (r.get("assessment_type") or "OTHER").upper()
+                by_type.setdefault(t, []).append(r)
+
+            sorted_types = [t for t in type_order if t in by_type] + \
+                           [t for t in by_type if t not in type_order]
+
+            tbl_data = [
+                [Paragraph("#",      norm_c),
+                 Paragraph("Assessment Name", sect_s),
+                 Paragraph("Type",   norm_c),
+                 Paragraph("Term",   norm_c),
+                 Paragraph("Cycle",  norm_c),
+                 Paragraph("Marks",  norm_c),
+                 Paragraph("Out of", norm_c),
+                 Paragraph("Score%", norm_c),
+                 Paragraph("Grade",  norm_c),
+                 Paragraph("Trainer",norm_s)]
+            ]
+            tbl_style = [
+                ('BACKGROUND',(0,0),(-1,0), colors.HexColor('#1e40af')),
+                ('TEXTCOLOR',(0,0),(-1,0),  colors.white),
+                ('FONTNAME',(0,0),(-1,-1),  'Helvetica'),
+                ('FONTSIZE',(0,0),(-1,-1),  8),
+                ('TOPPADDING',(0,0),(-1,-1),4),
+                ('BOTTOMPADDING',(0,0),(-1,-1),4),
+                ('LEFTPADDING',(0,0),(-1,-1),5),
+                ('RIGHTPADDING',(0,0),(-1,-1),5),
+                ('GRID',(0,0),(-1,-1),0.4, colors.HexColor('#e2e8f0')),
+                ('ALIGN',(0,0),(-1,-1),'CENTER'),
+                ('ALIGN',(1,0),(1,-1),'LEFT'),
+                ('ALIGN',(9,0),(9,-1),'LEFT'),
+                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+            ]
+            row_n = 0
+
+            for atype in sorted_types:
+                type_rows = by_type[atype]
+                tc = TYPE_COLORS.get(atype, colors.HexColor('#f8fafc'))
+                # Type sub-header
+                tbl_data.append([
+                    Paragraph(f"── {atype} ──", ParagraphStyle(
+                        'ts', parent=norm_s, fontName='Helvetica-Bold',
+                        fontSize=7.5, textColor=colors.HexColor('#374151'))),
+                    *[""] * 9
+                ])
+                ri = len(tbl_data) - 1
+                tbl_style += [
+                    ('BACKGROUND', (0,ri),(-1,ri), tc),
+                    ('SPAN',       (0,ri),(-1,ri)),
+                ]
+
+                for r in type_rows:
+                    row_n += 1
+                    mx   = r.get("max_marks") or 100
+                    obt  = r.get("marks_obtained") or 0
+                    pct  = round(obt / mx * 100, 1) if mx else 0
+                    grade = (r.get("grade") or "—").upper()
+                    gc   = GRADE_COLORS.get(grade, colors.white)
+                    trainer = (r.get("trainer") or {}).get("full_name","—")
+                    tbl_data.append([
+                        Paragraph(str(row_n),                                              norm_c),
+                        Paragraph(r.get("assessment_name") or "—",                        norm_s),
+                        Paragraph(atype,                                                   norm_c),
+                        Paragraph(f"T{r.get('term','—')}",                                norm_c),
+                        Paragraph(str(r.get("cycle","—")),                                norm_c),
+                        Paragraph(f"<b>{obt}</b>",                                        norm_c),
+                        Paragraph(str(mx),                                                 norm_c),
+                        Paragraph(f"<b>{pct}%</b>",                                       norm_c),
+                        Paragraph(f"<b>{grade}</b>",                                      norm_c),
+                        Paragraph(trainer,                                                 norm_s),
+                    ])
+                    ri = len(tbl_data) - 1
+                    tbl_style.append(('BACKGROUND', (8,ri),(8,ri), gc))
+
+            # Unit summary row
+            unit_obt = sum(r.get("marks_obtained") or 0 for r in rows)
+            unit_mx  = sum(r.get("max_marks") or 100 for r in rows)
+            unit_pct = round(unit_obt / unit_mx * 100, 1) if unit_mx else 0
+            if unit_pct >= 85:   final = "M"
+            elif unit_pct >= 70: final = "P"
+            elif unit_pct >= 50: final = "C"
+            else:                final = "NYC"
+
+            tbl_data.append([
+                Paragraph("", norm_s),
+                Paragraph(f"<b>UNIT TOTAL</b>", sect_s),
+                *[""] * 3,
+                Paragraph(f"<b>{unit_obt}</b>", norm_c),
+                Paragraph(f"<b>{unit_mx}</b>",  norm_c),
+                Paragraph(f"<b>{unit_pct}%</b>",norm_c),
+                Paragraph(f"<b>{final}</b>",     norm_c),
+                Paragraph("", norm_s),
+            ])
+            ri = len(tbl_data) - 1
+            tbl_style += [
+                ('BACKGROUND', (0,ri),(-1,ri), GRADE_COLORS.get(final, colors.white)),
+                ('LINEABOVE',  (0,ri),(-1,ri), 1.0, colors.HexColor('#0f2c54')),
+                ('FONTNAME',   (0,ri),(-1,ri), 'Helvetica-Bold'),
+            ]
+
+            col_w = [0.3*cm for cm in []] + [
+                9*mm, W*0.26, 15*mm, 12*mm, 12*mm,
+                13*mm, 13*mm, 14*mm, 14*mm, W - 9*mm - W*0.26 - 15*mm*4 - 13*mm*2 - 14*mm*2
+            ]
+            # Use simple proportional widths
+            cw = [8*mm, W*0.27, 14*mm, 11*mm, 11*mm, 13*mm, 13*mm, 14*mm, 13*mm, None]
+            last = W - sum(x for x in cw if x)
+            cw[-1] = max(last, 20*mm)
+
+            unit_tbl = Table(tbl_data, colWidths=cw, repeatRows=1)
+            unit_tbl.setStyle(TableStyle(tbl_style))
+            story += [unit_tbl, Spacer(1, 10)]
+
+        # ── Grade scale footer ────────────────────────────────────────────────
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=4))
+        scale_data = [[
+            Paragraph("<b>M — Mastery</b>: 85–100%", norm_s),
+            Paragraph("<b>P — Proficient</b>: 70–84%", norm_s),
+            Paragraph("<b>C — Competent</b>: 50–69%", norm_s),
+            Paragraph("<b>NYC — Not Yet Competent</b>: 0–49%", norm_s),
+        ]]
+        sc_tbl = Table(scale_data, colWidths=[W/4]*4)
+        sc_tbl.setStyle(TableStyle([
+            ('BACKGROUND',(0,0),(-1,-1), colors.HexColor('#f8fafc')),
+            ('BOX',(0,0),(-1,-1),0.5, colors.HexColor('#e2e8f0')),
+            ('TOPPADDING',(0,0),(-1,-1),4),
+            ('BOTTOMPADDING',(0,0),(-1,-1),4),
+            ('LEFTPADDING',(0,0),(-1,-1),6),
+        ]))
+        story += [sc_tbl,
+                  Spacer(1, 4),
+                  Paragraph(f"Generated: {datetime.now().strftime('%d %B %Y %H:%M')}  |  "
+                            f"Student: {student.get('full_name','—')}  |  "
+                            f"Adm: {student.get('admission_no','—')}", norm_s)]
+
+        doc.build(story)
+        pdf_bytes = buf.getvalue()
+
+        fname = f"ResultSlip_{student.get('admission_no','student')}_{year}"
+        if term:
+            fname += f"_T{term}"
+        resp = make_response(pdf_bytes)
+        resp.headers["Content-Type"] = "application/pdf"
+        resp.headers["Content-Disposition"] = f'attachment; filename="{fname}.pdf"'
+        return resp
+
+    except ImportError:
+        flash("PDF generation requires reportlab. Run: pip install reportlab pillow", "warning")
+        return redirect(url_for("student.marks"))
+    except Exception as exc:
+        flash(f"Could not generate PDF: {exc}", "danger")
+        return redirect(url_for("student.marks"))
 
 
 # ── Portfolio of Evidence (PoE) ───────────────────────────────────────────────
