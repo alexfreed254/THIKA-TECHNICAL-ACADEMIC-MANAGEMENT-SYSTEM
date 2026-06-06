@@ -2474,137 +2474,142 @@ def download_result_slip():
                                 color=BORDER, spaceAfter=6))
 
         # ════════════════════════════════════════════════════════════════════
-        # 3.  PER-UNIT SECTIONS  ─  Unit name/code + assessment table
+        # 3.  COMPACT MARKS TABLE  —  ONE UNIT = ONE ROW
+        #     Columns: # | Code | Unit Name | Tm | ORAL | PRACTICAL |
+        #              WRITTEN | CA | IA | Total | Score% | Grade
         # ════════════════════════════════════════════════════════════════════
-        type_order = ['ORAL', 'PRACTICAL', 'WRITTEN', 'CA', 'IA']
-        COL_W = [7*mm, W*0.28, 17*mm, 10*mm, 10*mm,
-                 13*mm, 13*mm, 13*mm, 13*mm]
-        COL_W.append(W - sum(COL_W))   # Trainer = remaining
+        TYPE_ORDER = ['ORAL', 'PRACTICAL', 'WRITTEN', 'CA', 'IA']
+
+        # Determine which types are actually present so we only make those columns
+        present_types = []
+        for t in TYPE_ORDER:
+            for ud in by_unit.values():
+                if any((r.get("assessment_type") or "").upper() == t for r in ud["rows"]):
+                    present_types.append(t)
+                    break
 
         if not by_unit:
             story.append(Paragraph("No assessment records found for the selected period.", lft9))
         else:
-            for uid, ud in by_unit.items():
+            # ── Build header row ──────────────────────────────────────────────
+            TYPE_HDR_COLOR = {
+                'ORAL':      colors.HexColor('#c2410c'),
+                'PRACTICAL': colors.HexColor('#1d4ed8'),
+                'WRITTEN':   colors.HexColor('#6d28d9'),
+                'CA':        colors.HexColor('#15803d'),
+                'IA':        colors.HexColor('#854d0e'),
+            }
+            TYPE_BG2 = {
+                'ORAL':      colors.HexColor('#fff7ed'),
+                'PRACTICAL': colors.HexColor('#eff6ff'),
+                'WRITTEN':   colors.HexColor('#f5f3ff'),
+                'CA':        colors.HexColor('#f0fdf4'),
+                'IA':        colors.HexColor('#fef9c3'),
+            }
+
+            hdr = ([Paragraph("#",     tbl_h),
+                    Paragraph("Code",  tbl_h),
+                    Paragraph("Unit Name", tbl_l)] +
+                   [Paragraph("Tm",    tbl_h)] +
+                   [Paragraph(t, ParagraphStyle(f'th_{t}', parent=tbl_h,
+                                                textColor=TYPE_HDR_COLOR.get(t, colors.white)))
+                    for t in present_types] +
+                   [Paragraph("Total", tbl_h),
+                    Paragraph("Score", tbl_h),
+                    Paragraph("Grade", tbl_h)])
+
+            tbl_data  = [hdr]
+            tbl_style = [
+                ('BACKGROUND',    (0,0), (-1,0),  MID_BLUE),
+                ('TEXTCOLOR',     (0,0), (-1,0),  colors.white),
+                ('FONTNAME',      (0,0), (-1,-1), 'Helvetica'),
+                ('FONTSIZE',      (0,0), (-1,-1), 7.5),
+                ('TOPPADDING',    (0,0), (-1,-1), 3),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+                ('LEFTPADDING',   (0,0), (-1,-1), 3),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 3),
+                ('GRID',          (0,0), (-1,-1), 0.4, BORDER),
+                ('ALIGN',         (0,0), (-1,-1), 'CENTER'),
+                ('ALIGN',         (2,0), (2,-1),  'LEFT'),
+                ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0,1),(-1,-1),
+                 [colors.white, colors.HexColor('#f8fafc')]),
+            ]
+
+            # ── One data row per unit ─────────────────────────────────────────
+            for row_i, (uid, ud) in enumerate(by_unit.items(), start=1):
                 unit = ud["unit"]
                 rows = ud["rows"]
 
-                # ── Unit name & code (left-aligned) ──────────────────────────
-                unit_info = Table([[
-                    Paragraph(f"Unit Name:&nbsp; <b>{unit.get('name','—')}</b>", lft9),
-                    Paragraph(f"Unit Code:&nbsp; <b>{unit.get('code','—')}</b>", lft9),
-                ]], colWidths=[W*0.65, W*0.35])
-                unit_info.setStyle(TableStyle([
-                    ('BACKGROUND', (0,0),(-1,-1), colors.HexColor('#eff6ff')),
-                    ('LINEBELOW',  (0,0),(-1,-1), 1, DARK_BLUE),
-                    ('TOPPADDING', (0,0),(-1,-1), 5),
-                    ('BOTTOMPADDING',(0,0),(-1,-1),5),
-                    ('LEFTPADDING',(0,0),(0,0), 8),
-                ]))
-
-                # ── Assessment table ──────────────────────────────────────────
-                by_type = OrderedDict()
+                # Group rows by type
+                by_type = {}
                 for r in rows:
                     t = (r.get("assessment_type") or "OTHER").upper()
                     by_type.setdefault(t, []).append(r)
-                sorted_types = ([t for t in type_order if t in by_type] +
-                                [t for t in by_type  if t not in type_order])
 
-                tbl_data  = [[
-                    Paragraph("#",             tbl_h),
-                    Paragraph("Assessment",    tbl_h),
-                    Paragraph("Type",          tbl_h),
-                    Paragraph("Tm",            tbl_h),
-                    Paragraph("Cy",            tbl_h),
-                    Paragraph("Marks",         tbl_h),
-                    Paragraph("Max",           tbl_h),
-                    Paragraph("Score",         tbl_h),
-                    Paragraph("Grade",         tbl_h),
-                    Paragraph("Trainer",       tbl_h),
-                ]]
-                tbl_style = [
-                    ('BACKGROUND',    (0,0),(-1,0), MID_BLUE),
-                    ('TEXTCOLOR',     (0,0),(-1,0), colors.white),
-                    ('FONTNAME',      (0,0),(-1,-1),'Helvetica'),
-                    ('FONTSIZE',      (0,0),(-1,-1), 8),
-                    ('TOPPADDING',    (0,0),(-1,-1), 3),
-                    ('BOTTOMPADDING', (0,0),(-1,-1), 3),
-                    ('LEFTPADDING',   (0,0),(-1,-1), 4),
-                    ('RIGHTPADDING',  (0,0),(-1,-1), 4),
-                    ('GRID',          (0,0),(-1,-1), 0.4, BORDER),
-                    ('ALIGN',         (0,0),(-1,-1), 'CENTER'),
-                    ('ALIGN',         (1,0),(1,-1),  'LEFT'),
-                    ('ALIGN',         (9,0),(9,-1),  'LEFT'),
-                    ('VALIGN',        (0,0),(-1,-1), 'MIDDLE'),
-                ]
-                row_n = 0
-
-                for atype in sorted_types:
-                    tc = TYPE_BG.get(atype, LIGHT_GREY)
-                    # Type sub-header row
-                    tbl_data.append([
-                        Paragraph(f"  {atype}", ParagraphStyle(
-                            f'ts{atype}', parent=tbl_h,
-                            textColor=DARK_BLUE, fontSize=7.5)),
-                        *[""] * 9
-                    ])
-                    ri = len(tbl_data) - 1
-                    tbl_style += [('BACKGROUND',(0,ri),(-1,ri), tc),
-                                  ('SPAN',      (0,ri),(-1,ri))]
-
-                    for r in by_type[atype]:
-                        row_n += 1
-                        mx      = float(r.get("max_marks") or 100)
+                # Per-type cells: list marks as "val(name_abbrev)" strings
+                type_cells = []
+                for t in present_types:
+                    t_rows = by_type.get(t, [])
+                    if not t_rows:
+                        type_cells.append(Paragraph("—", tbl_c))
+                        continue
+                    # Build a compact string: "90  70  —" with grade colouring
+                    lines = []
+                    for r in t_rows:
                         obt_raw = r.get("marks_obtained")
-                        has_obt = obt_raw is not None
-                        obt     = float(obt_raw) if has_obt else None
-                        pct     = round(obt / mx * 100, 1) if (has_obt and mx) else None
-                        grade   = (r.get("grade") or "—") if has_obt else "—"
-                        gc      = GRADE_BG.get(str(grade).upper(), colors.white)
-                        trainer = (r.get("trainer") or {}).get("full_name","—")
-                        tbl_data.append([
-                            Paragraph(str(row_n),                       tbl_c),
-                            Paragraph(r.get("assessment_name") or "—",  tbl_l),
-                            Paragraph(atype,                             tbl_c),
-                            Paragraph(str(r.get("term","—")),            tbl_c),
-                            Paragraph(str(r.get("cycle") or "—"),        tbl_c),
-                            Paragraph(f"<b>{obt}</b>" if has_obt else "—", tbl_c),
-                            Paragraph(str(int(mx)),                      tbl_c),
-                            Paragraph(f"<b>{pct}%</b>" if pct is not None else "—", tbl_c),
-                            Paragraph(f"<b>{grade}</b>",                 tbl_c),
-                            Paragraph(trainer,                           tbl_l),
-                        ])
-                        ri = len(tbl_data) - 1
-                        tbl_style.append(('BACKGROUND',(8,ri),(8,ri), gc))
+                        if obt_raw is not None:
+                            mx    = float(r.get("max_marks") or 100)
+                            obt   = float(obt_raw)
+                            pct_v = obt / mx * 100 if mx else 0
+                            grade = (r.get("grade") or "").upper()
+                            # Short abbreviation of name: first word + number if any
+                            name = r.get("assessment_name") or ""
+                            lines.append(f"{obt}")
+                        else:
+                            lines.append("—")
+                    cell_txt = "  ".join(lines)
+                    type_cells.append(Paragraph(cell_txt, tbl_c))
 
-                # Unit total — only count rows with marks entered
-                entered_rows = [r for r in rows if r.get("marks_obtained") is not None]
-                u_obt = round(sum(float(r["marks_obtained"]) for r in entered_rows), 1) if entered_rows else 0
-                u_mx  = round(sum(float(r.get("max_marks") or 100) for r in entered_rows), 1) if entered_rows else 0
+                # Unit total
+                entered = [r for r in rows if r.get("marks_obtained") is not None]
+                u_obt = round(sum(float(r["marks_obtained"]) for r in entered), 1) if entered else 0
+                u_mx  = round(sum(float(r.get("max_marks") or 100) for r in entered), 1) if entered else 0
                 u_pct = round(u_obt / u_mx * 100, 1) if u_mx else 0
                 final = ("M" if u_pct >= 85 else "P" if u_pct >= 70
-                         else "C" if u_pct >= 50 else "NYC") if entered_rows else "—"
-                tbl_data.append([
-                    Paragraph("", tbl_c),
-                    Paragraph("<b>UNIT TOTAL</b>", tbl_l),
-                    *[""] * 3,
-                    Paragraph(f"<b>{u_obt}</b>", tbl_c),
-                    Paragraph(f"<b>{u_mx}</b>",  tbl_c),
-                    Paragraph(f"<b>{u_pct}%</b>",tbl_c),
-                    Paragraph(f"<b>{final}</b>",  tbl_c),
-                    Paragraph("", tbl_l),
-                ])
+                         else "C" if u_pct >= 50 else "NYC") if entered else "—"
+                grade_bg = GRADE_BG.get(final, colors.white)
+
+                data_row = (
+                    [Paragraph(str(row_i),                      tbl_c),
+                     Paragraph(unit.get("code","—"),            tbl_c),
+                     Paragraph(unit.get("name","—"),            tbl_l),
+                     Paragraph(f"T{rows[0].get('term','') or '—'}" if rows else "—", tbl_c)]
+                    + type_cells +
+                    [Paragraph(f"<b>{u_obt}/{u_mx}</b>" if entered else "—", tbl_c),
+                     Paragraph(f"<b>{u_pct}%</b>"       if entered else "—", tbl_c),
+                     Paragraph(f"<b>{final}</b>",                             tbl_c)]
+                )
+                tbl_data.append(data_row)
                 ri = len(tbl_data) - 1
-                tbl_style += [
-                    ('BACKGROUND', (0,ri),(-1,ri), GRADE_BG.get(final, LIGHT_GREY)),
-                    ('LINEABOVE',  (0,ri),(-1,ri), 1.0, DARK_BLUE),
-                    ('FONTNAME',   (0,ri),(-1,ri), 'Helvetica-Bold'),
-                ]
+                # Grade cell colour
+                grade_col_idx = len(hdr) - 1
+                tbl_style.append(('BACKGROUND', (grade_col_idx,ri), (grade_col_idx,ri), grade_bg))
 
-                asmt_tbl = Table(tbl_data, colWidths=COL_W, repeatRows=1)
-                asmt_tbl.setStyle(TableStyle(tbl_style))
+            # ── Column widths ─────────────────────────────────────────────────
+            # Fixed: #(7) Code(14) Name(dynamic) Tm(8) ... type cols ... Total(18) Score(16) Grade(13)
+            fixed = 7*mm + 14*mm + 8*mm + 18*mm + 16*mm + 13*mm
+            type_col_w = 14*mm   # per type column
+            name_w = W - fixed - type_col_w * len(present_types)
+            name_w = max(name_w, 30*mm)
+            col_widths = ([7*mm, 14*mm, name_w, 8*mm] +
+                          [type_col_w] * len(present_types) +
+                          [18*mm, 16*mm, 13*mm])
 
-                story.append(KeepTogether([unit_info, asmt_tbl]))
-                story.append(Spacer(1, 10))
+            compact_tbl = Table(tbl_data, colWidths=col_widths, repeatRows=1)
+            compact_tbl.setStyle(TableStyle(tbl_style))
+            story.append(compact_tbl)
+            story.append(Spacer(1, 10))
 
         # ════════════════════════════════════════════════════════════════════
         # 4.  GRADE SCALE
