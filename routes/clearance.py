@@ -116,9 +116,10 @@ def dashboard():
 
     approvals = _fetch_all_approvals(db, cr["id"])
 
-    # Build per-group summary for the progress steps
+    # Build per-group summary for the progress steps (groups 1–4 only).
+    # Groups 5 (Finance) and 6 (Dean/Registrar) are signed manually on the form.
     groups = {i: {"label": GROUP_LABELS[i], "approvals": [], "status": "locked"}
-              for i in range(1, 7)}
+              for i in range(1, 5)}
 
     for a in approvals:
         stage = a.get("clearance_stages") or {}
@@ -240,12 +241,20 @@ def initiate_clearance():
                   .order("stage_order")
                   .execute().data or [])
 
-        # ── Create approval records ───────────────────────────────────────
+        # ── Create approval records (digital groups 1–4 only) ────────────
+        # Groups 5 (Finance) and 6 (Dean/Registrar) are handled manually
+        # on the physical clearance form — no digital approval records created.
         for stage in stages:
             s_name = (stage.get("stage_name") or "").lower()
             s_role = (stage.get("approver_role") or "").lower()
             cd     = stage.get("clearance_departments") or {}
             ctype  = (cd.get("clearance_type") or "").lower()
+
+            # Build a temporary stage dict to check its group
+            _tmp_stage = {"approver_role": s_role, "stage_name": s_name,
+                          "clearance_departments": cd}
+            if _global_group(_tmp_stage) >= 5:
+                continue   # skip Finance and Final Authority — done manually
 
             def _insert(approver_id=None, extra_comment=""):
                 db.table("clearance_approvals").insert({
@@ -257,28 +266,24 @@ def initiate_clearance():
                 }).execute()
 
             if s_role == "trainer" and "technician" not in s_name and ctype == "department":
-                # One row per trainer who taught the student
                 if trainer_ids:
                     for tid in trainer_ids:
                         _insert(approver_id=tid)
                 else:
-                    _insert()  # Fallback: one unassigned row
+                    _insert()
             elif "technician" in s_name and ctype == "department":
-                # One row per technician in the dept
                 if tech_ids:
                     for tid in tech_ids:
                         _insert(approver_id=tid)
                 else:
                     _insert()
             elif s_role == "dept_admin" and ctype == "department":
-                # One row per HOD
                 if hod_ids:
                     for hid in hod_ids:
                         _insert(approver_id=hid)
                 else:
                     _insert()
             else:
-                # Single unassigned approval for other stages
                 _insert()
 
         # Notify trainers
@@ -959,8 +964,13 @@ def _check_clearance_completion(request_id: str):
     if not approvals:
         return
 
-    any_rejected = any(a["status"] == "rejected" for a in approvals)
-    all_approved = all(a["status"] == "approved" for a in approvals)
+    # Only digital groups 1-4 count for completion.
+    # Groups 5 (Finance) and 6 (Dean/Registrar) are signed manually on the PDF.
+    digital = [a for a in approvals
+               if _global_group(a.get("clearance_stages") or {}) <= 4]
+
+    any_rejected = any(a["status"] == "rejected" for a in digital)
+    all_approved = bool(digital) and all(a["status"] == "approved" for a in digital)
 
     if any_rejected:
         db.table("clearance_requests").update({"status": "rejected"}).eq("id", request_id).execute()

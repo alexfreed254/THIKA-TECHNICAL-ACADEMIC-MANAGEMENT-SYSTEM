@@ -254,11 +254,9 @@
         2: 'All workshop technicians in your department.',
         3: 'Head of Department — gates all remaining stages.',
         4: 'Library, Sports, Environment, Dean\'s Office, etc.',
-        5: 'Finance verifies all fees are settled.',
-        6: 'Deputy Principal / Dean final verification.',
       } %}
 
-      {% for step in steps %}{% set i = loop.index %}{% if i <= 6 %}
+      {% for step in steps %}{% set i = loop.index %}{% if i <= 4 %}
       {% set st = step.status %}
       <div class="step-row step-{{ st }}">
         <div class="step-icon icon-{{ st if st != 'n_a' else 'locked' }}">
