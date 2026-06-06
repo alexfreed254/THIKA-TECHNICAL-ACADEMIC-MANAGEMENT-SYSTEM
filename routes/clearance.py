@@ -24,29 +24,31 @@ clearance_bp = Blueprint("clearance", __name__)
 
 
 # ── Global stage-order mapping ────────────────────────────────────────────────
-# Each clearance_approval belongs to one sequential group (1–7).
-# Approval of group N is blocked until ALL approvals in groups < N are done.
+# Digital groups 1–5; groups 6+ are manual (signed on the physical PDF form).
 
 def _global_group(stage: dict) -> int:
-    """Return 1–7 sequential group for a clearance_stage dict."""
+    """Return sequential group number for a clearance_stage dict."""
     role  = (stage.get("approver_role") or "").lower()
     name  = (stage.get("stage_name")    or "").lower()
     dept  = stage.get("clearance_departments") or {}
     ctype = (dept.get("clearance_type") or "").lower()
+    dname = (dept.get("name") or "").lower()
 
     if role == "trainer" and "technician" not in name:
         return 1  # Trainer Clearance
     if "technician" in name or role == "workshop_technician":
         return 2  # Home Dept Technicians
     if role == "dept_admin" and ctype == "department":
-        return 3  # HOD (home or other depts — gated by HOD completing first)
+        return 3  # HOD
+    if "library" in name or "library" in dname or role in ("librarian", "library_officer"):
+        return 5  # Community Library Clearance (digital — checked before 4)
     if ctype == "institutional":
-        return 4  # Library / Sports / Environment / DoS
+        return 4  # Other Institutional Sections (Sports, Environment, DoS)
     if role in ("finance_officer", "finance"):
-        return 5  # Finance
+        return 6  # Finance — manual
     if role in ("dean_students", "dean_of_students", "deputy_principal",
                 "registrar", "academic_registrar"):
-        return 6  # Final authority
+        return 7  # Final authority — manual
     return 4  # Default to institutional
 
 GROUP_LABELS = {
@@ -54,8 +56,9 @@ GROUP_LABELS = {
     2: "Technician Clearance",
     3: "HOD Approval",
     4: "Institutional Sections",
-    5: "Finance",
-    6: "Final Authority (Dean / Registrar)",
+    5: "Community Library Clearance",
+    6: "Finance",             # manual — not shown digitally
+    7: "Final Authority",     # manual — not shown digitally
 }
 
 def _serial(request_id: str) -> str:
@@ -116,10 +119,10 @@ def dashboard():
 
     approvals = _fetch_all_approvals(db, cr["id"])
 
-    # Build per-group summary for the progress steps (groups 1–4 only).
-    # Groups 5 (Finance) and 6 (Dean/Registrar) are signed manually on the form.
+    # Build per-group summary for the progress steps (digital groups 1–5).
+    # Groups 6 (Finance) and 7 (Dean/Registrar) are signed manually on the PDF.
     groups = {i: {"label": GROUP_LABELS[i], "approvals": [], "status": "locked"}
-              for i in range(1, 5)}
+              for i in range(1, 6)}
 
     for a in approvals:
         stage = a.get("clearance_stages") or {}
@@ -253,8 +256,8 @@ def initiate_clearance():
             # Build a temporary stage dict to check its group
             _tmp_stage = {"approver_role": s_role, "stage_name": s_name,
                           "clearance_departments": cd}
-            if _global_group(_tmp_stage) >= 5:
-                continue   # skip Finance and Final Authority — done manually
+            if _global_group(_tmp_stage) >= 6:
+                continue   # skip Finance (6) and Final Authority (7) — done manually on printed form
 
             def _insert(approver_id=None, extra_comment=""):
                 db.table("clearance_approvals").insert({
@@ -964,10 +967,10 @@ def _check_clearance_completion(request_id: str):
     if not approvals:
         return
 
-    # Only digital groups 1-4 count for completion.
-    # Groups 5 (Finance) and 6 (Dean/Registrar) are signed manually on the PDF.
+    # Digital groups 1-5 count for completion.
+    # Groups 6 (Finance) and 7 (Dean/Registrar) are signed manually on the PDF.
     digital = [a for a in approvals
-               if _global_group(a.get("clearance_stages") or {}) <= 4]
+               if _global_group(a.get("clearance_stages") or {}) <= 5]
 
     any_rejected = any(a["status"] == "rejected" for a in digital)
     all_approved = bool(digital) and all(a["status"] == "approved" for a in digital)

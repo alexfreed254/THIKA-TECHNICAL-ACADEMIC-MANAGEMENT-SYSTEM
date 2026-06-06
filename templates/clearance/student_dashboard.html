@@ -253,10 +253,11 @@
         1: 'All trainers who taught you must approve.',
         2: 'All workshop technicians in your department.',
         3: 'Head of Department — gates all remaining stages.',
-        4: 'Library, Sports, Environment, Dean\'s Office, etc.',
+        4: 'Sports, Environment, Dean\'s Office and other sections.',
+        5: 'Community Library — no outstanding books or dues.',
       } %}
 
-      {% for step in steps %}{% set i = loop.index %}{% if i <= 4 %}
+      {% for step in steps %}{% set i = loop.index %}{% if i <= 5 %}
       {% set st = step.status %}
       <div class="step-row step-{{ st }}">
         <div class="step-icon icon-{{ st if st != 'n_a' else 'locked' }}">
