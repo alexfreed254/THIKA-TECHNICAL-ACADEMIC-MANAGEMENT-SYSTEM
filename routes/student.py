@@ -481,42 +481,46 @@ def my_documents():
                 file = request.files[doc_type]
                 if file and file.filename:
                     try:
-                        # Upload to Supabase Storage
-                        ext = file.filename.rsplit('.', 1)[1].lower()
+                        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'pdf'
                         filename = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
-                        
+                        file_bytes = file.read()  # read once — reuse for size
+                        content_type = "application/pdf" if ext == 'pdf' else f"image/{ext}"
+                        doc_display  = doc_type.replace("_", " ").title()
+
                         storage_client = get_service_client().storage
                         storage_client.from_("assessment-evidence").upload(
-                            filename,
-                            file.read(),
-                            {"content-type": f"application/{ext}" if ext == 'pdf' else f"image/{ext}"}
+                            filename, file_bytes, {"content-type": content_type}
                         )
-                        
-                        # Get public URL
                         public_url = storage_client.from_("assessment-evidence").get_public_url(filename)
-                        
-                        # Check if document already exists
-                        existing = db.table("trainee_documents").select("*").eq("student_id", student_id).eq("document_type", doc_type).execute().data
-                        
+
+                        existing = (db.table("trainee_documents")
+                                      .select("id")
+                                      .eq("student_id", student_id)
+                                      .eq("document_type", doc_type)
+                                      .limit(1)
+                                      .execute().data or [])
+
                         if existing:
-                            # Update existing document
                             db.table("trainee_documents").update({
-                                "file_path": filename,
-                                "file_name": file.filename,
-                                "file_size": len(file.read()) if file else 0,
-                                "uploaded_at": "now()"
+                                "document_name": doc_display,
+                                "file_path":     filename,
+                                "file_url":      public_url,
+                                "file_name":     file.filename,
+                                "file_size":     len(file_bytes),
+                                "status":        "pending",
                             }).eq("id", existing[0]["id"]).execute()
                         else:
-                            # Insert new document
                             db.table("trainee_documents").insert({
-                                "student_id": student_id,
+                                "student_id":    student_id,
                                 "document_type": doc_type,
-                                "file_path": filename,
-                                "file_name": file.filename,
-                                "file_size": len(file.read()) if file else 0,
-                                "status": "pending"
+                                "document_name": doc_display,
+                                "file_path":     filename,
+                                "file_url":      public_url,
+                                "file_name":     file.filename,
+                                "file_size":     len(file_bytes),
+                                "status":        "pending",
                             }).execute()
-                        
+
                         uploaded_count += 1
                     except Exception as e:
                         flash(f'Error uploading {doc_type.replace("_", " ").title()}: {e}', 'danger')
