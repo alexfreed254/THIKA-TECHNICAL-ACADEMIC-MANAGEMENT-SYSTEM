@@ -1420,6 +1420,293 @@ def exam_booking_form():
                           marks_by_unit=marks_by_unit)
 
 
+def _build_exam_booking_pdf(student: dict, course_name: str, course_code: str,
+                             department_name: str, units_data: list,
+                             serial_number: str, year: str, series: str, term: str,
+                             form_data: dict = None) -> bytes:
+    """
+    Generate the TTTI Regular Candidate Assessment Registration Form 1A PDF.
+    Layout matches the physical printed form exactly.
+    Returns raw PDF bytes.
+    """
+    import io as _io, os as _os
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch, mm
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
+                                    TableStyle, HRFlowable, Image as RLImage)
+    from PIL import Image as PILImage
+
+    fd = form_data or {}
+
+    # ── Page geometry ────────────────────────────────────────────────────────
+    buf = _io.BytesIO()
+    pdf = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=18*mm, rightMargin=18*mm,
+        topMargin=14*mm,  bottomMargin=14*mm,
+    )
+    W = A4[0] - 36*mm   # usable width
+
+    # ── Styles ───────────────────────────────────────────────────────────────
+    base   = getSampleStyleSheet()
+    bold11 = ParagraphStyle('b11', parent=base['Normal'], fontSize=11,
+                            fontName='Helvetica-Bold')
+    bold10 = ParagraphStyle('b10', parent=base['Normal'], fontSize=10,
+                            fontName='Helvetica-Bold')
+    norm9  = ParagraphStyle('n9',  parent=base['Normal'], fontSize=9,
+                            fontName='Helvetica')
+    norm8  = ParagraphStyle('n8',  parent=base['Normal'], fontSize=8,
+                            fontName='Helvetica')
+    title  = ParagraphStyle('ttl', parent=base['Normal'], fontSize=13,
+                            fontName='Helvetica-Bold', alignment=TA_CENTER,
+                            spaceAfter=1)
+    sub    = ParagraphStyle('sub', parent=base['Normal'], fontSize=11,
+                            fontName='Helvetica-Bold', alignment=TA_CENTER,
+                            spaceAfter=1)
+    ref_s  = ParagraphStyle('ref', parent=base['Normal'], fontSize=9,
+                            fontName='Helvetica', alignment=TA_CENTER,
+                            spaceAfter=4)
+    label_s = ParagraphStyle('lbl', parent=base['Normal'], fontSize=9,
+                              fontName='Helvetica', leading=12)
+    value_s = ParagraphStyle('val', parent=base['Normal'], fontSize=9,
+                              fontName='Helvetica', leading=12)
+    sect_s  = ParagraphStyle('sec', parent=base['Normal'], fontSize=9,
+                              fontName='Helvetica-Bold', leading=12)
+
+    story = []
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    logo_path = _os.path.join(_os.path.dirname(__file__), '..', 'static', 'assets', 'THIKATTILOGO.jpg')
+    logo_cell = ""
+    if _os.path.exists(logo_path):
+        try:
+            logo_cell = RLImage(logo_path, width=0.85*inch, height=0.85*inch)
+        except Exception:
+            logo_cell = Paragraph("", norm9)
+    else:
+        logo_cell = Paragraph("", norm9)
+
+    header_text = [
+        Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title),
+        Paragraph("REGULAR CANDIDATE ASSESSMENT REGISTRATION FORM 1A", sub),
+        Paragraph("TTTI/EXAMS/CDACC/REG/1A", ref_s),
+    ]
+    header_tbl = Table(
+        [[logo_cell, header_text]],
+        colWidths=[1.0*inch, W - 1.0*inch],
+    )
+    header_tbl.setStyle(TableStyle([
+        ('VALIGN',  (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN',   (1,0), (1,0),   'CENTER'),
+        ('TOPPADDING',    (0,0),(-1,-1), 0),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 0),
+    ]))
+    story.append(header_tbl)
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceAfter=4))
+
+    # ── INSTRUCTIONS ─────────────────────────────────────────────────────────
+    instructions = [
+        "INSTRUCTIONS",
+        "Ensure you have registered on the student portal before filling this form.",
+        "Attach all required documents listed below.",
+        "Submit the completed form to the departmental HOD before the deadline.",
+    ]
+    for i, line in enumerate(instructions):
+        sty = sect_s if i == 0 else norm9
+        story.append(Paragraph(line, sty))
+    story.append(Spacer(1, 4))
+
+    # ── REQUIRED ATTACHMENTS ─────────────────────────────────────────────────
+    story.append(Paragraph("REQUIRED ATTACHMENTS", sect_s))
+    for att in [
+        "Copy of National ID / Passport",
+        "Copy of Birth Certificate",
+        "KCSE Certificate (for Module I) or Previous Module Result Slip (continuing students)",
+        "Fee Statement showing exam fee payment",
+    ]:
+        story.append(Paragraph(att, norm9))
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=4))
+
+    # ── SECTION 1: CANDIDATE DETAILS ─────────────────────────────────────────
+    story.append(Paragraph("SECTION 1: CANDIDATE DETAILS", sect_s))
+    story.append(Spacer(1, 3))
+
+    def _frow(lbl, val):
+        """Single field row: label | underlined value."""
+        return [Paragraph(lbl, label_s), Paragraph(str(val) if val else "", value_s)]
+
+    dob = (fd.get("date_of_birth") or student.get("date_of_birth") or "")
+    if dob and len(dob) == 10:  # YYYY-MM-DD → DD/MM/YYYY
+        try:
+            from datetime import datetime as _dt
+            dob = _dt.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y")
+        except Exception:
+            pass
+
+    field_rows = [
+        _frow("Full Name (as per ID):",       fd.get("full_name")     or student.get("full_name","")),
+        _frow("Admission Number:",             student.get("admission_no","")),
+        _frow("Gender:",                       fd.get("gender")        or student.get("gender","")),
+        _frow("Date of Birth:",                dob),
+        _frow("Mobile Number:",                fd.get("mobile_number") or student.get("mobile_number","")),
+        _frow("Email Address:",                student.get("email","")),
+        _frow("National ID / Birth Cert No.:", fd.get("national_id_no") or student.get("national_id_no","")),
+        _frow("Course Code:",                  course_code),
+        _frow("Course Name (see overleaf):",   course_name),
+        _frow("Module / Level / TEP:",         fd.get("module_level") or student.get("level","")),
+        _frow("PWD Status:",                   fd.get("pwd_status")   or student.get("pwd_status","N/A")),
+    ]
+    lw = 2.2 * inch
+    vw = W - lw
+    ftbl = Table(field_rows, colWidths=[lw, vw])
+    ftbl.setStyle(TableStyle([
+        ('FONTNAME',      (0,0),(-1,-1), 'Helvetica'),
+        ('FONTSIZE',      (0,0),(-1,-1), 9),
+        ('TOPPADDING',    (0,0),(-1,-1), 2),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 2),
+        ('LINEBELOW',     (1,0),(1,-1), 0.5, colors.black),  # underline value column
+        ('VALIGN',        (0,0),(-1,-1), 'BOTTOM'),
+    ]))
+    story.append(ftbl)
+    story.append(Spacer(1, 8))
+
+    # ── SECTION 2: EXAM PERIOD (compact inline) ───────────────────────────────
+    series_label = {"1": "Series 1 (Jan – Apr)", "2": "Series 2 (May – Aug)",
+                    "3": "Series 3 (Sep – Dec)"}.get(str(series), f"Series {series}")
+    ep_rows = [[
+        _frow("Exam Year:", year)[0],   _frow("Exam Year:", year)[1],
+        _frow("Series:", series_label)[0], _frow("Series:", series_label)[1],
+        _frow("Term:", f"Term {term}")[0], _frow("Term:", f"Term {term}")[1],
+    ]]
+    ep_tbl = Table(ep_rows, colWidths=[1.1*inch, 1.2*inch, 0.7*inch, 1.5*inch, 0.6*inch, 1.0*inch])
+    ep_tbl.setStyle(TableStyle([
+        ('FONTNAME',   (0,0),(-1,-1),'Helvetica'),
+        ('FONTSIZE',   (0,0),(-1,-1), 9),
+        ('TOPPADDING', (0,0),(-1,-1), 2),
+        ('BOTTOMPADDING',(0,0),(-1,-1),2),
+        ('LINEBELOW',  (1,0),(1,0), 0.5, colors.black),
+        ('LINEBELOW',  (3,0),(3,0), 0.5, colors.black),
+        ('LINEBELOW',  (5,0),(5,0), 0.5, colors.black),
+        ('VALIGN',     (0,0),(-1,-1),'BOTTOM'),
+    ]))
+    story.append(ep_tbl)
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=4))
+
+    # ── SECTION 3: DEPARTMENTAL CLEARANCE ────────────────────────────────────
+    story.append(Paragraph("SECTION 3: DEPARTMENTAL CLEARANCE", sect_s))
+    story.append(Spacer(1, 3))
+
+    cl_rows = [
+        _frow("Department:", department_name),
+        _frow("HOD Name:",   ""),
+    ]
+    cl_tbl = Table(cl_rows, colWidths=[lw, vw])
+    cl_tbl.setStyle(TableStyle([
+        ('FONTNAME',      (0,0),(-1,-1),'Helvetica'),
+        ('FONTSIZE',      (0,0),(-1,-1), 9),
+        ('TOPPADDING',    (0,0),(-1,-1), 2),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 2),
+        ('LINEBELOW',     (1,0),(1,-1), 0.5, colors.black),
+        ('VALIGN',        (0,0),(-1,-1),'BOTTOM'),
+    ]))
+    story.append(cl_tbl)
+    story.append(Spacer(1, 3))
+
+    sig_row = [[
+        Paragraph("Signature: ___________________________", norm9),
+        Paragraph("Date: _______________________________", norm9),
+    ]]
+    sig_tbl = Table(sig_row, colWidths=[W/2, W/2])
+    sig_tbl.setStyle(TableStyle([
+        ('TOPPADDING',    (0,0),(-1,-1), 2),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 2),
+    ]))
+    story.append(sig_tbl)
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=4))
+
+    # ── UNITS OF COMPETENCY TABLE ─────────────────────────────────────────────
+    story.append(Paragraph("UNITS OF COMPETENCY", sect_s))
+    story.append(Spacer(1, 3))
+
+    u_header = [
+        Paragraph("S/N",                    bold10),
+        Paragraph("Unit of Competency",     bold10),
+        Paragraph("Unit Type\n(Core/Common/Basic)", bold10),
+        Paragraph("Unit Cost\n(Ksh)",       bold10),
+    ]
+    u_rows   = [u_header]
+    total_cost = 0.0
+    for i, ud in enumerate(units_data):
+        unit = ud.get("unit") or {}
+        cost_raw = ud.get("cost") or ""
+        try:
+            cost_val = float(cost_raw) if cost_raw else 0.0
+        except (ValueError, TypeError):
+            cost_val = 0.0
+        total_cost += cost_val
+        cost_str = f"{cost_val:,.2f}" if cost_val else ""
+        u_rows.append([
+            Paragraph(str(i+1), norm9),
+            Paragraph(unit.get("name",""), norm9),
+            Paragraph(ud.get("type","Core"), norm9),
+            Paragraph(cost_str, norm9),
+        ])
+
+    # Pad to at least 8 rows so it looks like the physical form
+    while len(u_rows) < 9:
+        u_rows.append([Paragraph(str(len(u_rows)), norm9), Paragraph("", norm9),
+                       Paragraph("", norm9), Paragraph("", norm9)])
+
+    # Total row
+    u_rows.append([
+        Paragraph("", norm9),
+        Paragraph("TOTAL", bold10),
+        Paragraph("", norm9),
+        Paragraph(f"{total_cost:,.2f}" if total_cost else "", bold10),
+    ])
+
+    col_w = [0.45*inch, W - 0.45*inch - 1.5*inch - 1.1*inch, 1.5*inch, 1.1*inch]
+    utbl  = Table(u_rows, colWidths=col_w, repeatRows=1)
+    utbl.setStyle(TableStyle([
+        ('GRID',         (0,0), (-1,-2), 0.5, colors.black),
+        ('LINEBELOW',    (0,-1),(-1,-1), 1.0, colors.black),
+        ('LINEABOVE',    (0,-1),(-1,-1), 0.5, colors.black),
+        ('BACKGROUND',   (0,0), (-1,0),  colors.HexColor('#E8E8E8')),
+        ('FONTNAME',     (0,0), (-1,0),  'Helvetica-Bold'),
+        ('FONTSIZE',     (0,0), (-1,-1), 9),
+        ('TOPPADDING',   (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING',(0,0), (-1,-1), 3),
+        ('VALIGN',       (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN',        (0,0), (0,-1),  'CENTER'),
+        ('ALIGN',        (3,0), (3,-1),  'RIGHT'),
+    ]))
+    story.append(utbl)
+    story.append(Spacer(1, 6))
+
+    # ── FOOTER: PAYMENT DETAILS + SERIAL ─────────────────────────────────────
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=3))
+    footer_rows = [[
+        Paragraph(f"<b>Account Name:</b> Thika Technical Training Institute", norm8),
+        Paragraph(f"<b>Serial No:</b> {serial_number}", norm8),
+    ]]
+    ftbl2 = Table(footer_rows, colWidths=[W*0.65, W*0.35])
+    ftbl2.setStyle(TableStyle([
+        ('TOPPADDING',    (0,0),(-1,-1), 2),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 2),
+        ('ALIGN',         (1,0),(1,0),   'RIGHT'),
+    ]))
+    story.append(ftbl2)
+
+    pdf.build(story)
+    return buf.getvalue()
+
+
 @student_bp.route("/exam-booking-submit", methods=["POST"])
 @student_required
 def exam_booking_submit():
@@ -1605,301 +1892,24 @@ def exam_booking_submit():
         flash(f"Error saving booking: {db_err}", "danger")
         return redirect(url_for("student.exam_booking_form"))
     
-    # Generate multi-page PDF with embedded documents
+    # Generate PDF — Form 1A design matching the physical form
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
-        import io
-        from PIL import Image as PILImage
-        import os
-        
-        # Create PDF buffer
-        buffer  = io.BytesIO()
-        pdf_doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
-        
-        # Story (content) list
-        story = []
-        styles = getSampleStyleSheet()
-        
-        # Custom styles
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            textColor=colors.darkblue,
-            alignment=TA_CENTER,
-            spaceAfter=12
+        pdf_value  = _build_exam_booking_pdf(
+            student=student, course_name=course_name, course_code=course_code,
+            department_name=department_name, units_data=units_data,
+            serial_number=serial_number, year=year, series=series, term=term,
+            form_data=form_data,
         )
-        
-        header_style = ParagraphStyle(
-            'CustomHeader',
-            parent=styles['Heading2'],
-            fontSize=12,
-            textColor=colors.black,
-            alignment=TA_CENTER,
-            spaceAfter=6
-        )
-        
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.black,
-            spaceAfter=6
-        )
-        
-        # PAGE 1: COVER PAGE
-        story.append(Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title_style))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph("EXAMINATION BOOKING FORM", header_style))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph(f"Serial Number: {serial_number}", normal_style))
-        story.append(Paragraph(f"Academic Year: {year}", normal_style))
-        story.append(Paragraph(f"Exam Series: {series}", normal_style))
-        story.append(Spacer(1, 24))
-        
-        # PAGE 2: STUDENT DETAILS
-        story.append(Paragraph("STUDENT DETAILS", header_style))
-        story.append(Spacer(1, 12))
-        
-        student_data = [
-            ["Full Name:", student.get("full_name", "")],
-            ["Admission Number:", student.get("admission_no", "")],
-            ["Course:", course_name],
-            ["Department:", department_name],
-            ["Phone:", student.get("mobile_number", "")],
-            ["Email:", student.get("email", "")],
-            ["PWD Status:", student.get("pwd_status", "N/A")]
-        ]
-        
-        student_table = Table(student_data, colWidths=[2*inch, 4*inch])
-        student_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        story.append(student_table)
-        story.append(Spacer(1, 24))
-        
-        # PAGE 3: UNIT REGISTRATION
-        story.append(Paragraph("UNIT REGISTRATION", header_style))
-        story.append(Spacer(1, 12))
-        
-        unit_headers = ["S/N", "Unit Name", "Unit Code", "Type", "Attempt"]
-        unit_rows = [
-            [str(i+1), u["unit"]["name"], u["unit"].get("code",""), u["type"].title(),
-             u.get("attempt","first_attempt").replace("_"," ").title()]
-            for i, u in enumerate(units_data)
-        ]
-        unit_table_data = [unit_headers] + unit_rows
-        
-        unit_table = Table(unit_table_data, colWidths=[0.5*inch, 2.5*inch, 1.2*inch, 0.9*inch, 1*inch])
-        unit_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        story.append(unit_table)
-        story.append(Spacer(1, 24))
-        
-        # PAGE 4: DOCUMENT VERIFICATION SUMMARY
-        story.append(Paragraph("DOCUMENT VERIFICATION SUMMARY", header_style))
-        story.append(Spacer(1, 12))
-        
-        doc_headers = ["Document", "Status", "Reference ID"]
-        doc_rows = []
-        required_docs_list = [
-            ("National ID", "national_id"),
-            ("Birth Certificate", "birth_certificate"),
-            ("KCSE Certificate", "kcse_certificate"),
-            ("Passport Photo", "passport_photo")
-        ]
-        
-        for doc_name, doc_type in required_docs_list:
-            d      = documents.get(doc_type)
-            status = "✓ Attached" if d else "✗ Missing"
-            ref_id = d.get("id", "")[:8] if d else "N/A"
-            doc_rows.append([doc_name, status, ref_id])
-        
-        doc_table_data = [doc_headers] + doc_rows
-        doc_table = Table(doc_table_data, colWidths=[2*inch, 1.5*inch, 2*inch])
-        doc_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        story.append(doc_table)
-        story.append(Spacer(1, 24))
-        
-        # PAGE 5-7: ATTACHED DOCUMENTS
-        story.append(Paragraph("ATTACHED DOCUMENTS", header_style))
-        story.append(Spacer(1, 12))
-        
-        storage_client = get_service_client().storage
-        
-        for doc_name, doc_type in required_docs_list:
-            doc = documents.get(doc_type)
-            if doc:
-                story.append(Paragraph(f"{doc_name}:", normal_style))
-                story.append(Spacer(1, 6))
-                
-                try:
-                    file_path = doc.get("file_path")
-                    file_url  = doc.get("file_url", "")
-                    ext       = (file_path or "").rsplit(".", 1)[-1].lower() if file_path else ""
-
-                    if file_path and ext in ("jpg", "jpeg", "png", "webp", "gif"):
-                        # Download from storage and embed as image
-                        file_data = storage_client.from_("assessment-evidence").download(file_path)
-
-                        img        = PILImage.open(io.BytesIO(file_data))
-                        if img.mode != "RGB":
-                            img = img.convert("RGB")
-
-                        # Scale to fit within 5 × 7 inches (reportlab points = pixels here)
-                        max_w, max_h = 5 * inch, 7 * inch
-                        iw, ih = img.size
-                        ratio  = min(max_w / iw, max_h / ih, 1.0)  # never upscale
-                        disp_w = iw * ratio
-                        disp_h = ih * ratio
-
-                        # Write (possibly resized) PIL image to a fresh buffer
-                        out_buf = io.BytesIO()
-                        if ratio < 1.0:
-                            img = img.resize((int(iw * ratio), int(ih * ratio)), PILImage.LANCZOS)
-                        img.save(out_buf, format="JPEG", quality=85)
-                        out_buf.seek(0)
-
-                        rl_image = Image(out_buf, width=disp_w, height=disp_h)
-                        story.append(rl_image)
-                        story.append(Spacer(1, 12))
-
-                    elif file_url:
-                        # For PDFs or non-image files, show a reference link
-                        story.append(Paragraph(
-                            f'<link href="{file_url}"><u>Click to view {doc_name} (opens in browser)</u></link>',
-                            normal_style))
-                        story.append(Spacer(1, 12))
-                    else:
-                        story.append(Paragraph(f"[{doc_name}: file path not recorded]", normal_style))
-                        story.append(Spacer(1, 12))
-
-                except Exception as e:
-                    story.append(Paragraph(f"[{doc_name}: could not embed — {e}]", normal_style))
-                    story.append(Spacer(1, 12))
-            else:
-                story.append(Paragraph(f"{doc_name}: NOT UPLOADED", normal_style))
-                story.append(Spacer(1, 12))
-        
-        # PAGE 8: SYSTEM VERIFICATION
-        story.append(Paragraph("SYSTEM VERIFICATION", header_style))
-        story.append(Spacer(1, 12))
-        
-        all_required_present = all(documents.get(dt) for _, dt in required_docs_list)
-        verification_data = [
-            ["Serial Number:", serial_number],
-            ["Generated On:", datetime.now().strftime("%d %B %Y %H:%M:%S")],
-            ["System Status:", "READY FOR HOD VERIFICATION" if all_required_present else "INCOMPLETE — MISSING DOCUMENTS"],
-            ["Total Units:", str(len(units_data))],
-        ]
-        
-        verification_table = Table(verification_data, colWidths=[2*inch, 4*inch])
-        verification_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        story.append(verification_table)
-        story.append(Spacer(1, 24))
-        
-        # PAGE 9: SIGNATURE PAGE (LEFT BLANK FOR PHYSICAL USE)
-        story.append(Paragraph("OFFICIAL SIGNATURES", header_style))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph("This form must be signed and stamped by:", normal_style))
-        story.append(Spacer(1, 12))
-        
-        signature_data = [
-            ["1. HOD (Head of Department)", "_________________________"],
-            ["   Signature & Stamp", ""],
-            ["   Date:", "_________________________"],
-            ["", ""],
-            ["2. Examinations Office", "_________________________"],
-            ["   Signature & Stamp", ""],
-            ["   Date:", "_________________________"],
-            ["", ""],
-            ["3. Student Signature", "_________________________"],
-            ["   Date:", "_________________________"]
-        ]
-        
-        signature_table = Table(signature_data, colWidths=[3*inch, 3*inch])
-        signature_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
-        ]))
-        story.append(signature_table)
-
-        # Build PDF
-        pdf_doc.build(story)
-
-        # Get PDF value
-        pdf_value = buffer.getvalue()
-        buffer.close()
-        
-        # Try to save PDF to Supabase Storage (non-fatal if bucket missing)
-        safe_serial   = serial_number.replace("/", "-")
-        pdf_filename  = f"exam_bookings/{student_id}_{safe_serial}.pdf"
-        try:
-            storage_client.from_("exam-bookings").upload(
-                pdf_filename, pdf_value,
-                {"content-type": "application/pdf", "x-upsert": "true"}
-            )
-        except Exception:
-            pass  # storage failure must not prevent the student getting their PDF
-
+        safe_serial = serial_number.replace("/", "-")
         flash(f'Exam booking created! Serial Number: {serial_number}', 'success')
         flash('Download, print and hand it to your HOD for departmental clearance.', 'info')
-
-        # Stream PDF directly to the browser for download
         response = make_response(pdf_value)
         response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = (
-            f'attachment; filename=Exam_Booking_{safe_serial}.pdf'
-        )
+        response.headers['Content-Disposition'] = f'attachment; filename=Exam_Booking_{safe_serial}.pdf'
         return response
-        
     except ImportError:
-        # If reportlab is not installed, fall back to simple message
-        flash(f'Exam booking created successfully! Serial Number: {serial_number}', 'success')
-        flash('PDF generation requires reportlab library. Please install it: pip install reportlab pillow', 'warning')
-        flash('Please download and print the form, then submit to HOD for verification.', 'info')
+        flash('PDF generation requires reportlab & pillow: pip install reportlab pillow', 'warning')
+        flash(f'Exam booking saved. Serial Number: {serial_number}', 'success')
         return redirect(url_for("student.exam_bookings"))
     except Exception as e:
         flash(f'Error generating PDF: {e}', 'danger')
@@ -1955,18 +1965,16 @@ def download_exam_booking(booking_id):
                     .select("*, classes(id, name, course_id)")
                     .eq("student_id", student_id)
                     .execute().data or [])
-    course_name = department_name = ""
+    course_name = department_name = course_code = ""
     if enrollment:
         cls = enrollment[0].get("classes") or {}
         cid = cls.get("course_id")
         if cid:
-            crs = db.table("courses").select("*, departments(name)").eq("id", cid).single().execute().data or {}
+            crs = (db.table("courses").select("*, departments(name)")
+                     .eq("id", cid).single().execute().data or {})
             course_name     = crs.get("name", "")
+            course_code     = crs.get("code", "")
             department_name = (crs.get("departments") or {}).get("name", "")
-
-    docs_raw  = (db.table("student_personal_documents")
-                   .select("*").eq("student_id", student_id).execute().data or [])
-    documents = {d["document_type"]: d for d in docs_raw}
 
     # Build units_data list from the booking rows
     units_data = []
@@ -1982,183 +1990,19 @@ def download_exam_booking(booking_id):
             "attempt": row.get("attempt_type", "first_attempt"),
         })
 
-    # ── 4. Generate PDF ──────────────────────────────────────────────────────
+    # ── Generate PDF using shared Form 1A builder ────────────────────────────
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib import colors
-        from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
-                                        Paragraph, Spacer, Image as RLImage)
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.lib.enums import TA_CENTER
-        import io as _io
-        from PIL import Image as PILImage
-
-        buf     = _io.BytesIO()
-        pdf_doc = SimpleDocTemplate(buf, pagesize=A4,
-                                    rightMargin=72, leftMargin=72,
-                                    topMargin=72,   bottomMargin=18)
-        story  = []
-        styles = getSampleStyleSheet()
-
-        title_s  = ParagraphStyle('T',  parent=styles['Heading1'],
-                                  fontSize=16, textColor=colors.darkblue,
-                                  alignment=TA_CENTER, spaceAfter=12)
-        head_s   = ParagraphStyle('H',  parent=styles['Heading2'],
-                                  fontSize=12, textColor=colors.black,
-                                  alignment=TA_CENTER, spaceAfter=6)
-        norm_s   = ParagraphStyle('N',  parent=styles['Normal'],
-                                  fontSize=10, spaceAfter=6)
-
-        # Cover
-        story += [
-            Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title_s),
-            Spacer(1, 12),
-            Paragraph("EXAMINATION BOOKING FORM", head_s),
-            Spacer(1, 6),
-            Paragraph(f"Serial Number: {serial_number or booking_id[:8].upper()}", norm_s),
-            Paragraph(f"Academic Year: {year}  |  Series: {series}", norm_s),
-            Spacer(1, 24),
-        ]
-
-        # Student details
-        story.append(Paragraph("CANDIDATE DETAILS", head_s))
-        story.append(Spacer(1, 8))
-        student_rows = [
-            ["Full Name:",       student.get("full_name", "")],
-            ["Admission No:",    student.get("admission_no", "")],
-            ["Course:",          course_name],
-            ["Department:",      department_name],
-            ["Phone:",           student.get("mobile_number", "")],
-            ["Email:",           student.get("email", "")],
-            ["National ID:",     student.get("national_id_no", "")],
-            ["PWD Status:",      student.get("pwd_status", "N/A")],
-        ]
-        t = Table(student_rows, colWidths=[2*inch, 4*inch])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0),(0,-1), colors.lightgrey),
-            ('BACKGROUND', (1,0),(1,-1), colors.beige),
-            ('GRID',       (0,0),(-1,-1),1, colors.black),
-            ('FONTNAME',   (0,0),(-1,-1),'Helvetica'),
-            ('FONTSIZE',   (0,0),(-1,-1), 10),
-            ('BOTTOMPADDING',(0,0),(-1,-1), 6),
-        ]))
-        story += [t, Spacer(1, 24)]
-
-        # Units
-        story.append(Paragraph("UNITS OF COMPETENCY", head_s))
-        story.append(Spacer(1, 8))
-        u_headers = ["S/N", "Unit Name", "Code", "Type", "Attempt"]
-        u_rows    = [[str(i+1),
-                      ud["unit"].get("name",""),
-                      ud["unit"].get("code",""),
-                      ud["type"],
-                      ud["attempt"].replace("_"," ").title()]
-                     for i, ud in enumerate(units_data)]
-        ut = Table([u_headers] + u_rows,
-                   colWidths=[0.5*inch, 2.5*inch, 1.2*inch, 0.9*inch, 1*inch])
-        ut.setStyle(TableStyle([
-            ('BACKGROUND', (0,0),(-1,0), colors.darkblue),
-            ('TEXTCOLOR',  (0,0),(-1,0), colors.whitesmoke),
-            ('FONTNAME',   (0,0),(-1,0),'Helvetica-Bold'),
-            ('BACKGROUND', (0,1),(-1,-1), colors.beige),
-            ('GRID',       (0,0),(-1,-1),1, colors.black),
-            ('FONTSIZE',   (0,0),(-1,-1), 10),
-            ('BOTTOMPADDING',(0,0),(-1,-1), 6),
-            ('ALIGN',      (0,0),(-1,-1),'CENTER'),
-        ]))
-        story += [ut, Spacer(1, 24)]
-
-        # Documents
-        story.append(Paragraph("REQUIRED ATTACHMENTS", head_s))
-        story.append(Spacer(1, 8))
-        req_docs = [("National ID","national_id"),
-                    ("Birth Certificate","birth_certificate"),
-                    ("KCSE Certificate","kcse_certificate"),
-                    ("Passport Photo","passport_photo")]
-        d_rows = [[n, "✓ Attached" if documents.get(k) else "✗ Missing",
-                   (documents[k].get("id","")[:8] if documents.get(k) else "N/A")]
-                  for n, k in req_docs]
-        dt = Table([["Document","Status","Ref"]] + d_rows,
-                   colWidths=[2.5*inch, 1.5*inch, 2*inch])
-        dt.setStyle(TableStyle([
-            ('BACKGROUND', (0,0),(-1,0), colors.darkblue),
-            ('TEXTCOLOR',  (0,0),(-1,0), colors.whitesmoke),
-            ('FONTNAME',   (0,0),(-1,0),'Helvetica-Bold'),
-            ('BACKGROUND', (0,1),(-1,-1), colors.beige),
-            ('GRID',       (0,0),(-1,-1),1, colors.black),
-            ('FONTSIZE',   (0,0),(-1,-1), 10),
-            ('BOTTOMPADDING',(0,0),(-1,-1), 6),
-        ]))
-        story += [dt, Spacer(1, 24)]
-
-        # Embed document images
-        story.append(Paragraph("ATTACHED DOCUMENT IMAGES", head_s))
-        story.append(Spacer(1, 8))
-        storage_cl = db.storage
-        for doc_name, doc_key in req_docs:
-            d = documents.get(doc_key)          # renamed: was 'doc' — collided with SimpleDocTemplate
-            story.append(Paragraph(f"{doc_name}:", norm_s))
-            if d and d.get("file_path"):
-                ext = (d["file_path"].rsplit(".", 1)[-1]).lower()
-                if ext in ("jpg", "jpeg", "png", "webp", "gif"):
-                    try:
-                        raw  = storage_cl.from_("assessment-evidence").download(d["file_path"])
-                        pimg = PILImage.open(_io.BytesIO(raw))
-                        if pimg.mode != "RGB":
-                            pimg = pimg.convert("RGB")
-                        max_w, max_h = 5 * inch, 7 * inch
-                        iw, ih = pimg.size
-                        ratio  = min(max_w / iw, max_h / ih, 1.0)
-                        out    = _io.BytesIO()
-                        if ratio < 1.0:
-                            pimg = pimg.resize((int(iw * ratio), int(ih * ratio)), PILImage.LANCZOS)
-                        pimg.save(out, format="JPEG", quality=85)
-                        out.seek(0)
-                        story.append(RLImage(out, width=iw * ratio, height=ih * ratio))
-                    except Exception as img_err:
-                        story.append(Paragraph(f"[Image error: {img_err}]", norm_s))
-                elif d.get("file_url"):
-                    story.append(Paragraph(
-                        f'<link href="{d["file_url"]}"><u>View {doc_name}</u></link>', norm_s))
-                else:
-                    story.append(Paragraph("[PDF — print from My Documents]", norm_s))
-            else:
-                story.append(Paragraph(f"{doc_name}: NOT UPLOADED", norm_s))
-            story.append(Spacer(1, 10))
-
-        # Signatures page
-        story += [Spacer(1, 24), Paragraph("OFFICIAL SIGNATURES", head_s), Spacer(1, 12)]
-        sig_rows = [
-            ["HOD (Head of Department)", "_________________________"],
-            ["Signature & Stamp:", ""],
-            ["Date:", "_________________________"],
-            ["", ""],
-            ["Examinations Office", "_________________________"],
-            ["Signature & Stamp:", ""],
-            ["Date:", "_________________________"],
-            ["", ""],
-            ["Student Signature:", "_________________________"],
-            ["Date:", "_________________________"],
-        ]
-        sig_table = Table(sig_rows, colWidths=[3 * inch, 3 * inch])   # renamed: was 'st'
-        sig_table.setStyle(TableStyle([
-            ('FONTNAME',      (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE',      (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ]))
-        story.append(sig_table)
-
-        pdf_doc.build(story)        # fixed: was doc.build — 'doc' was overwritten by loop
-        pdf_bytes = buf.getvalue()
-        buf.close()
-
+        pdf_bytes = _build_exam_booking_pdf(
+            student=student, course_name=course_name, course_code=course_code,
+            department_name=department_name, units_data=units_data,
+            serial_number=serial_number or booking_id[:8].upper(),
+            year=year, series=series, term="",
+        )
         safe = (serial_number or booking_id[:8]).replace("/", "-")
         resp = make_response(pdf_bytes)
         resp.headers["Content-Type"] = "application/pdf"
         resp.headers["Content-Disposition"] = f'inline; filename="ExamBooking_{safe}.pdf"'
         return resp
-
     except ImportError:
         flash("PDF generation requires reportlab & pillow. Run: pip install reportlab pillow", "warning")
         return redirect(url_for("student.exam_bookings"))
