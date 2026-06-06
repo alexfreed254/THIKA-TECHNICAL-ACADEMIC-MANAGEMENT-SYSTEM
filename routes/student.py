@@ -1580,8 +1580,7 @@ def _build_exam_booking_pdf(student: dict, course_name: str, course_code: str,
     story.append(Spacer(1, 8))
 
     # ── SECTION 2: EXAM PERIOD (compact inline) ───────────────────────────────
-    series_label = {"1": "Series 1 (Jan – Apr)", "2": "Series 2 (May – Aug)",
-                    "3": "Series 3 (Sep – Dec)"}.get(str(series), f"Series {series}")
+    series_label = {"1": "MARCH", "2": "JULY", "3": "NOVEMBER"}.get(str(series), f"Series {series}")
     ep_rows = [[
         _frow("Exam Year:", year)[0],   _frow("Exam Year:", year)[1],
         _frow("Series:", series_label)[0], _frow("Series:", series_label)[1],
