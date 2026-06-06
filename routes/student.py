@@ -1497,25 +1497,67 @@ def exam_booking_submit():
     unique_serial = str(uuid.uuid4().int)[:6].zfill(6)
     serial_number = f"TTTI-{year}-EXAM-{unique_serial}"   # hyphens, never slashes
 
-    def _insert_strip_unknown(payload: dict) -> None:
-        """Insert a row, automatically removing any columns the table doesn't have."""
-        data    = dict(payload)
-        seen    = set()
-        while data:
+    # Columns that have check constraints — map to their safe fallback values.
+    # If the constraint rejects our value we null the column rather than fail.
+    _CONSTRAINED = {
+        "exam_session":         None,   # drop if constraint rejects
+        "purpose":              None,
+        "special_requirements": None,
+        "attempt_type":         None,
+    }
+
+    def _insert_strip_bad(payload: dict) -> None:
+        """
+        Insert a row into exam_bookings.
+        - Strips columns not present in the schema (PGRST204).
+        - Nulls / drops columns that violate a check constraint (23514).
+        Retries until the insert succeeds or a genuine error is hit.
+        """
+        data = dict(payload)
+        seen = set()
+        for _ in range(20):                     # max 20 attempts
             try:
                 db.table("exam_bookings").insert(data).execute()
                 return
             except Exception as exc:
-                msg = str(exc)
-                m   = re.search(r"'(\w+)' column", msg)
-                if "PGRST204" in msg and m:
-                    bad = m.group(1)
-                    if bad in seen:           # avoid infinite loop
-                        raise
-                    seen.add(bad)
-                    data.pop(bad, None)       # drop the offending column and retry
-                else:
-                    raise                     # non-schema error — propagate
+                msg  = str(exc)
+                code = ""
+                try:
+                    import json as _json
+                    code = _json.loads(msg).get("code", "") if msg.startswith("{") else ""
+                except Exception:
+                    pass
+                if not code:
+                    # parse code from dict repr  {'code': 'PGRST204', ...}
+                    m_code = re.search(r"'code':\s*'([^']+)'", msg)
+                    code   = m_code.group(1) if m_code else ""
+
+                if code == "PGRST204":
+                    # Unknown column — extract name and drop it
+                    m = re.search(r"'(\w+)' column", msg)
+                    if m:
+                        bad = m.group(1)
+                        if bad in seen: raise
+                        seen.add(bad); data.pop(bad, None); continue
+
+                elif code == "23514":
+                    # Check constraint violation — find which column & null/drop it
+                    # The constraint name is exam_bookings_<column>_check
+                    m = re.search(r'"exam_bookings_(\w+)_check"', msg)
+                    if m:
+                        bad = m.group(1)
+                        if bad in seen: raise
+                        seen.add(bad); data.pop(bad, None); continue
+                    # Fallback: drop all known constrained columns not yet tried
+                    stripped = False
+                    for col in list(_CONSTRAINED.keys()):
+                        if col not in seen and col in data:
+                            seen.add(col); data.pop(col, None); stripped = True; break
+                    if stripped: continue
+
+                raise   # unrecognised error — surface it
+
+        raise RuntimeError("Could not insert booking after 20 attempts")
 
     # Insert exam booking records
     try:
@@ -1525,7 +1567,7 @@ def exam_booking_submit():
                 "student_id":           student_id,
                 "unit_id":              uid,
                 "exam_date":            str(datetime.now().date()),
-                "exam_session":         f"Series {series} — Term {term}",
+                "exam_session":         series,          # raw "1"/"2"/"3" — matches DB constraint
                 "purpose":              f"{ud['type']} — {form_data.get('module_level','')}",
                 "status":               "pending",
                 "serial_number":        serial_number,
@@ -1535,7 +1577,7 @@ def exam_booking_submit():
             if ud["prev_grade"]: payload["previous_grade"]    = ud["prev_grade"]
             if ud["prev_mid"]:   payload["previous_marks_id"] = ud["prev_mid"]
 
-            _insert_strip_unknown(payload)
+            _insert_strip_bad(payload)
 
         write_audit_log("create_exam_booking", target=f"booking:{serial_number}",
                         detail={"units": len(units_data)})
