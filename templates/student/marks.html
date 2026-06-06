@@ -337,9 +337,15 @@
         </tr>
         {% for a in ud.assessments if (a.assessment_type or 'OTHER')|upper == atype %}
         {% set row_n.v = row_n.v + 1 %}
-        {% set a_pct = (a.marks_obtained / (a.max_marks or 100) * 100)|round(1) %}
-        {% set bar_color = '#15803d' if a_pct >= 85 else '#1d4ed8' if a_pct >= 70 else '#d97706' if a_pct >= 50 else '#dc2626' %}
-        <tr>
+        {% set has_mark = a.marks_obtained is not none and a.marks_obtained != '' %}
+        {% if has_mark %}
+          {% set a_pct = (a.marks_obtained|float / (a.max_marks or 100) * 100)|round(1) %}
+          {% set bar_color = '#15803d' if a_pct >= 85 else '#1d4ed8' if a_pct >= 70 else '#d97706' if a_pct >= 50 else '#dc2626' %}
+        {% else %}
+          {% set a_pct = 0 %}
+          {% set bar_color = '#e2e8f0' %}
+        {% endif %}
+        <tr style="{{ 'opacity:.6;' if not has_mark else '' }}">
           <td style="text-align:center;color:#94a3b8;font-weight:700;font-size:12px">{{ row_n.v }}</td>
           <td style="font-weight:600;color:#0f172a">{{ a.assessment_name or '—' }}</td>
           <td>
@@ -353,14 +359,28 @@
           </td>
           <td style="font-size:12px;color:#64748b;text-align:center">{{ a.cycle or '—' }}</td>
           <td>
+            {% if has_mark %}
             <span style="font-size:15px;font-weight:800;color:{{ bar_color }}">{{ a.marks_obtained }}</span>
             <div class="marks-bar-wrap">
               <div class="marks-bar" style="width:{{ a_pct }}%;background:{{ bar_color }}"></div>
             </div>
+            {% else %}
+            <span style="font-size:12px;color:#94a3b8;font-style:italic">
+              <i class="fas fa-clock" style="font-size:10px;margin-right:3px"></i>Pending
+            </span>
+            {% endif %}
           </td>
-          <td style="color:#64748b;font-size:13px;text-align:center">{{ a.max_marks or 100 }}</td>
-          <td style="font-weight:700;color:{{ bar_color }}">{{ a_pct }}%</td>
-          <td><span class="gb gb-{{ a.grade or 'NYC' }}">{{ a.grade or '—' }}</span></td>
+          <td style="color:#64748b;font-size:13px;text-align:center">{{ a.max_marks|int }}</td>
+          <td style="font-weight:700;color:{{ bar_color }}">
+            {% if has_mark %}{{ a_pct }}%{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if a.grade %}
+            <span class="gb gb-{{ a.grade }}">{{ a.grade }}</span>
+            {% else %}
+            <span style="font-size:11px;color:#94a3b8">—</span>
+            {% endif %}
+          </td>
           <td style="font-size:12px;color:#64748b;max-width:160px;white-space:normal">{{ a.remarks or '—' }}</td>
           <td style="font-size:12px;color:#94a3b8;white-space:nowrap">
             {{ (a.trainer or {}).get('full_name','—') }}
@@ -396,7 +416,11 @@
       <div>
         <div class="uf-label" style="text-align:right">Final Grade</div>
       </div>
+      {% if ud.has_marks %}
       <span class="gb gb-{{ fg }} gb-lg">{{ fg }}</span>
+      {% else %}
+      <span style="font-size:13px;color:#94a3b8;font-style:italic;font-weight:600">Awaiting marks</span>
+      {% endif %}
     </div>
   </div>
 

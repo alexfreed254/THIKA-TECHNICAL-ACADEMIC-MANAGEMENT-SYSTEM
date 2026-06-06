@@ -2152,7 +2152,10 @@ def delete_exam_booking(booking_id):
 @student_bp.route("/marks")
 @student_required
 def marks():
-    """Marks & Transcript — grouped by unit with per-unit grade summary."""
+    """
+    Marks & Transcript — reads from formative_assessments + formative_marks
+    (the tables the trainer dashboard writes to).
+    """
     db = get_service_client()
     user = current_user()
     student_id = user["id"]
@@ -2160,69 +2163,100 @@ def marks():
     year = request.args.get("year", str(datetime.now().year))
     term = request.args.get("term", "").strip()
 
-    # Student profile + class/department info
-    profile = db.table("user_profiles").select("full_name, admission_no, mobile_number").eq("id", student_id).limit(1).execute().data or []
+    from collections import OrderedDict
+
+    # ── Student profile ───────────────────────────────────────────────────────
+    profile = (db.table("user_profiles")
+                 .select("full_name, admission_no, mobile_number")
+                 .eq("id", student_id).limit(1).execute().data or [])
     profile = profile[0] if profile else {}
 
     enrollment = (db.table("enrollments")
                     .select("class_id, classes(name, departments(name))")
-                    .eq("student_id", student_id)
-                    .limit(1)
-                    .execute().data or [])
+                    .eq("student_id", student_id).limit(1).execute().data or [])
     class_name = dept_name = ""
+    class_id   = None
     if enrollment:
+        class_id = enrollment[0].get("class_id")
         cls  = enrollment[0].get("classes") or {}
         dept = cls.get("departments") or {}
         class_name = cls.get("name", "")
         dept_name  = dept.get("name", "")
 
-    query = (db.table("marks")
-               .select("id, unit_id, assessment_name, assessment_type, term, cycle, year, "
-                       "marks_obtained, max_marks, grade, remarks, created_at, "
+    # ── Fetch assessment definitions for the student's class ─────────────────
+    assessments = []
+    if class_id:
+        q = (db.table("formative_assessments")
+               .select("id, unit_id, assessment_name, assessment_type, max_marks, year, term, "
                        "units(name, code), "
-                       "trainer:user_profiles!marks_trainer_id_fkey(full_name)")
-               .eq("student_id", student_id)
+                       "trainer:user_profiles!formative_assessments_trainer_id_fkey(full_name)")
+               .eq("class_id", class_id)
                .eq("year", int(year)))
-    if term:
-        query = query.eq("term", term)
+        if term:
+            q = q.eq("term", int(term))
+        assessments = (q.order("unit_id")
+                        .order("assessment_type")
+                        .order("created_at")
+                        .execute().data or [])
 
-    marks_list = query.order("unit_id").order("created_at").execute().data or []
+    # ── Fetch marks for this student ──────────────────────────────────────────
+    marks_map = {}   # assessment_id → marks_obtained
+    if assessments:
+        a_ids = [a["id"] for a in assessments]
+        fm = (db.table("formative_marks")
+                .select("assessment_id, marks_obtained")
+                .eq("student_id", student_id)
+                .in_("assessment_id", a_ids)
+                .execute().data or [])
+        marks_map = {m["assessment_id"]: m["marks_obtained"] for m in fm}
 
-    # Group by unit — ordered by first occurrence
-    from collections import OrderedDict
+    # ── Group by unit ─────────────────────────────────────────────────────────
     by_unit = OrderedDict()
-    for m in marks_list:
-        uid = m.get("unit_id") or m.get("id")
+    for a in assessments:
+        uid  = a["unit_id"]
+        unit = a.get("units") or {}
         if uid not in by_unit:
-            by_unit[uid] = {
-                "unit":        m.get("units") or {},
-                "assessments": [],
-                "term":        m.get("term"),
-            }
-        by_unit[uid]["assessments"].append(m)
+            by_unit[uid] = {"unit": unit, "term": a.get("term"), "assessments": []}
 
-    # Calculate per-unit summary
+        obt = marks_map.get(a["id"])          # None = not yet entered by trainer
+        mx  = float(a.get("max_marks") or 100)
+        if obt is not None:
+            pct   = round(float(obt) / mx * 100, 1) if mx else 0
+            grade = ("M" if pct >= 85 else "P" if pct >= 70
+                     else "C" if pct >= 50 else "NYC")
+        else:
+            pct   = None
+            grade = None            # None → template renders "Pending"
+
+        by_unit[uid]["assessments"].append({
+            "assessment_name": a.get("assessment_name", ""),
+            "assessment_type": (a.get("assessment_type") or "OTHER").upper(),
+            "term":            a.get("term"),
+            "cycle":           None,
+            "marks_obtained":  obt,       # None if trainer hasn't entered yet
+            "max_marks":       mx,
+            "grade":           grade,
+            "remarks":         None,
+            "trainer":         a.get("trainer"),
+        })
+
+    # ── Per-unit totals (only rows with marks entered) ────────────────────────
     units_data = []
     for uid, data in by_unit.items():
-        asmts = data["assessments"]
-        total_obt = round(sum(a["marks_obtained"] for a in asmts), 1)
-        total_max = round(sum(a.get("max_marks") or 100 for a in asmts), 1)
-        pct = round(total_obt / total_max * 100, 1) if total_max else 0
-        if pct >= 85:   final = "M"
-        elif pct >= 70: final = "P"
-        elif pct >= 50: final = "C"
-        else:           final = "NYC"
+        entered = [a for a in data["assessments"] if a["marks_obtained"] is not None]
+        total_obt = round(sum(float(a["marks_obtained"]) for a in entered), 1) if entered else 0
+        total_max = round(sum(a["max_marks"]              for a in entered), 1) if entered else 0
+        pct       = round(total_obt / total_max * 100, 1) if total_max else 0
+        final     = ("M" if pct >= 85 else "P" if pct >= 70
+                     else "C" if pct >= 50 else "NYC") if entered else "—"
         data.update({"total_obt": total_obt, "total_max": total_max,
-                     "pct": pct, "final_grade": final})
+                     "pct": pct, "final_grade": final, "has_marks": bool(entered)})
         units_data.append(data)
 
-    # Overall stats
-    if units_data:
-        all_pcts  = [u["pct"] for u in units_data]
-        overall   = round(sum(all_pcts) / len(all_pcts), 1)
-        passed    = sum(1 for u in units_data if u["final_grade"] in ("M", "P", "C"))
-    else:
-        overall = passed = 0
+    # ── Overall stats ─────────────────────────────────────────────────────────
+    scored = [u for u in units_data if u["has_marks"]]
+    overall = round(sum(u["pct"] for u in scored) / len(scored), 1) if scored else 0
+    passed  = sum(1 for u in scored if u["final_grade"] in ("M","P","C"))
 
     return render_template("student/marks.html",
                            units_data=units_data,
@@ -2254,24 +2288,15 @@ def download_result_slip():
     # ── Fetch all needed data ─────────────────────────────────────────────────
     from collections import OrderedDict
 
-    query = (db.table("marks")
-               .select("id, unit_id, assessment_name, assessment_type, term, cycle, year, "
-                       "marks_obtained, max_marks, grade, remarks, created_at, "
-                       "units(name, code), "
-                       "trainer:user_profiles!marks_trainer_id_fkey(full_name)")
-               .eq("student_id", student_id)
-               .eq("year", int(year)))
-    if term:
-        query = query.eq("term", term)
-    marks_list = query.order("unit_id").order("created_at").execute().data or []
-
     student    = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
     enrollment = (db.table("enrollments")
                     .select("class_id, classes(id, name, course_id, departments(name))")
                     .eq("student_id", student_id).limit(1).execute().data or [])
 
     class_name = dept_name = course_name = course_code = ""
+    class_id   = None
     if enrollment:
+        class_id = enrollment[0].get("class_id")
         cls  = enrollment[0].get("classes") or {}
         dept = cls.get("departments") or {}
         class_name = cls.get("name", "")
@@ -2282,13 +2307,55 @@ def download_result_slip():
             course_name = crs.get("name", "")
             course_code = crs.get("code", "")
 
-    # Group marks by unit
+    # ── Fetch assessment definitions + marks (same tables trainer uses) ───────
+    assessments = []
+    if class_id:
+        q = (db.table("formative_assessments")
+               .select("id, unit_id, assessment_name, assessment_type, max_marks, year, term, "
+                       "units(name, code), "
+                       "trainer:user_profiles!formative_assessments_trainer_id_fkey(full_name)")
+               .eq("class_id", class_id)
+               .eq("year", int(year)))
+        if term:
+            q = q.eq("term", int(term))
+        assessments = (q.order("unit_id").order("assessment_type")
+                        .order("created_at").execute().data or [])
+
+    marks_map = {}
+    if assessments:
+        a_ids = [a["id"] for a in assessments]
+        fm = (db.table("formative_marks")
+                .select("assessment_id, marks_obtained")
+                .eq("student_id", student_id)
+                .in_("assessment_id", a_ids)
+                .execute().data or [])
+        marks_map = {m["assessment_id"]: m["marks_obtained"] for m in fm}
+
+    # ── Build by_unit (only include entries where marks exist) ────────────────
     by_unit = OrderedDict()
-    for m in marks_list:
-        uid = m.get("unit_id") or m.get("id")
+    for a in assessments:
+        uid  = a["unit_id"]
+        unit = a.get("units") or {}
         if uid not in by_unit:
-            by_unit[uid] = {"unit": m.get("units") or {}, "rows": []}
-        by_unit[uid]["rows"].append(m)
+            by_unit[uid] = {"unit": unit, "rows": []}
+        obt = marks_map.get(a["id"])
+        mx  = float(a.get("max_marks") or 100)
+        if obt is not None:
+            pct   = round(float(obt) / mx * 100, 1) if mx else 0
+            grade = ("M" if pct >= 85 else "P" if pct >= 70
+                     else "C" if pct >= 50 else "NYC")
+        else:
+            pct = grade = None
+        by_unit[uid]["rows"].append({
+            "assessment_name": a.get("assessment_name",""),
+            "assessment_type": (a.get("assessment_type") or "OTHER").upper(),
+            "term":            a.get("term"),
+            "cycle":           None,
+            "marks_obtained":  obt,
+            "max_marks":       mx,
+            "grade":           grade,
+            "trainer":         a.get("trainer"),
+        })
 
     # ── Build PDF ─────────────────────────────────────────────────────────────
     try:
@@ -2486,33 +2553,36 @@ def download_result_slip():
 
                     for r in by_type[atype]:
                         row_n += 1
-                        mx    = r.get("max_marks") or 100
-                        obt   = r.get("marks_obtained") or 0
-                        pct   = round(obt / mx * 100, 1) if mx else 0
-                        grade = (r.get("grade") or "—").upper()
-                        gc    = GRADE_BG.get(grade, colors.white)
+                        mx      = float(r.get("max_marks") or 100)
+                        obt_raw = r.get("marks_obtained")
+                        has_obt = obt_raw is not None
+                        obt     = float(obt_raw) if has_obt else None
+                        pct     = round(obt / mx * 100, 1) if (has_obt and mx) else None
+                        grade   = (r.get("grade") or "—") if has_obt else "—"
+                        gc      = GRADE_BG.get(str(grade).upper(), colors.white)
                         trainer = (r.get("trainer") or {}).get("full_name","—")
                         tbl_data.append([
-                            Paragraph(str(row_n),               tbl_c),
-                            Paragraph(r.get("assessment_name") or "—", tbl_l),
-                            Paragraph(atype,                    tbl_c),
-                            Paragraph(str(r.get("term","—")),   tbl_c),
-                            Paragraph(str(r.get("cycle","—")),  tbl_c),
-                            Paragraph(f"<b>{obt}</b>",          tbl_c),
-                            Paragraph(str(mx),                  tbl_c),
-                            Paragraph(f"<b>{pct}%</b>",         tbl_c),
-                            Paragraph(f"<b>{grade}</b>",        tbl_c),
-                            Paragraph(trainer,                  tbl_l),
+                            Paragraph(str(row_n),                       tbl_c),
+                            Paragraph(r.get("assessment_name") or "—",  tbl_l),
+                            Paragraph(atype,                             tbl_c),
+                            Paragraph(str(r.get("term","—")),            tbl_c),
+                            Paragraph(str(r.get("cycle") or "—"),        tbl_c),
+                            Paragraph(f"<b>{obt}</b>" if has_obt else "—", tbl_c),
+                            Paragraph(str(int(mx)),                      tbl_c),
+                            Paragraph(f"<b>{pct}%</b>" if pct is not None else "—", tbl_c),
+                            Paragraph(f"<b>{grade}</b>",                 tbl_c),
+                            Paragraph(trainer,                           tbl_l),
                         ])
                         ri = len(tbl_data) - 1
                         tbl_style.append(('BACKGROUND',(8,ri),(8,ri), gc))
 
-                # Unit total row
-                u_obt = sum(r.get("marks_obtained") or 0 for r in rows)
-                u_mx  = sum(r.get("max_marks") or 100 for r in rows)
+                # Unit total — only count rows with marks entered
+                entered_rows = [r for r in rows if r.get("marks_obtained") is not None]
+                u_obt = round(sum(float(r["marks_obtained"]) for r in entered_rows), 1) if entered_rows else 0
+                u_mx  = round(sum(float(r.get("max_marks") or 100) for r in entered_rows), 1) if entered_rows else 0
                 u_pct = round(u_obt / u_mx * 100, 1) if u_mx else 0
                 final = ("M" if u_pct >= 85 else "P" if u_pct >= 70
-                         else "C" if u_pct >= 50 else "NYC")
+                         else "C" if u_pct >= 50 else "NYC") if entered_rows else "—"
                 tbl_data.append([
                     Paragraph("", tbl_c),
                     Paragraph("<b>UNIT TOTAL</b>", tbl_l),
