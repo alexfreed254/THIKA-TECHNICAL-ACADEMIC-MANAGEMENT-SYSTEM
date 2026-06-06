@@ -488,19 +488,19 @@ def my_documents():
 
             doc_label = doc_type.replace("_", " ").title()
             try:
-                ext        = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'pdf'
-                filename   = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
-                file_bytes = file.read()
+                ext          = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'pdf'
+                storage_path = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
+                file_bytes   = file.read()
                 content_type = "application/pdf" if ext == 'pdf' else f"image/{ext}"
 
                 # 1. Upload to Supabase Storage
                 storage_client = get_service_client().storage
                 storage_client.from_("assessment-evidence").upload(
-                    filename, file_bytes, {"content-type": content_type}
+                    storage_path, file_bytes, {"content-type": content_type}
                 )
-                public_url = storage_client.from_("assessment-evidence").get_public_url(filename)
+                public_url = storage_client.from_("assessment-evidence").get_public_url(storage_path)
 
-                # 2. Check for existing record
+                # 2. Upsert into trainee_documents
                 existing = (db.table("trainee_documents")
                               .select("id")
                               .eq("student_id", student_id)
@@ -508,45 +508,28 @@ def my_documents():
                               .limit(1)
                               .execute().data or [])
 
-                # 3. Core payload — only columns guaranteed in schema
-                core = {
+                payload = {
                     "document_name": doc_label,
                     "file_url":      public_url,
+                    "file_path":     storage_path,
                     "file_name":     file.filename,
                     "file_size":     len(file_bytes),
+                    "status":        "pending",
                 }
 
                 if existing:
-                    db.table("trainee_documents").update(core).eq("id", existing[0]["id"]).execute()
-                    rec_id = existing[0]["id"]
+                    db.table("trainee_documents").update(payload).eq("id", existing[0]["id"]).execute()
                 else:
-                    res = db.table("trainee_documents").insert({
+                    db.table("trainee_documents").insert({
                         "student_id":    student_id,
                         "document_type": doc_type,
-                        **core,
+                        **payload,
                     }).execute()
-                    rec_id = (res.data or [{}])[0].get("id")
-
-                # 4. Try to also save file_path and status (only if those columns exist)
-                if rec_id:
-                    try:
-                        db.table("trainee_documents").update({
-                            "file_path": filename,
-                            "status":    "pending",
-                        }).eq("id", rec_id).execute()
-                    except Exception:
-                        pass  # columns not yet migrated — non-fatal
 
                 uploaded_count += 1
 
             except Exception as e:
-                err = str(e)
-                if "23514" in err or "violates check constraint" in err.lower():
-                    upload_errors.append(
-                        f"{doc_label}: document_type not allowed in DB — run the SQL migration."
-                    )
-                else:
-                    upload_errors.append(f"{doc_label}: {err}")
+                upload_errors.append(f"{doc_label}: {e}")
 
         for err in upload_errors:
             flash(err, 'danger')
