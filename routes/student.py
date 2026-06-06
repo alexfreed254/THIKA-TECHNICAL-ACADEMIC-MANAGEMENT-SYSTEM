@@ -433,6 +433,9 @@ def my_documents():
                 "mobile_number": mobile or None,
                 "national_id_no":request.form.get("national_id_no", "").strip() or None,
                 "date_of_birth": request.form.get("date_of_birth", "").strip() or None,
+                "county":        request.form.get("county", "").strip() or None,
+                "sub_county":    request.form.get("sub_county", "").strip() or None,
+                "village":       request.form.get("village", "").strip() or None,
             }
             # Remove None values so we don't overwrite existing data with nulls
             updates = {k: v for k, v in updates.items() if v is not None}
