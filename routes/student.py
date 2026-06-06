@@ -1694,19 +1694,9 @@ def _build_exam_booking_pdf(student: dict, course_name: str, course_code: str,
     story.append(utbl)
     story.append(Spacer(1, 6))
 
-    # ── FOOTER: PAYMENT DETAILS + SERIAL ─────────────────────────────────────
+    # ── FOOTER: SERIAL NUMBER ─────────────────────────────────────────────────
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=3))
-    footer_rows = [[
-        Paragraph(f"<b>Account Name:</b> Thika Technical Training Institute", norm8),
-        Paragraph(f"<b>Serial No:</b> {serial_number}", norm8),
-    ]]
-    ftbl2 = Table(footer_rows, colWidths=[W*0.65, W*0.35])
-    ftbl2.setStyle(TableStyle([
-        ('TOPPADDING',    (0,0),(-1,-1), 2),
-        ('BOTTOMPADDING', (0,0),(-1,-1), 2),
-        ('ALIGN',         (1,0),(1,0),   'RIGHT'),
-    ]))
-    story.append(ftbl2)
+    story.append(Paragraph(f"<b>Serial No:</b> {serial_number}", norm8))
 
     # ── SUPPORTING DOCUMENT PAGES ─────────────────────────────────────────────
     # Append uploaded documents as extra pages so the download is one complete PDF.
