@@ -1,50 +1,259 @@
 {% extends "student/base.html" %}
 {% block title %}My Assessments{% endblock %}
 {% block page_title %}My Assessments{% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;margin-bottom:20px}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-pending{background:#fff3e0;color:#e65100}
-.badge-approved{background:#e8f5e9;color:#2e7d32}
-.badge-rejected{background:#ffebee;color:#c62828}
-.btn-sm{padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;display:inline-block}
-.btn-primary{background:#1565c0;color:#fff}
-.btn-success{background:#2e7d32;color:#fff}
+<style>
+.asmts-wrap { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+/* ── Top card ─────────────────────────────────────────────────── */
+.asmts-card {
+  background: #fff; border-radius: 16px;
+  border: 1px solid #e2e8f0; margin-bottom: 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
+}
+.asmts-head {
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: #fff; padding: 14px 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.asmts-head-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.btn-upload {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 18px; background: #22c55e; color: #fff;
+  border-radius: 9px; font-size: 13px; font-weight: 700;
+  text-decoration: none; transition: background .18s;
+}
+.btn-upload:hover { background: #16a34a; }
+
+/* ── Table wrapper ───────────────────────────────────────────── */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── Table ───────────────────────────────────────────────────── */
+.asmts-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; white-space: nowrap;
+}
+.asmts-table thead tr {
+  background: linear-gradient(135deg,#1e40af,#1d4ed8);
+}
+.asmts-table thead th {
+  padding: 11px 14px; color: rgba(255,255,255,.92);
+  font-size: 11.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  text-align: left; border: none;
+  white-space: nowrap;
+}
+.asmts-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .14s; }
+.asmts-table tbody tr:last-child { border-bottom: none; }
+.asmts-table tbody tr:hover td { background: #f8fafc; }
+.asmts-table td {
+  padding: 11px 14px; color: #374151;
+  font-size: 13px; vertical-align: middle;
+}
+
+/* Unit cell */
+.unit-name { font-weight: 700; color: #1e293b; }
+.unit-code {
+  display: inline-flex; align-items: center;
+  background: #eff6ff; color: #1d4ed8;
+  border: 1px solid #bfdbfe; border-radius: 5px;
+  padding: 1px 7px; font-size: 10.5px; font-weight: 700;
+  margin-top: 3px;
+}
+
+/* Status badges */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 9999px;
+  font-size: 11.5px; font-weight: 700;
+}
+.badge-pending  { background: #fef3c7; color: #92400e; }
+.badge-approved { background: #dcfce7; color: #15803d; }
+.badge-rejected { background: #fee2e2; color: #991b1b; }
+.badge-marked   { background: #dbeafe; color: #1d4ed8; }
+
+/* Evidence count pill */
+.ev-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 9999px;
+  font-size: 11.5px; font-weight: 700;
+  background: #f1f5f9; color: #475569;
+}
+.ev-pill.has-ev { background: #eff6ff; color: #1d4ed8; }
+
+/* Action button */
+.btn-evidence {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 700; text-decoration: none;
+  background: linear-gradient(135deg,#1e5a9f,#154070);
+  color: #fff; transition: all .18s;
+  box-shadow: 0 2px 8px rgba(30,90,159,.2);
+}
+.btn-evidence:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(30,90,159,.35);
+}
+
+/* Empty state */
+.empty-state {
+  padding: 56px 24px; text-align: center; color: #94a3b8;
+}
+.empty-state i { font-size: 52px; display: block; margin-bottom: 14px; opacity: .25; }
+.empty-state h3 { font-size: 16px; font-weight: 700; color: #64748b; margin-bottom: 6px; }
+.empty-state a { color: #2563eb; font-weight: 700; text-decoration: none; }
+.empty-state a:hover { text-decoration: underline; }
+</style>
 {% endblock %}
+
 {% block content %}
-<div class="page-wrap">
-  <div class="card">
-    <div class="card-header">
-      <span><i class="fas fa-file-alt"></i> My Assessments ({{ assessments|length }})</span>
-      <a href="/student/assessments/upload" class="btn-sm btn-success"><i class="fas fa-upload"></i> Upload New</a>
+<div class="asmts-wrap">
+  <div class="asmts-card">
+
+    <!-- Header -->
+    <div class="asmts-head">
+      <div class="asmts-head-title">
+        <i class="fas fa-file-alt"></i>
+        My Assessments
+        <span style="background:rgba(255,255,255,.2);padding:2px 10px;border-radius:9999px;font-size:12px">
+          {{ assessments|length }}
+        </span>
+      </div>
+      <a href="/student/assessments/upload" class="btn-upload">
+        <i class="fas fa-upload"></i> Upload New Assessment
+      </a>
     </div>
-    <table>
-      <thead><tr><th>Unit</th><th>Class</th><th>Type</th><th>No.</th><th>Term</th><th>Cycle</th><th>Year</th><th>Status</th><th>Evidence</th><th>Uploaded</th><th>Action</th></tr></thead>
-      <tbody>
-        {% for a in assessments %}
-        <tr>
-          <td>{{ a.get('units',{}).get('name','—') }}<br><small style="color:#aaa">{{ a.get('units',{}).get('code','') }}</small></td>
-          <td>{{ a.get('classes',{}).get('name','—') }}</td>
-          <td>{{ a.get('assessment_type','—') }}</td>
-          <td>{{ a.get('assessment_no','—') }}</td>
-          <td>{{ a.get('term','—') }}</td>
-          <td>{{ a.get('cycle','—') }}</td>
-          <td>{{ a.get('year','—') }}</td>
-          <td><span class="badge badge-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
-          <td>{{ a.get('evidence_count',0) }} file(s)</td>
-          <td>{{ a.get('uploaded_at','—')[:10] if a.get('uploaded_at') else '—' }}</td>
-          <td><a href="/student/assessments/{{ a.id }}/evidence" class="btn-sm btn-primary"><i class="fas fa-paperclip"></i> Evidence</a></td>
-        </tr>
-        {% else %}
-        <tr><td colspan="11" style="text-align:center;color:#aaa;padding:32px">No assessments uploaded yet. <a href="/student/assessments/upload">Upload your first assessment</a>.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+    <!-- Table -->
+    {% if assessments %}
+    <div class="table-scroll">
+      <table class="asmts-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Unit</th>
+            <th>Class</th>
+            <th>Type</th>
+            <th>No.</th>
+            <th>Term</th>
+            <th>Cycle</th>
+            <th>Year</th>
+            <th>Status</th>
+            <th>Evidence</th>
+            <th>Uploaded</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in assessments %}
+          {% set st = a.get('status','pending') %}
+          {% set unit = a.get('units') or {} %}
+          {% set cls  = a.get('classes') or {} %}
+          <tr>
+
+            <!-- Row number -->
+            <td style="color:#94a3b8;font-weight:700;text-align:center">{{ loop.index }}</td>
+
+            <!-- Unit -->
+            <td>
+              <div class="unit-name">{{ unit.get('name','—') }}</div>
+              {% if unit.get('code') %}
+              <span class="unit-code">{{ unit.get('code') }}</span>
+              {% endif %}
+            </td>
+
+            <!-- Class -->
+            <td>{{ cls.get('name','—') }}</td>
+
+            <!-- Type -->
+            <td>
+              <span style="font-weight:700;color:#0f2c54">{{ a.get('assessment_type','—') }}</span>
+            </td>
+
+            <!-- Assessment No. -->
+            <td style="text-align:center;font-weight:700;color:#1e293b">
+              {{ a.get('assessment_no','—') }}
+            </td>
+
+            <!-- Term -->
+            <td style="text-align:center">
+              {% if a.get('term') %}
+              <span style="background:#f1f5f9;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:600;color:#374151">
+                Term {{ a.get('term') }}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+
+            <!-- Cycle -->
+            <td style="text-align:center">
+              {% if a.get('cycle') %}
+              <span style="background:#f1f5f9;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:600;color:#374151">
+                {{ a.get('cycle') }}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+
+            <!-- Year -->
+            <td style="text-align:center;font-weight:600;color:#374151">
+              {{ a.get('year','—') }}
+            </td>
+
+            <!-- Status -->
+            <td>
+              <span class="badge badge-{{ st }}">
+                {% if st == 'approved' %}<i class="fas fa-check-circle"></i>
+                {% elif st == 'rejected' %}<i class="fas fa-times-circle"></i>
+                {% elif st == 'marked' %}<i class="fas fa-pen"></i>
+                {% else %}<i class="fas fa-clock"></i>{% endif %}
+                {{ st|title }}
+              </span>
+            </td>
+
+            <!-- Evidence -->
+            <td style="text-align:center">
+              {% set ev_count = a.get('evidence_count',0) %}
+              <span class="ev-pill {{ 'has-ev' if ev_count > 0 else '' }}">
+                <i class="fas fa-paperclip" style="font-size:10px"></i>
+                {{ ev_count }} file{{ 's' if ev_count != 1 else '' }}
+              </span>
+            </td>
+
+            <!-- Uploaded date -->
+            <td style="color:#64748b;font-size:12px;white-space:nowrap">
+              {% if a.get('uploaded_at') %}
+              <i class="fas fa-calendar-alt" style="margin-right:4px;opacity:.5"></i>
+              {{ a.get('uploaded_at','')[:10] }}
+              {% else %}—{% endif %}
+            </td>
+
+            <!-- Action -->
+            <td>
+              <a href="/student/assessments/{{ a.id }}/evidence" class="btn-evidence">
+                <i class="fas fa-paperclip"></i> Evidence
+              </a>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-file-alt"></i>
+      <h3>No Assessments Yet</h3>
+      <p style="font-size:13px;margin-bottom:16px">
+        Upload your completed assessment scripts to get started.
+      </p>
+      <a href="/student/assessments/upload">
+        <i class="fas fa-upload" style="margin-right:6px"></i>Upload Your First Assessment
+      </a>
+    </div>
+    {% endif %}
+
   </div>
 </div>
 {% endblock %}
