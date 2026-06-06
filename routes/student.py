@@ -2626,55 +2626,84 @@ def download_result_slip():
         story += [scale, Spacer(1, 16)]
 
         # ════════════════════════════════════════════════════════════════════
-        # 5.  OFFICIAL SIGNATURES
+        # 5.  OFFICIAL SIGNATURES  (HOD left · Examinations right)
         # ════════════════════════════════════════════════════════════════════
-        story.append(HRFlowable(width="100%", thickness=1, color=DARK_BLUE, spaceAfter=10))
+        story.append(HRFlowable(width="100%", thickness=1.5,
+                                color=DARK_BLUE, spaceAfter=10))
         story.append(Paragraph("OFFICIAL VERIFICATION", lft10b))
-        story.append(Spacer(1, 6))
+        story.append(Spacer(1, 8))
 
-        sig_data = [
-            # Row 1 — Examinations Officer
-            [Paragraph("<b>EXAMINATIONS OFFICER</b>", lft9b),
-             Paragraph("", lft9),
-             Paragraph("<b>HEAD OF DEPARTMENT</b>", lft9b),
-             Paragraph("", lft9)],
-            # Row 2 — name line
-            [Paragraph("Name: ", lft9),
-             Paragraph("_" * 32, lft9),
-             Paragraph("Name: ", lft9),
-             Paragraph("_" * 32, lft9)],
-            # Row 3 — signature line
-            [Paragraph("Signature: ", lft9),
-             Paragraph("_" * 28, lft9),
-             Paragraph("Signature: ", lft9),
-             Paragraph("_" * 28, lft9)],
-            # Row 4 — stamp & date
-            [Paragraph("Stamp / Date: ", lft9),
-             Paragraph("_" * 25, lft9),
-             Paragraph("Stamp / Date: ", lft9),
-             Paragraph("_" * 25, lft9)],
-        ]
-        sig_tbl = Table(sig_data,
-                        colWidths=[24*mm, W/2 - 24*mm, 24*mm, W/2 - 24*mm])
-        sig_tbl.setStyle(TableStyle([
-            ('TOPPADDING',    (0,0), (-1,-1), 6),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-            ('FONTNAME',      (0,0), (-1,-1), 'Helvetica'),
-            ('FONTSIZE',      (0,0), (-1,-1), 9),
-            ('VALIGN',        (0,0), (-1,-1), 'BOTTOM'),
+        # Use a simple 2-column layout; each column is self-contained.
+        half = W / 2 - 4*mm
+        line = "_" * 38        # underline length
+
+        def _sig_block(title):
+            """Return a Table cell containing one signature block."""
+            rows = [
+                [Paragraph(f"<b>{title}</b>",
+                           ParagraphStyle('sh', parent=lft9b, fontSize=9,
+                                          textColor=DARK_BLUE))],
+                [Spacer(1, 6)],
+                [Paragraph(f"Name:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
+                [Spacer(1, 4)],
+                [Paragraph(f"Signature:&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
+                [Spacer(1, 4)],
+                [Paragraph(f"Stamp/Date: {line}", lft9)],
+            ]
+            t = Table(rows, colWidths=[half])
+            t.setStyle(TableStyle([
+                ('TOPPADDING',    (0,0),(-1,-1), 2),
+                ('BOTTOMPADDING', (0,0),(-1,-1), 2),
+                ('LEFTPADDING',   (0,0),(-1,-1), 0),
+                ('RIGHTPADDING',  (0,0),(-1,-1), 0),
+            ]))
+            return t
+
+        sig_outer = Table(
+            [[_sig_block("HEAD OF DEPARTMENT"),
+              Spacer(8*mm, 1),
+              _sig_block("EXAMINATIONS OFFICER")]],
+            colWidths=[half, 8*mm, half]
+        )
+        sig_outer.setStyle(TableStyle([
+            ('VALIGN', (0,0),(-1,-1), 'TOP'),
+            ('TOPPADDING',    (0,0),(-1,-1), 0),
+            ('BOTTOMPADDING', (0,0),(-1,-1), 0),
         ]))
-        story.append(sig_tbl)
+        story.append(sig_outer)
 
         # Footer timestamp
-        story.append(Spacer(1, 8))
+        story.append(Spacer(1, 10))
         story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=3))
         story.append(Paragraph(
             f"Generated: {datetime.now().strftime('%d %B %Y  %H:%M')}  ·  "
             f"{student.get('full_name','—')}  ·  Adm: {student.get('admission_no','—')}",
             ctr9))
 
-        # Build
-        pdf.build(story)
+        # ════════════════════════════════════════════════════════════════════
+        # 6.  WATERMARK  (drawn on every page via onPage callback)
+        # ════════════════════════════════════════════════════════════════════
+        import math as _math
+        _wm_text = "TTTI OFFICIAL DOCUMENT"
+        _adm_no  = student.get("admission_no","") or ""
+
+        def _draw_watermark(canvas_obj, doc_obj):
+            canvas_obj.saveState()
+            canvas_obj.setFont("Helvetica-Bold", 42)
+            canvas_obj.setFillColorRGB(0.75, 0.75, 0.75, alpha=0.18)
+            # Centre of A4
+            cx = A4[0] / 2
+            cy = A4[1] / 2
+            canvas_obj.translate(cx, cy)
+            canvas_obj.rotate(45)
+            canvas_obj.drawCentredString(0, 20,  _wm_text)
+            canvas_obj.drawCentredString(0, -30, _adm_no)
+            canvas_obj.restoreState()
+
+        # Build with watermark callback
+        pdf.build(story,
+                  onFirstPage=_draw_watermark,
+                  onLaterPages=_draw_watermark)
         pdf_bytes = buf.getvalue()
 
         fname = f"ResultSlip_{student.get('admission_no','student')}_{year}"
