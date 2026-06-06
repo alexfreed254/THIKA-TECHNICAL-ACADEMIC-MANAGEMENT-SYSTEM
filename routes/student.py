@@ -472,7 +472,8 @@ def my_documents():
         document_types = [
             'passport_photo', 'admission_letter', 'medical_form', 'personal_data_form',
             'declaration_form', 'kcse_result_slip', 'kcse_certificate', 'kcpe_result_slip',
-            'birth_certificate', 'national_id', 'guardian_id', 'consent_form'
+            'birth_certificate', 'national_id', 'guardian_id', 'consent_form',
+            'most_recent_result_slip',
         ]
         
         uploaded_count = 0
