@@ -253,29 +253,6 @@
                    placeholder="Enter ID or Birth Cert number">
           </div>
 
-          <!-- County (editable) -->
-          <div class="pf-field">
-            <label class="pf-label">County <span class="req">*</span></label>
-            <input class="pf-input" type="text" name="county"
-                   value="{{ student.get('county','') }}"
-                   placeholder="e.g. Kiambu">
-          </div>
-
-          <!-- Sub County (editable) -->
-          <div class="pf-field">
-            <label class="pf-label">Sub County <span class="req">*</span></label>
-            <input class="pf-input" type="text" name="sub_county"
-                   value="{{ student.get('sub_county','') }}"
-                   placeholder="e.g. Thika">
-          </div>
-
-          <!-- Village / Address (editable) -->
-          <div class="pf-field">
-            <label class="pf-label">Village / Address <span class="req">*</span></label>
-            <input class="pf-input" type="text" name="village"
-                   value="{{ student.get('village','') }}"
-                   placeholder="e.g. Makongeni">
-          </div>
 
           <!-- Course (read-only) -->
           <div class="pf-field">
