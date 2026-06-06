@@ -4,7 +4,7 @@
 
 {% block extra_style %}
 <style>
-  .cl-wrap { padding: 24px; max-width: 900px; }
+  .cl-wrap { padding: 24px; max-width: 920px; }
 
   /* ── Initiate card ── */
   .initiate-card {
@@ -44,66 +44,6 @@
     font-family: monospace; color: #1e3a5f; white-space: nowrap;
   }
 
-  /* ── 9-step flow ── */
-  .flow-card {
-    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
-    padding: 24px; margin-bottom: 24px;
-  }
-  .flow-title {
-    font-size: 15px; font-weight: 700; color: #111827;
-    margin: 0 0 20px; display: flex; align-items: center; gap: 8px;
-  }
-
-  .step-list { display: flex; flex-direction: column; gap: 0; }
-
-  .step-row {
-    display: flex; align-items: flex-start; gap: 16px; position: relative; padding-bottom: 4px;
-  }
-  .step-row:not(:last-child)::before {
-    content: ''; position: absolute; left: 19px; top: 42px;
-    width: 2px; height: calc(100% - 10px); background: #e5e7eb; z-index: 0;
-  }
-  .step-row.step-approved::before   { background: #22c55e; }
-  .step-row.step-in_progress::before { background: #1565c0; }
-  .step-row.step-rejected::before   { background: #ef4444; }
-
-  .step-icon {
-    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700; z-index: 1; border: 3px solid #fff;
-    box-shadow: 0 0 0 2px #e5e7eb;
-  }
-  .icon-locked      { background: #f3f4f6; color: #9ca3af; box-shadow: 0 0 0 2px #e5e7eb; }
-  .icon-in_progress { background: #dbeafe; color: #1d4ed8; box-shadow: 0 0 0 2px #1565c0; }
-  .icon-approved    { background: #dcfce7; color: #15803d; box-shadow: 0 0 0 2px #22c55e; }
-  .icon-rejected    { background: #fee2e2; color: #b91c1c; box-shadow: 0 0 0 2px #ef4444; }
-  .icon-complete    { background: #15803d; color: #fff;    box-shadow: 0 0 0 2px #15803d; }
-
-  .step-body { flex: 1; padding: 10px 0 20px; }
-  .step-name { font-size: 14px; font-weight: 700; color: #111827; }
-  .step-desc { font-size: 12px; color: #6b7280; margin-top: 3px; }
-  .step-badge {
-    display: inline-block; padding: 2px 10px; border-radius: 9999px;
-    font-size: 11px; font-weight: 700; margin-top: 6px;
-  }
-  .badge-locked      { background: #f3f4f6; color: #9ca3af; }
-  .badge-in_progress { background: #dbeafe; color: #1d4ed8; }
-  .badge-approved    { background: #dcfce7; color: #15803d; }
-  .badge-rejected    { background: #fee2e2; color: #b91c1c; }
-  .badge-n_a         { background: #f3f4f6; color: #9ca3af; }
-
-  /* ── Approval details expand ── */
-  .approval-details { margin-top: 10px; display: none; }
-  .approval-details.open { display: block; }
-  .ap-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 12px; background: #f9fafb; border-radius: 8px;
-    margin-bottom: 4px; font-size: 12px;
-  }
-  .ap-name    { color: #374151; font-weight: 600; }
-  .ap-comment { color: #6b7280; font-style: italic; margin-top: 2px; }
-  .ap-date    { color: #9ca3af; white-space: nowrap; margin-left: 12px; }
-
   /* ── Download block ── */
   .download-block {
     background: linear-gradient(135deg, #15803d, #16a34a);
@@ -132,12 +72,187 @@
   }
   .locked-download i { font-size: 28px; display: block; margin-bottom: 8px; }
 
-  /* ── Toggle expand btn ── */
-  .expand-btn {
-    background: none; border: none; color: #1565c0; font-size: 11px;
-    font-weight: 700; cursor: pointer; padding: 0; margin-top: 4px;
+  /* ════════════════════════════════════════════════
+     CLEARANCE PROGRESS — REDESIGNED
+  ════════════════════════════════════════════════ */
+
+  .prog-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 0;
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,.06);
   }
-  .expand-btn:hover { text-decoration: underline; }
+
+  /* Header bar */
+  .prog-header {
+    background: linear-gradient(135deg, #0f2744 0%, #1565c0 60%, #1d83de 100%);
+    padding: 20px 28px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+  }
+  .prog-header-left { display: flex; align-items: center; gap: 12px; }
+  .prog-header-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: rgba(255,255,255,.18); display: flex; align-items: center;
+    justify-content: center; font-size: 20px; color: #fff; flex-shrink: 0;
+  }
+  .prog-header-title { color: #fff; font-size: 16px; font-weight: 800; line-height: 1.2; }
+  .prog-header-sub   { color: rgba(255,255,255,.72); font-size: 12px; margin-top: 2px; }
+
+  /* Compact progress bar */
+  .prog-bar-wrap {
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  }
+  .prog-bar-track {
+    width: 120px; height: 8px; background: rgba(255,255,255,.25);
+    border-radius: 99px; overflow: hidden;
+  }
+  .prog-bar-fill {
+    height: 100%; background: #4ade80; border-radius: 99px;
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+  }
+  .prog-bar-label { color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+  /* Stage list body */
+  .stage-list { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; }
+
+  /* Individual stage item */
+  .stage-item {
+    display: flex; gap: 0; position: relative;
+  }
+
+  /* Left spine + icon column */
+  .stage-spine {
+    display: flex; flex-direction: column; align-items: center;
+    width: 52px; flex-shrink: 0;
+  }
+  .stage-dot {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 800; z-index: 1;
+    position: relative; transition: box-shadow .3s;
+  }
+  .stage-line {
+    width: 3px; flex: 1; min-height: 18px; margin: 2px 0;
+    border-radius: 99px;
+  }
+
+  /* Status colours */
+  .dot-approved    { background: linear-gradient(135deg,#22c55e,#16a34a); color:#fff; box-shadow: 0 0 0 4px #dcfce7, 0 4px 10px rgba(34,197,94,.35); }
+  .dot-in_progress { background: linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); animation: pulse-ring 2s infinite; }
+  .dot-locked      { background: #f3f4f6; color:#9ca3af; box-shadow: 0 0 0 3px #e5e7eb; }
+  .dot-rejected    { background: linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; box-shadow: 0 0 0 4px #fee2e2, 0 4px 10px rgba(239,68,68,.35); }
+  .dot-final-done  { background: linear-gradient(135deg,#15803d,#166534); color:#fff; box-shadow: 0 0 0 4px #bbf7d0, 0 6px 18px rgba(21,128,61,.4); }
+  .dot-final-wait  { background: linear-gradient(135deg,#94a3b8,#64748b); color:#fff; box-shadow: 0 0 0 3px #e2e8f0; }
+
+  .line-approved    { background: linear-gradient(to bottom, #22c55e, #22c55e); }
+  .line-in_progress { background: linear-gradient(to bottom, #3b82f6, #e5e7eb); }
+  .line-locked      { background: #e5e7eb; }
+  .line-rejected    { background: linear-gradient(to bottom, #ef4444, #e5e7eb); }
+  .line-last        { display: none; }
+
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); }
+    50%  { box-shadow: 0 0 0 8px rgba(59,130,246,.15), 0 4px 14px rgba(59,130,246,.5); }
+    100% { box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); }
+  }
+
+  /* Right content card */
+  .stage-content {
+    flex: 1; margin-bottom: 14px;
+    border-radius: 12px; overflow: hidden;
+    border: 1.5px solid #e5e7eb;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .stage-content:hover { border-color: #93c5fd; box-shadow: 0 4px 16px rgba(59,130,246,.1); }
+  .stage-content.st-approved    { border-color: #bbf7d0; }
+  .stage-content.st-in_progress { border-color: #93c5fd; box-shadow: 0 4px 16px rgba(59,130,246,.12); }
+  .stage-content.st-rejected    { border-color: #fca5a5; }
+  .stage-content.st-locked      { background: #fafafa; }
+  .stage-content.st-final-done  { border-color: #86efac; background: linear-gradient(135deg,#f0fdf4,#dcfce7); }
+  .stage-content.st-final-wait  { background: #f8fafc; border-style: dashed; }
+
+  .stage-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px 10px; gap: 10px; flex-wrap: wrap;
+  }
+  .stage-title-wrap { flex: 1; min-width: 0; }
+  .stage-num  { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .07em; }
+  .stage-name { font-size: 14px; font-weight: 800; color: #111827; margin-top: 1px; line-height: 1.3; }
+  .stage-desc { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.5; }
+
+  /* Right side badges */
+  .stage-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .st-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 11px; border-radius: 99px; font-size: 11px; font-weight: 700;
+    white-space: nowrap;
+  }
+  .pill-approved    { background: #dcfce7; color: #15803d; }
+  .pill-in_progress { background: #dbeafe; color: #1d4ed8; }
+  .pill-locked      { background: #f3f4f6; color: #9ca3af; }
+  .pill-rejected    { background: #fee2e2; color: #b91c1c; }
+  .pill-final-done  { background: #dcfce7; color: #15803d; }
+  .pill-final-wait  { background: #f1f5f9; color: #64748b; }
+
+  /* Expand button */
+  .expand-btn {
+    background: none; border: 1.5px solid #e5e7eb; color: #1565c0;
+    font-size: 11px; font-weight: 700; cursor: pointer; padding: 4px 10px;
+    border-radius: 7px; display: inline-flex; align-items: center; gap: 5px;
+    transition: background .15s, border-color .15s;
+  }
+  .expand-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+
+  /* Approval details panel */
+  .approval-panel {
+    max-height: 0; overflow: hidden;
+    transition: max-height .35s cubic-bezier(.4,0,.2,1), padding .25s;
+    background: #f8fafc; border-top: 1px solid #e5e7eb;
+  }
+  .approval-panel.open {
+    max-height: 600px;
+    padding: 12px 16px 14px;
+  }
+  .ap-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 9px 12px; background: #fff; border-radius: 9px;
+    margin-bottom: 6px; font-size: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .ap-row:last-child { margin-bottom: 0; }
+  .ap-name    { color: #374151; font-weight: 700; }
+  .ap-comment { color: #6b7280; font-style: italic; margin-top: 3px; }
+  .ap-date    {
+    color: #9ca3af; white-space: nowrap; margin-left: 12px;
+    font-size: 11px; padding-top: 2px;
+  }
+
+  /* Final "Clearance Issued" row special treatment */
+  .stage-final-banner {
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .final-banner-icon { font-size: 22px; }
+  .final-banner-text { flex: 1; }
+  .final-banner-title { font-size: 14px; font-weight: 800; color: #15803d; }
+  .final-banner-sub   { font-size: 12px; color: #16a34a; margin-top: 2px; }
+  .final-locked-title { font-size: 14px; font-weight: 700; color: #64748b; }
+  .final-locked-sub   { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+  /* Explainer grid (pre-initiation) */
+  .flow-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    padding: 24px; margin-bottom: 24px;
+  }
+  .flow-title {
+    font-size: 15px; font-weight: 700; color: #111827;
+    margin: 0 0 20px; display: flex; align-items: center; gap: 8px;
+  }
 </style>
 {% endblock %}
 
@@ -150,7 +265,7 @@
     <h2><i class="fas fa-graduation-cap"></i> Start Your Course Clearance</h2>
     <p>
       Initiate clearance when you have completed your course requirements.
-      The clearance follows a sequential 7-stage process — each stage must be
+      The clearance follows a sequential 5-stage process — each stage must be
       approved before the next unlocks.
     </p>
     <form method="post" action="/clearance/initiate">
@@ -170,13 +285,13 @@
     </form>
   </div>
 
-  <!-- 9-step explainer -->
+  <!-- 5-step explainer -->
   <div class="flow-card">
     <p class="flow-title"><i class="fas fa-route" style="color:#1565c0"></i> How Clearance Works</p>
     <div style="display:grid;gap:10px;font-size:13px;color:#374151">
-      {% for num, label in [('1','Trainer Clearance'),('2','Home Dept Technicians'),
+      {% for num, label in [('1','Trainer Clearance'),('2','Technician Clearance'),
           ('3','HOD Approval (Gates All Other Stages)'),('4','Institutional Sections'),
-          ('5','Finance Office'),('6','Dean of Students / Final Authority'),('✓','Clearance Issued')] %}
+          ('5','Community Library Clearance'),('✓','Clearance Issued')] %}
       <div style="display:flex;align-items:center;gap:10px">
         <span style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ num }}</span>
         <span>{{ label }}</span>
@@ -195,7 +310,9 @@
     </span>
     <div class="sb-info">
       <div class="sb-title">
-        {% if cr_status == 'completed' %}Clearance Complete — Certificate Ready{% elif cr_status == 'rejected' %}Clearance Rejected{% else %}Clearance In Progress{% endif %}
+        {% if cr_status == 'completed' %}Clearance Complete — Certificate Ready
+        {% elif cr_status == 'rejected' %}Clearance Rejected
+        {% else %}Clearance In Progress{% endif %}
       </div>
       <div class="sb-sub">
         Course: {{ (clearance_request.get('courses') or {}).get('name','—') }}
@@ -214,14 +331,12 @@
     <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
       <a href="/clearance/certificate/{{ clearance_request.id }}/pdf"
          class="btn-download"
-         style="background:linear-gradient(135deg,#16a34a,#15803d);
-                box-shadow:0 4px 14px rgba(22,163,74,.35)">
+         style="background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 4px 14px rgba(22,163,74,.35)">
         <i class="fas fa-file-pdf"></i> Download Clearance Form (PDF)
       </a>
       <a href="/clearance/certificate/{{ clearance_request.id }}" target="_blank"
          class="btn-download"
-         style="background:linear-gradient(135deg,#1e5a9f,#154070);
-                box-shadow:0 4px 14px rgba(30,90,159,.3)">
+         style="background:linear-gradient(135deg,#1e5a9f,#154070);box-shadow:0 4px 14px rgba(30,90,159,.3)">
         <i class="fas fa-eye"></i> View Online Certificate
       </a>
     </div>
@@ -234,21 +349,35 @@
   </div>
   {% endif %}
 
-  <!-- ── 9-STEP PROGRESS FLOW ── -->
-  <div class="flow-card">
-    <p class="flow-title">
-      <i class="fas fa-route" style="color:#1565c0"></i> Clearance Progress
-    </p>
+  <!-- ════════════════════════════════════════════
+       CLEARANCE PROGRESS — REDESIGNED
+  ════════════════════════════════════════════ -->
+  {% set approved_count = steps[:5] | selectattr('status','eq','approved') | list | length %}
+  {% set total_stages = 5 %}
+  {% set pct = ((approved_count / total_stages) * 100) | int %}
 
-    <div class="step-list">
+  <div class="prog-card">
 
-      {% set step_icons = {
-        'approved':    'fa-check',
-        'in_progress': 'fa-clock',
-        'locked':      'fa-lock',
-        'rejected':    'fa-times',
-        'n_a':         'fa-minus',
-      } %}
+    <!-- Header -->
+    <div class="prog-header">
+      <div class="prog-header-left">
+        <div class="prog-header-icon"><i class="fas fa-route"></i></div>
+        <div>
+          <div class="prog-header-title">Clearance Progress</div>
+          <div class="prog-header-sub">{{ approved_count }} of {{ total_stages }} stages approved</div>
+        </div>
+      </div>
+      <div class="prog-bar-wrap">
+        <div class="prog-bar-track">
+          <div class="prog-bar-fill" style="width:{{ pct }}%"></div>
+        </div>
+        <div class="prog-bar-label">{{ pct }}%</div>
+      </div>
+    </div>
+
+    <!-- Stage rows -->
+    <div class="stage-list">
+
       {% set step_descs = {
         1: 'All trainers who taught you must approve.',
         2: 'All workshop technicians in your department.',
@@ -259,27 +388,54 @@
 
       {% for step in steps %}{% set i = loop.index %}{% if i <= 5 %}
       {% set st = step.status %}
-      <div class="step-row step-{{ st }}">
-        <div class="step-icon icon-{{ st if st != 'n_a' else 'locked' }}">
-          {% if st == 'approved' %}<i class="fas fa-check"></i>
-          {% elif st == 'in_progress' %}<i class="fas fa-clock"></i>
-          {% elif st == 'rejected' %}<i class="fas fa-times"></i>
-          {% else %}<i class="fas fa-lock"></i>{% endif %}
+      {% set is_last_step = (i == 5) %}
+
+      <div class="stage-item">
+        <!-- Spine -->
+        <div class="stage-spine">
+          <div class="stage-dot dot-{{ st if st != 'n_a' else 'locked' }}">
+            {% if st == 'approved' %}<i class="fas fa-check"></i>
+            {% elif st == 'in_progress' %}<i class="fas fa-clock"></i>
+            {% elif st == 'rejected' %}<i class="fas fa-times"></i>
+            {% else %}<i class="fas fa-lock"></i>{% endif %}
+          </div>
+          {% if not is_last_step %}
+          <div class="stage-line line-{{ st if st != 'n_a' else 'locked' }}"></div>
+          {% else %}
+          <div class="stage-line line-{{ st if st != 'n_a' else 'locked' }}" style="min-height:12px"></div>
+          {% endif %}
         </div>
-        <div class="step-body">
-          <div class="step-name">Stage {{ i }}: {{ step.label }}</div>
-          <div class="step-desc">{{ step_descs.get(i,'') }}</div>
-          <span class="step-badge badge-{{ st }}">
-            {{ {'approved':'✅ Approved','in_progress':'🔄 In Progress','locked':'🔒 Locked','rejected':'❌ Rejected','n_a':'—'}.get(st, st)|title }}
-          </span>
+
+        <!-- Content card -->
+        <div class="stage-content st-{{ st if st != 'n_a' else 'locked' }}">
+          <div class="stage-top">
+            <div class="stage-title-wrap">
+              <div class="stage-num">Stage {{ i }}</div>
+              <div class="stage-name">{{ step.label }}</div>
+              <div class="stage-desc">{{ step_descs.get(i,'') }}</div>
+            </div>
+            <div class="stage-right">
+              <span class="st-pill pill-{{ st if st != 'n_a' else 'locked' }}">
+                {% if st == 'approved' %}✅ Approved
+                {% elif st == 'in_progress' %}🔄 In Progress
+                {% elif st == 'rejected' %}❌ Rejected
+                {% elif st == 'n_a' %}— N/A
+                {% else %}🔒 Locked{% endif %}
+              </span>
+              {% if step.approvals %}
+              <button class="expand-btn" onclick="toggleStage({{ i }})" id="ebtn-{{ i }}">
+                <i class="fas fa-chevron-down" id="eico-{{ i }}" style="font-size:10px;transition:transform .25s"></i>
+                Show ({{ step.approvals|length }})
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
           {% if step.approvals %}
-          <button class="expand-btn" onclick="toggleApprovals({{ loop.index }})">
-            Show details ({{ step.approvals|length }})
-          </button>
-          <div class="approval-details" id="apd-{{ loop.index }}">
+          <div class="approval-panel" id="apd-{{ i }}">
             {% for a in step.approvals %}
             <div class="ap-row">
-              <div>
+              <div style="flex:1;min-width:0">
                 <div class="ap-name">
                   {% if a.status == 'approved' %}✅{% elif a.status == 'rejected' %}❌{% else %}⏳{% endif %}
                   {{ (a.get('clearance_stages') or {}).get('stage_name','Stage') }}
@@ -297,43 +453,59 @@
       </div>
       {% endif %}{% endfor %}
 
-      <!-- Final: Clearance Issued -->
-      <div class="step-row {% if cr_status == 'completed' %}step-approved{% endif %}">
-        <div class="step-icon {% if cr_status == 'completed' %}icon-complete{% else %}icon-locked{% endif %}">
-          {% if cr_status == 'completed' %}<i class="fas fa-certificate"></i>
-          {% else %}<i class="fas fa-lock"></i>{% endif %}
+      <!-- Final step: Clearance Issued -->
+      <div class="stage-item">
+        <div class="stage-spine">
+          <div class="stage-dot {% if cr_status == 'completed' %}dot-final-done{% else %}dot-final-wait{% endif %}">
+            {% if cr_status == 'completed' %}<i class="fas fa-certificate"></i>
+            {% else %}<i class="fas fa-graduation-cap"></i>{% endif %}
+          </div>
+          <!-- no line after last -->
         </div>
-        <div class="step-body">
-          <div class="step-name">Clearance Issued</div>
-          <div class="step-desc">All stages approved — certificate downloadable with QR code and serial number.</div>
+        <div class="stage-content {% if cr_status == 'completed' %}st-final-done{% else %}st-final-wait{% endif %}" style="margin-bottom:0">
           {% if cr_status == 'completed' %}
-          <span class="step-badge badge-approved">✅ Clearance Issued</span>
+          <div class="stage-final-banner">
+            <div class="final-banner-icon">🎓</div>
+            <div class="final-banner-text">
+              <div class="final-banner-title">Clearance Issued</div>
+              <div class="final-banner-sub">All stages approved — certificate ready with QR code and serial number.</div>
+            </div>
+            <span class="st-pill pill-approved">✅ Issued</span>
+          </div>
           {% else %}
-          <span class="step-badge badge-locked">🔒 Awaiting All Stages</span>
+          <div class="stage-final-banner">
+            <div class="final-banner-icon" style="opacity:.45">🎓</div>
+            <div class="final-banner-text">
+              <div class="final-locked-title">Clearance Issued</div>
+              <div class="final-locked-sub">Certificate downloadable once all stages are approved.</div>
+            </div>
+            <span class="st-pill pill-final-wait">🔒 Awaiting All Stages</span>
+          </div>
           {% endif %}
         </div>
       </div>
 
-    </div><!-- /step-list -->
-  </div>
+    </div><!-- /stage-list -->
+  </div><!-- /prog-card -->
 
   {% endif %}
-
 </div><!-- /cl-wrap -->
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-function toggleApprovals(idx) {
-  var el = document.getElementById('apd-' + idx);
-  if (!el) return;
-  var open = el.classList.toggle('open');
-  // Update button label
-  var btn = el.previousElementSibling;
+function toggleStage(idx) {
+  var panel = document.getElementById('apd-' + idx);
+  var icon  = document.getElementById('eico-' + idx);
+  var btn   = document.getElementById('ebtn-' + idx);
+  if (!panel) return;
+  var opening = !panel.classList.contains('open');
+  panel.classList.toggle('open', opening);
+  if (icon) icon.style.transform = opening ? 'rotate(180deg)' : 'rotate(0deg)';
   if (btn) {
-    var n = el.querySelectorAll('.ap-row').length;
-    btn.textContent = (open ? 'Hide' : 'Show') + ' details (' + n + ')';
+    var n = panel.querySelectorAll('.ap-row').length;
+    btn.innerHTML = '<i class="fas fa-chevron-down" id="eico-' + idx + '" style="font-size:10px;transition:transform .25s;transform:' + (opening ? 'rotate(180deg)' : 'rotate(0deg)') + '"></i> ' + (opening ? 'Hide' : 'Show') + ' (' + n + ')';
   }
 }
 </script>
