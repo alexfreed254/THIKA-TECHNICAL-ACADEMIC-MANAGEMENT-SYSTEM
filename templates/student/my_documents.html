@@ -1,751 +1,655 @@
 {% extends "student/base.html" %}
-
 {% block title %}My Documents{% endblock %}
 {% block page_title %}My Documents{% endblock %}
 
 {% block extra_style %}
 <style>
-  .page-wrap { padding: 24px; max-width: 960px; margin: 0 auto; }
+/* ── Layout ──────────────────────────────────── */
+.md-wrap { padding: 24px; max-width: 1080px; margin: 0 auto; }
 
-  /* Section header */
-  .section-card {
-    background: #fff; border-radius: 16px;
-    border: 1px solid #e2e8f0; margin-bottom: 28px;
-    box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
-  }
-  .section-head {
-    background: linear-gradient(135deg, #0f2c54, #1a3d6e);
-    color: #fff; padding: 14px 22px;
-    font-size: 13.5px; font-weight: 700;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  }
-  .section-head i { font-size: 16px; }
-  .section-body { padding: 22px; }
+/* ── Section card ────────────────────────────── */
+.md-card {
+  background: #fff; border-radius: 16px;
+  border: 1px solid #e2e8f0; margin-bottom: 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
+}
+.md-head {
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e);
+  color: #fff; padding: 14px 22px;
+  font-size: 13.5px; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+}
+.md-head .hright { margin-left: auto; font-size: 11.5px; font-weight: 500; opacity: .8; }
+.md-body { padding: 24px; }
 
-  /* Profile form grid */
-  .profile-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-  }
-  @media(max-width:720px){ .profile-grid { grid-template-columns: 1fr 1fr; } }
-  @media(max-width:480px){ .profile-grid { grid-template-columns: 1fr; } }
+/* ── Progress bar ────────────────────────────── */
+.prog-bar-wrap {
+  background: #f1f5f9; border-radius: 9999px;
+  height: 10px; overflow: hidden; margin: 6px 0 4px;
+}
+.prog-bar-fill {
+  height: 100%; border-radius: 9999px;
+  background: linear-gradient(90deg,#22c55e,#16a34a);
+  transition: width .4s;
+}
 
-  .pf-field { display: flex; flex-direction: column; gap: 6px; }
-  .pf-label {
-    font-size: 11.5px; font-weight: 700; color: #64748b;
-    text-transform: uppercase; letter-spacing: .05em;
-  }
-  .pf-label .req { color: #dc2626; margin-left: 2px; }
+/* ── Profile grid ────────────────────────────── */
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 16px;
+}
+@media(max-width:720px){ .pf-grid { grid-template-columns: 1fr 1fr; } }
+@media(max-width:460px){ .pf-grid { grid-template-columns: 1fr; } }
 
-  .pf-input, .pf-select {
-    padding: 10px 13px; border: 1.5px solid #e2e8f0;
-    border-radius: 10px; font-size: 13.5px;
-    font-family: 'Inter', sans-serif; color: #0f172a;
-    background: #fff; width: 100%;
-    transition: border-color .18s, box-shadow .18s;
-  }
-  .pf-input:focus, .pf-select:focus {
-    outline: none; border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
-  }
-  .pf-input.readonly { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; cursor: default; }
-  .pf-hint { font-size: 11px; color: #94a3b8; }
+.pf-field { display: flex; flex-direction: column; gap: 6px; }
+.pf-label {
+  font-size: 11.5px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.pf-label .req { color: #dc2626; margin-left: 2px; }
+.pf-input, .pf-select {
+  padding: 10px 13px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; font-size: 13.5px; font-family: 'Inter',sans-serif;
+  color: #0f172a; background: #fff; width: 100%;
+  transition: border-color .18s, box-shadow .18s;
+}
+.pf-input:focus, .pf-select:focus {
+  outline: none; border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.pf-input.ro { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; cursor: default; }
+.pf-static   { padding: 10px 13px; border: 1.5px solid #bae6fd; border-radius: 10px;
+               font-size: 13.5px; font-weight: 600; color: #0369a1; background: #f0f9ff; }
+.pf-hint { font-size: 11px; color: #94a3b8; }
 
-  .btn-save-profile {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 28px; border: none; border-radius: 10px;
-    font-size: 13.5px; font-weight: 700; font-family: 'Inter', sans-serif;
-    cursor: pointer; transition: all .2s;
-    background: linear-gradient(135deg, #1e5a9f, #154070);
-    color: #fff; box-shadow: 0 4px 14px rgba(30,90,159,.3);
-  }
-  .btn-save-profile:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(30,90,159,.4); }
+/* ── Save profile button ─────────────────────── */
+.btn-profile {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 28px; border: none; border-radius: 10px;
+  font-size: 13.5px; font-weight: 700; font-family: 'Inter',sans-serif;
+  cursor: pointer; transition: all .2s;
+  background: linear-gradient(135deg,#1e5a9f,#154070);
+  color: #fff; box-shadow: 0 4px 14px rgba(30,90,159,.3);
+}
+.btn-profile:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(30,90,159,.4); }
 
-  /* readonly static display (Course / Department) */
-  .pf-static {
-    padding: 10px 13px; border: 1.5px solid #e2e8f0;
-    border-radius: 10px; font-size: 13.5px; font-weight: 600;
-    color: #0369a1; background: #f0f9ff; border-color: #bae6fd;
-  }
-  .doc-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
-    gap: 20px; 
-    margin-bottom: 30px; 
-  }
-  .doc-card { 
-    background: #fff; 
-    padding: 20px; 
-    border-radius: 10px; 
-    border: 2px solid #e2e8f0; 
-    transition: all 0.2s; 
-  }
-  .doc-card:hover { 
-    border-color: #cbd5e1; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-  }
-  .doc-card.uploaded { border-color: #22c55e; background: #f0fdf4; }
-  .doc-card.missing { border-color: #ef4444; }
-  .doc-card.uploading { border-color: #f59e0b; background: #fffbeb; }
-  .doc-label { 
-    font-size: 14px; 
-    font-weight: 600; 
-    color: #1e293b; 
-    margin-bottom: 8px; 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-  }
-  .doc-label .required { color: #ef4444; }
-  .doc-status { 
-    font-size: 12px; 
-    font-weight: 600; 
-    margin-bottom: 12px; 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-  }
-  .doc-status.no-file { color: #94a3b8; }
-  .doc-status.uploading { color: #f59e0b; }
-  .doc-status.uploaded { color: #22c55e; }
-  .doc-status.missing { color: #ef4444; }
-  .doc-status.rejected { color: #dc2626; }
-  .file-input-wrapper { 
-    position: relative; 
-    margin-bottom: 10px; 
-  }
-  .file-input { 
-    width: 100%; 
-    padding: 10px 14px; 
-    border: 2px dashed #cbd5e1; 
-    border-radius: 8px; 
-    font-size: 13px; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-    background: #fff; 
-  }
-  .file-input:hover { 
-    border-color: #3b82f6; 
-    background: #f8fafc; 
-  }
-  .file-input::file-selector-button {
-    padding: 6px 14px;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-right: 10px;
-  }
-  .file-input::file-selector-button:hover {
-    background: #2563eb;
-  }
-  .file-info { 
-    font-size: 12px; 
-    color: #64748b; 
-    margin-top: 8px; 
-  }
-  .btn-save { 
-    background: #22c55e; 
-    color: white; 
-    padding: 14px 32px; 
-    border: none; 
-    border-radius: 8px; 
-    font-size: 14px; 
-    font-weight: 700; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-    display: block; 
-    margin: 0 auto; 
-  }
-  .btn-save:hover { 
-    background: #16a34a; 
-    transform: translateY(-2px); 
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); 
-  }
-  .btn-save:disabled { 
-    background: #cbd5e1; 
-    cursor: not-allowed; 
-    transform: none; 
-    box-shadow: none; 
-  }
-  .progress-bar { 
-    background: #e2e8f0; 
-    height: 6px; 
-    border-radius: 3px; 
-    overflow: hidden; 
-    margin-top: 10px; 
-  }
-  .progress-fill { 
-    background: #3b82f6; 
-    height: 100%; 
-    transition: width 0.3s; 
-  }
+/* ── Upload doc cards grid ───────────────────── */
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+  gap: 16px;
+}
+
+.doc-card {
+  border-radius: 12px; border: 2px solid #e2e8f0;
+  padding: 16px; background: #fff;
+  transition: border-color .2s, box-shadow .2s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.doc-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+.doc-card.has-file  { border-color: #22c55e; background: #f0fdf4; }
+.doc-card.selecting { border-color: #f59e0b; background: #fffbeb; }
+.doc-card.missing   { border-color: #fca5a5; }
+
+.doc-card-label {
+  font-size: 13.5px; font-weight: 700; color: #1e293b;
+  display: flex; align-items: center; gap: 8px;
+}
+.doc-card-label .req { color: #ef4444; }
+
+.doc-card-status {
+  font-size: 12.5px; font-weight: 600;
+  display: flex; align-items: center; gap: 6px;
+}
+.doc-card-status.ok      { color: #16a34a; }
+.doc-card-status.missing { color: #94a3b8; }
+.doc-card-status.picking { color: #d97706; }
+
+.doc-file-input {
+  width: 100%; padding: 8px 12px;
+  border: 2px dashed #cbd5e1; border-radius: 8px;
+  font-size: 13px; cursor: pointer;
+  background: #fff; transition: border-color .18s;
+}
+.doc-file-input:hover { border-color: #3b82f6; }
+.doc-file-input::file-selector-button {
+  padding: 5px 12px; background: #2563eb; color: #fff;
+  border: none; border-radius: 6px; font-size: 12px;
+  font-weight: 600; cursor: pointer; margin-right: 10px;
+}
+.doc-file-input::file-selector-button:hover { background: #1d4ed8; }
+
+.doc-existing {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid #d1fae5;
+  border-radius: 8px; padding: 8px 12px;
+  font-size: 12px; color: #15803d;
+}
+.doc-existing a {
+  margin-left: auto; color: #2563eb; font-weight: 700;
+  text-decoration: none; white-space: nowrap;
+  display: flex; align-items: center; gap: 4px;
+}
+.doc-existing a:hover { text-decoration: underline; }
+
+/* ── Save docs button ────────────────────────── */
+.btn-save-docs {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 13px 36px; border: none; border-radius: 11px;
+  font-size: 14px; font-weight: 700; font-family: 'Inter',sans-serif;
+  cursor: pointer; transition: all .2s;
+  background: linear-gradient(135deg,#16a34a,#15803d);
+  color: #fff; box-shadow: 0 4px 16px rgba(22,163,74,.3);
+}
+.btn-save-docs:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(22,163,74,.4); }
+.btn-save-docs:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── Gallery of uploaded docs ────────────────── */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
+  gap: 16px;
+}
+
+.gallery-tile {
+  border-radius: 14px; border: 1.5px solid #e2e8f0;
+  overflow: hidden; background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  transition: transform .18s, box-shadow .18s;
+  display: flex; flex-direction: column;
+}
+.gallery-tile:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+
+.gallery-thumb {
+  height: 140px; background: #f1f5f9;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; flex-shrink: 0;
+}
+.gallery-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.gallery-thumb .thumb-icon { font-size: 52px; opacity: .35; }
+
+.gallery-info {
+  padding: 12px 14px; flex: 1;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.gallery-doc-name {
+  font-size: 13px; font-weight: 800; color: #1e293b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gallery-file-name {
+  font-size: 11.5px; color: #64748b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gallery-size { font-size: 11px; color: #94a3b8; }
+
+.gallery-footer {
+  padding: 10px 14px;
+  border-top: 1px solid #f1f5f9;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+}
+.status-pill {
+  padding: 3px 10px; border-radius: 9999px;
+  font-size: 11px; font-weight: 700;
+}
+.status-pill.pending  { background: #fef3c7; color: #92400e; }
+.status-pill.approved { background: #dcfce7; color: #15803d; }
+.status-pill.rejected { background: #fee2e2; color: #991b1b; }
+
+.btn-view {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  color: #fff; background: #2563eb; text-decoration: none; border: none;
+  transition: background .15s;
+}
+.btn-view:hover { background: #1d4ed8; }
+
+/* ── Result slip highlight card ──────────────── */
+.rslip-wrap {
+  margin-top: 24px; border-radius: 14px; overflow: hidden;
+  border: 2px solid #bfdbfe; box-shadow: 0 2px 12px rgba(37,99,235,.1);
+}
+.rslip-head {
+  background: linear-gradient(135deg,#1e40af,#1d4ed8);
+  padding: 14px 22px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.rslip-body {
+  background: #eff6ff; padding: 20px 22px;
+  display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-wrap">
+<div class="md-wrap">
 
-  <!-- ── PERSONAL INFORMATION (editable) ──────────────────── -->
-  <div class="section-card">
-    <div class="section-head">
-      <span><i class="fas fa-user-edit"></i>&nbsp; Personal Information</span>
-      <span style="font-size:11px;opacity:.75;font-weight:500">Fields marked <span style="color:#fbbf24">*</span> are editable</span>
-    </div>
-    <div class="section-body">
-
-      <form method="POST" action="/student/documents" id="profile-form">
-        <input type="hidden" name="form_action" value="update_profile">
-
-        <div class="profile-grid">
-
-          <!-- Full Name (read-only) -->
-          <div class="pf-field">
-            <label class="pf-label">Full Name</label>
-            <input class="pf-input readonly" type="text"
-                   value="{{ student.get('full_name','') }}" readonly>
-            <span class="pf-hint">Official name — contact admin to change</span>
-          </div>
-
-          <!-- Admission Number (read-only) -->
-          <div class="pf-field">
-            <label class="pf-label">Admission Number</label>
-            <input class="pf-input readonly" type="text"
-                   value="{{ student.get('admission_no','') }}" readonly>
-            <span class="pf-hint">System-assigned — cannot be changed</span>
-          </div>
-
-          <!-- Gender (editable) -->
-          <div class="pf-field">
-            <label class="pf-label">Gender <span class="req">*</span></label>
-            <select class="pf-select" name="gender">
-              <option value="">-- Select Gender --</option>
-              <option value="Male"   {% if student.get('gender') == 'Male'   %}selected{% endif %}>Male</option>
-              <option value="Female" {% if student.get('gender') == 'Female' %}selected{% endif %}>Female</option>
-              <option value="Other"  {% if student.get('gender') == 'Other'  %}selected{% endif %}>Other</option>
-            </select>
-          </div>
-
-          <!-- Phone Number (editable) -->
-          <div class="pf-field">
-            <label class="pf-label">Phone Number <span class="req">*</span></label>
-            <input class="pf-input" type="tel" name="mobile_number"
-                   value="{{ student.get('mobile_number','') }}"
-                   placeholder="e.g. 0712345678">
-          </div>
-
-          <!-- Date of Birth (editable) -->
-          <div class="pf-field">
-            <label class="pf-label">Date of Birth <span class="req">*</span></label>
-            <input class="pf-input" type="date" name="date_of_birth"
-                   value="{{ student.get('date_of_birth','') }}">
-          </div>
-
-          <!-- National ID No (editable) -->
-          <div class="pf-field">
-            <label class="pf-label">National ID / Birth Cert No. <span class="req">*</span></label>
-            <input class="pf-input" type="text" name="national_id_no"
-                   value="{{ student.get('national_id_no','') }}"
-                   placeholder="Enter ID or Birth Cert number">
-          </div>
-
-          <div class="pf-field">
-            <label class="pf-label">County</label>
-            <input class="pf-input" type="text" name="county"
-                   value="{{ student.get('county','') }}"
-                   placeholder="e.g. Kiambu">
-          </div>
-
-          <div class="pf-field">
-            <label class="pf-label">Sub County</label>
-            <input class="pf-input" type="text" name="sub_county"
-                   value="{{ student.get('sub_county','') }}"
-                   placeholder="e.g. Thika">
-          </div>
-
-          <div class="pf-field">
-            <label class="pf-label">Village / Address</label>
-            <input class="pf-input" type="text" name="village"
-                   value="{{ student.get('village','') }}"
-                   placeholder="e.g. Makongeni">
-          </div>
-
-          <!-- Course (read-only) -->
-          <div class="pf-field">
-            <label class="pf-label">Course</label>
-            <div class="pf-static">{{ course_name or '—' }}</div>
-            <span class="pf-hint">Set by your department enrollment</span>
-          </div>
-
-          <!-- Department (read-only) -->
-          <div class="pf-field">
-            <label class="pf-label">Department</label>
-            <div class="pf-static">{{ department_name or '—' }}</div>
-            <span class="pf-hint">Set by your department enrollment</span>
-          </div>
-
+{# ─────────────────────────────────────────────────────────────
+   PROGRESS SUMMARY BAR
+───────────────────────────────────────────────────────────── #}
+{% set uploaded_n = documents|length %}
+<div class="md-card" style="margin-bottom:20px">
+  <div class="md-body" style="padding:18px 24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:#1e293b">Document Upload Progress</div>
+        <div style="font-size:12.5px;color:#64748b;margin-top:2px">
+          <b style="color:{{ '#16a34a' if uploaded_n == total_doc_types else '#0f2c54' }}">{{ uploaded_n }}</b>
+          of <b>{{ total_doc_types }}</b> documents uploaded
         </div>
-
-        <div style="margin-top:22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-          <button type="submit" class="btn-save-profile">
-            <i class="fas fa-save"></i> Save Personal Information
-          </button>
-          <span style="font-size:12.5px;color:#64748b">
-            <i class="fas fa-info-circle" style="color:#0891b2;margin-right:4px"></i>
-            Only editable fields will be updated. Read-only fields are locked.
-          </span>
+      </div>
+      <div style="flex:1;min-width:160px;max-width:360px">
+        <div class="prog-bar-wrap">
+          <div class="prog-bar-fill" style="width:{{ ((uploaded_n / total_doc_types) * 100)|int }}%"></div>
         </div>
-      </form>
-
+        <div style="font-size:11px;color:#94a3b8;text-align:right;margin-top:2px">
+          {{ ((uploaded_n / total_doc_types) * 100)|int }}% complete
+        </div>
+      </div>
+      {% if uploaded_n == total_doc_types %}
+      <span style="background:#dcfce7;color:#15803d;padding:6px 16px;border-radius:9999px;font-size:12.5px;font-weight:700">
+        <i class="fas fa-check-circle"></i> All Documents Submitted
+      </span>
+      {% endif %}
     </div>
   </div>
+</div>
 
-  <!-- ── DOCUMENT UPLOAD SECTION ───────────────────────────── -->
-  <div class="section-card">
-    <div class="section-head">
-      <span><i class="fas fa-folder-open"></i>&nbsp; My Documents</span>
-      <span style="font-size:11px;opacity:.75;font-weight:500">Upload or replace required documents</span>
-    </div>
+{# ─────────────────────────────────────────────────────────────
+   SECTION 1 — PERSONAL INFORMATION
+───────────────────────────────────────────────────────────── #}
+<div class="md-card">
+  <div class="md-head">
+    <i class="fas fa-user-edit"></i> Personal Information
+    <span class="hright">Fields marked <span style="color:#fbbf24">*</span> are editable</span>
   </div>
-  
-  <div style="padding:22px;background:#fff;border-radius:0 0 16px 16px;border:1px solid #e2e8f0;border-top:none;margin-top:-1px;box-shadow:0 2px 12px rgba(0,0,0,.06)">
-  <form id="documents-form" method="POST" action="/student/documents" enctype="multipart/form-data">
-    <input type="hidden" name="form_action" value="documents">
-    <div class="doc-grid">
-      
-      <!-- Passport Photos -->
-      <div class="doc-card {{ 'uploaded' if documents.get('passport_photo') else 'missing' }}" data-doc-type="passport_photo">
-        <div class="doc-label">
-          <i class="fas fa-camera"></i> Passport Photos <span class="required">*</span>
+  <div class="md-body">
+    <form method="POST" action="/student/documents">
+      <input type="hidden" name="form_action" value="update_profile">
+      <div class="pf-grid">
+
+        <div class="pf-field">
+          <label class="pf-label">Full Name</label>
+          <input class="pf-input ro" type="text" value="{{ student.get('full_name','') }}" readonly>
+          <span class="pf-hint">Contact admin to change</span>
         </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('passport_photo') else 'no-file' }}">
-          {% if documents.get('passport_photo') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
+
+        <div class="pf-field">
+          <label class="pf-label">Admission Number</label>
+          <input class="pf-input ro" type="text" value="{{ student.get('admission_no','') }}" readonly>
+          <span class="pf-hint">System-assigned</span>
         </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="passport_photo" class="file-input" accept="image/*" onchange="handleFileSelect(this, 'passport_photo')">
+
+        <div class="pf-field">
+          <label class="pf-label">Gender <span class="req">*</span></label>
+          <select class="pf-select" name="gender">
+            <option value="">-- Select --</option>
+            <option value="Male"   {% if student.get('gender')=='Male'   %}selected{% endif %}>Male</option>
+            <option value="Female" {% if student.get('gender')=='Female' %}selected{% endif %}>Female</option>
+            <option value="Other"  {% if student.get('gender')=='Other'  %}selected{% endif %}>Other</option>
+          </select>
         </div>
-        {% if documents.get('passport_photo') %}
-        <div class="file-info">
-          <p>{{ documents.passport_photo.file_name }}</p>
-          <p>{{ (documents.passport_photo.file_size / 1024) | round(1) }} KB</p>
+
+        <div class="pf-field">
+          <label class="pf-label">Phone Number <span class="req">*</span></label>
+          <input class="pf-input" type="tel" name="mobile_number"
+                 value="{{ student.get('mobile_number','') }}" placeholder="e.g. 0712345678">
         </div>
-        {% endif %}
+
+        <div class="pf-field">
+          <label class="pf-label">Date of Birth <span class="req">*</span></label>
+          <input class="pf-input" type="date" name="date_of_birth"
+                 value="{{ student.get('date_of_birth','') }}">
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">National ID / Birth Cert No. <span class="req">*</span></label>
+          <input class="pf-input" type="text" name="national_id_no"
+                 value="{{ student.get('national_id_no','') }}" placeholder="ID or Birth Cert number">
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">County</label>
+          <input class="pf-input" type="text" name="county"
+                 value="{{ student.get('county','') }}" placeholder="e.g. Kiambu">
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">Sub County</label>
+          <input class="pf-input" type="text" name="sub_county"
+                 value="{{ student.get('sub_county','') }}" placeholder="e.g. Thika">
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">Village / Address</label>
+          <input class="pf-input" type="text" name="village"
+                 value="{{ student.get('village','') }}" placeholder="e.g. Makongeni">
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">Course</label>
+          <div class="pf-static">{{ course_name or '—' }}</div>
+          <span class="pf-hint">Set by enrollment</span>
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-label">Department</label>
+          <div class="pf-static">{{ department_name or '—' }}</div>
+          <span class="pf-hint">Set by enrollment</span>
+        </div>
+
       </div>
-
-      <!-- Admission Letter -->
-      <div class="doc-card {{ 'uploaded' if documents.get('admission_letter') else 'missing' }}" data-doc-type="admission_letter">
-        <div class="doc-label">
-          <i class="fas fa-envelope"></i> Admission Letter <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('admission_letter') else 'no-file' }}">
-          {% if documents.get('admission_letter') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="admission_letter" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'admission_letter')">
-        </div>
-        {% if documents.get('admission_letter') %}
-        <div class="file-info">
-          <p>{{ documents.admission_letter.file_name }}</p>
-          <p>{{ (documents.admission_letter.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
+      <div style="margin-top:22px">
+        <button type="submit" class="btn-profile">
+          <i class="fas fa-save"></i> Save Personal Information
+        </button>
       </div>
+    </form>
+  </div>
+</div>
 
-      <!-- Medical Examination Form -->
-      <div class="doc-card {{ 'uploaded' if documents.get('medical_form') else 'missing' }}" data-doc-type="medical_form">
-        <div class="doc-label">
-          <i class="fas fa-notes-medical"></i> Medical Examination Form <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('medical_form') else 'no-file' }}">
-          {% if documents.get('medical_form') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="medical_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'medical_form')">
-        </div>
-        {% if documents.get('medical_form') %}
-        <div class="file-info">
-          <p>{{ documents.medical_form.file_name }}</p>
-          <p>{{ (documents.medical_form.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
+{# ─────────────────────────────────────────────────────────────
+   SECTION 2 — UPLOAD DOCUMENTS
+───────────────────────────────────────────────────────────── #}
+<div class="md-card">
+  <div class="md-head">
+    <i class="fas fa-cloud-upload-alt"></i> Upload Documents
+    <span class="hright">Select files then click Save — all changes upload together</span>
+  </div>
+  <div class="md-body">
+    <form id="docs-form" method="POST" action="/student/documents" enctype="multipart/form-data">
+      <input type="hidden" name="form_action" value="documents">
 
-      <!-- Personal Data Form -->
-      <div class="doc-card {{ 'uploaded' if documents.get('personal_data_form') else 'missing' }}" data-doc-type="personal_data_form">
-        <div class="doc-label">
-          <i class="fas fa-user-edit"></i> Personal Data Form <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('personal_data_form') else 'no-file' }}">
-          {% if documents.get('personal_data_form') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="personal_data_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'personal_data_form')">
-        </div>
-        {% if documents.get('personal_data_form') %}
-        <div class="file-info">
-          <p>{{ documents.personal_data_form.file_name }}</p>
-          <p>{{ (documents.personal_data_form.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
+      {% set doc_defs = [
+        {'key':'passport_photo',     'icon':'fas fa-camera',        'label':'Passport Photos',          'req':true,  'accept':'image/*'},
+        {'key':'admission_letter',   'icon':'fas fa-envelope',      'label':'Admission Letter',          'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'medical_form',       'icon':'fas fa-notes-medical', 'label':'Medical Examination Form',  'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'personal_data_form', 'icon':'fas fa-user-edit',     'label':'Personal Data Form',        'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'declaration_form',   'icon':'fas fa-file-signature','label':'Declaration Form',          'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'kcse_result_slip',   'icon':'fas fa-scroll',        'label':'KCSE Result Slip',          'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'kcse_certificate',   'icon':'fas fa-certificate',   'label':'KCSE Certificate',          'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'kcpe_result_slip',   'icon':'fas fa-scroll',        'label':'KCPE Result Slip',          'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'birth_certificate',  'icon':'fas fa-baby',          'label':'Birth Certificate',         'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'national_id',        'icon':'fas fa-id-card',       'label':'National ID',               'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'guardian_id',        'icon':'fas fa-users',         'label':'Guardian ID Copies',        'req':false, 'accept':'.pdf,.jpg,.jpeg,.png'},
+        {'key':'consent_form',       'icon':'fas fa-file-contract', 'label':'Consent Form',              'req':true,  'accept':'.pdf,.jpg,.jpeg,.png'},
+      ] %}
 
-      <!-- Declaration Form -->
-      <div class="doc-card {{ 'uploaded' if documents.get('declaration_form') else 'missing' }}" data-doc-type="declaration_form">
-        <div class="doc-label">
-          <i class="fas fa-file-signature"></i> Declaration Form <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('declaration_form') else 'no-file' }}">
-          {% if documents.get('declaration_form') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="declaration_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'declaration_form')">
-        </div>
-        {% if documents.get('declaration_form') %}
-        <div class="file-info">
-          <p>{{ documents.declaration_form.file_name }}</p>
-          <p>{{ (documents.declaration_form.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
+      <div class="doc-grid" id="docGrid">
+        {% for dd in doc_defs %}
+        {% set doc = documents.get(dd.key) %}
+        <div class="doc-card {{ 'has-file' if doc else 'missing' }}" id="card-{{ dd.key }}">
 
-      <!-- KCSE Result Slip -->
-      <div class="doc-card {{ 'uploaded' if documents.get('kcse_result_slip') else 'missing' }}" data-doc-type="kcse_result_slip">
-        <div class="doc-label">
-          <i class="fas fa-scroll"></i> KCSE Result Slip <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('kcse_result_slip') else 'no-file' }}">
-          {% if documents.get('kcse_result_slip') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="kcse_result_slip" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'kcse_result_slip')">
-        </div>
-        {% if documents.get('kcse_result_slip') %}
-        <div class="file-info">
-          <p>{{ documents.kcse_result_slip.file_name }}</p>
-          <p>{{ (documents.kcse_result_slip.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- KCSE Certificate -->
-      <div class="doc-card {{ 'uploaded' if documents.get('kcse_certificate') else 'missing' }}" data-doc-type="kcse_certificate">
-        <div class="doc-label">
-          <i class="fas fa-certificate"></i> KCSE Certificate <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('kcse_certificate') else 'no-file' }}">
-          {% if documents.get('kcse_certificate') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="kcse_certificate" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'kcse_certificate')">
-        </div>
-        {% if documents.get('kcse_certificate') %}
-        <div class="file-info">
-          <p>{{ documents.kcse_certificate.file_name }}</p>
-          <p>{{ (documents.kcse_certificate.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- KCPE Result Slip -->
-      <div class="doc-card {{ 'uploaded' if documents.get('kcpe_result_slip') else 'missing' }}" data-doc-type="kcpe_result_slip">
-        <div class="doc-label">
-          <i class="fas fa-scroll"></i> KCPE Result Slip <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('kcpe_result_slip') else 'no-file' }}">
-          {% if documents.get('kcpe_result_slip') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="kcpe_result_slip" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'kcpe_result_slip')">
-        </div>
-        {% if documents.get('kcpe_result_slip') %}
-        <div class="file-info">
-          <p>{{ documents.kcpe_result_slip.file_name }}</p>
-          <p>{{ (documents.kcpe_result_slip.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- Birth Certificate -->
-      <div class="doc-card {{ 'uploaded' if documents.get('birth_certificate') else 'missing' }}" data-doc-type="birth_certificate">
-        <div class="doc-label">
-          <i class="fas fa-baby"></i> Birth Certificate <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('birth_certificate') else 'no-file' }}">
-          {% if documents.get('birth_certificate') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="birth_certificate" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'birth_certificate')">
-        </div>
-        {% if documents.get('birth_certificate') %}
-        <div class="file-info">
-          <p>{{ documents.birth_certificate.file_name }}</p>
-          <p>{{ (documents.birth_certificate.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- National ID -->
-      <div class="doc-card {{ 'uploaded' if documents.get('national_id') else 'missing' }}" data-doc-type="national_id">
-        <div class="doc-label">
-          <i class="fas fa-id-card"></i> National ID <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('national_id') else 'no-file' }}">
-          {% if documents.get('national_id') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="national_id" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'national_id')">
-        </div>
-        {% if documents.get('national_id') %}
-        <div class="file-info">
-          <p>{{ documents.national_id.file_name }}</p>
-          <p>{{ (documents.national_id.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- Guardian ID Copies -->
-      <div class="doc-card {{ 'uploaded' if documents.get('guardian_id') else 'missing' }}" data-doc-type="guardian_id">
-        <div class="doc-label">
-          <i class="fas fa-users"></i> Guardian ID Copies
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('guardian_id') else 'no-file' }}">
-          {% if documents.get('guardian_id') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="guardian_id" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'guardian_id')">
-        </div>
-        {% if documents.get('guardian_id') %}
-        <div class="file-info">
-          <p>{{ documents.guardian_id.file_name }}</p>
-          <p>{{ (documents.guardian_id.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- Consent Form -->
-      <div class="doc-card {{ 'uploaded' if documents.get('consent_form') else 'missing' }}" data-doc-type="consent_form">
-        <div class="doc-label">
-          <i class="fas fa-file-contract"></i> Consent Form <span class="required">*</span>
-        </div>
-        <div class="doc-status {{ 'uploaded' if documents.get('consent_form') else 'no-file' }}">
-          {% if documents.get('consent_form') %}
-            <i class="fas fa-check-circle"></i> Uploaded Successfully
-          {% else %}
-            <i class="fas fa-file"></i> No file selected
-          {% endif %}
-        </div>
-        <div class="file-input-wrapper">
-          <input type="file" name="consent_form" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(this, 'consent_form')">
-        </div>
-        {% if documents.get('consent_form') %}
-        <div class="file-info">
-          <p>{{ documents.consent_form.file_name }}</p>
-          <p>{{ (documents.consent_form.file_size / 1024) | round(1) }} KB</p>
-        </div>
-        {% endif %}
-      </div>
-
-    </div>
-
-    <!-- ── Most Recent Result Slip (separate highlighted section) ── -->
-    <div style="margin-top:28px;border-radius:14px;overflow:hidden;border:2px solid #bfdbfe;box-shadow:0 2px 12px rgba(37,99,235,.1)">
-      <div style="background:linear-gradient(135deg,#1e40af,#1d4ed8);padding:14px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <i class="fas fa-file-alt" style="font-size:22px;color:#fff"></i>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:800;color:#fff">Most Recent Academic Result Slip</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:2px">
-            Upload your latest TTTI result slip — required when booking exams and linked to your transcript
+          <div class="doc-card-label">
+            <i class="{{ dd.icon }}" style="color:#0f2c54;font-size:15px"></i>
+            {{ dd.label }}
+            {% if dd.req %}<span class="req">*</span>{% endif %}
           </div>
-        </div>
-        {% if documents.get('most_recent_result_slip') %}
-        <span style="background:#dcfce7;color:#15803d;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700">
-          <i class="fas fa-check-circle"></i> Uploaded
-        </span>
-        {% else %}
-        <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700">
-          <i class="fas fa-exclamation-triangle"></i> Not Yet Uploaded
-        </span>
-        {% endif %}
-      </div>
-      <div style="background:#eff6ff;padding:20px 22px;display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
-        <div style="flex:1;min-width:220px">
-          {% if documents.get('most_recent_result_slip') %}
-          {% set rslip = documents.most_recent_result_slip %}
-          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:12px">
-            <i class="fas fa-file-pdf" style="font-size:24px;color:#dc2626;flex-shrink:0"></i>
+
+          {% if doc %}
+          <div class="doc-card-status ok">
+            <i class="fas fa-check-circle"></i> Uploaded
+          </div>
+          <div class="doc-existing">
+            <i class="fas fa-file{% if doc.file_name and doc.file_name.endswith('.pdf') %}-pdf{% elif doc.file_name and doc.file_name.rsplit('.',1)[-1].lower() in ['jpg','jpeg','png','webp'] %}-image{% endif %}"
+               style="font-size:18px;color:{% if doc.file_name and doc.file_name.endswith('.pdf') %}#dc2626{% else %}#2563eb{% endif %}"></i>
             <div style="min-width:0">
-              <div style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                {{ rslip.file_name }}
+              <div style="font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">
+                {{ doc.file_name }}
               </div>
-              <div style="font-size:11.5px;color:#64748b;margin-top:2px">
-                {{ (rslip.file_size / 1024) | round(1) }} KB
-                {% if rslip.get('file_url') %}
-                &nbsp;·&nbsp;
-                <a href="{{ rslip.file_url }}" target="_blank" style="color:#1d4ed8;font-weight:600">
-                  <i class="fas fa-eye"></i> View
-                </a>
-                {% endif %}
-              </div>
+              <div style="font-size:11px;color:#64748b">{{ (doc.file_size / 1024)|round(1) }} KB</div>
+            </div>
+            {% if doc.get('file_url') %}
+            <a href="{{ doc.file_url }}" target="_blank">
+              <i class="fas fa-eye"></i> View
+            </a>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="doc-card-status missing" id="status-{{ dd.key }}">
+            <i class="fas fa-times-circle"></i> Not uploaded
+          </div>
+          {% endif %}
+
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;
+                          letter-spacing:.04em;display:block;margin-bottom:5px">
+              {% if doc %}Replace file{% else %}Upload file{% endif %}
+            </label>
+            <input type="file" name="{{ dd.key }}" class="doc-file-input"
+                   accept="{{ dd.accept }}"
+                   onchange="onFileChange(this,'{{ dd.key }}')">
+            <div id="pick-{{ dd.key }}" style="font-size:11.5px;color:#d97706;margin-top:5px;display:none">
+              <i class="fas fa-paperclip"></i> <span></span>
             </div>
           </div>
-          <div style="font-size:12px;color:#16a34a;font-weight:600;margin-bottom:10px">
-            <i class="fas fa-check-circle"></i> Slip on file — you can replace it below
-          </div>
-          {% else %}
-          <div style="background:#fff;border:1.5px dashed #93c5fd;border-radius:10px;padding:18px 16px;text-align:center;margin-bottom:12px;color:#1d4ed8;font-size:13px">
-            <i class="fas fa-cloud-upload-alt" style="font-size:28px;display:block;margin-bottom:8px;opacity:.6"></i>
-            No result slip uploaded yet
-          </div>
-          {% endif %}
-          <label style="display:block;font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">
-            {% if documents.get('most_recent_result_slip') %}Replace Result Slip{% else %}Upload Result Slip{% endif %}
-          </label>
-          <input type="file" name="most_recent_result_slip"
-                 accept=".pdf,.jpg,.jpeg,.png"
-                 onchange="handleFileSelect(this,'most_recent_result_slip')"
-                 style="display:block;font-size:13px;color:#374151;cursor:pointer;
-                        padding:8px;border:1.5px solid #bfdbfe;border-radius:8px;
-                        background:#fff;width:100%">
-          <div style="font-size:11.5px;color:#64748b;margin-top:6px">
-            <i class="fas fa-info-circle" style="color:#93c5fd"></i>
-            Accepted: PDF, JPG, PNG · Max 10 MB
-          </div>
+
         </div>
-        <div style="font-size:12.5px;color:#1e40af;background:#dbeafe;border-radius:10px;padding:14px 16px;max-width:280px;line-height:1.6;flex-shrink:0">
-          <div style="font-weight:700;margin-bottom:6px"><i class="fas fa-lightbulb" style="color:#fbbf24"></i> What to upload</div>
-          Upload the result slip printed from your department after each term's assessment. This is the official slip signed by your trainer showing your grades for each unit.
+        {% endfor %}
+      </div>
+
+      <!-- ── Most Recent Result Slip ── -->
+      {% set rslip = documents.get('most_recent_result_slip') %}
+      <div class="rslip-wrap">
+        <div class="rslip-head">
+          <i class="fas fa-file-alt" style="font-size:22px;color:#fff"></i>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:800;color:#fff">Most Recent Academic Result Slip</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:2px">
+              Upload your latest TTTI result slip — required when booking exams
+            </div>
+          </div>
+          {% if rslip %}
+          <span style="background:#dcfce7;color:#15803d;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700">
+            <i class="fas fa-check-circle"></i> Uploaded
+          </span>
+          {% else %}
+          <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700">
+            <i class="fas fa-exclamation-triangle"></i> Not Uploaded
+          </span>
+          {% endif %}
+        </div>
+        <div class="rslip-body">
+          <div style="flex:1;min-width:220px">
+            {% if rslip %}
+            <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #bfdbfe;
+                        border-radius:10px;padding:12px 16px;margin-bottom:12px">
+              <i class="fas fa-file-pdf" style="font-size:26px;color:#dc2626;flex-shrink:0"></i>
+              <div style="min-width:0">
+                <div style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;
+                            overflow:hidden;text-overflow:ellipsis">{{ rslip.file_name }}</div>
+                <div style="font-size:11.5px;color:#64748b;margin-top:2px">
+                  {{ (rslip.file_size/1024)|round(1) }} KB
+                  {% if rslip.get('file_url') %}
+                  &nbsp;·&nbsp;
+                  <a href="{{ rslip.file_url }}" target="_blank"
+                     style="color:#1d4ed8;font-weight:700;text-decoration:none">
+                    <i class="fas fa-eye"></i> View
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#16a34a;font-weight:600;margin-bottom:10px">
+              <i class="fas fa-check-circle"></i> Slip on file — you can replace it below
+            </div>
+            {% else %}
+            <div style="background:#fff;border:1.5px dashed #93c5fd;border-radius:10px;
+                        padding:20px;text-align:center;margin-bottom:12px;color:#1d4ed8;font-size:13px">
+              <i class="fas fa-cloud-upload-alt" style="font-size:30px;display:block;margin-bottom:8px;opacity:.5"></i>
+              No result slip uploaded yet
+            </div>
+            {% endif %}
+            <label style="display:block;font-size:12px;font-weight:700;color:#1d4ed8;
+                          margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">
+              {% if rslip %}Replace Result Slip{% else %}Upload Result Slip{% endif %}
+            </label>
+            <input type="file" name="most_recent_result_slip"
+                   accept=".pdf,.jpg,.jpeg,.png"
+                   onchange="onFileChange(this,'most_recent_result_slip')"
+                   style="display:block;font-size:13px;color:#374151;cursor:pointer;
+                          padding:8px;border:1.5px solid #bfdbfe;border-radius:8px;
+                          background:#fff;width:100%">
+            <div id="pick-most_recent_result_slip"
+                 style="font-size:11.5px;color:#d97706;margin-top:6px;display:none">
+              <i class="fas fa-paperclip"></i> <span></span>
+            </div>
+            <div style="font-size:11.5px;color:#64748b;margin-top:6px">
+              <i class="fas fa-info-circle" style="color:#93c5fd"></i>
+              PDF, JPG, PNG · Max 10 MB
+            </div>
+          </div>
+          <div style="font-size:12.5px;color:#1e40af;background:#dbeafe;border-radius:10px;
+                      padding:14px 16px;max-width:260px;line-height:1.7;flex-shrink:0">
+            <div style="font-weight:700;margin-bottom:6px">
+              <i class="fas fa-lightbulb" style="color:#fbbf24"></i> What to upload
+            </div>
+            Upload the result slip printed from your department after each term's assessment —
+            the official slip signed by your trainer showing your grades for each unit.
+          </div>
         </div>
       </div>
-    </div>
 
-    <button type="submit" class="btn-save" id="save-btn" style="margin-top:24px">
-      <i class="fas fa-save"></i> SAVE DOCUMENTS
-    </button>
-  </form>
+      <div style="margin-top:28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <button type="submit" class="btn-save-docs" id="saveDocsBtn">
+          <i class="fas fa-save"></i> Save Documents
+        </button>
+        <span style="font-size:12.5px;color:#64748b">
+          <i class="fas fa-info-circle" style="color:#0891b2;margin-right:4px"></i>
+          Only files you select will be uploaded. Existing files are kept unless you replace them.
+        </span>
+      </div>
+
+    </form>
   </div>
-
 </div>
+
+{# ─────────────────────────────────────────────────────────────
+   SECTION 3 — UPLOADED DOCUMENTS GALLERY
+───────────────────────────────────────────────────────────── #}
+<div class="md-card">
+  <div class="md-head">
+    <i class="fas fa-folder-open"></i> Uploaded Documents
+    <span class="hright">{{ documents_list|length }} document{{ 's' if documents_list|length != 1 else '' }} on file</span>
+  </div>
+  <div class="md-body">
+    {% if documents_list %}
+    <div class="gallery-grid">
+      {% for doc in documents_list %}
+      {% set ext = doc.file_name.rsplit('.',1)[-1].lower() if doc.file_name and '.' in doc.file_name else '' %}
+      {% set is_image = ext in ['jpg','jpeg','png','webp','gif'] %}
+      {% set is_pdf   = ext == 'pdf' %}
+      <div class="gallery-tile">
+
+        <!-- Thumb -->
+        <div class="gallery-thumb">
+          {% if is_image and doc.get('file_url') %}
+            <img src="{{ doc.file_url }}" alt="{{ doc.document_name }}"
+                 loading="lazy" onerror="this.parentElement.innerHTML='<span class=\'thumb-icon\'>🖼️</span>'">
+          {% elif is_pdf %}
+            <span class="thumb-icon" style="font-size:56px">📄</span>
+          {% else %}
+            <span class="thumb-icon" style="font-size:56px">📎</span>
+          {% endif %}
+        </div>
+
+        <!-- Info -->
+        <div class="gallery-info">
+          <div class="gallery-doc-name">{{ doc.document_name or doc.document_type.replace('_',' ')|title }}</div>
+          <div class="gallery-file-name" title="{{ doc.file_name }}">{{ doc.file_name or '—' }}</div>
+          <div class="gallery-size">
+            {% if doc.get('file_size') %}{{ (doc.file_size/1024)|round(1) }} KB{% endif %}
+            {% if doc.get('updated_at') %}
+            &nbsp;·&nbsp; {{ doc.updated_at[:10] }}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="gallery-footer">
+          <span class="status-pill {{ doc.get('status','pending') }}">
+            {% if doc.get('status') == 'approved' %}
+              <i class="fas fa-check-circle"></i> Approved
+            {% elif doc.get('status') == 'rejected' %}
+              <i class="fas fa-times-circle"></i> Rejected
+            {% else %}
+              <i class="fas fa-clock"></i> Pending
+            {% endif %}
+          </span>
+          {% if doc.get('file_url') %}
+          <a href="{{ doc.file_url }}" target="_blank" class="btn-view">
+            <i class="fas fa-eye"></i> View
+          </a>
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px 24px;color:#94a3b8">
+      <i class="fas fa-folder-open" style="font-size:52px;display:block;margin-bottom:14px;opacity:.25"></i>
+      <div style="font-size:16px;font-weight:700;color:#64748b;margin-bottom:6px">No Documents Uploaded Yet</div>
+      <div style="font-size:13px">Use the Upload Documents section above to submit your files.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+</div>{# end .md-wrap #}
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-function handleFileSelect(input, docType) {
-  const card = input.closest('.doc-card');
-  const statusDiv = card.querySelector('.doc-status');
-  const fileInfo = card.querySelector('.file-info');
-  
+/* Mark card as "file selected" when user picks a file */
+function onFileChange(input, key) {
+  const card    = document.getElementById('card-' + key);
+  const pickDiv = document.getElementById('pick-' + key);
+
   if (input.files && input.files[0]) {
-    const file = input.files[0];
-    const fileSize = (file.size / 1024).toFixed(1);
-    
-    // Update status to uploading
-    statusDiv.className = 'doc-status uploading';
-    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-    
-    // Update file info
-    if (!fileInfo) {
-      const newFileInfo = document.createElement('div');
-      newFileInfo.className = 'file-info';
-      card.appendChild(newFileInfo);
-    }
-    card.querySelector('.file-info').innerHTML = `
-      <p>${file.name}</p>
-      <p>${fileSize} KB</p>
-    `;
-    
-    // Simulate upload completion (in real implementation, this would be an AJAX call)
-    setTimeout(() => {
-      statusDiv.className = 'doc-status uploaded';
-      statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Uploaded Successfully';
+    const f = input.files[0];
+    if (card) {
       card.classList.remove('missing');
-      card.classList.add('uploaded');
-    }, 1000);
+      card.classList.add('selecting');
+      const st = card.querySelector('.doc-card-status');
+      if (st) { st.className='doc-card-status picking'; st.innerHTML='<i class="fas fa-spinner fa-spin"></i> Ready to upload'; }
+    }
+    if (pickDiv) {
+      pickDiv.style.display = 'block';
+      pickDiv.querySelector('span').textContent = f.name + ' (' + (f.size/1024).toFixed(1) + ' KB)';
+    }
   } else {
-    // No file selected
-    statusDiv.className = 'doc-status no-file';
-    statusDiv.innerHTML = '<i class="fas fa-file"></i> No file selected';
-    card.classList.remove('uploaded');
-    card.classList.add('missing');
+    if (card) {
+      card.classList.remove('selecting');
+      const hasCurrent = card.querySelector('.doc-existing');
+      if (!hasCurrent) {
+        card.classList.add('missing');
+        const st = card.querySelector('.doc-card-status');
+        if (st) { st.className='doc-card-status missing'; st.innerHTML='<i class="fas fa-times-circle"></i> Not uploaded'; }
+      }
+    }
+    if (pickDiv) pickDiv.style.display = 'none';
   }
 }
 
-// Form submission
-document.getElementById('documents-form').addEventListener('submit', function(e) {
-  e.preventDefault();
-  
-  // Check if at least one file is selected
-  const inputs = this.querySelectorAll('input[type="file"]');
-  let hasFile = false;
-  inputs.forEach(input => {
-    if (input.files && input.files[0]) {
-      hasFile = true;
-    }
-  });
-  
+/* On submit — let the POST through, just show spinner */
+document.getElementById('docs-form').addEventListener('submit', function(e) {
+  const inputs  = this.querySelectorAll('input[type="file"]');
+  let   hasFile = false;
+  inputs.forEach(i => { if (i.files && i.files[0]) hasFile = true; });
+
   if (!hasFile) {
-    alert('Please select at least one file to upload.');
+    e.preventDefault();
+    alert('Please select at least one file before saving.');
     return;
   }
-  
-  // Show saving state
-  const saveBtn = document.getElementById('save-btn');
-  saveBtn.disabled = true;
-  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-  
-  // Submit form (in real implementation, this would be an AJAX call)
-  setTimeout(() => {
-    saveBtn.disabled = false;
-    saveBtn.innerHTML = '<i class="fas fa-save"></i> SAVE DOCUMENTS';
-    alert('Documents saved successfully!');
-  }, 1500);
+
+  const btn = document.getElementById('saveDocsBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading, please wait…';
+  /* form submits normally */
 });
 </script>
 {% endblock %}

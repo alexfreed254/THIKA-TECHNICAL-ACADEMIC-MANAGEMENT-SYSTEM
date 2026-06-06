@@ -413,94 +413,92 @@ def profile():
 
 # ── My Documents ───────────────────────────────────────────────────────────────
 
+_DOC_MIME = {
+    'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+    'png': 'image/png',  'webp': 'image/webp',
+    'gif': 'image/gif',  'pdf':  'application/pdf',
+}
+
+_ALL_DOC_TYPES = [
+    'passport_photo', 'admission_letter', 'medical_form', 'personal_data_form',
+    'declaration_form', 'kcse_result_slip', 'kcse_certificate', 'kcpe_result_slip',
+    'birth_certificate', 'national_id', 'guardian_id', 'consent_form',
+    'most_recent_result_slip',
+]
+
+
 @student_bp.route("/documents", methods=["GET", "POST"])
 @student_required
 def my_documents():
-    """Manage student personal documents with individual file uploads."""
-    db = get_service_client()
-    user = current_user()
+    db       = get_service_client()
+    user     = current_user()
     student_id = user["id"]
 
     if request.method == "POST":
         form_action = request.form.get("form_action", "documents")
 
-        # ── Handle personal info update ───────────────────────────────────────
+        # ── Personal info update ──────────────────────────────────────────────
         if form_action == "update_profile":
             mobile_raw = request.form.get("mobile_number", "").strip()
-            mobile = _clean_mobile_number(mobile_raw) if mobile_raw else ""
+            mobile     = _clean_mobile_number(mobile_raw) if mobile_raw else ""
             updates = {
-                "gender":        request.form.get("gender", "").strip() or None,
-                "mobile_number": mobile or None,
-                "national_id_no":request.form.get("national_id_no", "").strip() or None,
-                "date_of_birth": request.form.get("date_of_birth", "").strip() or None,
-                "county":        request.form.get("county", "").strip() or None,
-                "sub_county":    request.form.get("sub_county", "").strip() or None,
-                "village":       request.form.get("village", "").strip() or None,
+                "gender":         request.form.get("gender", "").strip() or None,
+                "mobile_number":  mobile or None,
+                "national_id_no": request.form.get("national_id_no", "").strip() or None,
+                "date_of_birth":  request.form.get("date_of_birth", "").strip() or None,
+                "county":         request.form.get("county", "").strip() or None,
+                "sub_county":     request.form.get("sub_county", "").strip() or None,
+                "village":        request.form.get("village", "").strip() or None,
             }
-            # Remove None values so we don't overwrite existing data with nulls
             updates = {k: v for k, v in updates.items() if v is not None}
             try:
                 db.table("user_profiles").update(updates).eq("id", student_id).execute()
                 write_audit_log("update_profile", target=f"user:{student_id}", detail=updates)
-                flash('Personal information updated successfully.', 'success')
+                flash("Personal information updated successfully.", "success")
             except Exception as e:
                 err_msg = str(e)
-                # If specific columns are missing in DB, retry with only known-safe columns
                 if "PGRST204" in err_msg or "schema cache" in err_msg:
+                    bad = re.search(r"'(\w+)' column", err_msg)
                     safe = {k: v for k, v in updates.items()
-                            if k in ("mobile_number", "gender", "date_of_birth",
-                                     "national_id_no", "county", "sub_county", "village")}
+                            if k in ("mobile_number","gender","date_of_birth",
+                                     "national_id_no","county","sub_county","village")}
+                    if bad:
+                        safe.pop(bad.group(1), None)
                     try:
-                        # Try removing whichever field triggered the error and retry
-                        import re as _re
-                        bad_col = _re.search(r"'(\w+)' column", err_msg)
-                        if bad_col:
-                            safe.pop(bad_col.group(1), None)
                         if safe:
                             db.table("user_profiles").update(safe).eq("id", student_id).execute()
-                            flash('Profile updated (some fields require a DB migration to save). '
-                                  'Please ask admin to run the migration.', 'warning')
+                            flash("Profile updated (some fields need a DB migration).", "warning")
                         else:
-                            flash('Profile could not be saved — DB migration required.', 'warning')
+                            flash("Profile could not be saved — DB migration required.", "warning")
                     except Exception as e2:
-                        flash(f'Error updating profile: {e2}', 'danger')
+                        flash(f"Error updating profile: {e2}", "danger")
                 else:
-                    flash(f'Error updating profile: {e}', 'danger')
+                    flash(f"Error updating profile: {e}", "danger")
             return redirect(url_for("student.my_documents"))
 
-        # ── Handle document uploads ───────────────────────────────────────────
-        document_types = [
-            'passport_photo', 'admission_letter', 'medical_form', 'personal_data_form',
-            'declaration_form', 'kcse_result_slip', 'kcse_certificate', 'kcpe_result_slip',
-            'birth_certificate', 'national_id', 'guardian_id', 'consent_form',
-            'most_recent_result_slip',
-        ]
-        
+        # ── Document uploads ──────────────────────────────────────────────────
         uploaded_count = 0
         upload_errors  = []
+        storage        = db.storage  # reuse same client
 
-        for doc_type in document_types:
-            if doc_type not in request.files:
-                continue
-            file = request.files[doc_type]
+        for doc_type in _ALL_DOC_TYPES:
+            file = request.files.get(doc_type)
             if not file or not file.filename:
                 continue
 
             doc_label = doc_type.replace("_", " ").title()
             try:
-                ext          = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'pdf'
+                ext          = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "pdf"
                 storage_path = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
                 file_bytes   = file.read()
-                content_type = "application/pdf" if ext == 'pdf' else f"image/{ext}"
+                content_type = _DOC_MIME.get(ext, "application/octet-stream")
 
-                # 1. Upload to Supabase Storage
-                storage_client = get_service_client().storage
-                storage_client.from_("assessment-evidence").upload(
-                    storage_path, file_bytes, {"content-type": content_type}
+                storage.from_("assessment-evidence").upload(
+                    storage_path, file_bytes,
+                    {"content-type": content_type, "x-upsert": "true"}
                 )
-                public_url = storage_client.from_("assessment-evidence").get_public_url(storage_path)
+                public_url = storage.from_("assessment-evidence").get_public_url(storage_path)
 
-                # 2. Upsert into student_personal_documents
                 existing = (db.table("student_personal_documents")
                               .select("id")
                               .eq("student_id", student_id)
@@ -516,15 +514,13 @@ def my_documents():
                     "file_size":     len(file_bytes),
                     "status":        "pending",
                 }
-
                 if existing:
-                    db.table("student_personal_documents").update(payload).eq("id", existing[0]["id"]).execute()
+                    db.table("student_personal_documents").update(payload)\
+                      .eq("id", existing[0]["id"]).execute()
                 else:
-                    db.table("student_personal_documents").insert({
-                        "student_id":    student_id,
-                        "document_type": doc_type,
-                        **payload,
-                    }).execute()
+                    db.table("student_personal_documents").insert(
+                        {"student_id": student_id, "document_type": doc_type, **payload}
+                    ).execute()
 
                 uploaded_count += 1
 
@@ -532,39 +528,47 @@ def my_documents():
                 upload_errors.append(f"{doc_label}: {e}")
 
         for err in upload_errors:
-            flash(err, 'danger')
-        
-        if uploaded_count > 0:
-            write_audit_log("upload_documents", target=f"user:{student_id}", detail={"count": uploaded_count})
-            flash(f'{uploaded_count} document(s) uploaded successfully.', 'success')
-        
+            flash(err, "danger")
+        if uploaded_count:
+            write_audit_log("upload_documents", target=f"user:{student_id}",
+                            detail={"count": uploaded_count})
+            flash(f"{uploaded_count} document(s) uploaded successfully.", "success")
+        elif not upload_errors:
+            flash("No files were selected.", "warning")
+
         return redirect(url_for("student.my_documents"))
 
-    # GET request - fetch student data and documents
-    student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
-    
-    # Get course and department info
-    enrollment = db.table("enrollments").select("*, classes(name, course_id)").eq("student_id", student_id).execute().data or []
-    course_name = ""
-    department_name = ""
-    
+    # ── GET ───────────────────────────────────────────────────────────────────
+    student    = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
+    enrollment = db.table("enrollments").select("*, classes(name, course_id)")\
+                   .eq("student_id", student_id).execute().data or []
+
+    course_name = department_name = ""
     if enrollment:
-        class_data = enrollment[0].get("classes", {})
-        course_id = class_data.get("course_id")
-        if course_id:
-            course = db.table("courses").select("*, departments(name)").eq("id", course_id).single().execute().data or {}
-            course_name = course.get("name", "")
-            department_name = course.get("departments", {}).get("name", "")
-    
-    # Get uploaded documents
-    documents_data = db.table("student_personal_documents").select("*").eq("student_id", student_id).execute().data or []
-    documents = {doc["document_type"]: doc for doc in documents_data}
-    
-    return render_template("student/my_documents.html", 
-                          student=student, 
-                          course_name=course_name,
-                          department_name=department_name,
-                          documents=documents)
+        cls = enrollment[0].get("classes") or {}
+        cid = cls.get("course_id")
+        if cid:
+            course = db.table("courses").select("*, departments(name)")\
+                       .eq("id", cid).single().execute().data or {}
+            course_name     = course.get("name", "")
+            department_name = (course.get("departments") or {}).get("name", "")
+
+    docs_raw  = db.table("student_personal_documents").select("*")\
+                  .eq("student_id", student_id)\
+                  .order("updated_at", desc=True)\
+                  .execute().data or []
+    documents      = {d["document_type"]: d for d in docs_raw}   # dict for upload-card lookups
+    documents_list = docs_raw                                      # ordered list for gallery
+
+    return render_template(
+        "student/my_documents.html",
+        student=student,
+        course_name=course_name,
+        department_name=department_name,
+        documents=documents,
+        documents_list=documents_list,
+        total_doc_types=len(_ALL_DOC_TYPES),
+    )
 
 
 # ── Assessment Upload ─────────────────────────────────────────────────────────
@@ -2604,11 +2608,18 @@ def logbook():
 
     today_str = datetime.now().strftime("%Y-%m-%d")
 
+    # Fetch personal documents uploaded via My Documents
+    personal_docs_raw = (db.table("student_personal_documents")
+                          .select("document_type, document_name, file_url, file_name, status, updated_at")
+                          .eq("student_id", student_id)
+                          .execute().data or [])
+
     return render_template("student/logbook.html",
                           attachment=active_attachment,
                           logbooks=logbooks,
                           weeks_grouped=weeks_grouped,
-                          today_str=today_str)
+                          today_str=today_str,
+                          personal_docs=personal_docs_raw)
 
 
 @student_bp.route("/logbook/add", methods=["POST"])

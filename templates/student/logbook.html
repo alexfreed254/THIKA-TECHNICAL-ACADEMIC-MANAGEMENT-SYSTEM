@@ -542,6 +542,52 @@
   </div>
 </div>
 
+<!-- ── MY SUBMITTED DOCUMENTS ────────────────── -->
+{% if personal_docs %}
+<div class="lb-card" style="margin-bottom:24px">
+  <div class="lb-card-head">
+    <i class="fas fa-folder-open"></i> My Submitted Documents
+    <span class="head-right">{{ personal_docs|length }} document{{ 's' if personal_docs|length != 1 else '' }}</span>
+  </div>
+  <div class="lb-card-body" style="padding:16px 22px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+      {% for doc in personal_docs %}
+      {% set ext = doc.file_url.rsplit('.',1)[-1].lower() if doc.file_url and '.' in doc.file_url else '' %}
+      <a href="{{ doc.file_url }}" target="_blank"
+         style="display:flex;align-items:center;gap:12px;padding:12px 14px;
+                border:1.5px solid #e2e8f0;border-radius:12px;text-decoration:none;
+                background:#f8fafc;transition:all .18s"
+         onmouseover="this.style.borderColor='#2563eb';this.style.background='#eff6ff'"
+         onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+        <span style="font-size:26px;flex-shrink:0">
+          {% if ext == 'pdf' %}📄
+          {% elif ext in ['jpg','jpeg','png','webp'] %}🖼️
+          {% else %}📎
+          {% endif %}
+        </span>
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            {{ doc.document_name or doc.document_type.replace('_',' ')|title }}
+          </div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px">
+            {% if doc.status == 'approved' %}
+              <span style="color:#15803d"><i class="fas fa-check-circle" style="margin-right:3px"></i>Approved</span>
+            {% elif doc.status == 'rejected' %}
+              <span style="color:#dc2626"><i class="fas fa-times-circle" style="margin-right:3px"></i>Rejected</span>
+            {% else %}
+              <span style="color:#92400e"><i class="fas fa-clock" style="margin-right:3px"></i>Pending</span>
+            {% endif %}
+            &bull; {{ (doc.updated_at or '')[:10] }}
+          </div>
+        </div>
+        <i class="fas fa-external-link-alt" style="margin-left:auto;color:#94a3b8;font-size:11px;flex-shrink:0"></i>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── GUIDELINES ────────────────────────────── -->
 <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:14px;padding:18px 22px;margin-top:4px">
   <div style="font-size:13px;font-weight:700;color:#0e7490;margin-bottom:10px">
