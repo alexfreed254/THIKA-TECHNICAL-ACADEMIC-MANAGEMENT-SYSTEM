@@ -1497,34 +1497,45 @@ def exam_booking_submit():
     unique_serial = str(uuid.uuid4().int)[:6].zfill(6)
     serial_number = f"TTTI-{year}-EXAM-{unique_serial}"   # hyphens, never slashes
 
-    # Insert exam booking records — wrapped so DB schema errors surface clearly
+    def _insert_strip_unknown(payload: dict) -> None:
+        """Insert a row, automatically removing any columns the table doesn't have."""
+        data    = dict(payload)
+        seen    = set()
+        while data:
+            try:
+                db.table("exam_bookings").insert(data).execute()
+                return
+            except Exception as exc:
+                msg = str(exc)
+                m   = re.search(r"'(\w+)' column", msg)
+                if "PGRST204" in msg and m:
+                    bad = m.group(1)
+                    if bad in seen:           # avoid infinite loop
+                        raise
+                    seen.add(bad)
+                    data.pop(bad, None)       # drop the offending column and retry
+                else:
+                    raise                     # non-schema error — propagate
+
+    # Insert exam booking records
     try:
         for ud in units_data:
-            uid = ud["unit"]["id"]
-            base_payload = {
-                "student_id":    student_id,
-                "unit_id":       uid,
-                "exam_date":     str(datetime.now().date()),
-                "exam_session":  f"Series {series} — Term {term}",
-                "purpose":       f"{ud['type']} — {form_data.get('module_level','')}",
-                "status":        "pending",
-                "serial_number": serial_number,
+            uid     = ud["unit"]["id"]
+            payload = {
+                "student_id":           student_id,
+                "unit_id":              uid,
+                "exam_date":            str(datetime.now().date()),
+                "exam_session":         f"Series {series} — Term {term}",
+                "purpose":              f"{ud['type']} — {form_data.get('module_level','')}",
+                "status":               "pending",
+                "serial_number":        serial_number,
                 "special_requirements": form_data.get("pwd_status", "N/A"),
+                "attempt_type":         ud["attempt"],
             }
-            # Optional columns — try with them first, fall back without
-            full_payload = dict(base_payload)
-            full_payload["attempt_type"] = ud["attempt"]
-            if ud["prev_grade"]: full_payload["previous_grade"]    = ud["prev_grade"]
-            if ud["prev_mid"]:   full_payload["previous_marks_id"] = ud["prev_mid"]
+            if ud["prev_grade"]: payload["previous_grade"]    = ud["prev_grade"]
+            if ud["prev_mid"]:   payload["previous_marks_id"] = ud["prev_mid"]
 
-            try:
-                db.table("exam_bookings").insert(full_payload).execute()
-            except Exception as col_err:
-                # If optional columns don't exist in schema, retry with base payload only
-                if "PGRST204" in str(col_err) or "column" in str(col_err).lower():
-                    db.table("exam_bookings").insert(base_payload).execute()
-                else:
-                    raise
+            _insert_strip_unknown(payload)
 
         write_audit_log("create_exam_booking", target=f"booking:{serial_number}",
                         detail={"units": len(units_data)})
