@@ -1386,14 +1386,14 @@ def exam_booking_form():
             except Exception:
                 pass
 
-    # Get uploaded documents
-    documents_data = db.table("trainee_documents").select("*").eq("student_id", student_id).execute().data or []
+    # Get uploaded documents — source: student_personal_documents (My Documents menu)
+    documents_data = db.table("student_personal_documents").select("*").eq("student_id", student_id).execute().data or []
     documents = {doc["document_type"]: doc for doc in documents_data}
-    
+
     # Check required documents
     required_docs = ['national_id', 'birth_certificate', 'kcse_certificate', 'passport_photo']
     missing_documents = any(doc not in documents for doc in required_docs)
-    
+
     # Check if can download (all docs present + at least one unit selected)
     can_download = not missing_documents and len(units) > 0
 

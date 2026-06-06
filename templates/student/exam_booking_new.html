@@ -118,18 +118,29 @@
 /* Document verification */
 .docs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
 }
 .doc-card {
-  border-radius: 12px; padding: 14px 16px;
-  border: 1.5px solid; display: flex;
-  align-items: center; gap: 10px;
+  border-radius: 13px; border: 1.5px solid;
+  overflow: hidden; display: flex; flex-direction: column;
+  transition: transform .18s, box-shadow .18s;
 }
+.doc-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.09); }
 .doc-card.ok     { border-color: #bbf7d0; background: #f0fdf4; }
 .doc-card.miss   { border-color: #fecaca; background: #fef2f2; }
 .doc-card.warn   { border-color: #fde68a; background: #fffbeb; }
-.doc-card .doc-icon { font-size: 20px; flex-shrink: 0; }
+
+.doc-card-thumb {
+  height: 80px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.04); flex-shrink: 0;
+}
+.doc-card-thumb img { width:100%; height:100%; object-fit:cover; }
+.doc-card-thumb .thumb-icon { font-size: 36px; opacity: .35; }
+
+.doc-card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.doc-card .doc-icon { font-size: 18px; flex-shrink: 0; }
 .doc-card.ok   .doc-icon { color: #16a34a; }
 .doc-card.miss .doc-icon { color: #dc2626; }
 .doc-card.warn .doc-icon { color: #d97706; }
@@ -138,6 +149,17 @@
 .doc-card.ok   .doc-status { color: #16a34a; }
 .doc-card.miss .doc-status { color: #dc2626; }
 .doc-card.warn .doc-status { color: #d97706; }
+.doc-card .doc-file-name { font-size: 10.5px; color: #94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.btn-doc-view {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 7px; font-size: 11.5px; font-weight: 700;
+  text-decoration: none; margin-top: 6px; width: fit-content;
+}
+.doc-card.ok   .btn-doc-view { background: #dcfce7; color: #15803d; }
+.doc-card.ok   .btn-doc-view:hover { background: #bbf7d0; }
+.doc-card.miss .btn-doc-view { background: #fee2e2; color: #dc2626; }
+.doc-card.warn .btn-doc-view { background: #fef9c3; color: #854d0e; }
 
 /* Units table */
 .units-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -432,58 +454,75 @@
         <i class="fas fa-paperclip"></i> Section 3: Required Attachments Verification
       </div>
       <div class="form-section-body">
+        {# ── Helper macro: single attachment card ── #}
+        {% macro doc_card(key, icon, label, required) %}
+        {% set doc = documents.get(key) %}
+        {% set has = doc is not none %}
+        {% set ext = doc.file_name.rsplit('.',1)[-1].lower() if has and doc.file_name and '.' in doc.file_name else '' %}
+        {% set is_img = ext in ['jpg','jpeg','png','webp','gif'] %}
+        <div class="doc-card {{ 'ok' if has else ('miss' if required else 'warn') }}">
+
+          {# thumbnail strip #}
+          <div class="doc-card-thumb">
+            {% if has and is_img and doc.get('file_url') %}
+              <img src="{{ doc.file_url }}" alt="{{ label }}"
+                   loading="lazy"
+                   onerror="this.parentElement.innerHTML='<span class=\'thumb-icon\'>🖼️</span>'">
+            {% elif has %}
+              <span class="thumb-icon">{{ '📄' if ext == 'pdf' else '📎' }}</span>
+            {% else %}
+              <span class="thumb-icon">{{ '🆔' if 'id' in key else ('📷' if 'photo' in key else '📋') }}</span>
+            {% endif %}
+          </div>
+
+          <div class="doc-card-body">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="doc-icon"><i class="fas fa-{{ icon }}"></i></div>
+              <div class="doc-info" style="min-width:0">
+                <div class="doc-name">{{ label }}{% if required %} <span style="color:#dc2626">*</span>{% endif %}</div>
+                <div class="doc-status">
+                  {% if has %}
+                    <i class="fas fa-check-circle"></i> Uploaded
+                    {% if doc.get('status') == 'approved' %}
+                      &nbsp;<span style="background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">Approved</span>
+                    {% elif doc.get('status') == 'rejected' %}
+                      &nbsp;<span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">Rejected</span>
+                    {% else %}
+                      &nbsp;<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">Pending</span>
+                    {% endif %}
+                  {% elif required %}
+                    <i class="fas fa-times-circle"></i> Missing — required
+                  {% else %}
+                    <i class="fas fa-exclamation-triangle"></i> Not uploaded
+                  {% endif %}
+                </div>
+                {% if has and doc.get('file_name') %}
+                <div class="doc-file-name" title="{{ doc.file_name }}">{{ doc.file_name }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if has and doc.get('file_url') %}
+            <a href="{{ doc.file_url }}" target="_blank" class="btn-doc-view">
+              <i class="fas fa-eye"></i> View Document
+            </a>
+            {% else %}
+            <a href="/student/documents" class="btn-doc-view">
+              <i class="fas fa-upload"></i> Upload Now
+            </a>
+            {% endif %}
+          </div>
+
+        </div>
+        {% endmacro %}
+
         <div class="docs-grid">
-
-          <div class="doc-card {{ 'ok' if documents.get('national_id') else 'miss' }}">
-            <div class="doc-icon"><i class="fas fa-id-card"></i></div>
-            <div class="doc-info">
-              <div class="doc-name">National ID / Passport</div>
-              <div class="doc-status">
-                {% if documents.get('national_id') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-times-circle"></i> Missing{% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="doc-card {{ 'ok' if documents.get('birth_certificate') else 'miss' }}">
-            <div class="doc-icon"><i class="fas fa-certificate"></i></div>
-            <div class="doc-info">
-              <div class="doc-name">Birth Certificate</div>
-              <div class="doc-status">
-                {% if documents.get('birth_certificate') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-times-circle"></i> Missing{% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="doc-card {{ 'ok' if documents.get('kcse_certificate') else 'warn' }}">
-            <div class="doc-icon"><i class="fas fa-scroll"></i></div>
-            <div class="doc-info">
-              <div class="doc-name">KCSE Certificate</div>
-              <div class="doc-status">
-                {% if documents.get('kcse_certificate') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-exclamation-triangle"></i> Missing{% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="doc-card {{ 'ok' if documents.get('passport_photo') else 'miss' }}">
-            <div class="doc-icon"><i class="fas fa-camera"></i></div>
-            <div class="doc-info">
-              <div class="doc-name">Passport Photo</div>
-              <div class="doc-status">
-                {% if documents.get('passport_photo') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-times-circle"></i> Missing{% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="doc-card {{ 'ok' if documents.get('fee_statement') else 'warn' }}">
-            <div class="doc-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-            <div class="doc-info">
-              <div class="doc-name">Fee Statement</div>
-              <div class="doc-status">
-                {% if documents.get('fee_statement') %}<i class="fas fa-check-circle"></i> Uploaded{% else %}<i class="fas fa-exclamation-triangle"></i> Missing{% endif %}
-              </div>
-            </div>
-          </div>
-
+          {{ doc_card('national_id',        'id-card',             'National ID / Passport', true)  }}
+          {{ doc_card('birth_certificate',  'certificate',         'Birth Certificate',       true)  }}
+          {{ doc_card('kcse_certificate',   'scroll',              'KCSE Certificate',        true)  }}
+          {{ doc_card('passport_photo',     'camera',              'Passport Photo',          true)  }}
+          {{ doc_card('most_recent_result_slip', 'file-alt',       'Recent Result Slip',      false) }}
+          {{ doc_card('admission_letter',   'envelope',            'Admission Letter',        false) }}
         </div>
 
         {% if missing_documents %}
@@ -495,6 +534,11 @@
               Upload Missing Documents &rarr;
             </a>
           </div>
+        </div>
+        {% else %}
+        <div style="margin-top:14px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#15803d;font-weight:600">
+          <i class="fas fa-check-circle"></i>
+          All required documents are on file — sourced automatically from your My Documents uploads.
         </div>
         {% endif %}
       </div>
