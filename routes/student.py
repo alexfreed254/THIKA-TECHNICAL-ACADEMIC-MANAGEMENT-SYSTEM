@@ -1343,25 +1343,28 @@ def exam_booking_form():
     student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
     
     # Get course and department info
-    enrollment = db.table("enrollments").select("*, classes(name, course_id)").eq("student_id", student_id).execute().data or []
+    # Include id in the classes join so class_id is available
+    enrollment = db.table("enrollments").select("*, classes(id, name, course_id)").eq("student_id", student_id).execute().data or []
     course_name = ""
     department_name = ""
     class_id = None
-    
+
     if enrollment:
-        class_data = enrollment[0].get("classes", {})
-        class_id = class_data.get("id")
+        class_data = enrollment[0].get("classes") or {}
+        # Use FK directly from enrollment row — most reliable source
+        class_id = enrollment[0].get("class_id") or class_data.get("id")
         course_id = class_data.get("course_id")
         if course_id:
             course = db.table("courses").select("*, departments(name)").eq("id", course_id).single().execute().data or {}
             course_name = course.get("name", "")
-            department_name = course.get("departments", {}).get("name", "")
-    
+            department_name = (course.get("departments") or {}).get("name", "")
+
     # Get units for the student's class
+    # Include id in the units join so unit IDs are available for marks lookup
     units = []
     if class_id:
         cu_rows = (db.table("class_units")
-                   .select("*, units(name, code)")
+                   .select("*, units(id, name, code)")
                    .eq("class_id", class_id)
                    .execute().data or [])
         units = cu_rows
@@ -1369,7 +1372,7 @@ def exam_booking_form():
     # Fetch most recent marks per unit — used to pre-fill attempt type
     marks_by_unit = {}
     if units:
-        unit_ids = [u["units"]["id"] for u in units if u.get("units")]
+        unit_ids = [u["units"]["id"] for u in units if u.get("units") and u["units"].get("id")]
         if unit_ids:
             try:
                 all_marks = (db.table("marks")
