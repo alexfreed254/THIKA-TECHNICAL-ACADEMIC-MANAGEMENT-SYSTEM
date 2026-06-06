@@ -2096,6 +2096,57 @@ def download_exam_booking(booking_id):
         return redirect(url_for("student.exam_bookings"))
 
 
+# ── Delete Exam Booking ────────────────────────────────────────────────────────
+
+@student_bp.route("/exam-bookings/<booking_id>/delete", methods=["POST"])
+@student_required
+def delete_exam_booking(booking_id):
+    """Delete an exam booking (pending or rejected only). Removes the entire batch."""
+    db         = get_service_client()
+    user       = current_user()
+    student_id = user["id"]
+
+    # Fetch the booking — must belong to this student
+    rows = (db.table("exam_bookings")
+              .select("id, status, serial_number, student_id")
+              .eq("id", booking_id)
+              .eq("student_id", student_id)
+              .limit(1)
+              .execute().data or [])
+
+    if not rows:
+        flash("Booking not found.", "warning")
+        return redirect(url_for("student.exam_booking_form"))
+
+    booking = rows[0]
+
+    if booking.get("status") == "approved":
+        flash("Approved bookings cannot be deleted. Contact your HOD.", "warning")
+        return redirect(url_for("student.exam_booking_form"))
+
+    # Delete all rows sharing the same serial_number (entire submission batch)
+    serial = booking.get("serial_number")
+    try:
+        if serial:
+            db.table("exam_bookings").delete()\
+              .eq("student_id", student_id)\
+              .eq("serial_number", serial)\
+              .execute()
+        else:
+            db.table("exam_bookings").delete()\
+              .eq("id", booking_id)\
+              .eq("student_id", student_id)\
+              .execute()
+        write_audit_log("delete_exam_booking",
+                        target=f"booking:{serial or booking_id}",
+                        detail={"status": booking.get("status")})
+        flash("Exam booking deleted successfully.", "success")
+    except Exception as e:
+        flash(f"Could not delete booking: {e}", "danger")
+
+    return redirect(url_for("student.exam_booking_form"))
+
+
 # ── Marks Viewing ─────────────────────────────────────────────────────────────
 
 @student_bp.route("/marks")

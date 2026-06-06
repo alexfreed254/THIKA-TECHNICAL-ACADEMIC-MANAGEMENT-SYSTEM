@@ -772,15 +772,14 @@
                 {% endif %}
               </td>
               <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center">
-                {% if st == 'rejected' %}
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+
+                  {% if st == 'rejected' %}
                     <span style="font-size:12px;color:#dc2626;font-style:italic;font-weight:600">
                       <i class="fas fa-times-circle" style="margin-right:3px"></i>Resubmit required
                     </span>
-                  </div>
-                {% else %}
-                  {# Download available for pending, confirmed and approved #}
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                  {% else %}
+                    {# Download / Print button for pending, confirmed and approved #}
                     <a href="/student/exam-bookings/{{ b.get('id') }}/download"
                        style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
                               background:{% if st == 'approved' %}linear-gradient(135deg,#16a34a,#15803d){% else %}linear-gradient(135deg,#1e5a9f,#154070){% endif %};
@@ -799,8 +798,29 @@
                       Awaiting HOD approval
                     </span>
                     {% endif %}
-                  </div>
-                {% endif %}
+                  {% endif %}
+
+                  {# Delete icon — pending and rejected only; approved is locked #}
+                  {% if st in ('pending', 'rejected') %}
+                  <form method="POST"
+                        action="/student/exam-bookings/{{ b.get('id') }}/delete"
+                        onsubmit="return confirm('Delete this exam booking?\nThis will remove all units in this submission and cannot be undone.');"
+                        style="margin:0">
+                    <button type="submit"
+                            title="Delete booking"
+                            style="display:inline-flex;align-items:center;gap:5px;
+                                   padding:5px 12px;border:1.5px solid #fecaca;
+                                   border-radius:8px;background:#fff;color:#dc2626;
+                                   font-size:12px;font-weight:700;cursor:pointer;
+                                   transition:all .18s"
+                            onmouseover="this.style.background='#fef2f2';this.style.borderColor='#dc2626'"
+                            onmouseout="this.style.background='#fff';this.style.borderColor='#fecaca'">
+                      <i class="fas fa-trash-alt"></i> Delete
+                    </button>
+                  </form>
+                  {% endif %}
+
+                </div>
               </td>
             </tr>
             {% endfor %}
