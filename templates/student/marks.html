@@ -80,56 +80,59 @@
   background: rgba(255,255,255,.12); padding: 2px 9px; border-radius: 6px;
 }
 
-/* ── Assessment table ──────────────────────────── */
-.asmt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.asmt-table th {
-  background: #f8fafc; padding: 9px 16px;
-  text-align: left; font-size: 11px; font-weight: 700; color: #64748b;
-  text-transform: uppercase; letter-spacing: .05em;
-  border-bottom: 2px solid #e2e8f0;
+/* ── Compact marks table ───────────────────────── */
+.marks-tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.marks-tbl {
+  width: 100%; border-collapse: collapse; font-size: 12.5px;
+  white-space: nowrap;
 }
-.asmt-table td {
-  padding: 11px 16px; border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle; color: #334155;
+.marks-tbl thead tr {
+  background: linear-gradient(135deg,#1e40af,#1d4ed8);
 }
-.asmt-table tr:last-child td { border-bottom: none; }
-.asmt-table tbody tr:hover td { background: #f8fafc; }
-
-/* Assessment type colour-coded badges */
-.asmt-type-tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 10px; border-radius: 6px;
+.marks-tbl thead th {
+  padding: 10px 12px; color: rgba(255,255,255,.92);
   font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  text-align: center; border: none; white-space: nowrap;
 }
-.type-ORAL      { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-.type-PRACTICAL { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.type-WRITTEN   { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
-.type-CA        { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-.type-IA        { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
-.type-OTHER     { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-
-/* Type section sub-header inside unit card */
-.type-section-head {
-  padding: 7px 16px; font-size: 11px; font-weight: 800;
-  letter-spacing: .06em; text-transform: uppercase;
-  border-top: 1px solid #e2e8f0; border-bottom: 1px dashed #e2e8f0;
+.marks-tbl thead th.th-left { text-align: left; }
+.marks-tbl tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .12s; }
+.marks-tbl tbody tr:last-child { border-bottom: none; }
+.marks-tbl tbody tr:hover td  { background: #f8fafc; }
+.marks-tbl td {
+  padding: 9px 12px; color: #374151; vertical-align: middle; text-align: center;
 }
-.type-head-ORAL      { background: #fff7ed; color: #c2410c; }
-.type-head-PRACTICAL { background: #eff6ff; color: #1d4ed8; }
-.type-head-WRITTEN   { background: #f5f3ff; color: #6d28d9; }
-.type-head-CA        { background: #f0fdf4; color: #15803d; }
-.type-head-IA        { background: #fef9c3; color: #854d0e; }
-.type-head-OTHER     { background: #f8fafc;  color: #475569; }
+.marks-tbl td.td-left { text-align: left; }
 
-/* ── Marks bar ─────────────────────────────────── */
-.marks-bar-wrap { background: #f1f5f9; border-radius: 6px; height: 6px; margin-top: 4px; overflow: hidden; }
-.marks-bar      { height: 100%; border-radius: 6px; transition: width .4s; }
+/* Unit info cell */
+.unit-cell-name { font-weight: 700; color: #1e293b; font-size: 12.5px; }
+.unit-cell-code {
+  display: inline-flex; align-items: center;
+  background: #eff6ff; color: #1d4ed8;
+  border: 1px solid #bfdbfe; border-radius: 5px;
+  padding: 1px 6px; font-size: 10px; font-weight: 700; margin-right: 4px;
+}
+
+/* Individual mark chip */
+.mk {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 7px; border-radius: 5px; font-size: 11.5px; font-weight: 700;
+  margin: 1px; min-width: 32px;
+}
+.mk-M   { background: #dcfce7; color: #15803d; }
+.mk-P   { background: #dbeafe; color: #1d4ed8; }
+.mk-C   { background: #fef3c7; color: #92400e; }
+.mk-NYC { background: #fee2e2; color: #b91c1c; }
+.mk-nd  { background: #f1f5f9; color: #94a3b8; font-style: italic; font-size: 10.5px; }
+
+/* Assessment name tooltip */
+.mk[title] { cursor: help; }
 
 /* ── Grade badges ──────────────────────────────── */
 .gb {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 3px 10px; border-radius: 7px; font-size: 11.5px; font-weight: 800;
-  min-width: 42px; text-align: center;
+  min-width: 40px; text-align: center;
 }
 .gb-M   { background: #dcfce7; color: #15803d; }
 .gb-P   { background: #dbeafe; color: #1d4ed8; }
@@ -137,19 +140,14 @@
 .gb-NYC { background: #fee2e2; color: #b91c1c; }
 .gb-lg  { font-size: 17px; padding: 6px 18px; border-radius: 10px; }
 
-/* ── Unit footer ───────────────────────────────── */
-.unit-footer {
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  padding: 14px 22px; background: #f8fafc;
-  border-top: 2px solid #e2e8f0;
-}
-.uf-label { font-size: 11.5px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-.uf-val   { font-size: 14px; font-weight: 700; color: #0f172a; }
+/* score bar inside % cell */
+.score-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.score-bar-bg { width:52px; height:5px; background:#e2e8f0; border-radius:9999px; overflow:hidden; }
+.score-bar-fill { height:100%; border-radius:9999px; }
 
-/* Progress bar */
-.pct-bar-wrap { flex: 1; max-width: 220px; }
-.pct-bar-bg   { background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden; }
-.pct-bar-fill { height: 100%; border-radius: 9999px; }
+/* ── Unit card (kept for grade scale section) ──── */
+.unit-card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 20px; overflow: hidden; }
 
 /* ── Grade scale ───────────────────────────────── */
 .grade-scale {
@@ -265,7 +263,7 @@
 </div>
 {% endif %}
 
-{# ── PER-UNIT CARDS ─────────────────────────────── #}
+{# ── COMPACT MARKS TABLE — one unit per row ────────── #}
 {% if not units_data %}
 <div class="tr-empty">
   <i class="fas fa-chart-line"></i>
@@ -273,159 +271,151 @@
   <p style="font-size:13.5px;color:#64748b">No marks recorded for Year {{ year }}{% if term %}, Term {{ term }}{% endif %}. Try a different filter.</p>
 </div>
 {% else %}
-{% for ud in units_data %}
-{% set unit = ud.unit %}
-{% set fg   = ud.final_grade %}
 
-<div class="unit-card">
-
-  {# Unit header #}
-  <div class="unit-card-head">
-    <span class="unit-code">{{ unit.get('code','—') }}</span>
-    <span class="unit-name-lbl">{{ unit.get('name','Unknown Unit') }}</span>
-    {% if ud.term %}<span class="unit-term-tag">Term {{ ud.term }}</span>{% endif %}
-  </div>
-
-  {# Group assessments by type for clear display #}
-  {% set type_order = ['ORAL','PRACTICAL','WRITTEN','CA','IA'] %}
-  {% set type_icons = {'ORAL':'fas fa-microphone','PRACTICAL':'fas fa-tools',
-                       'WRITTEN':'fas fa-pen','CA':'fas fa-clipboard-check',
-                       'IA':'fas fa-user-check'} %}
-
-  {# Build a dict of types present in this unit #}
-  {% set types_present = [] %}
-  {% for a in ud.assessments %}
-    {% set t = (a.assessment_type or 'OTHER')|upper %}
-    {% if t not in types_present %}{% set _ = types_present.append(t) %}{% endif %}
+{# Determine which assessment types exist across all units so we only show relevant columns #}
+{% set col_types = [] %}
+{% for t in ['ORAL','PRACTICAL','WRITTEN','CA','IA'] %}
+  {% set found = namespace(v=false) %}
+  {% for ud in units_data %}
+    {% for a in ud.assessments if (a.assessment_type or '')|upper == t %}
+      {% set found.v = true %}
+    {% endfor %}
   {% endfor %}
-  {# Sort: known types first, then others #}
-  {% set sorted_types = [] %}
-  {% for t in type_order %}{% if t in types_present %}{% set _ = sorted_types.append(t) %}{% endif %}{% endfor %}
-  {% for t in types_present %}{% if t not in type_order %}{% set _ = sorted_types.append(t) %}{% endif %}{% endfor %}
-
-  <div style="overflow-x:auto">
-    <table class="asmt-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Assessment Name</th>
-          <th>Type</th>
-          <th>Term</th>
-          <th>Cycle</th>
-          <th>Marks Obtained</th>
-          <th>Out of</th>
-          <th>Score %</th>
-          <th>Grade</th>
-          <th>Remarks</th>
-          <th>Trainer</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% set row_n = namespace(v=0) %}
-        {% for atype in sorted_types %}
-        {# Type section header #}
-        {% set css_type = atype if atype in ['ORAL','PRACTICAL','WRITTEN','CA','IA'] else 'OTHER' %}
-        <tr>
-          <td colspan="11" class="type-section-head type-head-{{ css_type }}">
-            <i class="{{ type_icons.get(atype,'fas fa-file-alt') }}" style="margin-right:6px"></i>
-            {{ atype }} Assessment{{ 's' if ud.assessments|selectattr('assessment_type','equalto',atype)|list|length != 1 else '' }}
-            &nbsp;·&nbsp;
-            <span style="font-weight:500;font-size:10.5px;opacity:.8">
-              {{ ud.assessments|selectattr('assessment_type','equalto',atype)|list|length }} record(s)
-            </span>
-          </td>
-        </tr>
-        {% for a in ud.assessments if (a.assessment_type or 'OTHER')|upper == atype %}
-        {% set row_n.v = row_n.v + 1 %}
-        {% set has_mark = a.marks_obtained is not none and a.marks_obtained != '' %}
-        {% if has_mark %}
-          {% set a_pct = (a.marks_obtained|float / (a.max_marks or 100) * 100)|round(1) %}
-          {% set bar_color = '#15803d' if a_pct >= 85 else '#1d4ed8' if a_pct >= 70 else '#d97706' if a_pct >= 50 else '#dc2626' %}
-        {% else %}
-          {% set a_pct = 0 %}
-          {% set bar_color = '#e2e8f0' %}
-        {% endif %}
-        <tr style="{{ 'opacity:.6;' if not has_mark else '' }}">
-          <td style="text-align:center;color:#94a3b8;font-weight:700;font-size:12px">{{ row_n.v }}</td>
-          <td style="font-weight:600;color:#0f172a">{{ a.assessment_name or '—' }}</td>
-          <td>
-            <span class="asmt-type-tag type-{{ css_type }}">
-              <i class="{{ type_icons.get(atype,'fas fa-file-alt') }}" style="font-size:9px"></i>
-              {{ atype|title }}
-            </span>
-          </td>
-          <td style="font-size:12px;color:#64748b;text-align:center">
-            {% if a.term %}Term {{ a.term }}{% else %}—{% endif %}
-          </td>
-          <td style="font-size:12px;color:#64748b;text-align:center">{{ a.cycle or '—' }}</td>
-          <td>
-            {% if has_mark %}
-            <span style="font-size:15px;font-weight:800;color:{{ bar_color }}">{{ a.marks_obtained }}</span>
-            <div class="marks-bar-wrap">
-              <div class="marks-bar" style="width:{{ a_pct }}%;background:{{ bar_color }}"></div>
-            </div>
-            {% else %}
-            <span style="font-size:12px;color:#94a3b8;font-style:italic">
-              <i class="fas fa-clock" style="font-size:10px;margin-right:3px"></i>Pending
-            </span>
-            {% endif %}
-          </td>
-          <td style="color:#64748b;font-size:13px;text-align:center">{{ a.max_marks|int }}</td>
-          <td style="font-weight:700;color:{{ bar_color }}">
-            {% if has_mark %}{{ a_pct }}%{% else %}—{% endif %}
-          </td>
-          <td>
-            {% if a.grade %}
-            <span class="gb gb-{{ a.grade }}">{{ a.grade }}</span>
-            {% else %}
-            <span style="font-size:11px;color:#94a3b8">—</span>
-            {% endif %}
-          </td>
-          <td style="font-size:12px;color:#64748b;max-width:160px;white-space:normal">{{ a.remarks or '—' }}</td>
-          <td style="font-size:12px;color:#94a3b8;white-space:nowrap">
-            {{ (a.trainer or {}).get('full_name','—') }}
-          </td>
-        </tr>
-        {% endfor %}
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  {# Unit summary footer #}
-  <div class="unit-footer">
-    <div>
-      <div class="uf-label">Total Marks</div>
-      <div class="uf-val">{{ ud.total_obt }} / {{ ud.total_max }}</div>
-    </div>
-    <div>
-      <div class="uf-label">Assessments</div>
-      <div class="uf-val">{{ ud.assessments|length }}</div>
-    </div>
-    <div class="pct-bar-wrap">
-      <div class="uf-label">Score — {{ ud.pct }}%</div>
-      <div class="pct-bar-bg" style="margin-top:5px">
-        <div class="pct-bar-fill" style="width:{{ ud.pct }}%;background:
-          {% if ud.pct >= 85 %}#16a34a
-          {% elif ud.pct >= 70 %}#2563eb
-          {% elif ud.pct >= 50 %}#d97706
-          {% else %}#dc2626{% endif %}"></div>
-      </div>
-    </div>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
-      <div>
-        <div class="uf-label" style="text-align:right">Final Grade</div>
-      </div>
-      {% if ud.has_marks %}
-      <span class="gb gb-{{ fg }} gb-lg">{{ fg }}</span>
-      {% else %}
-      <span style="font-size:13px;color:#94a3b8;font-style:italic;font-weight:600">Awaiting marks</span>
-      {% endif %}
-    </div>
-  </div>
-
-</div>
+  {% if found.v %}{% set _ = col_types.append(t) %}{% endif %}
 {% endfor %}
+
+{% set type_colors = {
+  'ORAL':      '#c2410c',
+  'PRACTICAL': '#1d4ed8',
+  'WRITTEN':   '#6d28d9',
+  'CA':        '#15803d',
+  'IA':        '#854d0e',
+} %}
+
+<div class="tr-card" style="background:#fff;border-radius:14px;border:1px solid #e2e8f0;
+     box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden;margin-bottom:24px">
+
+  <div style="background:linear-gradient(135deg,#0f2c54,#1a3d6e);padding:12px 22px;
+       display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="color:#fff;font-weight:700;font-size:14px">
+      <i class="fas fa-table" style="margin-right:8px"></i>Assessment Marks — {{ units_data|length }} Unit(s)
+    </span>
+    <span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.7)">
+      Hover over a mark chip to see the assessment name
+    </span>
+  </div>
+
+  <div class="marks-tbl-wrap">
+  <table class="marks-tbl">
+    <thead>
+      <tr>
+        <th class="th-left" style="width:22px">#</th>
+        <th class="th-left" style="min-width:200px">Unit</th>
+        <th>Tm</th>
+        {% for t in col_types %}
+        <th style="color:{{ type_colors.get(t,'#fff') }}{% if type_colors.get(t) %};{% endif %}min-width:80px">
+          {{ t|title }}
+        </th>
+        {% endfor %}
+        <th>Total</th>
+        <th>Score</th>
+        <th>Grade</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for ud in units_data %}
+    {% set unit = ud.unit %}
+    {% set fg   = ud.final_grade %}
+    {% set bar_color = '#16a34a' if ud.pct >= 85 else '#2563eb' if ud.pct >= 70 else '#d97706' if ud.pct >= 50 else '#dc2626' %}
+    <tr>
+
+      {# Row # #}
+      <td style="color:#94a3b8;font-weight:700;font-size:11px">{{ loop.index }}</td>
+
+      {# Unit name + code #}
+      <td class="td-left">
+        <span class="unit-cell-code">{{ unit.get('code','—') }}</span>
+        <span class="unit-cell-name">{{ unit.get('name','—') }}</span>
+      </td>
+
+      {# Term #}
+      <td style="font-size:11.5px;color:#64748b;font-weight:600">
+        {% if ud.term %}T{{ ud.term }}{% else %}—{% endif %}
+      </td>
+
+      {# One column per assessment type — marks shown as chips #}
+      {% for t in col_types %}
+      <td>
+        {% set type_asmts = ud.assessments|selectattr("assessment_type","equalto",t)|list %}
+        {% if type_asmts %}
+          {% for a in type_asmts %}
+            {% set has_m = a.marks_obtained is not none and a.marks_obtained != '' %}
+            {% if has_m %}
+              {% set chip_cls = a.grade if a.grade else 'NYC' %}
+              <span class="mk mk-{{ chip_cls }}"
+                    title="{{ a.assessment_name }}: {{ a.marks_obtained }}/{{ a.max_marks|int }}">
+                {{ a.marks_obtained }}
+              </span>
+            {% else %}
+              <span class="mk mk-nd" title="{{ a.assessment_name }}: Not yet entered">—</span>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <span style="color:#e2e8f0;font-size:11px">—</span>
+        {% endif %}
+      </td>
+      {% endfor %}
+
+      {# Total marks #}
+      <td style="font-weight:700;color:#0f172a;font-size:12.5px">
+        {% if ud.has_marks %}
+          {{ ud.total_obt }}<span style="color:#94a3b8;font-weight:400;font-size:11px">/{{ ud.total_max }}</span>
+        {% else %}
+          <span style="color:#94a3b8;font-size:11px">—</span>
+        {% endif %}
+      </td>
+
+      {# Score % with mini bar #}
+      <td>
+        {% if ud.has_marks %}
+        <div class="score-wrap">
+          <span style="font-weight:700;color:{{ bar_color }};font-size:12.5px">{{ ud.pct }}%</span>
+          <div class="score-bar-bg">
+            <div class="score-bar-fill" style="width:{{ ud.pct }}%;background:{{ bar_color }}"></div>
+          </div>
+        </div>
+        {% else %}
+        <span style="color:#94a3b8;font-size:11px;font-style:italic">Pending</span>
+        {% endif %}
+      </td>
+
+      {# Grade #}
+      <td>
+        {% if ud.has_marks %}
+        <span class="gb gb-{{ fg }}">{{ fg }}</span>
+        {% else %}
+        <span style="font-size:11px;color:#94a3b8">—</span>
+        {% endif %}
+      </td>
+
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {# Legend row #}
+  <div style="padding:10px 22px;background:#f8fafc;border-top:1px solid #f1f5f9;
+       display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:#64748b">
+    <span style="font-weight:700;color:#374151">Mark grades:</span>
+    <span><span class="mk mk-M">90</span> M — Mastery ≥85%</span>
+    <span><span class="mk mk-P">75</span> P — Proficient 70–84%</span>
+    <span><span class="mk mk-C">60</span> C — Competent 50–69%</span>
+    <span><span class="mk mk-NYC">40</span> NYC — Not Yet Competent &lt;50%</span>
+    <span><span class="mk mk-nd">—</span> Not yet entered</span>
+  </div>
+</div>
+
 {% endif %}
 
 {# ── GRADING SCALE ──────────────────────────────── #}
