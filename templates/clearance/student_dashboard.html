@@ -211,9 +211,20 @@
     <h3><i class="fas fa-certificate"></i> Your Clearance is Approved!</h3>
     <div class="serial-display">{{ serial }}</div>
     <p>All stages have been approved. Download your official clearance certificate below.</p>
-    <a href="/clearance/certificate/{{ clearance_request.id }}" target="_blank" class="btn-download">
-      <i class="fas fa-download"></i> Download Clearance Certificate
-    </a>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+      <a href="/clearance/certificate/{{ clearance_request.id }}/pdf"
+         class="btn-download"
+         style="background:linear-gradient(135deg,#16a34a,#15803d);
+                box-shadow:0 4px 14px rgba(22,163,74,.35)">
+        <i class="fas fa-file-pdf"></i> Download Clearance Form (PDF)
+      </a>
+      <a href="/clearance/certificate/{{ clearance_request.id }}" target="_blank"
+         class="btn-download"
+         style="background:linear-gradient(135deg,#1e5a9f,#154070);
+                box-shadow:0 4px 14px rgba(30,90,159,.3)">
+        <i class="fas fa-eye"></i> View Online Certificate
+      </a>
+    </div>
   </div>
   {% else %}
   <div class="locked-download">

@@ -575,6 +575,317 @@ def certificate(request_id):
                            _global_group=_global_group)
 
 
+# ── Clearance certificate PDF download ───────────────────────────────────────
+
+@clearance_bp.route("/certificate/<request_id>/pdf")
+@login_required
+def certificate_pdf(request_id):
+    """
+    Generate and stream the TTTI Clearance Certificate as a PDF.
+
+    Page layout:
+      1. Centred header (logo + institute + Clearance Certificate title)
+      2. Left-aligned student & course details
+      3. Digital approvals grid  — one row per approver with name + date
+      4. Remaining manual signature blocks:
+         Finance Dept · Dean of Students · Registrar · Chief Principal
+      5. Diagonal watermark (serial number)
+    """
+    db   = get_service_client()
+    user = current_user()
+
+    cr = (db.table("clearance_requests")
+          .select("*, courses(name, code), departments(name), "
+                  "user_profiles:user_profiles!clearance_requests_student_id_fkey(*)")
+          .eq("id", request_id)
+          .single()
+          .execute().data)
+
+    if not cr:
+        abort(404)
+    if user["role"] == "student" and cr["student_id"] != user["id"]:
+        abort(403)
+    if cr.get("status") != "completed":
+        flash("The clearance certificate is only available once all stages are approved.", "warning")
+        return redirect(url_for("clearance.dashboard"))
+
+    serial    = cr.get("serial_number") or _serial(cr["id"])
+    approvals = _fetch_all_approvals(db, request_id)
+
+    # Attach approver profiles
+    approver_ids = [a["approver_id"] for a in approvals if a.get("approver_id")]
+    approver_map = {}
+    if approver_ids:
+        profiles = (db.table("user_profiles")
+                    .select("id, full_name, role")
+                    .in_("id", approver_ids)
+                    .execute().data or [])
+        approver_map = {p["id"]: p for p in profiles}
+    for a in approvals:
+        a["_approver"] = approver_map.get(a.get("approver_id") or "", {})
+
+    student = cr.get("user_profiles") or {}
+
+    # ── Build PDF ─────────────────────────────────────────────────────────────
+    try:
+        import io as _io, os as _os
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, HRFlowable,
+                                        Image as RLImage, KeepTogether)
+
+        buf = _io.BytesIO()
+        pdf = SimpleDocTemplate(buf, pagesize=A4,
+                                leftMargin=18*mm, rightMargin=18*mm,
+                                topMargin=14*mm,  bottomMargin=14*mm)
+        W = A4[0] - 36*mm
+
+        base    = getSampleStyleSheet()
+        DARK    = colors.HexColor('#0f2c54')
+        MID     = colors.HexColor('#1e40af')
+        BORDER  = colors.HexColor('#e2e8f0')
+        LGREY   = colors.HexColor('#f8fafc')
+        GREEN   = colors.HexColor('#dcfce7')
+        GTEXT   = colors.HexColor('#15803d')
+
+        ctr14b  = ParagraphStyle('c14', parent=base['Normal'], fontSize=14,
+                                 fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=2)
+        ctr11b  = ParagraphStyle('c11', parent=base['Normal'], fontSize=11,
+                                 fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=2)
+        ctr9    = ParagraphStyle('c9',  parent=base['Normal'], fontSize=9,
+                                 fontName='Helvetica', alignment=TA_CENTER, spaceAfter=1)
+        lft10b  = ParagraphStyle('l10', parent=base['Normal'], fontSize=10,
+                                 fontName='Helvetica-Bold')
+        lft9b   = ParagraphStyle('l9b', parent=base['Normal'], fontSize=9,
+                                 fontName='Helvetica-Bold')
+        lft9    = ParagraphStyle('l9',  parent=base['Normal'], fontSize=9,
+                                 fontName='Helvetica')
+        tbl_h   = ParagraphStyle('th',  parent=base['Normal'], fontSize=8,
+                                 fontName='Helvetica-Bold', alignment=TA_CENTER)
+        tbl_c   = ParagraphStyle('tc',  parent=base['Normal'], fontSize=8,
+                                 fontName='Helvetica', alignment=TA_CENTER)
+        tbl_l   = ParagraphStyle('tl',  parent=base['Normal'], fontSize=8,
+                                 fontName='Helvetica', alignment=TA_LEFT)
+
+        story = []
+
+        # ── 1.  CENTRED HEADER ────────────────────────────────────────────────
+        logo_path = _os.path.join(_os.path.dirname(__file__),
+                                  '..', 'static', 'assets', 'THIKATTILOGO.jpg')
+        logo_cell = Paragraph("", lft9)
+        if _os.path.exists(logo_path):
+            try:
+                logo_cell = RLImage(logo_path, width=22*mm, height=22*mm)
+            except Exception:
+                pass
+
+        hdr = Table([[
+            logo_cell,
+            [Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", ctr14b),
+             Paragraph("CLEARANCE CERTIFICATE", ctr11b),
+             Paragraph("This certifies that the above-named student has been cleared "
+                       "by all relevant departments.", ctr9),
+             Paragraph(f"Serial No: {serial}", ctr9)],
+            logo_cell,
+        ]], colWidths=[24*mm, W - 48*mm, 24*mm])
+        hdr.setStyle(TableStyle([
+            ('VALIGN',        (0,0),(-1,-1),'MIDDLE'),
+            ('ALIGN',         (1,0),(1,0), 'CENTER'),
+            ('TOPPADDING',    (0,0),(-1,-1), 0),
+            ('BOTTOMPADDING', (0,0),(-1,-1), 0),
+        ]))
+        story.append(hdr)
+        story.append(HRFlowable(width="100%", thickness=2, color=DARK, spaceAfter=6))
+
+        # ── 2.  STUDENT & COURSE DETAILS ─────────────────────────────────────
+        course = cr.get("courses") or {}
+        dept   = cr.get("departments") or {}
+
+        def _info_row(l1, v1, l2, v2):
+            t = Table([[Paragraph(l1, lft9b), Paragraph(str(v1), lft9),
+                        Paragraph(l2, lft9b), Paragraph(str(v2), lft9)]],
+                      colWidths=[28*mm, W/2-28*mm, 28*mm, W/2-28*mm])
+            t.setStyle(TableStyle([
+                ('TOPPADDING',    (0,0),(-1,-1), 3),
+                ('BOTTOMPADDING', (0,0),(-1,-1), 3),
+                ('LINEBELOW',     (1,0),(1,0),   0.5, colors.grey),
+                ('LINEBELOW',     (3,0),(3,0),   0.5, colors.grey),
+                ('VALIGN',        (0,0),(-1,-1), 'BOTTOM'),
+            ]))
+            return t
+
+        story.append(_info_row("Student Name:", student.get("full_name","—"),
+                               "Admission No:", student.get("admission_no","—")))
+        story.append(_info_row("Course:",       course.get("name","—"),
+                               "Course Code:",  course.get("code","—")))
+        story.append(_info_row("Department:",   dept.get("name","—"),
+                               "Completed:",    (cr.get("completed_at") or "")[:10] or "—"))
+        story.append(Spacer(1, 8))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=5))
+
+        # ── 3.  DIGITAL APPROVALS GRID ────────────────────────────────────────
+        story.append(Paragraph("DIGITAL CLEARANCE APPROVALS", lft10b))
+        story.append(Spacer(1, 5))
+
+        # Group approvals by stage group for display
+        grouped = {}
+        for a in approvals:
+            stage = a.get("clearance_stages") or {}
+            g     = _global_group(stage)
+            sname = stage.get("stage_name") or GROUP_LABELS.get(g, f"Stage {g}")
+            grouped.setdefault(g, {"label": sname, "items": []})["items"].append(a)
+
+        appr_hdr = [Paragraph("#",        tbl_h),
+                    Paragraph("Section",  tbl_h),
+                    Paragraph("Stage",    tbl_h),
+                    Paragraph("Approved by", tbl_l),
+                    Paragraph("Date",     tbl_c),
+                    Paragraph("Status",   tbl_c)]
+        appr_data  = [appr_hdr]
+        appr_style = [
+            ('BACKGROUND',    (0,0),(-1,0), MID),
+            ('TEXTCOLOR',     (0,0),(-1,0), colors.white),
+            ('FONTNAME',      (0,0),(-1,-1),'Helvetica'),
+            ('FONTSIZE',      (0,0),(-1,-1), 8),
+            ('GRID',          (0,0),(-1,-1), 0.4, BORDER),
+            ('TOPPADDING',    (0,0),(-1,-1), 3),
+            ('BOTTOMPADDING', (0,0),(-1,-1), 3),
+            ('LEFTPADDING',   (0,0),(-1,-1), 4),
+            ('RIGHTPADDING',  (0,0),(-1,-1), 4),
+            ('ALIGN',         (0,0),(-1,-1), 'CENTER'),
+            ('ALIGN',         (1,0),(3,-1),  'LEFT'),
+            ('VALIGN',        (0,0),(-1,-1), 'MIDDLE'),
+            ('ROWBACKGROUNDS',(0,1),(-1,-1), [colors.white, LGREY]),
+        ]
+        row_n = 0
+        for g in sorted(grouped.keys()):
+            group_info = grouped[g]
+            for a in group_info["items"]:
+                row_n += 1
+                stage    = a.get("clearance_stages") or {}
+                approver = a.get("_approver") or {}
+                status   = a.get("status","pending")
+                appr_nm  = approver.get("full_name","—") if status == "approved" else "—"
+                appr_date= (a.get("approved_at") or "")[:10] if status == "approved" else "—"
+                status_txt = "✓ Approved" if status=="approved" else "Pending"
+                ri = len(appr_data)
+                appr_data.append([
+                    Paragraph(str(row_n),                             tbl_c),
+                    Paragraph(GROUP_LABELS.get(g, f"Stage {g}"),      tbl_l),
+                    Paragraph(stage.get("stage_name","—"),             tbl_l),
+                    Paragraph(appr_nm,                                 tbl_l),
+                    Paragraph(appr_date,                               tbl_c),
+                    Paragraph(status_txt,                              tbl_c),
+                ])
+                if status == "approved":
+                    appr_style.append(('TEXTCOLOR', (5,ri),(5,ri), GTEXT))
+                    appr_style.append(('FONTNAME',  (5,ri),(5,ri), 'Helvetica-Bold'))
+
+        appr_tbl = Table(appr_data,
+                         colWidths=[8*mm, 36*mm, 40*mm, W-8*mm-36*mm-40*mm-26*mm-20*mm,
+                                    26*mm, 20*mm],
+                         repeatRows=1)
+        appr_tbl.setStyle(TableStyle(appr_style))
+        story += [appr_tbl, Spacer(1, 12)]
+
+        # ── 4.  MANUAL SIGNATURE BLOCKS ───────────────────────────────────────
+        story.append(HRFlowable(width="100%", thickness=1, color=DARK, spaceAfter=8))
+        story.append(Paragraph("OFFICIAL SIGN-OFF", lft10b))
+        story.append(Paragraph(
+            "The following officials must sign and stamp this form to complete clearance.",
+            lft9))
+        story.append(Spacer(1, 8))
+
+        # 4 officials  — 2 per row
+        officials = [
+            "FINANCE DEPARTMENT",
+            "DEAN OF STUDENTS",
+            "REGISTRAR",
+            "CHIEF PRINCIPAL",
+        ]
+        line = "_" * 34
+
+        def _sig_block_clr(title):
+            rows = [
+                [Paragraph(f"<b>{title}</b>",
+                           ParagraphStyle('sh2', parent=lft9b, fontSize=9,
+                                          textColor=DARK))],
+                [Spacer(1,4)],
+                [Paragraph(f"Name:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
+                [Spacer(1,3)],
+                [Paragraph(f"Signature: {line}", lft9)],
+                [Spacer(1,3)],
+                [Paragraph(f"Date:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
+                [Spacer(1,3)],
+                [Paragraph(f"Stamp:&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
+            ]
+            half = W / 2 - 5*mm
+            t = Table(rows, colWidths=[half])
+            t.setStyle(TableStyle([
+                ('TOPPADDING',    (0,0),(-1,-1), 2),
+                ('BOTTOMPADDING', (0,0),(-1,-1), 2),
+                ('LEFTPADDING',   (0,0),(-1,-1), 0),
+                ('BOX',           (0,0),(-1,-1), 0.5, BORDER),
+                ('BACKGROUND',    (0,0),(0,0),   LGREY),
+            ]))
+            return t
+
+        half = W / 2 - 5*mm
+        for i in range(0, len(officials), 2):
+            left  = _sig_block_clr(officials[i])
+            right = _sig_block_clr(officials[i+1]) if i+1 < len(officials) else Paragraph("", lft9)
+            row_tbl = Table([[left, Spacer(10*mm, 1), right]],
+                            colWidths=[half, 10*mm, half])
+            row_tbl.setStyle(TableStyle([
+                ('VALIGN',        (0,0),(-1,-1), 'TOP'),
+                ('TOPPADDING',    (0,0),(-1,-1), 0),
+                ('BOTTOMPADDING', (0,0),(-1,-1), 8),
+            ]))
+            story.append(row_tbl)
+
+        # ── 5.  FOOTER ────────────────────────────────────────────────────────
+        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=3))
+        story.append(Paragraph(
+            f"Generated: {datetime.now().strftime('%d %B %Y %H:%M')}  ·  "
+            f"Serial: {serial}  ·  Verify at: /clearance/verify/{serial}",
+            ctr9))
+
+        # ── WATERMARK ─────────────────────────────────────────────────────────
+        _serial_wm = serial
+
+        def _wm(canvas_obj, doc_obj):
+            canvas_obj.saveState()
+            canvas_obj.setFont("Helvetica-Bold", 40)
+            canvas_obj.setFillColorRGB(0.75, 0.75, 0.75, alpha=0.15)
+            canvas_obj.translate(A4[0]/2, A4[1]/2)
+            canvas_obj.rotate(45)
+            canvas_obj.drawCentredString(0, 20,  "TTTI CLEARANCE CERTIFICATE")
+            canvas_obj.drawCentredString(0, -30, _serial_wm)
+            canvas_obj.restoreState()
+
+        pdf.build(story, onFirstPage=_wm, onLaterPages=_wm)
+        pdf_bytes = buf.getvalue()
+
+        from flask import make_response
+        resp = make_response(pdf_bytes)
+        resp.headers["Content-Type"] = "application/pdf"
+        safe = serial.replace("/", "-")
+        resp.headers["Content-Disposition"] = \
+            f'attachment; filename="Clearance_{safe}_{student.get("admission_no","")}.pdf"'
+        return resp
+
+    except ImportError:
+        flash("PDF generation requires reportlab. Run: pip install reportlab pillow", "warning")
+        return redirect(url_for("clearance.certificate", request_id=request_id))
+    except Exception as exc:
+        flash(f"Could not generate PDF: {exc}", "danger")
+        return redirect(url_for("clearance.certificate", request_id=request_id))
+
+
 # ── Public verification ───────────────────────────────────────────────────────
 
 @clearance_bp.route("/verify", methods=["GET", "POST"])
