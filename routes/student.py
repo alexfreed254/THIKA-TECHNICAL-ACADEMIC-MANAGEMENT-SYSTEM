@@ -1506,34 +1506,44 @@ def exam_booking_submit():
         "attempt_type":         None,
     }
 
+    def _extract_code(msg: str) -> str:
+        """Pull the Postgres/PostgREST error code out of an exception message."""
+        try:
+            import json as _j
+            return _j.loads(msg).get("code", "") if msg.strip().startswith("{") else ""
+        except Exception:
+            pass
+        m = re.search(r"'code':\s*'([^']+)'", msg)
+        return m.group(1) if m else ""
+
     def _insert_strip_bad(payload: dict) -> None:
         """
-        Insert a row into exam_bookings.
-        - Strips columns not present in the schema (PGRST204).
-        - Nulls / drops columns that violate a check constraint (23514).
-        Retries until the insert succeeds or a genuine error is hit.
+        Insert a row into exam_bookings, automatically handling:
+          PGRST204 — unknown column  → drop it and retry
+          23514    — check constraint → drop the offending column and retry
+          23505    — duplicate key   → upsert on the natural key columns and retry
+        Retries up to 25 times before raising.
         """
-        data = dict(payload)
-        seen = set()
-        for _ in range(20):                     # max 20 attempts
+        data     = dict(payload)
+        seen     = set()
+        upserted = False
+        for _ in range(25):
             try:
-                db.table("exam_bookings").insert(data).execute()
+                if upserted:
+                    # Use upsert so a re-submission updates the existing row
+                    db.table("exam_bookings").upsert(
+                        data,
+                        on_conflict="student_id,unit_id,exam_date"
+                    ).execute()
+                else:
+                    db.table("exam_bookings").insert(data).execute()
                 return
             except Exception as exc:
                 msg  = str(exc)
-                code = ""
-                try:
-                    import json as _json
-                    code = _json.loads(msg).get("code", "") if msg.startswith("{") else ""
-                except Exception:
-                    pass
-                if not code:
-                    # parse code from dict repr  {'code': 'PGRST204', ...}
-                    m_code = re.search(r"'code':\s*'([^']+)'", msg)
-                    code   = m_code.group(1) if m_code else ""
+                code = _extract_code(msg)
 
                 if code == "PGRST204":
-                    # Unknown column — extract name and drop it
+                    # Unknown column — strip it
                     m = re.search(r"'(\w+)' column", msg)
                     if m:
                         bad = m.group(1)
@@ -1541,23 +1551,33 @@ def exam_booking_submit():
                         seen.add(bad); data.pop(bad, None); continue
 
                 elif code == "23514":
-                    # Check constraint violation — find which column & null/drop it
-                    # The constraint name is exam_bookings_<column>_check
+                    # Check constraint violation
                     m = re.search(r'"exam_bookings_(\w+)_check"', msg)
                     if m:
                         bad = m.group(1)
                         if bad in seen: raise
                         seen.add(bad); data.pop(bad, None); continue
-                    # Fallback: drop all known constrained columns not yet tried
-                    stripped = False
+                    # Fallback: strip known constrained cols one by one
                     for col in list(_CONSTRAINED.keys()):
                         if col not in seen and col in data:
-                            seen.add(col); data.pop(col, None); stripped = True; break
-                    if stripped: continue
+                            seen.add(col); data.pop(col, None); break
+                    else:
+                        raise
+                    continue
 
-                raise   # unrecognised error — surface it
+                elif code == "23505":
+                    # Duplicate key — switch to upsert mode and retry
+                    upserted = True
+                    # Keep only columns that are safe to upsert
+                    # (don't reset status/approval fields on re-submission)
+                    for protected in ("status", "approved_by", "approved_at", "rejection_reason"):
+                        data.pop(protected, None)
+                    data["status"] = "pending"   # re-submission always resets to pending
+                    continue
 
-        raise RuntimeError("Could not insert booking after 20 attempts")
+                raise   # genuine error — surface it
+
+        raise RuntimeError("Could not insert/upsert exam booking after 25 attempts")
 
     # Insert exam booking records
     try:

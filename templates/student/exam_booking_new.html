@@ -772,19 +772,34 @@
                 {% endif %}
               </td>
               <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center">
-                {% if st == 'approved' %}
-                <a href="/student/exam-bookings/{{ b.get('id') }}/download"
-                   style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none;box-shadow:0 4px 12px rgba(22,163,74,.3);transition:all .2s"
-                   onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(22,163,74,.4)'"
-                   onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(22,163,74,.3)'">
-                  <i class="fas fa-download"></i> Download
-                </a>
-                {% elif st == 'pending' %}
-                <span style="font-size:12px;color:#94a3b8;font-style:italic">Awaiting HOD approval</span>
-                {% elif st == 'rejected' %}
-                <span style="font-size:12px;color:#dc2626;font-style:italic">Resubmit required</span>
+                {% if st == 'rejected' %}
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                    <span style="font-size:12px;color:#dc2626;font-style:italic;font-weight:600">
+                      <i class="fas fa-times-circle" style="margin-right:3px"></i>Resubmit required
+                    </span>
+                  </div>
                 {% else %}
-                <span style="font-size:12px;color:#64748b">—</span>
+                  {# Download available for pending, confirmed and approved #}
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                    <a href="/student/exam-bookings/{{ b.get('id') }}/download"
+                       style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+                              background:{% if st == 'approved' %}linear-gradient(135deg,#16a34a,#15803d){% else %}linear-gradient(135deg,#1e5a9f,#154070){% endif %};
+                              color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;
+                              text-decoration:none;
+                              box-shadow:{% if st == 'approved' %}0 4px 12px rgba(22,163,74,.3){% else %}0 4px 12px rgba(30,90,159,.3){% endif %};
+                              transition:all .2s"
+                       onmouseover="this.style.transform='translateY(-1px)'"
+                       onmouseout="this.style.transform=''">
+                      <i class="fas fa-{% if st == 'approved' %}download{% else %}print{% endif %}"></i>
+                      {% if st == 'approved' %}Download{% else %}Print Form{% endif %}
+                    </a>
+                    {% if st == 'pending' %}
+                    <span style="font-size:10.5px;color:#92400e;background:#fef3c7;
+                                 padding:2px 8px;border-radius:9999px;font-weight:600">
+                      Awaiting HOD approval
+                    </span>
+                    {% endif %}
+                  </div>
                 {% endif %}
               </td>
             </tr>
