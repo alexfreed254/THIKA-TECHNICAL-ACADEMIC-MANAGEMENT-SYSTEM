@@ -1423,10 +1423,15 @@ def exam_booking_form():
 def _build_exam_booking_pdf(student: dict, course_name: str, course_code: str,
                              department_name: str, units_data: list,
                              serial_number: str, year: str, series: str, term: str,
-                             form_data: dict = None) -> bytes:
+                             form_data: dict = None,
+                             documents: dict = None,
+                             storage_client=None) -> bytes:
     """
     Generate the TTTI Regular Candidate Assessment Registration Form 1A PDF.
     Layout matches the physical printed form exactly.
+    If documents + storage_client are provided, the uploaded supporting documents
+    (National ID, Birth Certificate, KCSE Certificate / Result Slip) are appended
+    as additional pages to produce one complete, self-contained PDF.
     Returns raw PDF bytes.
     """
     import io as _io, os as _os
@@ -1703,8 +1708,90 @@ def _build_exam_booking_pdf(student: dict, course_name: str, course_code: str,
     ]))
     story.append(ftbl2)
 
+    # ── SUPPORTING DOCUMENT PAGES ─────────────────────────────────────────────
+    # Append uploaded documents as extra pages so the download is one complete PDF.
+    # Priority order matches the physical form's required attachments list.
+    _attach_order = [
+        ('national_id',             'COPY OF NATIONAL ID / PASSPORT'),
+        ('birth_certificate',       'COPY OF BIRTH CERTIFICATE'),
+        ('kcse_certificate',        'KCSE CERTIFICATE (Module I students)'),
+        ('kcse_result_slip',        'KCSE RESULT SLIP'),
+        ('most_recent_result_slip', 'PREVIOUS MODULE RESULT SLIP (Continuing students)'),
+    ]
+
+    pdf_attachments = []   # (label, bytes) for PDF-type documents
+
+    if documents and storage_client:
+        from reportlab.platypus import PageBreak
+        from PIL import Image as PILImage
+
+        for doc_key, doc_label in _attach_order:
+            rec = documents.get(doc_key)
+            if not rec or not rec.get('file_path'):
+                continue
+            fp  = rec['file_path']
+            ext = fp.rsplit('.', 1)[-1].lower() if '.' in fp else ''
+            try:
+                raw = bytes(storage_client.from_("assessment-evidence").download(fp))
+            except Exception:
+                continue   # skip documents that can't be fetched
+
+            if ext in ('jpg', 'jpeg', 'png', 'webp', 'gif'):
+                # Image → embed as a full A4 page inside this story
+                try:
+                    pimg = PILImage.open(_io.BytesIO(raw))
+                    if pimg.mode not in ('RGB', 'L'):
+                        pimg = pimg.convert('RGB')
+                    max_w = A4[0] - 28*mm
+                    max_h = A4[1] - 36*mm     # leave room for the label line
+                    iw, ih = pimg.size
+                    ratio  = min(max_w / iw, max_h / ih, 1.0)
+                    out    = _io.BytesIO()
+                    if ratio < 1.0:
+                        pimg = pimg.resize((int(iw * ratio), int(ih * ratio)),
+                                           PILImage.LANCZOS)
+                    pimg.save(out, format='JPEG', quality=92)
+                    out.seek(0)
+
+                    story.append(PageBreak())
+                    story.append(Paragraph(doc_label, sect_s))
+                    story.append(Spacer(1, 6))
+                    story.append(RLImage(out,
+                                        width=iw * ratio,
+                                        height=ih * ratio))
+                except Exception as img_err:
+                    story.append(PageBreak())
+                    story.append(Paragraph(f"{doc_label} — could not embed: {img_err}", norm9))
+
+            elif ext == 'pdf':
+                # PDF → keep aside; merge after ReportLab builds the form
+                pdf_attachments.append((doc_label, raw))
+
+    # ── Build the ReportLab portion (form + any image attachments) ────────────
     pdf.build(story)
-    return buf.getvalue()
+    form_bytes = buf.getvalue()
+
+    # ── Merge any PDF-type attachments ────────────────────────────────────────
+    if pdf_attachments:
+        try:
+            from pypdf import PdfWriter, PdfReader
+
+            writer = PdfWriter()
+            writer.append(PdfReader(_io.BytesIO(form_bytes)))
+
+            for doc_label, pdf_raw in pdf_attachments:
+                try:
+                    writer.append(PdfReader(_io.BytesIO(pdf_raw)))
+                except Exception:
+                    pass   # corrupt / encrypted PDF — skip silently
+
+            merged = _io.BytesIO()
+            writer.write(merged)
+            return merged.getvalue()
+        except ImportError:
+            pass   # pypdf not installed — return form + image pages only
+
+    return form_bytes
 
 
 @student_bp.route("/exam-booking-submit", methods=["POST"])
@@ -1899,6 +1986,8 @@ def exam_booking_submit():
             department_name=department_name, units_data=units_data,
             serial_number=serial_number, year=year, series=series, term=term,
             form_data=form_data,
+            documents=documents,
+            storage_client=get_service_client().storage,
         )
         safe_serial = serial_number.replace("/", "-")
         flash(f'Exam booking created! Serial Number: {serial_number}', 'success')
@@ -1990,6 +2079,11 @@ def download_exam_booking(booking_id):
             "attempt": row.get("attempt_type", "first_attempt"),
         })
 
+    # Fetch student's uploaded documents for attachment
+    docs_raw  = (db.table("student_personal_documents")
+                   .select("*").eq("student_id", student_id).execute().data or [])
+    documents = {d["document_type"]: d for d in docs_raw}
+
     # ── Generate PDF using shared Form 1A builder ────────────────────────────
     try:
         pdf_bytes = _build_exam_booking_pdf(
@@ -1997,6 +2091,8 @@ def download_exam_booking(booking_id):
             department_name=department_name, units_data=units_data,
             serial_number=serial_number or booking_id[:8].upper(),
             year=year, series=series, term="",
+            documents=documents,
+            storage_client=db.storage,
         )
         safe = (serial_number or booking_id[:8]).replace("/", "-")
         resp = make_response(pdf_bytes)
