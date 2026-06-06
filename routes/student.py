@@ -1890,50 +1890,261 @@ def exam_booking_submit():
 @student_bp.route("/exam-bookings/<booking_id>/download")
 @student_required
 def download_exam_booking(booking_id):
-    """Serve the exam booking PDF for printing — available for pending and approved bookings."""
-    db = get_service_client()
-    user = current_user()
+    """Regenerate and stream the exam booking PDF — no external bucket required."""
+    db         = get_service_client()
+    user       = current_user()
     student_id = user["id"]
 
-    booking = (db.table("exam_bookings")
-                 .select("id, status, serial_number, student_id")
-                 .eq("id", booking_id)
-                 .eq("student_id", student_id)
-                 .limit(1)
-                 .execute().data or [])
-
-    if not booking:
+    # ── 1. Fetch the target booking ──────────────────────────────────────────
+    booking_row = (db.table("exam_bookings")
+                     .select("id, status, serial_number, student_id")
+                     .eq("id", booking_id)
+                     .eq("student_id", student_id)
+                     .limit(1)
+                     .execute().data or [])
+    if not booking_row:
         abort(404)
+    booking_row = booking_row[0]
 
-    booking = booking[0]
-
-    if booking["status"] == "rejected":
+    if booking_row.get("status") == "rejected":
         flash("Rejected bookings cannot be downloaded.", "warning")
         return redirect(url_for("student.exam_bookings"))
 
-    serial_number = booking.get("serial_number", "")
-    if not serial_number:
-        flash("No form PDF found for this booking.", "warning")
-        return redirect(url_for("student.exam_bookings"))
+    serial_number = booking_row.get("serial_number") or ""
 
-    pdf_path = f"exam_bookings/{student_id}_{serial_number}.pdf"
+    # ── 2. Fetch all units in this submission (same serial or same booking) ──
+    if serial_number:
+        all_rows = (db.table("exam_bookings")
+                      .select("*, units(id, name, code)")
+                      .eq("student_id", student_id)
+                      .eq("serial_number", serial_number)
+                      .execute().data or [])
+    else:
+        all_rows = [booking_row]   # single row, no serial stored
 
+    if not all_rows:
+        all_rows = [booking_row]
+
+    first = all_rows[0]
+    series = str(first.get("exam_session", "1"))
+    year   = str(first.get("exam_date", str(datetime.now().year)))[:4]
+
+    # ── 3. Student / course / documents ─────────────────────────────────────
+    student    = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
+    enrollment = (db.table("enrollments")
+                    .select("*, classes(id, name, course_id)")
+                    .eq("student_id", student_id)
+                    .execute().data or [])
+    course_name = department_name = ""
+    if enrollment:
+        cls = enrollment[0].get("classes") or {}
+        cid = cls.get("course_id")
+        if cid:
+            crs = db.table("courses").select("*, departments(name)").eq("id", cid).single().execute().data or {}
+            course_name     = crs.get("name", "")
+            department_name = (crs.get("departments") or {}).get("name", "")
+
+    docs_raw  = (db.table("student_personal_documents")
+                   .select("*").eq("student_id", student_id).execute().data or [])
+    documents = {d["document_type"]: d for d in docs_raw}
+
+    # Build units_data list from the booking rows
+    units_data = []
+    for row in all_rows:
+        unit = row.get("units") or {}
+        if not unit.get("name"):
+            continue
+        purpose   = row.get("purpose", "")
+        unit_type = purpose.split(" — ")[0].strip() if " — " in purpose else "Core"
+        units_data.append({
+            "unit":    unit,
+            "type":    unit_type,
+            "attempt": row.get("attempt_type", "first_attempt"),
+        })
+
+    # ── 4. Generate PDF ──────────────────────────────────────────────────────
     try:
-        storage = get_service_client().storage
-        pdf_data = storage.from_("exam-bookings").download(pdf_path)
-        resp = make_response(pdf_data)
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                        Paragraph, Spacer, Image as RLImage)
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_CENTER
+        import io as _io
+        from PIL import Image as PILImage
+
+        buf    = _io.BytesIO()
+        doc    = SimpleDocTemplate(buf, pagesize=A4,
+                                   rightMargin=72, leftMargin=72,
+                                   topMargin=72,   bottomMargin=18)
+        story  = []
+        styles = getSampleStyleSheet()
+
+        title_s  = ParagraphStyle('T',  parent=styles['Heading1'],
+                                  fontSize=16, textColor=colors.darkblue,
+                                  alignment=TA_CENTER, spaceAfter=12)
+        head_s   = ParagraphStyle('H',  parent=styles['Heading2'],
+                                  fontSize=12, textColor=colors.black,
+                                  alignment=TA_CENTER, spaceAfter=6)
+        norm_s   = ParagraphStyle('N',  parent=styles['Normal'],
+                                  fontSize=10, spaceAfter=6)
+
+        # Cover
+        story += [
+            Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title_s),
+            Spacer(1, 12),
+            Paragraph("EXAMINATION BOOKING FORM", head_s),
+            Spacer(1, 6),
+            Paragraph(f"Serial Number: {serial_number or booking_id[:8].upper()}", norm_s),
+            Paragraph(f"Academic Year: {year}  |  Series: {series}", norm_s),
+            Spacer(1, 24),
+        ]
+
+        # Student details
+        story.append(Paragraph("CANDIDATE DETAILS", head_s))
+        story.append(Spacer(1, 8))
+        student_rows = [
+            ["Full Name:",       student.get("full_name", "")],
+            ["Admission No:",    student.get("admission_no", "")],
+            ["Course:",          course_name],
+            ["Department:",      department_name],
+            ["Phone:",           student.get("mobile_number", "")],
+            ["Email:",           student.get("email", "")],
+            ["National ID:",     student.get("national_id_no", "")],
+            ["PWD Status:",      student.get("pwd_status", "N/A")],
+        ]
+        t = Table(student_rows, colWidths=[2*inch, 4*inch])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(0,-1), colors.lightgrey),
+            ('BACKGROUND', (1,0),(1,-1), colors.beige),
+            ('GRID',       (0,0),(-1,-1),1, colors.black),
+            ('FONTNAME',   (0,0),(-1,-1),'Helvetica'),
+            ('FONTSIZE',   (0,0),(-1,-1), 10),
+            ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+        ]))
+        story += [t, Spacer(1, 24)]
+
+        # Units
+        story.append(Paragraph("UNITS OF COMPETENCY", head_s))
+        story.append(Spacer(1, 8))
+        u_headers = ["S/N", "Unit Name", "Code", "Type", "Attempt"]
+        u_rows    = [[str(i+1),
+                      ud["unit"].get("name",""),
+                      ud["unit"].get("code",""),
+                      ud["type"],
+                      ud["attempt"].replace("_"," ").title()]
+                     for i, ud in enumerate(units_data)]
+        ut = Table([u_headers] + u_rows,
+                   colWidths=[0.5*inch, 2.5*inch, 1.2*inch, 0.9*inch, 1*inch])
+        ut.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), colors.darkblue),
+            ('TEXTCOLOR',  (0,0),(-1,0), colors.whitesmoke),
+            ('FONTNAME',   (0,0),(-1,0),'Helvetica-Bold'),
+            ('BACKGROUND', (0,1),(-1,-1), colors.beige),
+            ('GRID',       (0,0),(-1,-1),1, colors.black),
+            ('FONTSIZE',   (0,0),(-1,-1), 10),
+            ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+            ('ALIGN',      (0,0),(-1,-1),'CENTER'),
+        ]))
+        story += [ut, Spacer(1, 24)]
+
+        # Documents
+        story.append(Paragraph("REQUIRED ATTACHMENTS", head_s))
+        story.append(Spacer(1, 8))
+        req_docs = [("National ID","national_id"),
+                    ("Birth Certificate","birth_certificate"),
+                    ("KCSE Certificate","kcse_certificate"),
+                    ("Passport Photo","passport_photo")]
+        d_rows = [[n, "✓ Attached" if documents.get(k) else "✗ Missing",
+                   (documents[k].get("id","")[:8] if documents.get(k) else "N/A")]
+                  for n, k in req_docs]
+        dt = Table([["Document","Status","Ref"]] + d_rows,
+                   colWidths=[2.5*inch, 1.5*inch, 2*inch])
+        dt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), colors.darkblue),
+            ('TEXTCOLOR',  (0,0),(-1,0), colors.whitesmoke),
+            ('FONTNAME',   (0,0),(-1,0),'Helvetica-Bold'),
+            ('BACKGROUND', (0,1),(-1,-1), colors.beige),
+            ('GRID',       (0,0),(-1,-1),1, colors.black),
+            ('FONTSIZE',   (0,0),(-1,-1), 10),
+            ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+        ]))
+        story += [dt, Spacer(1, 24)]
+
+        # Embed document images
+        story.append(Paragraph("ATTACHED DOCUMENT IMAGES", head_s))
+        story.append(Spacer(1, 8))
+        storage_cl = db.storage
+        for doc_name, doc_key in req_docs:
+            doc = documents.get(doc_key)
+            story.append(Paragraph(f"{doc_name}:", norm_s))
+            if doc and doc.get("file_path"):
+                ext = (doc["file_path"].rsplit(".",1)[-1]).lower()
+                if ext in ("jpg","jpeg","png","webp","gif"):
+                    try:
+                        raw  = storage_cl.from_("assessment-evidence").download(doc["file_path"])
+                        pimg = PILImage.open(_io.BytesIO(raw))
+                        if pimg.mode != "RGB":
+                            pimg = pimg.convert("RGB")
+                        max_w, max_h = 5*inch, 7*inch
+                        iw, ih = pimg.size
+                        ratio  = min(max_w/iw, max_h/ih, 1.0)
+                        out    = _io.BytesIO()
+                        if ratio < 1.0:
+                            pimg = pimg.resize((int(iw*ratio), int(ih*ratio)), PILImage.LANCZOS)
+                        pimg.save(out, format="JPEG", quality=85)
+                        out.seek(0)
+                        story.append(RLImage(out, width=iw*ratio, height=ih*ratio))
+                    except Exception as img_err:
+                        story.append(Paragraph(f"[Image error: {img_err}]", norm_s))
+                elif doc.get("file_url"):
+                    story.append(Paragraph(
+                        f'<link href="{doc["file_url"]}"><u>View {doc_name}</u></link>', norm_s))
+                else:
+                    story.append(Paragraph("[PDF — print from My Documents]", norm_s))
+            else:
+                story.append(Paragraph(f"{doc_name}: NOT UPLOADED", norm_s))
+            story.append(Spacer(1, 10))
+
+        # Signatures page
+        story += [Spacer(1, 24), Paragraph("OFFICIAL SIGNATURES", head_s), Spacer(1, 12)]
+        sig_rows = [
+            ["HOD (Head of Department)", "_________________________"],
+            ["Signature & Stamp:", ""],
+            ["Date:", "_________________________"],
+            ["", ""],
+            ["Examinations Office", "_________________________"],
+            ["Signature & Stamp:", ""],
+            ["Date:", "_________________________"],
+            ["", ""],
+            ["Student Signature:", "_________________________"],
+            ["Date:", "_________________________"],
+        ]
+        st = Table(sig_rows, colWidths=[3*inch, 3*inch])
+        st.setStyle(TableStyle([
+            ('FONTNAME',     (0,0),(-1,-1),'Helvetica'),
+            ('FONTSIZE',     (0,0),(-1,-1), 10),
+            ('BOTTOMPADDING',(0,0),(-1,-1), 12),
+        ]))
+        story.append(st)
+
+        doc.build(story)
+        pdf_bytes = buf.getvalue()
+        buf.close()
+
+        safe = (serial_number or booking_id[:8]).replace("/", "-")
+        resp = make_response(pdf_bytes)
         resp.headers["Content-Type"] = "application/pdf"
-        # inline = opens in browser so student can print; attachment = forces download
-        resp.headers["Content-Disposition"] = f'inline; filename="ExamBooking_{serial_number}.pdf"'
+        resp.headers["Content-Disposition"] = f'inline; filename="ExamBooking_{safe}.pdf"'
         return resp
-    except Exception:
-        # Fall back to public URL redirect if direct download fails
-        try:
-            url = get_service_client().storage.from_("exam-bookings").get_public_url(pdf_path)
-            return redirect(url)
-        except Exception as exc:
-            flash(f"Could not retrieve the form PDF: {exc}", "error")
-            return redirect(url_for("student.exam_bookings"))
+
+    except ImportError:
+        flash("PDF generation requires reportlab & pillow. Run: pip install reportlab pillow", "warning")
+        return redirect(url_for("student.exam_bookings"))
+    except Exception as exc:
+        flash(f"Could not generate PDF: {exc}", "danger")
+        return redirect(url_for("student.exam_bookings"))
 
 
 # ── Marks Viewing ─────────────────────────────────────────────────────────────
