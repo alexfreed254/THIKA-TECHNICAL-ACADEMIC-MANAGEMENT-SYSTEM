@@ -1619,8 +1619,8 @@ def exam_booking_submit():
         import os
         
         # Create PDF buffer
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        buffer  = io.BytesIO()
+        pdf_doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
         
         # Story (content) list
         story = []
@@ -1731,9 +1731,9 @@ def exam_booking_submit():
         ]
         
         for doc_name, doc_type in required_docs_list:
-            doc = documents.get(doc_type)
-            status = "✓ Attached" if doc else "✗ Missing"
-            ref_id = doc.get("id", "")[:8] if doc else "N/A"
+            d      = documents.get(doc_type)
+            status = "✓ Attached" if d else "✗ Missing"
+            ref_id = d.get("id", "")[:8] if d else "N/A"
             doc_rows.append([doc_name, status, ref_id])
         
         doc_table_data = [doc_headers] + doc_rows
@@ -1865,10 +1865,10 @@ def exam_booking_submit():
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
         ]))
         story.append(signature_table)
-        
+
         # Build PDF
-        doc.build(story)
-        
+        pdf_doc.build(story)
+
         # Get PDF value
         pdf_value = buffer.getvalue()
         buffer.close()
@@ -1994,10 +1994,10 @@ def download_exam_booking(booking_id):
         import io as _io
         from PIL import Image as PILImage
 
-        buf    = _io.BytesIO()
-        doc    = SimpleDocTemplate(buf, pagesize=A4,
-                                   rightMargin=72, leftMargin=72,
-                                   topMargin=72,   bottomMargin=18)
+        buf     = _io.BytesIO()
+        pdf_doc = SimpleDocTemplate(buf, pagesize=A4,
+                                    rightMargin=72, leftMargin=72,
+                                    topMargin=72,   bottomMargin=18)
         story  = []
         styles = getSampleStyleSheet()
 
@@ -2097,30 +2097,30 @@ def download_exam_booking(booking_id):
         story.append(Spacer(1, 8))
         storage_cl = db.storage
         for doc_name, doc_key in req_docs:
-            doc = documents.get(doc_key)
+            d = documents.get(doc_key)          # renamed: was 'doc' — collided with SimpleDocTemplate
             story.append(Paragraph(f"{doc_name}:", norm_s))
-            if doc and doc.get("file_path"):
-                ext = (doc["file_path"].rsplit(".",1)[-1]).lower()
-                if ext in ("jpg","jpeg","png","webp","gif"):
+            if d and d.get("file_path"):
+                ext = (d["file_path"].rsplit(".", 1)[-1]).lower()
+                if ext in ("jpg", "jpeg", "png", "webp", "gif"):
                     try:
-                        raw  = storage_cl.from_("assessment-evidence").download(doc["file_path"])
+                        raw  = storage_cl.from_("assessment-evidence").download(d["file_path"])
                         pimg = PILImage.open(_io.BytesIO(raw))
                         if pimg.mode != "RGB":
                             pimg = pimg.convert("RGB")
-                        max_w, max_h = 5*inch, 7*inch
+                        max_w, max_h = 5 * inch, 7 * inch
                         iw, ih = pimg.size
-                        ratio  = min(max_w/iw, max_h/ih, 1.0)
+                        ratio  = min(max_w / iw, max_h / ih, 1.0)
                         out    = _io.BytesIO()
                         if ratio < 1.0:
-                            pimg = pimg.resize((int(iw*ratio), int(ih*ratio)), PILImage.LANCZOS)
+                            pimg = pimg.resize((int(iw * ratio), int(ih * ratio)), PILImage.LANCZOS)
                         pimg.save(out, format="JPEG", quality=85)
                         out.seek(0)
-                        story.append(RLImage(out, width=iw*ratio, height=ih*ratio))
+                        story.append(RLImage(out, width=iw * ratio, height=ih * ratio))
                     except Exception as img_err:
                         story.append(Paragraph(f"[Image error: {img_err}]", norm_s))
-                elif doc.get("file_url"):
+                elif d.get("file_url"):
                     story.append(Paragraph(
-                        f'<link href="{doc["file_url"]}"><u>View {doc_name}</u></link>', norm_s))
+                        f'<link href="{d["file_url"]}"><u>View {doc_name}</u></link>', norm_s))
                 else:
                     story.append(Paragraph("[PDF — print from My Documents]", norm_s))
             else:
@@ -2141,15 +2141,15 @@ def download_exam_booking(booking_id):
             ["Student Signature:", "_________________________"],
             ["Date:", "_________________________"],
         ]
-        st = Table(sig_rows, colWidths=[3*inch, 3*inch])
-        st.setStyle(TableStyle([
-            ('FONTNAME',     (0,0),(-1,-1),'Helvetica'),
-            ('FONTSIZE',     (0,0),(-1,-1), 10),
-            ('BOTTOMPADDING',(0,0),(-1,-1), 12),
+        sig_table = Table(sig_rows, colWidths=[3 * inch, 3 * inch])   # renamed: was 'st'
+        sig_table.setStyle(TableStyle([
+            ('FONTNAME',      (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE',      (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
         ]))
-        story.append(st)
+        story.append(sig_table)
 
-        doc.build(story)
+        pdf_doc.build(story)        # fixed: was doc.build — 'doc' was overwritten by loop
         pdf_bytes = buf.getvalue()
         buf.close()
 
