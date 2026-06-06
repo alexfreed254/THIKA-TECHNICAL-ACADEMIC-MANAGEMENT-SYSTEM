@@ -1435,7 +1435,7 @@ def exam_booking_submit():
         flash('Please select at least one unit of competency.', 'danger')
         return redirect(url_for("student.exam_booking_form"))
 
-    # Collect extra fields from the new web form
+    # Collect form fields
     form_data = {
         "full_name":     request.form.get("full_name", "").strip(),
         "gender":        request.form.get("gender", "").strip(),
@@ -1451,85 +1451,86 @@ def exam_booking_submit():
 
     # Get student data
     student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
-    
-    # Get course and department info
-    enrollment = db.table("enrollments").select("*, classes(name, course_id)").eq("student_id", student_id).execute().data or []
-    course_name = ""
-    department_name = ""
-    
+
+    # Get course and department info (include id in classes join)
+    enrollment = (db.table("enrollments")
+                    .select("*, classes(id, name, course_id)")
+                    .eq("student_id", student_id)
+                    .execute().data or [])
+    course_name = department_name = dept_code = course_code = ""
+
     if enrollment:
-        class_data = enrollment[0].get("classes", {})
-        course_id = class_data.get("course_id")
+        class_data = enrollment[0].get("classes") or {}
+        course_id  = class_data.get("course_id")
         if course_id:
-            course = db.table("courses").select("*, departments(name)").eq("id", course_id).single().execute().data or {}
-            course_name = course.get("name", "")
-            department_name = course.get("departments", {}).get("name", "")
-    
-    # Get units details
+            course = (db.table("courses").select("*, departments(name, code)")
+                        .eq("id", course_id).single().execute().data or {})
+            course_name     = course.get("name", "")
+            course_code     = course.get("code", "GEN")
+            dept            = course.get("departments") or {}
+            department_name = dept.get("name", "")
+            dept_code       = dept.get("code", "GEN")
+
+    # Get unit details for selected units
     units_data = []
     for unit_id in selected_units:
         unit = db.table("units").select("*").eq("id", unit_id).single().execute().data
         if unit:
-            unit_type = request.form.get(f"unit_type_{unit_id}", "core")
             units_data.append({
-                "unit": unit,
-                "type": unit_type
+                "unit":      unit,
+                "type":      request.form.get(f"unit_type_{unit_id}", "Core"),
+                "attempt":   request.form.get(f"attempt_type_{unit_id}", "first_attempt"),
+                "prev_grade":request.form.get(f"prev_grade_{unit_id}", "") or None,
+                "prev_mid":  request.form.get(f"prev_marks_{unit_id}", "") or None,
+                "cost":      request.form.get(f"unit_cost_{unit_id}", "") or None,
             })
-    
-    # Get documents
-    documents_data = db.table("trainee_documents").select("*").eq("student_id", student_id).execute().data or []
+
+    # Get documents from student_personal_documents (My Documents)
+    documents_data = (db.table("student_personal_documents")
+                        .select("*").eq("student_id", student_id).execute().data or [])
     documents = {doc["document_type"]: doc for doc in documents_data}
-    
-    # Generate serial number: EXAM/DEPT/COURSE/YEAR/SERIES/UNIQUE_SERIAL
-    # Get department code
-    dept_code = ""
-    if enrollment:
-        class_data = enrollment[0].get("classes", {})
-        course_id = class_data.get("course_id")
-        if course_id:
-            course = db.table("courses").select("*, departments(code)").eq("id", course_id).single().execute().data or {}
-            dept_code = course.get("departments", {}).get("code", "GEN")
-    
-    # Get course code
-    course_code = ""
-    if enrollment:
-        class_data = enrollment[0].get("classes", {})
-        course_id = class_data.get("course_id")
-        if course_id:
-            course = db.table("courses").select("code").eq("id", course_id).single().execute().data or {}
-            course_code = course.get("code", "GEN")
-    
-    # Generate serial components from form data
-    year        = form_data.get("exam_year", str(datetime.now().year))
-    series      = form_data.get("exam_series", "1")
-    term        = form_data.get("term", "1")
+
+    # Build serial number — no slashes (they break storage paths)
+    year          = form_data.get("exam_year", str(datetime.now().year))
+    series        = form_data.get("exam_series", "1")
+    term          = form_data.get("term", "1")
     unique_serial = str(uuid.uuid4().int)[:6].zfill(6)
+    serial_number = f"TTTI-{year}-EXAM-{unique_serial}"   # hyphens, never slashes
 
-    serial_number = f"TTTI/{year}/EXAM/{unique_serial}"
+    # Insert exam booking records — wrapped so DB schema errors surface clearly
+    try:
+        for ud in units_data:
+            uid = ud["unit"]["id"]
+            base_payload = {
+                "student_id":    student_id,
+                "unit_id":       uid,
+                "exam_date":     str(datetime.now().date()),
+                "exam_session":  f"Series {series} — Term {term}",
+                "purpose":       f"{ud['type']} — {form_data.get('module_level','')}",
+                "status":        "pending",
+                "serial_number": serial_number,
+                "special_requirements": form_data.get("pwd_status", "N/A"),
+            }
+            # Optional columns — try with them first, fall back without
+            full_payload = dict(base_payload)
+            full_payload["attempt_type"] = ud["attempt"]
+            if ud["prev_grade"]: full_payload["previous_grade"]    = ud["prev_grade"]
+            if ud["prev_mid"]:   full_payload["previous_marks_id"] = ud["prev_mid"]
 
-    # Create exam booking records for each selected unit
-    for unit_data in units_data:
-        uid = unit_data["unit"]["id"]
-        attempt_type  = request.form.get(f"attempt_type_{uid}", "first_attempt")
-        prev_grade    = request.form.get(f"prev_grade_{uid}", "") or None
-        prev_marks_id = request.form.get(f"prev_marks_{uid}", "") or None
+            try:
+                db.table("exam_bookings").insert(full_payload).execute()
+            except Exception as col_err:
+                # If optional columns don't exist in schema, retry with base payload only
+                if "PGRST204" in str(col_err) or "column" in str(col_err).lower():
+                    db.table("exam_bookings").insert(base_payload).execute()
+                else:
+                    raise
 
-        insert_data = {
-            "student_id":   student_id,
-            "unit_id":      uid,
-            "exam_date":    datetime.now().date(),
-            "exam_session": f"Series {series} — Term {term}",
-            "purpose":      f"{unit_data['type']} — {form_data.get('module_level','')}",
-            "status":       "pending",
-            "serial_number": serial_number,
-            "special_requirements": form_data.get("pwd_status", "N/A"),
-            "attempt_type": attempt_type,
-        }
-        if prev_grade:    insert_data["previous_grade"]    = prev_grade
-        if prev_marks_id: insert_data["previous_marks_id"] = prev_marks_id
-        db.table("exam_bookings").insert(insert_data).execute()
-    
-    write_audit_log("create_exam_booking", target=f"booking:{serial_number}", detail={"units": len(units_data)})
+        write_audit_log("create_exam_booking", target=f"booking:{serial_number}",
+                        detail={"units": len(units_data)})
+    except Exception as db_err:
+        flash(f"Error saving booking: {db_err}", "danger")
+        return redirect(url_for("student.exam_booking_form"))
     
     # Generate multi-page PDF with embedded documents
     try:
@@ -1621,11 +1622,15 @@ def exam_booking_submit():
         story.append(Paragraph("UNIT REGISTRATION", header_style))
         story.append(Spacer(1, 12))
         
-        unit_headers = ["S/N", "Unit Name", "Unit Code", "Type"]
-        unit_rows = [[str(i+1), u["unit"]["name"], u["unit"]["code"], u["type"].title()] for i, u in enumerate(units_data)]
+        unit_headers = ["S/N", "Unit Name", "Unit Code", "Type", "Attempt"]
+        unit_rows = [
+            [str(i+1), u["unit"]["name"], u["unit"].get("code",""), u["type"].title(),
+             u.get("attempt","first_attempt").replace("_"," ").title()]
+            for i, u in enumerate(units_data)
+        ]
         unit_table_data = [unit_headers] + unit_rows
         
-        unit_table = Table(unit_table_data, colWidths=[0.5*inch, 2.5*inch, 1.5*inch, 1*inch])
+        unit_table = Table(unit_table_data, colWidths=[0.5*inch, 2.5*inch, 1.2*inch, 0.9*inch, 1*inch])
         unit_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -1686,42 +1691,48 @@ def exam_booking_submit():
                 story.append(Spacer(1, 6))
                 
                 try:
-                    # Download file from Supabase Storage
                     file_path = doc.get("file_path")
-                    if file_path:
-                        # Get file from storage
+                    file_url  = doc.get("file_url", "")
+                    ext       = (file_path or "").rsplit(".", 1)[-1].lower() if file_path else ""
+
+                    if file_path and ext in ("jpg", "jpeg", "png", "webp", "gif"):
+                        # Download from storage and embed as image
                         file_data = storage_client.from_("assessment-evidence").download(file_path)
-                        
-                        # Create image from file data
-                        img_buffer = io.BytesIO(file_data)
-                        try:
-                            img = PILImage.open(img_buffer)
-                            
-                            # Convert to RGB if necessary
-                            if img.mode != 'RGB':
-                                img = img.convert('RGB')
-                            
-                            # Resize to fit page (max width 5 inches, max height 6 inches)
-                            img_width, img_height = img.size
-                            max_width = 5 * inch
-                            max_height = 6 * inch
-                            
-                            if img_width > max_width or img_height > max_height:
-                                ratio = min(max_width / img_width, max_height / img_height)
-                                new_width = int(img_width * ratio)
-                                new_height = int(img_height * ratio)
-                                img = img.resize((new_width, new_height), PILImage.LANCZOS)
-                            
-                            # Add image to story
-                            img_buffer.seek(0)
-                            rl_image = Image(img_buffer, width=img.width, height=img.height)
-                            story.append(rl_image)
-                            story.append(Spacer(1, 12))
-                        except Exception as e:
-                            story.append(Paragraph(f"[Error loading image: {str(e)}]", normal_style))
-                            story.append(Spacer(1, 12))
+
+                        img        = PILImage.open(io.BytesIO(file_data))
+                        if img.mode != "RGB":
+                            img = img.convert("RGB")
+
+                        # Scale to fit within 5 × 7 inches (reportlab points = pixels here)
+                        max_w, max_h = 5 * inch, 7 * inch
+                        iw, ih = img.size
+                        ratio  = min(max_w / iw, max_h / ih, 1.0)  # never upscale
+                        disp_w = iw * ratio
+                        disp_h = ih * ratio
+
+                        # Write (possibly resized) PIL image to a fresh buffer
+                        out_buf = io.BytesIO()
+                        if ratio < 1.0:
+                            img = img.resize((int(iw * ratio), int(ih * ratio)), PILImage.LANCZOS)
+                        img.save(out_buf, format="JPEG", quality=85)
+                        out_buf.seek(0)
+
+                        rl_image = Image(out_buf, width=disp_w, height=disp_h)
+                        story.append(rl_image)
+                        story.append(Spacer(1, 12))
+
+                    elif file_url:
+                        # For PDFs or non-image files, show a reference link
+                        story.append(Paragraph(
+                            f'<link href="{file_url}"><u>Click to view {doc_name} (opens in browser)</u></link>',
+                            normal_style))
+                        story.append(Spacer(1, 12))
+                    else:
+                        story.append(Paragraph(f"[{doc_name}: file path not recorded]", normal_style))
+                        story.append(Spacer(1, 12))
+
                 except Exception as e:
-                    story.append(Paragraph(f"[Error downloading document: {str(e)}]", normal_style))
+                    story.append(Paragraph(f"[{doc_name}: could not embed — {e}]", normal_style))
                     story.append(Spacer(1, 12))
             else:
                 story.append(Paragraph(f"{doc_name}: NOT UPLOADED", normal_style))
@@ -1731,11 +1742,12 @@ def exam_booking_submit():
         story.append(Paragraph("SYSTEM VERIFICATION", header_style))
         story.append(Spacer(1, 12))
         
+        all_required_present = all(documents.get(dt) for _, dt in required_docs_list)
         verification_data = [
             ["Serial Number:", serial_number],
             ["Generated On:", datetime.now().strftime("%d %B %Y %H:%M:%S")],
-            ["System Status:", "READY FOR HOD VERIFICATION" if not any(doc not in documents for doc_type in required_docs_list) else "INCOMPLETE"],
-            ["Total Units:", str(len(units_data))]
+            ["System Status:", "READY FOR HOD VERIFICATION" if all_required_present else "INCOMPLETE — MISSING DOCUMENTS"],
+            ["Total Units:", str(len(units_data))],
         ]
         
         verification_table = Table(verification_data, colWidths=[2*inch, 4*inch])
@@ -1788,20 +1800,26 @@ def exam_booking_submit():
         pdf_value = buffer.getvalue()
         buffer.close()
         
-        # Save PDF to Supabase Storage
-        pdf_filename = f"exam_bookings/{student_id}_{serial_number}.pdf"
-        storage_client.from_("exam-bookings").upload(pdf_filename, pdf_value, {"content-type": "application/pdf"})
-        
-        # Get public URL
-        pdf_url = storage_client.from_("exam-bookings").get_public_url(pdf_filename)
-        
-        flash(f'Exam booking form generated successfully! Serial Number: {serial_number}', 'success')
-        flash('Please download and print the form, then submit to HOD for verification.', 'info')
-        
-        # Return PDF for download
+        # Try to save PDF to Supabase Storage (non-fatal if bucket missing)
+        safe_serial   = serial_number.replace("/", "-")
+        pdf_filename  = f"exam_bookings/{student_id}_{safe_serial}.pdf"
+        try:
+            storage_client.from_("exam-bookings").upload(
+                pdf_filename, pdf_value,
+                {"content-type": "application/pdf", "x-upsert": "true"}
+            )
+        except Exception:
+            pass  # storage failure must not prevent the student getting their PDF
+
+        flash(f'Exam booking created! Serial Number: {serial_number}', 'success')
+        flash('Download, print and hand it to your HOD for departmental clearance.', 'info')
+
+        # Stream PDF directly to the browser for download
         response = make_response(pdf_value)
         response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=Exam_Booking_{serial_number}.pdf'
+        response.headers['Content-Disposition'] = (
+            f'attachment; filename=Exam_Booking_{safe_serial}.pdf'
+        )
         return response
         
     except ImportError:
