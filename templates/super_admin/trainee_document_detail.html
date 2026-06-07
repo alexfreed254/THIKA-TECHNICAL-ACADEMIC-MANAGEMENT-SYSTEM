@@ -1,0 +1,310 @@
+{% extends "super_admin/base.html" %}
+{% block title %}Documents — {{ student.full_name }}{% endblock %}
+{% block page_title %}Trainee Documents{% endblock %}
+
+{% block extra_style %}
+<style>
+  .detail-wrap { padding: 24px; max-width: 900px; }
+
+  /* back link */
+  .back-link {
+    display:inline-flex; align-items:center; gap:7px; font-size:13px;
+    font-weight:600; color:#1565c0; text-decoration:none; margin-bottom:20px;
+  }
+  .back-link:hover { text-decoration:underline; }
+
+  /* student info card */
+  .student-info-card {
+    background:linear-gradient(135deg,#0d2167,#1565c0);
+    color:#fff; border-radius:14px; padding:22px 28px;
+    margin-bottom:28px; display:flex; align-items:center; gap:20px;
+  }
+  .student-info-avatar {
+    width:56px; height:56px; border-radius:50%;
+    background:rgba(255,255,255,.2); color:#fff;
+    font-size:22px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .student-info-name { font-size:20px; font-weight:800; margin:0 0 4px; }
+  .student-info-meta { font-size:13px; opacity:.85; display:flex; flex-wrap:wrap; gap:16px; }
+  .student-info-meta span { display:flex; align-items:center; gap:5px; }
+
+  /* section title */
+  .section-title {
+    font-size:16px; font-weight:700; color:#0d2167;
+    border-bottom:2px solid #dbeafe; padding-bottom:10px;
+    margin:0 0 18px; display:flex; align-items:center; gap:8px;
+  }
+
+  /* documents table */
+  .docs-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+    overflow:hidden; margin-bottom:28px;
+  }
+  .docs-table { width:100%; border-collapse:collapse; }
+  .docs-table thead { background:#f0f7ff; }
+  .docs-table th {
+    padding:11px 16px; text-align:left; font-size:11px; font-weight:700;
+    color:#1565c0; text-transform:uppercase; letter-spacing:.05em;
+    border-bottom:2px solid #dbeafe;
+  }
+  .docs-table td {
+    padding:13px 16px; font-size:13px; color:#374151;
+    border-bottom:1px solid #f3f4f6; vertical-align:middle;
+  }
+  .docs-table tr:last-child td { border-bottom:none; }
+  .docs-table tr:hover td { background:#f8fbff; }
+
+  .doc-label { font-weight:600; color:#111827; }
+  .required-star { color:#dc2626; margin-left:3px; }
+
+  /* status badges */
+  .badge { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
+  .b-uploaded { background:#dbeafe; color:#1d4ed8; }
+  .b-missing  { background:#fef3c7; color:#92400e; }
+  .b-required-missing { background:#fee2e2; color:#b91c1c; }
+  .b-approved { background:#dcfce7; color:#15803d; }
+  .b-rejected { background:#fee2e2; color:#b91c1c; }
+  .b-pending  { background:#fef3c7; color:#b45309; }
+
+  /* file info */
+  .file-info { display:flex; align-items:center; gap:8px; }
+  .file-icon { font-size:16px; }
+  .file-icon.pdf   { color:#ef4444; }
+  .file-icon.image { color:#3b82f6; }
+  .file-icon.doc   { color:#2563eb; }
+  .file-icon.other { color:#9ca3af; }
+  .file-size { font-size:11px; color:#9ca3af; }
+
+  /* action buttons */
+  .btn-action {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600;
+    text-decoration:none; white-space:nowrap; transition:opacity .15s;
+  }
+  .btn-view     { background:#1565c0; color:#fff; }
+  .btn-download { background:#0d47a1; color:#fff; }
+  .btn-view:hover, .btn-download:hover { opacity:.85; }
+
+  /* verification card */
+  .verify-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+    padding:26px; margin-bottom:28px;
+  }
+  .radio-group { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
+  .radio-option {
+    display:flex; align-items:center; gap:8px;
+    padding:10px 20px; border:2px solid #e5e7eb; border-radius:10px;
+    cursor:pointer; font-size:14px; font-weight:600; color:#374151;
+    transition:all .15s;
+  }
+  .radio-option:hover { border-color:#1565c0; background:#f0f7ff; }
+  .radio-option input[type=radio] { accent-color:#1565c0; width:16px; height:16px; }
+  .radio-option.opt-pending  { }
+  .radio-option.opt-approved { }
+  .radio-option.opt-rejected { }
+  .radio-option input:checked ~ span.lbl-pending  { color:#b45309; }
+  .radio-option input:checked ~ span.lbl-approved { color:#15803d; }
+  .radio-option input:checked ~ span.lbl-rejected { color:#b91c1c; }
+  .radio-option:has(input:checked) { border-color:currentColor; }
+  .radio-option:has(input[value=pending]:checked)  { border-color:#f59e0b; background:#fffbeb; }
+  .radio-option:has(input[value=approved]:checked) { border-color:#22c55e; background:#f0fdf4; }
+  .radio-option:has(input[value=rejected]:checked) { border-color:#ef4444; background:#fef2f2; }
+
+  .comment-group label {
+    display:block; font-size:12px; font-weight:700; color:#6b7280;
+    text-transform:uppercase; letter-spacing:.05em; margin-bottom:7px;
+  }
+  .comment-group textarea {
+    width:100%; padding:10px 14px; border:1px solid #d1d5db; border-radius:8px;
+    font-size:14px; background:#f9fafb; resize:vertical; min-height:90px;
+    font-family:inherit; transition:border-color .2s, box-shadow .2s;
+    box-sizing:border-box;
+  }
+  .comment-group textarea:focus {
+    outline:none; border-color:#1565c0; box-shadow:0 0 0 3px rgba(21,101,192,.1); background:#fff;
+  }
+
+  .btn-save {
+    margin-top:18px; padding:11px 28px;
+    background:linear-gradient(135deg,#1565c0,#0d47a1);
+    color:#fff; border:none; border-radius:9px; font-size:14px; font-weight:700;
+    cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+    transition:opacity .15s;
+  }
+  .btn-save:hover { opacity:.9; }
+
+  /* progress summary */
+  .doc-summary-row {
+    display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px;
+  }
+  .doc-summary-chip {
+    padding:7px 16px; border-radius:9999px; font-size:12px; font-weight:700;
+    display:flex; align-items:center; gap:6px;
+  }
+  .chip-total   { background:#ede9fe; color:#6d28d9; }
+  .chip-present { background:#dcfce7; color:#15803d; }
+  .chip-missing { background:#fee2e2; color:#b91c1c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-wrap">
+
+  <a href="/super-admin/trainees-documents" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to Trainees List
+  </a>
+
+  <!-- ── Student info banner ──────────────────────────────────────── -->
+  <div class="student-info-card">
+    <div class="student-info-avatar">{{ student.full_name[0].upper() if student.full_name else '?' }}</div>
+    <div>
+      <p class="student-info-name">{{ student.full_name }}</p>
+      <div class="student-info-meta">
+        <span><i class="fas fa-id-card"></i> {{ student.admission_no or '—' }}</span>
+        {% if class_name %}<span><i class="fas fa-door-open"></i> {{ class_name }}</span>{% endif %}
+        {% if student.email %}<span><i class="fas fa-envelope"></i> {{ student.email }}</span>{% endif %}
+        {% if student.mobile_number %}<span><i class="fas fa-phone"></i> {{ student.mobile_number }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Document completion summary ─────────────────────────────── -->
+  {% set total_docs   = doc_types | length %}
+  {% set present_docs = docs | length %}
+  {% set missing_docs = total_docs - present_docs %}
+  <div class="doc-summary-row">
+    <span class="doc-summary-chip chip-total"><i class="fas fa-list"></i> {{ total_docs }} Total Documents</span>
+    <span class="doc-summary-chip chip-present"><i class="fas fa-check-circle"></i> {{ present_docs }} Uploaded</span>
+    <span class="doc-summary-chip chip-missing"><i class="fas fa-exclamation-circle"></i> {{ missing_docs }} Missing</span>
+  </div>
+
+  <!-- ── Document checklist table ────────────────────────────────── -->
+  <div class="section-title"><i class="fas fa-folder-open"></i> Registration Documents</div>
+
+  <div class="docs-card">
+    <table class="docs-table">
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th>Document</th>
+          <th>File</th>
+          <th>Uploaded</th>
+          <th>Status</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dt, label, required in doc_types %}
+        {% set doc = docs.get(dt) %}
+        {% set ext = (doc.get('file_name','') or '').rsplit('.',1)[-1].lower() if doc else '' %}
+        {% set fi  = 'pdf' if ext=='pdf' else ('image' if ext in ('jpg','jpeg','png','webp','gif') else ('doc' if ext in ('doc','docx') else 'other')) %}
+        {% set fi_icon = 'file-pdf' if fi=='pdf' else ('image' if fi=='image' else ('file-word' if fi=='doc' else 'file')) %}
+        <tr>
+          <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
+          <td>
+            <span class="doc-label">{{ label }}</span>
+            {% if required %}<span class="required-star" title="Required">*</span>{% endif %}
+          </td>
+          <td>
+            {% if doc %}
+            <div class="file-info">
+              <i class="fas fa-{{ fi_icon }} file-icon {{ fi }}"></i>
+              <div>
+                <div style="font-size:12px;color:#374151;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                     title="{{ doc.get('file_name','') }}">{{ doc.get('file_name','') }}</div>
+                {% if doc.get('file_size') %}
+                <div class="file-size">{{ '%.1f' | format(doc.file_size / 1024) }} KB</div>
+                {% endif %}
+              </div>
+            </div>
+            {% else %}
+            <span style="color:#9ca3af;font-size:13px">—</span>
+            {% endif %}
+          </td>
+          <td style="font-size:12px;color:#6b7280;white-space:nowrap">
+            {% if doc and doc.get('uploaded_at') %}
+              {{ doc.uploaded_at[:10] }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>
+            {% if doc %}
+              {% set ds = doc.get('status','') %}
+              <span class="badge b-{{ ds if ds in ('approved','rejected','pending') else 'uploaded' }}">
+                {{ ds | title if ds else 'Uploaded' }}
+              </span>
+            {% elif required %}
+              <span class="badge b-required-missing">Required · Missing</span>
+            {% else %}
+              <span class="badge b-missing">Optional · Missing</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right">
+            {% if doc and doc.get('_url') %}
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <a href="{{ doc._url }}" target="_blank" class="btn-action btn-view">
+                <i class="fas fa-eye"></i> View
+              </a>
+              <a href="{{ doc._url }}" download="{{ doc.get('file_name','') }}"
+                 target="_blank" class="btn-action btn-download">
+                <i class="fas fa-download"></i>
+              </a>
+            </div>
+            {% else %}
+            <span style="font-size:12px;color:#d1d5db">Not uploaded</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Verification card ────────────────────────────────────────── -->
+  <div class="section-title"><i class="fas fa-clipboard-check"></i> Verification</div>
+
+  <div class="verify-card">
+    <form method="post" action="/super-admin/trainees-documents/{{ student.id }}/verify">
+
+      <p style="font-size:13px;color:#6b7280;margin:0 0 16px">
+        Set an overall verification status for this trainee's document package. This will update
+        the status of all uploaded documents.
+      </p>
+
+      <div class="radio-group">
+        <label class="radio-option opt-pending">
+          <input type="radio" name="status" value="pending"
+                 {% if overall_status == 'pending' %}checked{% endif %}>
+          <i class="fas fa-clock" style="color:#f59e0b"></i>
+          <span class="lbl-pending">Pending</span>
+        </label>
+        <label class="radio-option opt-approved">
+          <input type="radio" name="status" value="approved"
+                 {% if overall_status == 'approved' %}checked{% endif %}>
+          <i class="fas fa-check-circle" style="color:#22c55e"></i>
+          <span class="lbl-approved">Approved</span>
+        </label>
+        <label class="radio-option opt-rejected">
+          <input type="radio" name="status" value="rejected"
+                 {% if overall_status == 'rejected' %}checked{% endif %}>
+          <i class="fas fa-times-circle" style="color:#ef4444"></i>
+          <span class="lbl-rejected">Rejected</span>
+        </label>
+      </div>
+
+      <div class="comment-group">
+        <label for="comment"><i class="fas fa-comment-alt"></i> Comments / Remarks</label>
+        <textarea id="comment" name="comment"
+                  placeholder="Add any notes or remarks for this trainee…">{{ hod_comment }}</textarea>
+      </div>
+
+      <button type="submit" class="btn-save">
+        <i class="fas fa-save"></i> Save Verification
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

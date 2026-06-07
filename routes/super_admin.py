@@ -1558,3 +1558,507 @@ def send_notice():
         flash(f"Failed to send notice: {e}", "danger")
 
     return redirect(url_for("super_admin.notices"))
+
+# ── Super Admin: pages mirroring departmental admin (institute-wide scope) ────
+
+@super_admin_bp.route("/class-list")
+@super_admin_required
+def class_list():
+    from datetime import datetime as _dt
+    db = _svc()
+    class_id    = request.args.get("class_id","")
+    dept_id     = request.args.get("dept_id","")
+    departments = db.table("departments").select("id,name").order("name").execute().data or []
+    cq = db.table("classes").select("id,name,department_id,departments(name)")
+    if dept_id:
+        cq = cq.eq("department_id", dept_id)
+    classes = cq.order("name").execute().data or []
+    cls = None; students = []; dept_name = ""
+    if class_id:
+        cls = next((c for c in classes if str(c["id"]) == class_id), None)
+        if cls:
+            dept_name = (cls.get("departments") or {}).get("name","")
+            cls["dept_name"] = dept_name
+        enr = (db.table("enrollments")
+               .select("*, user_profiles(id,full_name,admission_no)")
+               .eq("class_id", class_id).execute().data or [])
+        for e in enr:
+            s = e.get("user_profiles") or {}
+            s["admission_number"] = s.get("admission_no","")
+            if s.get("id"):
+                students.append(s)
+        students.sort(key=lambda s: s.get("full_name",""))
+    return render_template("super_admin/class_list.html",
+                           departments=departments, classes=classes,
+                           class_id=class_id, dept_id=dept_id,
+                           cls=cls, students=students, dept_name=dept_name,
+                           date_gen=_dt.now().strftime("%d %b %Y"))
+
+
+@super_admin_bp.route("/class-list/pdf")
+@super_admin_required
+def class_list_pdf():
+    from datetime import datetime as _dt
+    db = _svc()
+    class_id = request.args.get("class_id","")
+    cls = None; students = []; dept_name = ""
+    if class_id:
+        cls = db.table("classes").select("id,name,departments(name)").eq("id",class_id).single().execute().data
+        dept_name = (cls.get("departments") or {}).get("name","") if cls else ""
+        if cls:
+            cls["dept_name"] = dept_name
+        enr = (db.table("enrollments")
+               .select("*, user_profiles(id,full_name,admission_no)")
+               .eq("class_id", class_id).execute().data or [])
+        for e in enr:
+            s = e.get("user_profiles") or {}
+            s["admission_number"] = s.get("admission_no","")
+            if s.get("id"):
+                students.append(s)
+        students.sort(key=lambda s: s.get("full_name",""))
+    return render_template("super_admin/class_list_pdf.html",
+                           cls=cls, students=students, dept_name=dept_name,
+                           date_gen=_dt.now().strftime("%d %b %Y"))
+
+
+@super_admin_bp.route("/trainee-search")
+@super_admin_required
+def trainee_search():
+    db = _svc()
+    query_str  = request.args.get("q","").strip()
+    student_id = request.args.get("student_id","").strip()
+    unit_id    = request.args.get("unit_id","").strip()
+    students = []; student = None; summary = None; records = []; units_list = []
+    if query_str:
+        rows = (db.table("user_profiles")
+                .select("id,full_name,admission_no,enrollments(classes(name,departments(name)))")
+                .eq("role","student")
+                .or_(f"full_name.ilike.%{query_str}%,admission_no.ilike.%{query_str}%")
+                .limit(20).execute().data or [])
+        for r in rows:
+            enr = (r.get("enrollments") or [{}])[0]
+            cls = enr.get("classes") or {}
+            r["class_name"] = cls.get("name","")
+            r["dept_name"]  = (cls.get("departments") or {}).get("name","")
+            students.append(r)
+    if student_id:
+        sr = db.table("user_profiles").select(
+            "id,full_name,admission_no,enrollments(classes(name,departments(name)))"
+        ).eq("id",student_id).single().execute().data or {}
+        enr = (sr.get("enrollments") or [{}])[0]
+        cls = enr.get("classes") or {}
+        sr["class_name"] = cls.get("name","")
+        sr["dept_name"]  = (cls.get("departments") or {}).get("name","")
+        sr["admission_number"] = sr.get("admission_no","")
+        student = sr
+        units_list = db.table("units").select("id,name,code").order("name").execute().data or []
+        if unit_id:
+            records = (db.table("attendance")
+                       .select("*, trainer:user_profiles!attendance_trainer_id_fkey(full_name)")
+                       .eq("student_id",student_id).eq("unit_id",unit_id)
+                       .order("attendance_date").execute().data or [])
+            for r in records:
+                r["trainer_name"] = (r.get("trainer") or {}).get("full_name","—")
+            total = len(records)
+            present = sum(1 for r in records if r.get("status")=="present")
+            absent  = total - present
+            pct     = round(present/total*100,1) if total else 0
+            unit_obj = next((u for u in units_list if u["id"]==unit_id),{})
+            summary = {"present":present,"absent":absent,"total":total,"pct":pct,"unit":unit_obj}
+    from datetime import datetime as _dt
+    return render_template("super_admin/trainee_search.html",
+                           query=query_str, students=students, student_id=student_id,
+                           unit_id=unit_id, student=student, summary=summary,
+                           records=records, units_list=units_list,
+                           date_gen=_dt.now().strftime("%d %b %Y"))
+
+
+@super_admin_bp.route("/trainee-report-pdf")
+@super_admin_required
+def trainee_report_pdf():
+    from datetime import datetime as _dt
+    db = _svc()
+    student_id = request.args.get("student_id","")
+    unit_id    = request.args.get("unit_id","")
+    student = db.table("user_profiles").select(
+        "id,full_name,admission_no,enrollments(classes(name,departments(name)))"
+    ).eq("id",student_id).single().execute().data or {}
+    enr = (student.get("enrollments") or [{}])[0]
+    cls = enr.get("classes") or {}
+    student["class_name"]       = cls.get("name","")
+    student["dept_name"]        = (cls.get("departments") or {}).get("name","")
+    student["admission_number"] = student.get("admission_no","")
+    records = []; unit = {}; present = absent = total = 0; pct = 0
+    if student_id and unit_id:
+        unit = db.table("units").select("id,name,code").eq("id",unit_id).single().execute().data or {}
+        records = (db.table("attendance")
+                   .select("*, trainer:user_profiles!attendance_trainer_id_fkey(full_name)")
+                   .eq("student_id",student_id).eq("unit_id",unit_id)
+                   .order("attendance_date").execute().data or [])
+        for r in records:
+            r["trainer_name"] = (r.get("trainer") or {}).get("full_name","—")
+        total   = len(records)
+        present = sum(1 for r in records if r.get("status")=="present")
+        absent  = total - present
+        pct     = round(present/total*100,1) if total else 0
+    return render_template("super_admin/trainee_report_pdf.html",
+                           student=student, unit=unit, records=records,
+                           present=present, absent=absent, total=total, pct=pct,
+                           term_label={1:"Term 1",2:"Term 2",3:"Term 3"},
+                           date_gen=_dt.now().strftime("%d %b %Y"))
+
+
+@super_admin_bp.route("/assessment-sheet")
+@super_admin_required
+def assessment_sheet():
+    from datetime import datetime as _dt
+    db = _svc()
+    dept_id  = request.args.get("dept_id","")
+    class_id = request.args.get("class_id","")
+    unit_id  = request.args.get("unit_id","")
+    year     = request.args.get("year","")
+    term     = request.args.get("term","")
+    min_pct  = int(request.args.get("min_pct",75))
+    departments = db.table("departments").select("id,name").order("name").execute().data or []
+    cq = db.table("classes").select("id,name,department_id")
+    if dept_id:
+        cq = cq.eq("department_id",dept_id)
+    classes = cq.order("name").execute().data or []
+    uq = db.table("units").select("id,name,code")
+    if dept_id:
+        uq = uq.eq("department_id",dept_id)
+    units = uq.order("name").execute().data or []
+    cls = unit = None; eligible = []
+    term_label = f"Term {term}" if term else "All Terms"
+    if class_id and unit_id:
+        cls  = next((c for c in classes if str(c["id"])==class_id), None)
+        unit = next((u for u in units  if str(u["id"])==unit_id),  None)
+        enr  = (db.table("enrollments")
+                .select("student_id, user_profiles!inner(id,full_name,admission_no)")
+                .eq("class_id",class_id).execute().data or [])
+        for e in enr:
+            s = e.get("user_profiles") or {}
+            sid = s.get("id")
+            if not sid:
+                continue
+            aq = db.table("attendance").select("status").eq("student_id",sid).eq("unit_id",unit_id)
+            if year: aq = aq.eq("year",int(year))
+            if term: aq = aq.eq("term",int(term))
+            att = aq.execute().data or []; tot = len(att)
+            if not tot:
+                continue
+            pre = sum(1 for a in att if a["status"]=="present")
+            p   = round(pre/tot*100,1)
+            if p >= min_pct:
+                eligible.append({"admission_number":s.get("admission_no",""),
+                                  "full_name":s.get("full_name",""),
+                                  "present":pre,"total":tot,"pct":p})
+        eligible.sort(key=lambda x: x["full_name"])
+    return render_template("super_admin/assessment_sheet.html",
+                           departments=departments, classes=classes, units=units,
+                           dept_id=dept_id, class_id=class_id, unit_id=unit_id,
+                           year=int(year) if year else "",
+                           term=int(term) if term else "",
+                           min_pct=min_pct, cls=cls, unit=unit, eligible=eligible,
+                           term_label=term_label)
+
+
+@super_admin_bp.route("/assessment-sheet/pdf")
+@super_admin_required
+def assessment_sheet_pdf():
+    from datetime import datetime as _dt
+    db = _svc()
+    class_id = request.args.get("class_id","")
+    unit_id  = request.args.get("unit_id","")
+    year     = request.args.get("year","")
+    term     = request.args.get("term","")
+    min_pct  = int(request.args.get("min_pct",75))
+    cls = unit = None; eligible = []
+    term_label = f"Term {term}" if term else "All Terms"
+    if class_id and unit_id:
+        cls  = db.table("classes").select("id,name,departments(name)").eq("id",class_id).single().execute().data
+        unit = db.table("units").select("id,name,code").eq("id",unit_id).single().execute().data
+        if cls: cls["dept_name"] = (cls.get("departments") or {}).get("name","")
+        enr = (db.table("enrollments")
+               .select("student_id, user_profiles!inner(id,full_name,admission_no)")
+               .eq("class_id",class_id).execute().data or [])
+        for e in enr:
+            s = e.get("user_profiles") or {}; sid = s.get("id")
+            if not sid: continue
+            aq = db.table("attendance").select("status").eq("student_id",sid).eq("unit_id",unit_id)
+            if year: aq = aq.eq("year",int(year))
+            if term: aq = aq.eq("term",int(term))
+            att = aq.execute().data or []; tot = len(att)
+            if not tot: continue
+            pre = sum(1 for a in att if a["status"]=="present")
+            p = round(pre/tot*100,1)
+            if p >= min_pct:
+                eligible.append({"admission_number":s.get("admission_no",""),
+                                  "full_name":s.get("full_name",""),
+                                  "present":pre,"total":tot,"pct":p})
+        eligible.sort(key=lambda x: x["full_name"])
+    return render_template("super_admin/assessment_sheet_pdf.html",
+                           cls=cls, unit=unit, eligible=eligible,
+                           term_label=term_label, year=year, min_pct=min_pct,
+                           date_gen=_dt.now().strftime("%d %b %Y"))
+
+
+@super_admin_bp.route("/exam-bookings")
+@super_admin_required
+def exam_bookings():
+    from datetime import date as _date
+    db = _svc()
+    status_filter = request.args.get("status","all")
+    dept_filter   = request.args.get("dept_id","")
+    year_filter   = request.args.get("year","")
+    term_filter   = request.args.get("term","")
+    q             = request.args.get("q","").strip()
+    TERM_MONTHS   = {"1":("01","04","30"),"2":("05","08","31"),"3":("09","12","31")}
+    departments   = db.table("departments").select("id,name").order("name").execute().data or []
+    bq = (db.table("exam_bookings")
+           .select("*, units(name,code), "
+                   "student:user_profiles!exam_bookings_student_id_fkey(full_name,admission_no,mobile_number), "
+                   "reviewer:user_profiles!exam_bookings_approved_by_fkey(full_name)")
+           .order("created_at",desc=True))
+    if status_filter and status_filter != "all":
+        bq = bq.eq("status",status_filter)
+    yr = year_filter or str(_date.today().year)
+    if year_filter:
+        bq = bq.gte("exam_date",f"{yr}-01-01").lte("exam_date",f"{yr}-12-31")
+    if term_filter and term_filter in TERM_MONTHS:
+        m0,m1,last = TERM_MONTHS[term_filter]
+        bq = bq.gte("exam_date",f"{yr}-{m0}-01").lte("exam_date",f"{yr}-{m1}-{last}")
+    bookings = bq.limit(500).execute().data or []
+    sids = list({b["student_id"] for b in bookings if b.get("student_id")})
+    dept_map = {}
+    if sids:
+        enr = (db.table("enrollments")
+               .select("student_id, classes!inner(department_id,name,departments(name))")
+               .in_("student_id",sids).execute().data or [])
+        for e in enr:
+            sid = e.get("student_id"); cls = e.get("classes") or {}
+            if sid and sid not in dept_map:
+                dept_map[sid] = {"class_name":cls.get("name",""),
+                                  "dept_name":(cls.get("departments") or {}).get("name",""),
+                                  "dept_id":cls.get("department_id","")}
+    for b in bookings:
+        b["student_user"]     = b.get("student")  or {}
+        b["approved_by_user"] = b.get("reviewer") or {}
+        dm = dept_map.get(b.get("student_id"),{})
+        b["class_name"] = dm.get("class_name","—")
+        b["dept_name"]  = dm.get("dept_name","—")
+        b["_dept_id"]   = dm.get("dept_id","")
+    if dept_filter:
+        bookings = [b for b in bookings if b.get("_dept_id")==dept_filter]
+    if q:
+        ql = q.lower()
+        bookings = [b for b in bookings
+                    if ql in b["student_user"].get("full_name","").lower()
+                    or ql in b["student_user"].get("admission_no","").lower()]
+    all_b = db.table("exam_bookings").select("status").limit(2000).execute().data or []
+    counts = {"all":len(all_b),
+              "pending": sum(1 for b in all_b if b["status"]=="pending"),
+              "approved":sum(1 for b in all_b if b["status"]=="approved"),
+              "rejected":sum(1 for b in all_b if b["status"]=="rejected")}
+    return render_template("super_admin/exam_bookings.html",
+                           bookings=bookings, departments=departments,
+                           status_filter=status_filter, dept_filter=dept_filter,
+                           year_filter=year_filter, term_filter=term_filter,
+                           q=q, counts=counts)
+
+
+@super_admin_bp.route("/exam-bookings/<booking_id>/approve", methods=["POST"])
+@super_admin_required
+def approve_exam_booking(booking_id):
+    db = _svc(); user = current_user()
+    try:
+        db.table("exam_bookings").update(
+            {"status":"approved","approved_by":user["id"],"approved_at":"now()"}
+        ).eq("id",booking_id).execute()
+        flash("Booking approved.", "success")
+    except Exception as e:
+        flash(f"Error: {e}", "danger")
+    return redirect(url_for("super_admin.exam_bookings"))
+
+
+@super_admin_bp.route("/exam-bookings/<booking_id>/reject", methods=["POST"])
+@super_admin_required
+def reject_exam_booking(booking_id):
+    db = _svc(); reason = request.form.get("rejection_reason","").strip()
+    try:
+        db.table("exam_bookings").update(
+            {"status":"rejected","rejection_reason":reason}
+        ).eq("id",booking_id).execute()
+        flash("Booking rejected.", "success")
+    except Exception as e:
+        flash(f"Error: {e}", "danger")
+    return redirect(url_for("super_admin.exam_bookings"))
+
+
+@super_admin_bp.route("/trainees-documents")
+@super_admin_required
+def trainees_documents():
+    db = _svc()
+    q           = request.args.get("q","").strip()
+    dept_filter = request.args.get("dept_id","")
+    departments = db.table("departments").select("id,name").order("name").execute().data or []
+    enr_q = db.table("enrollments").select(
+        "student_id, classes!inner(department_id,name), "
+        "user_profiles!enrollments_student_id_fkey(id,full_name,admission_no,email)")
+    if dept_filter:
+        enr_q = enr_q.eq("classes.department_id",dept_filter)
+    enr = enr_q.execute().data or []
+    seen = {}
+    for e in enr:
+        up = e.get("user_profiles") or {}
+        sid = up.get("id") or e.get("student_id")
+        if sid and sid not in seen:
+            seen[sid] = {"id":sid, "full_name":up.get("full_name","—"),
+                         "admission_no":up.get("admission_no","—"),
+                         "email":up.get("email",""),
+                         "class_name":(e.get("classes") or {}).get("name","")}
+    students = list(seen.values())
+    if q:
+        ql = q.lower()
+        students = [s for s in students
+                    if ql in s["full_name"].lower() or ql in s["admission_no"].lower()]
+    students.sort(key=lambda s: s["full_name"])
+    sids = [s["id"] for s in students]
+    req_types = {"passport_photo","admission_letter","medical_form","personal_data_form",
+                 "declaration_form","kcse_result_slip","kcse_certificate","kcpe_result_slip",
+                 "birth_certificate","national_id","consent_form"}
+    doc_map = {}
+    if sids:
+        try:
+            rows = (db.table("student_personal_documents").select("student_id,document_type,status")
+                    .in_("student_id",sids).execute().data or [])
+            for r in rows:
+                doc_map.setdefault(r["student_id"],{})[r["document_type"]] = r
+        except Exception:
+            pass
+    total_req = len(req_types)
+    for s in students:
+        docs = doc_map.get(s["id"],{})
+        s["uploaded"]    = len(docs)
+        s["required_ok"] = sum(1 for dt in req_types if dt in docs)
+        s["total_req"]   = total_req
+        statuses = [d.get("status","pending") for d in docs.values()]
+        s["overall_status"] = ("approved" if statuses and all(st=="approved" for st in statuses)
+                               else "rejected" if any(st=="rejected" for st in statuses)
+                               else "pending")
+    return render_template("super_admin/trainees_documents.html",
+                           students=students, departments=departments,
+                           q=q, dept_filter=dept_filter)
+
+
+@super_admin_bp.route("/trainees-documents/<student_id>")
+@super_admin_required
+def trainee_document_detail(student_id):
+    db = _svc()
+    student = db.table("user_profiles").select(
+        "id,full_name,admission_no,email,mobile_number"
+    ).eq("id",student_id).single().execute().data or {}
+    enr = (db.table("enrollments").select("classes(name)")
+           .eq("student_id",student_id).limit(1).execute().data or [])
+    class_name = ((enr[0].get("classes") or {}).get("name","")) if enr else ""
+    docs_raw = (db.table("student_personal_documents").select("*")
+                .eq("student_id",student_id).execute().data or [])
+    docs = {}
+    for d in docs_raw:
+        d["_url"] = d.get("file_url","")
+        docs[d["document_type"]] = d
+    DOC_TYPES = [
+        ("passport_photo","Passport Photo",True),
+        ("admission_letter","Admission Letter",True),
+        ("medical_form","Medical Examination Form",True),
+        ("personal_data_form","Personal Data Form",True),
+        ("declaration_form","Declaration Form",True),
+        ("kcse_result_slip","KCSE Result Slip",True),
+        ("kcse_certificate","KCSE Certificate",True),
+        ("kcpe_result_slip","KCPE Result Slip",True),
+        ("birth_certificate","Birth Certificate",True),
+        ("national_id","National ID",True),
+        ("guardian_id","Guardian ID Copies",False),
+        ("consent_form","Consent Form",True),
+        ("most_recent_result_slip","Previous Module Result Slip (Continuing)",False),
+    ]
+    statuses = [d.get("status","pending") for d in docs.values()]
+    overall = ("approved" if statuses and all(st=="approved" for st in statuses)
+               else "rejected" if any(st=="rejected" for st in statuses) else "pending")
+    return render_template("super_admin/trainee_document_detail.html",
+                           student=student, class_name=class_name, docs=docs,
+                           doc_types=DOC_TYPES, overall_status=overall, hod_comment="")
+
+
+@super_admin_bp.route("/trainees-documents/<student_id>/verify", methods=["POST"])
+@super_admin_required
+def verify_trainee_document(student_id):
+    from datetime import datetime as _dt
+    db = _svc()
+    status  = request.form.get("status","pending")
+    comment = request.form.get("comment","").strip()
+    if status not in ("pending","approved","rejected"):
+        status = "pending"
+    for doc in (db.table("student_personal_documents").select("id")
+                .eq("student_id",student_id).execute().data or []):
+        try:
+            db.table("student_personal_documents").update({
+                "status":           status,
+                "rejection_reason": comment or None,
+                "verified_by":      current_user().get("id"),
+                "verified_at":      _dt.utcnow().isoformat(),
+            }).eq("id",doc["id"]).execute()
+        except Exception as e:
+            print(f"verify_trainee_document: {e}")
+    flash(f"Documents marked as {status}.", "success")
+    return redirect(url_for("super_admin.trainee_document_detail", student_id=student_id))
+
+
+@super_admin_bp.route("/trainer-poe")
+@super_admin_required
+def trainer_poe():
+    db = _svc()
+    dept_filter = request.args.get("dept_id","")
+    q           = request.args.get("q","").strip()
+    departments = db.table("departments").select("id,name").order("name").execute().data or []
+    tq = db.table("user_profiles").select(
+        "id,full_name,admission_no,department_id,departments(name)"
+    ).eq("role","trainer")
+    if dept_filter:
+        tq = tq.eq("department_id",dept_filter)
+    trainers = tq.order("full_name").execute().data or []
+    if q:
+        ql = q.lower()
+        trainers = [t for t in trainers
+                    if ql in t.get("full_name","").lower()
+                    or ql in t.get("admission_no","").lower()]
+    tids = [t["id"] for t in trainers]
+    doc_map = {}
+    if tids:
+        try:
+            docs = (db.table("trainer_documents").select("*")
+                    .in_("trainer_id",tids).execute().data or [])
+            for d in docs:
+                doc_map.setdefault(d["trainer_id"],[]).append(d)
+        except Exception:
+            pass
+    for t in trainers:
+        t["docs"]      = doc_map.get(t["id"],[])
+        t["doc_count"] = len(t["docs"])
+        t["dept_name"] = (t.get("departments") or {}).get("name","—")
+    return render_template("super_admin/trainer_poe.html",
+                           trainers=trainers, departments=departments,
+                           dept_filter=dept_filter, q=q)
+
+
+@super_admin_bp.route("/import", methods=["GET","POST"])
+@super_admin_required
+def import_data():
+    db = _svc()
+    classes = db.table("classes").select("id,name").order("name").execute().data or []
+    results = []; result_summary = None; error = None
+    if request.method == "POST":
+        flash("Import submitted.", "info")
+    return render_template("super_admin/import.html",
+                           classes=classes, results=results,
+                           result=result_summary, error=error)

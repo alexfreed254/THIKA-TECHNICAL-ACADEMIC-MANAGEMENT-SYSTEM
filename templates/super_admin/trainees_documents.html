@@ -1,0 +1,180 @@
+{% extends "super_admin/base.html" %}
+{% block title %}Trainees Documents{% endblock %}
+{% block page_title %}Trainees Documents{% endblock %}
+
+{% block extra_style %}
+<style>
+  .td-wrap { padding: 24px; }
+
+  /* search bar */
+  .search-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+    padding:20px 24px; margin-bottom:24px;
+    display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;
+  }
+  .search-card .fg { display:flex; flex-direction:column; gap:6px; flex:1; min-width:240px; }
+  .search-card label { font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; }
+  .search-card input {
+    padding:9px 14px; border:1px solid #d1d5db; border-radius:8px;
+    font-size:14px; background:#f9fafb; width:100%;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .search-card input:focus { outline:none; border-color:#1565c0; box-shadow:0 0 0 3px rgba(21,101,192,.1); background:#fff; }
+  .btn-search {
+    padding:9px 22px; background:linear-gradient(135deg,#1565c0,#0d47a1);
+    color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700;
+    cursor:pointer; display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+  }
+  .btn-search:hover { opacity:.9; }
+  .btn-clear {
+    padding:9px 16px; background:#f3f4f6; color:#374151;
+    border:1px solid #d1d5db; border-radius:8px; font-size:14px; font-weight:600;
+    cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-clear:hover { background:#e5e7eb; }
+
+  /* student cards grid */
+  .students-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px;
+  }
+  .student-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+    padding:20px; transition:box-shadow .2s, transform .2s; position:relative;
+  }
+  .student-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.1); transform:translateY(-2px); }
+
+  .student-card-hdr { display:flex; align-items:flex-start; gap:14px; margin-bottom:14px; }
+  .student-avatar {
+    width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#1565c0,#42a5f5);
+    color:#fff; font-size:18px; font-weight:700; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .student-name { font-size:15px; font-weight:700; color:#111827; margin:0 0 3px; }
+  .student-adm  { font-size:12px; color:#9ca3af; }
+  .student-class{ font-size:12px; color:#6b7280; margin-top:2px; }
+
+  /* progress bar */
+  .progress-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .progress-bar-track {
+    flex:1; height:6px; background:#e5e7eb; border-radius:9999px; overflow:hidden;
+  }
+  .progress-bar-fill { height:100%; border-radius:9999px; transition:width .4s; }
+  .fill-complete { background:#16a34a; }
+  .fill-partial  { background:#f59e0b; }
+  .fill-empty    { background:#e5e7eb; }
+  .progress-label { font-size:12px; font-weight:700; color:#374151; white-space:nowrap; }
+
+  .status-pill {
+    display:inline-block; padding:2px 10px; border-radius:9999px;
+    font-size:11px; font-weight:700;
+  }
+  .s-pending  { background:#fef3c7; color:#b45309; }
+  .s-approved { background:#dcfce7; color:#15803d; }
+  .s-rejected { background:#fee2e2; color:#b91c1c; }
+
+  .btn-view-student {
+    display:block; text-align:center; padding:9px;
+    background:linear-gradient(135deg,#1565c0,#0d47a1);
+    color:#fff; border-radius:8px; font-size:13px; font-weight:700;
+    text-decoration:none; margin-top:4px; transition:opacity .15s;
+  }
+  .btn-view-student:hover { opacity:.88; }
+
+  /* empty state */
+  .empty-state { padding:56px 24px; text-align:center; color:#9ca3af; }
+  .empty-state i { font-size:40px; margin-bottom:14px; display:block; }
+  .empty-state p { font-size:15px; margin:0; }
+
+  .page-summary { font-size:13px; color:#6b7280; margin-bottom:16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="td-wrap">
+
+  <div style="margin-bottom:20px">
+    <h1 style="font-size:22px;font-weight:800;color:#0d2167;margin:0 0 4px">
+      <i class="fas fa-file-alt" style="color:#1565c0;margin-right:8px"></i>Trainees Documents
+    </h1>
+    <p style="color:#6b7280;font-size:13px;margin:0">
+      Click on a trainee to view and verify their uploaded registration documents.
+    </p>
+  </div>
+
+  <!-- search -->
+  <form method="get" action="/super-admin/trainees-documents" class="search-card">
+        <div class="fg" style="min-width:200px">
+      <label>Department</label>
+      <select name="dept_id" style="width:100%;padding:9px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:#f9fafb">
+        <option value="">All Departments</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {% if dept_filter == d.id %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fg">
+      <label for="q"><i class="fas fa-search"></i> Search by name or admission number</label>
+      <input id="q" name="q" type="text" value="{{ q }}"
+             placeholder="e.g. John Doe or TTTI/2024/001" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
+      {% if q %}
+      <a href="/super-admin/trainees-documents" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <p class="page-summary">
+    Showing <strong>{{ students|length }}</strong> trainee{{ 's' if students|length != 1 else '' }}
+    {% if q %} matching <em>"{{ q }}"</em>{% endif %}
+  </p>
+
+  {% if students %}
+  <div class="students-grid">
+    {% for s in students %}
+    {% set pct = ((s.required_ok / s.total_req * 100) | int) if s.total_req else 0 %}
+    {% set fill = 'fill-complete' if pct == 100 else ('fill-partial' if pct > 0 else 'fill-empty') %}
+    <div class="student-card">
+      <div class="student-card-hdr">
+        <div class="student-avatar">{{ s.full_name[0].upper() if s.full_name else '?' }}</div>
+        <div>
+          <p class="student-name">{{ s.full_name }}</p>
+          <p class="student-adm"><i class="fas fa-id-card" style="font-size:10px;margin-right:3px"></i>{{ s.admission_no }}</p>
+          {% if s.class_name %}
+          <p class="student-class"><i class="fas fa-door-open" style="font-size:10px;margin-right:3px"></i>{{ s.class_name }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="progress-row">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill {{ fill }}" style="width:{{ pct }}%"></div>
+        </div>
+        <span class="progress-label">{{ s.required_ok }}/{{ s.total_req }}</span>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-size:12px;color:#6b7280">
+          {{ s.uploaded }} doc{{ 's' if s.uploaded != 1 else '' }} uploaded
+        </span>
+        <span class="status-pill s-{{ s.overall_status }}">
+          {{ s.overall_status | title }}
+        </span>
+      </div>
+
+      <a href="/super-admin/trainees-documents/{{ s.id }}" class="btn-view-student">
+        <i class="fas fa-eye"></i> View Documents
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-users-slash"></i>
+    <p>No trainees found{% if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
