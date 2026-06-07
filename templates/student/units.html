@@ -1,63 +1,162 @@
 {% extends "student/base.html" %}
 {% block title %}My Units{% endblock %}
 {% block page_title %}My Units{% endblock %}
+
 {% block extra_style %}
-.page{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;overflow:hidden}
-.card-header{background:#e65100;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-.card-body{padding:20px}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
-.badge{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600}
-.badge-high{background:#e8f5e9;color:#2e7d32}
-.badge-med{background:#fff3e0;color:#e65100}
-.badge-low{background:#ffebee;color:#c62828}
-.progress-bar{height:8px;background:#eee;border-radius:4px;overflow:hidden;min-width:100px}
-.progress-fill{height:100%;border-radius:4px}
-.pf-high{background:#2e7d32}
-.pf-med{background:#e65100}
-.pf-low{background:#c62828}
-.empty{text-align:center;padding:40px;color:#999}
-.empty i{font-size:40px;margin-bottom:10px}
+<style>
+  .page { padding: 24px; max-width: 1000px; }
+
+  /* ── Card ── */
+  .att-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .att-card-header {
+    background: linear-gradient(135deg, #1e5a9f, #2e75b6);
+    color: #fff;
+    padding: 14px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+
+  table thead th {
+    background: #f9fafb !important;
+    color: #6b7280 !important;
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  table tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 13px;
+    color: #374151;
+    vertical-align: middle;
+  }
+  table tbody tr:last-child td { border-bottom: none; }
+  table tbody tr { transition: background .12s; cursor: pointer; }
+  table tbody tr:hover td { background: #f0f9ff; }
+
+  /* Unit code badge */
+  .unit-badge {
+    display: inline-block;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  /* Progress bar + badge inline */
+  .prog-wrap { display: flex; align-items: center; gap: 10px; min-width: 150px; }
+  .prog-track { flex: 1; background: #e5e7eb; border-radius: 99px; height: 8px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 99px; }
+  .fill-high { background: linear-gradient(90deg, #22c55e, #16a34a); }
+  .fill-med  { background: linear-gradient(90deg, #f59e0b, #d97706); }
+  .fill-low  { background: linear-gradient(90deg, #ef4444, #b91c1c); }
+
+  .pct-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .badge-high { background: #dcfce7; color: #15803d; }
+  .badge-med  { background: #fef3c7; color: #b45309; }
+  .badge-low  { background: #fee2e2; color: #b91c1c; }
+
+  /* View link */
+  .view-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px; background: #1d4ed8; color: #fff;
+    border-radius: 7px; font-size: 11.5px; font-weight: 700;
+    text-decoration: none; transition: opacity .15s;
+    white-space: nowrap;
+  }
+  .view-btn:hover { opacity: .85; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 52px 20px; color: #9ca3af; }
+  .empty-state i { font-size: 44px; display: block; margin-bottom: 14px; opacity: .4; }
+</style>
 {% endblock %}
+
 {% block content %}
 <div class="page">
-  <div class="card">
-    <div class="card-header"><i class="fas fa-book"></i> Enrolled Units</div>
-    <div class="card-body">
-      {% if units %}
+  <div class="att-card">
+    <div class="att-card-header">
+      <i class="fas fa-book-open"></i> Enrolled Units
+    </div>
+
+    {% if units %}
+    <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Code</th><th>Unit Name</th><th>Class</th><th>Attended</th><th>Total</th><th>%</th><th></th></tr>
+          <tr>
+            <th>Code</th>
+            <th>Unit Name</th>
+            <th>Class</th>
+            <th style="text-align:center">Attended</th>
+            <th style="text-align:center">Total</th>
+            <th>Attendance %</th>
+            <th></th>
+          </tr>
         </thead>
         <tbody>
           {% for u in units %}
           {% set sc = 'low' if u.pct < 75 else ('med' if u.pct < 90 else 'high') %}
-          <tr>
-            <td><strong>{{ u.code }}</strong></td>
-            <td>{{ u.name }}</td>
-            <td>{{ u.class_name }}</td>
-            <td>{{ u.attended }}</td>
-            <td>{{ u.total }}</td>
+          <tr onclick="window.location='/student/unit-detail?unit_id={{ u.id }}'">
+            <td><span class="unit-badge">{{ u.code }}</span></td>
+            <td style="font-weight:600;color:#111827">{{ u.name }}</td>
+            <td style="color:#6b7280">{{ u.class_name }}</td>
+            <td style="text-align:center;font-weight:800;color:#111827">{{ u.attended }}</td>
+            <td style="text-align:center;color:#9ca3af;font-weight:600">{{ u.total }}</td>
             <td>
-              <div style="display:flex;align-items:center;gap:8px">
-                <div class="progress-bar"><div class="progress-fill pf-{{ sc }}" style="width:{{ u.pct }}%"></div></div>
-                <span class="badge badge-{{ sc }}">{{ u.pct }}%</span>
+              <div class="prog-wrap">
+                <div class="prog-track">
+                  <div class="prog-fill fill-{{ sc }}" style="width:{{ u.pct }}%"></div>
+                </div>
+                <span class="pct-badge badge-{{ sc }}">{{ u.pct }}%</span>
               </div>
             </td>
-            <td><a href="/student/unit-detail?unit_id={{ u.id }}" style="color:#e65100;text-decoration:none;font-weight:600"><i class="fas fa-eye"></i></a></td>
+            <td onclick="event.stopPropagation()">
+              <a href="/student/unit-detail?unit_id={{ u.id }}" class="view-btn">
+                <i class="fas fa-eye"></i> View
+              </a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-      {% else %}
-      <div class="empty">
-        <i class="fas fa-book-open"></i>
-        <p>You are not enrolled in any units yet.</p>
-      </div>
-      {% endif %}
     </div>
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-book-open"></i>
+      <p style="font-weight:600;font-size:15px;margin-bottom:6px">No units enrolled yet.</p>
+      <p style="font-size:13px">Your enrolled units will appear here once assigned by your department.</p>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
