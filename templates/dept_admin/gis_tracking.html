@@ -1,189 +1,382 @@
 {% extends "dept_admin/base.html" %}
-{% block title %}GIS Placements & Logbook{% endblock %}
-{% block page_title %}GIS Placements & Industrial Attachments{% endblock %}
+{% block title %}Industrial Attachments & GIS{% endblock %}
+{% block page_title %}Industrial Attachments & GIS Placements{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://cdn.tailwindcss.com"></script>
 {% endblock %}
 
 {% block extra_style %}
 <style>
-  #gis-app { font-family: 'Inter', sans-serif; }
+  .ia-wrap { padding: 24px; max-width: 1400px; }
+
+  /* ── Period filter card ── */
+  .period-card {
+    background: linear-gradient(135deg, #0f2c54 0%, #1565c0 60%, #1d83de 100%);
+    border-radius: 18px; padding: 22px 28px; margin-bottom: 28px;
+    display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end;
+  }
+  .period-card .pc-title {
+    color: #fff; font-size: 16px; font-weight: 800;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .period-card .pc-left { flex: 1; min-width: 260px; }
+  .pc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pc-chip {
+    padding: 8px 18px; border-radius: 99px; font-size: 13px; font-weight: 700;
+    cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,.3);
+    color: rgba(255,255,255,.8); background: rgba(255,255,255,.1);
+    transition: all .18s;
+  }
+  .pc-chip:hover { background: rgba(255,255,255,.2); color: #fff; text-decoration: none; }
+  .pc-chip.active { background: #fff; color: #0f2c54; border-color: #fff; }
+  .pc-year-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .pc-year-wrap label { color: rgba(255,255,255,.7); font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; }
+  .pc-year-select {
+    padding: 9px 14px; border-radius: 10px; border: 2px solid rgba(255,255,255,.3);
+    background: rgba(255,255,255,.15); color: #fff; font-size: 13px; font-weight: 700;
+    cursor: pointer; outline: none;
+  }
+  .pc-year-select option { color: #0f2c54; background: #fff; }
+
+  /* ── Stat strip ── */
+  .stat-strip { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 28px; }
+  .stat-tile {
+    flex: 1; min-width: 140px; background: #fff;
+    border-radius: 16px; padding: 20px 18px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    display: flex; align-items: center; gap: 14px;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .stat-tile:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }
+  .stat-icon {
+    width: 48px; height: 48px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .stat-num  { font-size: 26px; font-weight: 900; color: #0f172a; line-height: 1; font-family: 'Poppins', sans-serif; }
+  .stat-lbl  { font-size: 11px; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
 
   /* ── Tab nav ── */
-  .gtab-active { background:#1565c0 !important; color:#fff !important; border-color:#1565c0 !important; }
-
-  /* ── Stat chips ── */
-  .schip {
-    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-    padding:16px 20px; display:flex; align-items:center; gap:14px; flex:1; min-width:130px;
+  .tab-nav {
+    display: flex; gap: 4px; background: #f1f5f9;
+    border-radius: 12px; padding: 5px; margin-bottom: 24px;
+    width: fit-content; flex-wrap: wrap;
   }
-  .schip-icon { width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
-  .schip-num  { font-size:26px;font-weight:800;color:#111827;line-height:1; }
-  .schip-lbl  { font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
-
-  /* ── Map ── */
-  #map { height:480px; border-radius:12px; border:1px solid #e5e7eb; }
-
-  /* ── Filters ── */
-  .filter-wrap {
-    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
-    background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-    padding:16px 20px; margin-bottom:20px;
+  .tab-btn {
+    padding: 9px 22px; border-radius: 9px; font-size: 13px; font-weight: 700;
+    border: none; cursor: pointer; background: transparent; color: #64748b;
+    display: inline-flex; align-items: center; gap: 7px; transition: all .18s;
   }
-  .filter-wrap input, .filter-wrap select {
-    padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
-    font-size:13px; background:#f9fafb; outline:none;
-    transition:border-color .2s;
+  .tab-btn.active { background: #fff; color: #0f2c54;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  .tab-btn:hover:not(.active) { color: #1565c0; }
+  .tab-cnt { background: #e0e7ff; color: #3730a3; font-size: 10px;
+    font-weight: 800; padding: 1px 7px; border-radius: 99px; }
+  .tab-btn.active .tab-cnt { background: #dbeafe; color: #1d4ed8; }
+
+  /* ── Map + table section ── */
+  .section-card {
+    background: #fff; border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    overflow: hidden; margin-bottom: 24px;
   }
-  .filter-wrap input:focus, .filter-wrap select:focus { border-color:#1565c0; background:#fff; }
-  .filter-wrap input[type=text] { min-width:200px; flex:1; }
-
-  /* ── Table shared ── */
-  .data-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
-  .data-tbl  { width:100%; border-collapse:collapse; }
-  .data-tbl thead { background:#f0f7ff; }
-  .data-tbl th {
-    padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
-    color:#1565c0; text-transform:uppercase; letter-spacing:.05em;
-    border-bottom:2px solid #dbeafe; white-space:nowrap;
+  .section-head {
+    padding: 15px 22px; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
   }
-  .data-tbl td { padding:12px 14px; font-size:13px; color:#374151; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
-  .data-tbl tr:last-child td { border-bottom:none; }
-  .data-tbl tr:hover td { background:#f8fbff; }
-  .sname { font-weight:600; color:#111827; }
-  .sadm  { font-size:11px; color:#9ca3af; margin-top:2px; }
+  .section-head-title {
+    font-size: 15px; font-weight: 800; color: #0d2167;
+    display: flex; align-items: center; gap: 8px;
+  }
 
-  /* Status badges */
-  .badge { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
-  .b-active   { background:#dbeafe; color:#1d4ed8; }
-  .b-approved { background:#dcfce7; color:#15803d; }
-  .b-pending  { background:#fef3c7; color:#b45309; }
-  .b-terminated { background:#fee2e2; color:#b91c1c; }
-  .b-lb-approved { background:#dcfce7; color:#15803d; }
-  .b-lb-pending  { background:#fef3c7; color:#b45309; }
-  .b-lb-rejected { background:#fee2e2; color:#b91c1c; }
-
-  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
-  .dot-active   { background:#3b82f6; }
-  .dot-approved { background:#22c55e; }
-  .dot-pending  { background:#f59e0b; }
-
-  /* Live location badge */
-  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;
-              animation:pulseDot 1.4s infinite; }
-  @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
-
-  /* Logbook entry detail cell */
-  .lb-text { font-size:12px; color:#374151; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* Map */
+  #map { height: 500px; }
 
   /* Map legend */
-  .map-legend { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 16px; font-size:12px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
-  .legend-item { display:flex; align-items:center; gap:6px; font-weight:600; color:#374151; }
-  .legend-circle-company { width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 2px #3b82f6; }
-  .legend-circle-live    { width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px #ef4444; }
+  .map-legend {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    padding: 12px 22px; background: #f8fafc;
+    border-top: 1px solid #f1f5f9; font-size: 12px;
+  }
+  .legend-lbl { font-size: 10.5px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: .06em; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #374151; }
+  .leg-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
 
-  .empty-state { padding:48px 24px; text-align:center; color:#9ca3af; }
-  .empty-state i { font-size:36px; display:block; margin-bottom:10px; }
+  /* Search bar */
+  .search-bar {
+    padding: 14px 20px; border-bottom: 1px solid #f1f5f9;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .search-bar input {
+    padding: 8px 14px; border: 1.5px solid #d1d5db; border-radius: 9px;
+    font-size: 13px; background: #f9fafb; flex: 1; min-width: 200px; outline: none;
+    transition: border-color .2s;
+  }
+  .search-bar input:focus { border-color: #1565c0; background: #fff; }
 
-  /* Export panel */
-  .btn-export { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; }
-  .btn-excel { background:#1a7f3c; color:#fff; }
-  .btn-pdf   { background:#c0392b; color:#fff; }
+  /* ── Placements table ── */
+  .data-tbl { width: 100%; border-collapse: collapse; }
+  table thead th {
+    background: #f9fafb !important; color: #6b7280 !important;
+    padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+  }
+  .data-tbl td {
+    padding: 13px 16px; font-size: 13px; color: #374151;
+    border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+  }
+  .data-tbl tr:last-child td { border-bottom: none; }
+  .data-tbl tr:hover td { background: #f8fbff; }
 
-  @media(max-width:640px) {
-    .data-tbl th:nth-child(n+4), .data-tbl td:nth-child(n+4) { display:none; }
+  .sname { font-weight: 700; color: #111827; }
+  .sadm  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .sphone { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+  .company-name { font-weight: 700; color: #0d2167; }
+  .company-city { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  /* Days bar */
+  .days-wrap { min-width: 130px; }
+  .days-num { font-size: 18px; font-weight: 900; font-family: 'Poppins', sans-serif; }
+  .days-lbl { font-size: 10px; color: #9ca3af; font-weight: 600; text-transform: uppercase; }
+  .days-bar { height: 6px; background: #e5e7eb; border-radius: 99px; overflow: hidden; margin-top: 5px; }
+  .days-fill { height: 100%; border-radius: 99px; transition: width .6s ease; }
+  .df-high { background: linear-gradient(90deg, #22c55e, #16a34a); }
+  .df-mid  { background: linear-gradient(90deg, #f59e0b, #d97706); }
+  .df-low  { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+  .ongoing-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 700; color: #15803d;
+    background: #dcfce7; border-radius: 99px; padding: 2px 8px; margin-top: 4px;
+  }
+  .ongoing-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+    animation: pulse-dot 1.4s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+  /* Pin button */
+  .pin-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 11px; border-radius: 7px; font-size: 11px; font-weight: 700;
+    border: none; cursor: pointer; background: #eff6ff; color: #1d4ed8;
+    transition: background .15s;
+  }
+  .pin-btn:hover { background: #dbeafe; }
+  .pin-btn.active-pin { background: #1d4ed8; color: #fff; }
+
+  /* Live dot */
+  .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #ef4444; animation: pulse-dot 1.4s infinite; }
+
+  /* Checkin cell */
+  .checkin-cell { font-size: 11.5px; }
+
+  /* Empty state */
+  .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
+  .empty-state i { font-size: 42px; display: block; margin-bottom: 14px; opacity: .35; }
+
+  /* ── Logbook cards ── */
+  .lb-card {
+    background: #fff; border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #e5e7eb;
+    box-shadow: 0 1px 6px rgba(0,0,0,.04);
+    margin-bottom: 14px; overflow: hidden;
+  }
+  .lb-filter-bar {
+    background: #fff; border-radius: 12px; border: 1px solid #e5e7eb;
+    padding: 14px 18px; margin-bottom: 18px;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+  }
+  .lb-filter-bar select, .lb-filter-bar input {
+    padding: 8px 12px; border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; background: #f9fafb; outline: none;
+  }
+  .lb-filter-bar select:focus, .lb-filter-bar input:focus { border-color: #1565c0; background: #fff; }
+
+  /* ── Export panel ── */
+  .export-panel {
+    background: #fff; border-radius: 16px; border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06); padding: 28px; max-width: 640px;
+  }
+  .exp-title { font-size: 16px; font-weight: 800; color: #0d2167; margin-bottom: 6px; }
+  .exp-sub   { font-size: 13px; color: #6b7280; margin-bottom: 22px; }
+  .exp-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .exp-fg label { display: block; font-size: 11px; font-weight: 700; color: #374151;
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .exp-fg select { width: 100%; padding: 9px 12px; border: 1.5px solid #d1d5db;
+    border-radius: 8px; font-size: 13px; background: #f9fafb; }
+  .btn-dl {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 22px; border-radius: 9px; font-size: 13.5px; font-weight: 700;
+    border: none; cursor: pointer; text-decoration: none; transition: opacity .15s;
+  }
+  .btn-dl:hover { opacity: .88; }
+  .btn-excel { background: linear-gradient(135deg, #1a7f3c, #15803d); color: #fff; }
+  .btn-pdf   { background: linear-gradient(135deg, #c0392b, #991b1b); color: #fff; }
+
+  @media (max-width: 700px) {
+    .data-tbl th:nth-child(n+5), .data-tbl td:nth-child(n+5) { display: none; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div id="gis-app" class="p-4">
+<div class="ia-wrap">
 
-  <!-- ── Tab nav ── -->
-  <nav class="flex p-1.5 bg-white rounded-2xl shadow-sm border border-slate-200 mb-8 w-fit gap-1">
-    <button id="tab-gis" onclick="gTab('gis')"
-      class="gtab-active px-6 py-2.5 rounded-xl text-sm font-bold border border-transparent flex items-center gap-2">
-      <i class="fas fa-map-marked-alt"></i> GIS Live Map
-    </button>
-    <button id="tab-logbook" onclick="gTab('logbook')"
-      class="px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-transparent hover:bg-slate-50 flex items-center gap-2">
-      <i class="fas fa-book-open"></i> Digital Logbook
-      <span id="lb-badge" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ logbook_entries|length }}</span>
-    </button>
-    <button id="tab-export" onclick="gTab('export')"
-      class="px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-transparent hover:bg-slate-50 flex items-center gap-2">
-      <i class="fas fa-file-download"></i> Export Report
-    </button>
-  </nav>
-
-  <!-- ══════════════════════════ GIS TAB ══════════════════════════ -->
-  <section id="sec-gis">
-
-    <!-- Stat chips -->
-    <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:24px">
-      <div class="schip">
-        <div class="schip-icon" style="background:#dbeafe"><i class="fas fa-users" style="color:#1d4ed8"></i></div>
-        <div><div class="schip-num">{{ total_students }}</div><div class="schip-lbl">Dept Students</div></div>
-      </div>
-      <div class="schip">
-        <div class="schip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
-        <div><div class="schip-num">{{ status_counts.active }}</div><div class="schip-lbl">Active</div></div>
-      </div>
-      <div class="schip">
-        <div class="schip-icon" style="background:#ede9fe"><i class="fas fa-clipboard-check" style="color:#6d28d9"></i></div>
-        <div><div class="schip-num">{{ status_counts.approved }}</div><div class="schip-lbl">Approved</div></div>
-      </div>
-      <div class="schip">
-        <div class="schip-icon" style="background:#fef3c7"><i class="fas fa-clock" style="color:#b45309"></i></div>
-        <div><div class="schip-num">{{ status_counts.pending }}</div><div class="schip-lbl">Pending</div></div>
-      </div>
-      <div class="schip">
-        <div class="schip-icon" style="background:#fee2e2"><i class="fas fa-map-pin" style="color:#b91c1c"></i></div>
-        <div><div class="schip-num">{{ live_locations|length }}</div><div class="schip-lbl">Live Check-ins</div></div>
+  <!-- ══ Period / Year Filter ══ -->
+  <div class="period-card">
+    <div class="pc-left">
+      <div class="pc-title"><i class="fas fa-calendar-alt"></i> Filter by Period &amp; Year</div>
+      <div class="pc-chips">
+        <a href="?year={{ year_filter }}"
+           class="pc-chip {% if not period_filter %}active{% endif %}">
+          <i class="fas fa-globe"></i> Full Year
+        </a>
+        <a href="?year={{ year_filter }}&period=1"
+           class="pc-chip {% if period_filter == '1' %}active{% endif %}">
+          Jan – Apr
+        </a>
+        <a href="?year={{ year_filter }}&period=2"
+           class="pc-chip {% if period_filter == '2' %}active{% endif %}">
+          May – Aug
+        </a>
+        <a href="?year={{ year_filter }}&period=3"
+           class="pc-chip {% if period_filter == '3' %}active{% endif %}">
+          Sep – Dec
+        </a>
       </div>
     </div>
-
-    <!-- Map legend -->
-    <div class="map-legend">
-      <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;">Map Legend:</span>
-      <span class="legend-item"><span class="legend-circle-company"></span> Company / Placement Site</span>
-      <span class="legend-item"><span class="legend-circle-live"></span> <span class="live-dot" style="width:8px;height:8px;margin-right:0"></span>&nbsp;Trainee Last Check-in</span>
-    </div>
-
-    <!-- Filter bar -->
-    <div class="filter-wrap">
-      <input type="text" id="gis-search" placeholder="Search student or company…" oninput="filterGIS()">
-      <select id="gis-status" onchange="filterGIS()">
-        <option value="all">All Statuses</option>
-        <option value="active">Active</option>
-        <option value="approved">Approved</option>
-        <option value="pending">Pending</option>
+    <div class="pc-year-wrap">
+      <label><i class="fas fa-calendar"></i> Year</label>
+      <select class="pc-year-select" onchange="window.location='?year='+this.value+'&period={{ period_filter }}'">
+        {% for y in range(2024, 2030) %}
+        <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
       </select>
     </div>
+    <div style="color:rgba(255,255,255,.7);font-size:13px;align-self:flex-end;padding-bottom:2px">
+      {% if period_filter %}
+      Showing: <strong style="color:#fff">{{ PERIOD_LABELS.get(period_filter,'') }} {{ year_filter }}</strong>
+      {% else %}
+      Showing: <strong style="color:#fff">Full Year {{ year_filter }}</strong>
+      {% endif %}
+      &nbsp;·&nbsp; <strong style="color:#fff">{{ placements|length }}</strong> placement{{ 's' if placements|length != 1 }}
+    </div>
+  </div>
 
-    <!-- Leaflet map -->
-    <div id="map" style="margin-bottom:24px"></div>
+  <!-- ══ Stat Strip ══ -->
+  <div class="stat-strip">
+    <div class="stat-tile">
+      <div class="stat-icon" style="background:#dbeafe"><i class="fas fa-industry" style="color:#1d4ed8;font-size:20px"></i></div>
+      <div>
+        <div class="stat-num">{{ placements|length }}</div>
+        <div class="stat-lbl">Total Placements</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-icon" style="background:#dcfce7"><i class="fas fa-broadcast-tower" style="color:#15803d;font-size:20px"></i></div>
+      <div>
+        <div class="stat-num">{{ active_count }}</div>
+        <div class="stat-lbl">Currently Active</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-icon" style="background:#ede9fe"><i class="fas fa-building" style="color:#6d28d9;font-size:20px"></i></div>
+      <div>
+        <div class="stat-num">{{ companies_count }}</div>
+        <div class="stat-lbl">Companies</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-icon" style="background:#fef3c7"><i class="fas fa-calendar-check" style="color:#b45309;font-size:20px"></i></div>
+      <div>
+        <div class="stat-num">{{ avg_days }}</div>
+        <div class="stat-lbl">Avg Days Spent</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-icon" style="background:#fee2e2"><i class="fas fa-map-pin" style="color:#b91c1c;font-size:20px"></i></div>
+      <div>
+        <div class="stat-num">{{ live_locations|length }}</div>
+        <div class="stat-lbl">Live Check-ins</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Tab Nav ══ -->
+  <div class="tab-nav">
+    <button id="tab-map"      class="tab-btn active" onclick="switchTab('map')">
+      <i class="fas fa-map-marked-alt"></i> Map &amp; Placements
+    </button>
+    <button id="tab-logbook"  class="tab-btn"        onclick="switchTab('logbook')">
+      <i class="fas fa-book-open"></i> Digital Logbook
+      <span class="tab-cnt">{{ logbook_entries|length }}</span>
+    </button>
+    <button id="tab-export"   class="tab-btn"        onclick="switchTab('export')">
+      <i class="fas fa-file-download"></i> Export
+    </button>
+  </div>
+
+  <!-- ════════════════ MAP TAB ════════════════ -->
+  <div id="sec-map">
+
+    <!-- Map card -->
+    <div class="section-card" style="margin-bottom:20px">
+      <div class="section-head">
+        <span class="section-head-title">
+          <i class="fas fa-map-marked-alt" style="color:#1565c0"></i>
+          Live Placement Map
+        </span>
+        <span style="font-size:12px;color:#9ca3af">
+          Blue = company site &nbsp;·&nbsp; Red = trainee last check-in
+        </span>
+      </div>
+      <div id="map"></div>
+      <div class="map-legend">
+        <span class="legend-lbl">Legend:</span>
+        <span class="legend-item"><span class="leg-dot" style="background:#1d4ed8"></span> Company / Placement Site</span>
+        <span class="legend-item"><span class="leg-dot" style="background:#22c55e"></span> Completed</span>
+        <span class="legend-item"><span class="leg-dot" style="background:#ef4444;animation:pulse-dot 1.4s infinite"></span> Trainee Last Check-in</span>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar" style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:16px">
+      <i class="fas fa-search" style="color:#9ca3af"></i>
+      <input type="text" id="ia-search" placeholder="Search trainee name, admission no or company…" oninput="filterTable()">
+      <span id="ia-count" style="font-size:12px;color:#9ca3af;white-space:nowrap">{{ placements|length }} shown</span>
+    </div>
 
     <!-- Placements table -->
-    <div class="data-card">
-      <div style="padding:14px 18px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:15px;font-weight:700;color:#0d2167"><i class="fas fa-table" style="color:#1565c0;margin-right:6px"></i>All Placements</span>
-        <span style="font-size:12px;color:#9ca3af">{{ placements|length }} placement{{ 's' if placements|length!=1 }}</span>
+    <div class="section-card">
+      <div class="section-head">
+        <span class="section-head-title">
+          <i class="fas fa-table" style="color:#1565c0"></i>
+          All Placements
+        </span>
+        <span style="font-size:12px;color:#9ca3af">{{ placements|length }} record{{ 's' if placements|length != 1 }}</span>
       </div>
       {% if placements %}
       <div style="overflow-x:auto">
-        <table class="data-tbl" id="placement-table">
+        <table class="data-tbl" id="ia-table">
           <thead>
             <tr>
+              <th>#</th>
               <th>Trainee</th>
               <th>Company</th>
-              <th>City</th>
               <th>Unit</th>
-              <th>Status</th>
-              <th>Period</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Days in Industry</th>
               <th>Last Check-in</th>
+              <th>Pin</th>
             </tr>
           </thead>
           <tbody>
@@ -191,38 +384,87 @@
             {% set co = p.companies or {} %}
             {% set st = p.student   or {} %}
             {% set un = p.units     or {} %}
-            <tr data-status="{{ p.status }}" data-search="{{ st.get('full_name','')|lower }} {{ co.get('name','')|lower }}">
+            {% set days = p._days_spent %}
+            {% set pct  = [((days / max_days) * 100)|int, 100]|min if max_days > 0 else 0 %}
+            {% set df   = 'high' if pct >= 66 else ('mid' if pct >= 33 else 'low') %}
+            <tr data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }} {{ co.get('name','')|lower }}"
+                data-lat="{{ co.get('latitude','') }}" data-lng="{{ co.get('longitude','') }}"
+                data-id="{{ p.student_id }}">
+              <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
               <td>
                 <div class="sname">{{ st.get('full_name','—') }}</div>
-                <div class="sadm">{{ st.get('admission_no','') }}</div>
-              </td>
-              <td style="font-weight:600">{{ co.get('name','—') }}</td>
-              <td style="color:#6b7280;font-size:12px">{{ co.get('city','') }}</td>
-              <td>
-                <span style="font-weight:600;color:#0d2167">{{ un.get('code','') }}</span>
-                <div style="font-size:11px;color:#9ca3af">{{ un.get('name','') }}</div>
+                <div class="sadm"><i class="fas fa-id-card" style="font-size:9px"></i> {{ st.get('admission_no','') }}</div>
+                {% if st.get('mobile_number') %}
+                <div class="sphone"><i class="fas fa-phone" style="font-size:9px"></i> {{ st.mobile_number }}</div>
+                {% endif %}
               </td>
               <td>
-                <span class="dot dot-{{ p.status }}"></span>
-                <span class="badge b-{{ p.status }}">{{ p.status|title }}</span>
+                <div class="company-name">{{ co.get('name','—') }}</div>
+                <div class="company-city">{{ co.get('city','') }}{% if co.get('industry_classification') %} · {{ co.industry_classification }}{% endif %}</div>
+                {% if p.get('mentor_name') %}
+                <div style="font-size:11px;color:#6b7280;margin-top:2px">
+                  <i class="fas fa-user-tie" style="font-size:9px"></i> {{ p.mentor_name }}
+                </div>
+                {% endif %}
               </td>
+              <td>
+                <span style="font-size:11px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:2px 7px;border-radius:5px">
+                  {{ un.get('code','') }}
+                </span>
+                <div style="font-size:11px;color:#9ca3af;margin-top:3px">{{ un.get('name','') }}</div>
+              </td>
+              <td style="font-size:12px;font-weight:600;white-space:nowrap">{{ p.start_date or '—' }}</td>
               <td style="font-size:12px;color:#6b7280;white-space:nowrap">
-                {{ p.start_date or '—' }} → {{ p.end_date or '—' }}
+                {{ p.end_date or '—' }}
               </td>
-              <td id="checkin-{{ p.student_id }}" style="font-size:12px;color:#9ca3af">—</td>
+              <td>
+                <div class="days-wrap">
+                  <span class="days-num" style="color:{% if df=='high' %}#15803d{% elif df=='mid' %}#b45309{% else %}#1d4ed8{% endif %}">{{ days }}</span>
+                  <span class="days-lbl"> days</span>
+                  <div class="days-bar">
+                    <div class="days-fill df-{{ df }}" style="width:{{ pct }}%"></div>
+                  </div>
+                  {% if p._is_ongoing %}
+                  <div class="ongoing-badge">
+                    <span class="ongoing-dot"></span> Ongoing
+                  </div>
+                  {% endif %}
+                </div>
+              </td>
+              <td class="checkin-cell" id="ci-{{ p.student_id }}">
+                <span style="color:#d1d5db;font-size:12px">—</span>
+              </td>
+              <td>
+                {% if co.get('latitude') and co.get('longitude') %}
+                <button class="pin-btn" id="pin-{{ loop.index }}"
+                        onclick="flyTo({{ co.latitude }}, {{ co.longitude }}, '{{ co.get('name','')|replace("'","\\'")|replace('"','\\"') }}', '{{ st.get('full_name','')|replace("'","\\'")|replace('"','\\"') }}', {{ loop.index }})">
+                  <i class="fas fa-map-pin"></i> Pin
+                </button>
+                {% else %}
+                <span style="font-size:11px;color:#d1d5db">No GPS</span>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
       {% else %}
-      <div class="empty-state"><i class="fas fa-map-pin"></i><p>No placements found for your department.</p></div>
+      <div class="empty-state">
+        <i class="fas fa-industry"></i>
+        <p style="font-size:15px;font-weight:600;color:#64748b;margin-bottom:6px">No placements found</p>
+        <p style="font-size:13px">
+          {% if period_filter %}No attachments starting in {{ PERIOD_LABELS.get(period_filter,'') }} {{ year_filter }}.
+          {% else %}No attachment records for {{ year_filter }}.{% endif %}
+        </p>
+      </div>
       {% endif %}
     </div>
-  </section>
 
-  <!-- ══════════════════════════ LOGBOOK TAB ══════════════════════════ -->
-  <section id="sec-logbook" class="hidden">
+  </div><!-- /sec-map -->
+
+  <!-- ════════════════ LOGBOOK TAB ════════════════ -->
+  <div id="sec-logbook" style="display:none">
 
     {% if logbook_error %}
     <div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:14px 20px;border-radius:10px;margin-bottom:20px;font-size:13px">
@@ -230,59 +472,52 @@
     </div>
     {% endif %}
 
-    <!-- Filter bar -->
-    <div class="filter-wrap" style="align-items:flex-end">
-      <input type="text"  id="lb-search"    placeholder="Search trainee name or admission no…" oninput="filterLogbook()" style="flex:2;min-width:200px">
-      <select id="lb-status" onchange="filterLogbook()">
+    <div class="lb-filter-bar">
+      <input type="text"  id="lb-q"    placeholder="Search trainee…" oninput="filterLB()" style="flex:2;min-width:200px">
+      <select id="lb-stat" onchange="filterLB()">
         <option value="all">All Statuses</option>
         <option value="approved">Approved</option>
         <option value="pending">Pending</option>
         <option value="rejected">Rejected</option>
       </select>
-      <input type="date" id="lb-date-from" onchange="filterLogbook()" title="From date" style="min-width:0">
-      <input type="date" id="lb-date-to"   onchange="filterLogbook()" title="To date"   style="min-width:0">
-      <button onclick="clearLBFilters()" style="padding:8px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+      <input type="date" id="lb-from" onchange="filterLB()" title="From date">
+      <input type="date" id="lb-to"   onchange="filterLB()" title="To date">
+      <button onclick="clearLB()" style="padding:8px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
         <i class="fas fa-undo"></i> Clear
       </button>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <span style="font-size:15px;font-weight:700;color:#0d2167">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <span style="font-size:15px;font-weight:800;color:#0d2167">
         <i class="fas fa-book-open" style="color:#1565c0;margin-right:6px"></i>Digital Logbook Entries
       </span>
-      <span id="lb-count" style="font-size:12px;color:#9ca3af">
-        {{ logbook_entries|length }} entr{{ 'ies' if logbook_entries|length!=1 else 'y' }}
-      </span>
+      <span id="lb-cnt" style="font-size:12px;color:#9ca3af">{{ logbook_entries|length }} entries</span>
     </div>
 
     {% if logbook_entries %}
-    <div id="lb-cards">
+    <div id="lb-list">
       {% for e in logbook_entries %}
-      {% set st     = e.student    or {} %}
-      {% set att    = e.attachment or {} %}
-      {% set co     = (att.get('companies') or {}) if att else {} %}
-      {% set lb_st  = e.get('mentor_approval_status') or 'pending' %}
-      {% set ev_list = e._evidence or [] %}
-      <div class="data-card" style="margin-bottom:16px;border-left:4px solid {% if lb_st=='approved' %}#22c55e{% elif lb_st=='rejected' %}#ef4444{% else %}#f59e0b{% endif %}"
-           data-status="{{ lb_st }}"
-           data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}"
-           data-date="{{ e.get('log_date','') }}">
+      {% set st   = e.student    or {} %}
+      {% set att  = e.attachment or {} %}
+      {% set co   = (att.get('companies') or {}) if att else {} %}
+      {% set lbst = e.get('mentor_approval_status') or 'pending' %}
+      <div class="lb-card"
+           style="border-left-color:{% if lbst=='approved' %}#22c55e{% elif lbst=='rejected' %}#ef4444{% else %}#f59e0b{% endif %}"
+           data-lbst="{{ lbst }}"
+           data-lbq="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}"
+           data-lbdate="{{ e.get('log_date','') }}">
 
-        <!-- Entry header -->
-        <div style="padding:12px 16px;border-bottom:1px solid #f3f4f6;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between">
+        <div style="padding:12px 18px;border-bottom:1px solid #f3f4f6;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between">
           <div>
-            <div style="font-weight:700;font-size:14px;color:#111827">{{ st.get('full_name','Unknown') }}</div>
-            <div style="font-size:11px;color:#9ca3af;margin-top:1px">
-              <i class="fas fa-id-card" style="font-size:9px"></i> {{ st.get('admission_no','—') }}
-              {% if co.get('name') %} &nbsp;&bull;&nbsp; <i class="fas fa-building" style="font-size:9px"></i> {{ co.name }}{% endif %}
+            <div style="font-weight:800;font-size:14px;color:#111827">{{ st.get('full_name','Unknown') }}</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">
+              {{ st.get('admission_no','—') }}
+              {% if co.get('name') %} &bull; <i class="fas fa-building" style="font-size:9px"></i> {{ co.name }}{% endif %}
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">
-              <span style="font-size:13px;font-weight:600;color:#374151"><i class="fas fa-calendar-day" style="color:#9ca3af;font-size:11px"></i> {{ e.get('log_date','—') }}</span>
-              {% if e.get('entry_time') %}
-              <span style="background:#ede9fe;color:#6d28d9;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700">
-                <i class="fas fa-clock"></i> {{ e.entry_time }}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center">
+              <span style="font-size:13px;font-weight:600;color:#374151">
+                <i class="fas fa-calendar-day" style="color:#9ca3af;font-size:10px"></i> {{ e.get('log_date','—') }}
               </span>
-              {% endif %}
               {% if e.get('hours_worked') %}
               <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">
                 <i class="fas fa-hourglass-half"></i> {{ e.hours_worked }}h
@@ -290,196 +525,144 @@
               {% endif %}
             </div>
           </div>
-          <span class="badge b-lb-{{ lb_st }}">
-            {% if lb_st=='approved' %}<i class="fas fa-check-circle"></i>{% elif lb_st=='rejected' %}<i class="fas fa-times-circle"></i>{% else %}<i class="fas fa-clock"></i>{% endif %}
-            {{ lb_st|title }}
+          <span style="display:inline-block;padding:3px 11px;border-radius:99px;font-size:11px;font-weight:700;
+            background:{% if lbst=='approved' %}#dcfce7{% elif lbst=='rejected' %}#fee2e2{% else %}#fef3c7{% endif %};
+            color:{% if lbst=='approved' %}#15803d{% elif lbst=='rejected' %}#b91c1c{% else %}#b45309{% endif %}">
+            {{ lbst|title }}
           </span>
         </div>
 
-        <!-- Activity fields -->
-        <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="padding:12px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-tasks" style="color:#6d28d9"></i> Tasks Performed</div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Tasks Performed</div>
             <div style="font-size:13px;color:#374151">{{ e.get('tasks_performed') or '—' }}</div>
           </div>
           <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-brain" style="color:#1d4ed8"></i> Skills Applied</div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Skills Applied</div>
             <div style="font-size:13px;color:#374151">{{ e.get('skills_applied') or '—' }}</div>
           </div>
-          {% if e.get('challenges_encountered') %}
-          <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i> Challenges</div>
-            <div style="font-size:13px;color:#374151">{{ e.challenges_encountered }}</div>
-          </div>
-          {% endif %}
           {% if e.get('achievements') %}
           <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-star" style="color:#15803d"></i> Achievements</div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Achievements</div>
             <div style="font-size:13px;color:#374151">{{ e.achievements }}</div>
           </div>
           {% endif %}
-        </div>
-
-        <!-- Evidence (horizontal row) -->
-        <div style="padding:10px 16px;border-top:1px solid #f9fafb;background:#fafbfd;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <span style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;margin-right:2px;flex-shrink:0">
-            <i class="fas fa-paperclip"></i> Evidence
-          </span>
-          {% if ev_list %}
-            {% for ev in ev_list %}
-              {% if ev.ext in ['jpg','jpeg','png','webp','gif'] %}
-              <a href="{{ ev.url }}" target="_blank" onclick="openLbLightbox('{{ ev.url }}');return false" title="{{ ev.name }}">
-                <img src="{{ ev.url }}" alt="{{ ev.name }}"
-                     style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;cursor:pointer;transition:transform .15s;flex-shrink:0"
-                     onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'"
-                     loading="lazy" onerror="this.style.display='none'">
-              </a>
-              {% elif ev.ext in ['mp4','mov','avi','webm','mkv'] %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;color:#15803d;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
-                <i class="fas fa-play-circle"></i> Video
-              </a>
-              {% elif ev.ext in ['mp3','wav','ogg','m4a','aac','flac'] %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:7px;color:#6d28d9;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
-                <i class="fas fa-headphones"></i> Audio
-              </a>
-              {% elif ev.ext == 'pdf' %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;color:#b91c1c;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
-                <i class="fas fa-file-pdf"></i> PDF
-              </a>
-              {% else %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:7px;color:#374151;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
-                <i class="fas fa-file"></i> File
-              </a>
-              {% endif %}
-            {% endfor %}
-          {% else %}
-          <span style="font-size:12px;color:#d1d5db;font-style:italic"><i class="fas fa-minus" style="font-size:10px;margin-right:3px"></i>No evidence attached</span>
+          {% if e.get('challenges_encountered') %}
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Challenges</div>
+            <div style="font-size:13px;color:#374151">{{ e.challenges_encountered }}</div>
+          </div>
           {% endif %}
         </div>
 
-        <!-- Mentor / trainer comments -->
-        {% if e.get('mentor_comments') or e.get('trainer_comments') %}
-        <div style="padding:8px 16px 12px;border-top:1px solid #f9fafb">
-          {% if e.get('mentor_comments') %}
-          <div style="font-size:12px;color:#6b7280;font-style:italic;margin-bottom:4px">
-            <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:4px"></i>
-            <strong>Supervisor:</strong> "{{ e.mentor_comments }}"
-          </div>
-          {% endif %}
-          {% if e.get('trainer_comments') %}
-          <div style="font-size:12px;color:#6b7280;font-style:italic">
-            <i class="fas fa-chalkboard-teacher" style="color:#6d28d9;margin-right:4px"></i>
-            <strong>Trainer:</strong> "{{ e.trainer_comments }}"
-          </div>
-          {% endif %}
+        {% set ev_list = e._evidence or [] %}
+        {% if ev_list %}
+        <div style="padding:8px 18px 10px;border-top:1px solid #f9fafb;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <span style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em"><i class="fas fa-paperclip"></i> Evidence</span>
+          {% for ev in ev_list %}
+            {% if ev.ext in ['jpg','jpeg','png','webp','gif'] %}
+            <a href="{{ ev.url }}" target="_blank" onclick="openLB('{{ ev.url }}');return false">
+              <img src="{{ ev.url }}" style="width:52px;height:52px;object-fit:cover;border-radius:7px;border:1px solid #e5e7eb;cursor:pointer" loading="lazy" onerror="this.style.display='none'">
+            </a>
+            {% elif ev.ext == 'pdf' %}
+            <a href="{{ ev.url }}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;color:#b91c1c;font-size:11px;font-weight:700;text-decoration:none">
+              <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            {% else %}
+            <a href="{{ ev.url }}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:7px;color:#374151;font-size:11px;font-weight:700;text-decoration:none">
+              <i class="fas fa-file"></i> File
+            </a>
+            {% endif %}
+          {% endfor %}
         </div>
         {% endif %}
 
+        {% if e.get('mentor_comments') %}
+        <div style="padding:8px 18px 12px;border-top:1px solid #f9fafb;font-size:12px;color:#6b7280;font-style:italic">
+          <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:4px"></i>
+          <strong>Supervisor:</strong> "{{ e.mentor_comments }}"
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
-
-    <div id="lb-no-results" style="display:none" class="empty-state">
+    <div id="lb-empty" style="display:none" class="empty-state">
       <i class="fas fa-search"></i><p>No entries match your filters.</p>
     </div>
-
     {% else %}
     <div class="empty-state">
       <i class="fas fa-book"></i>
-      <p>No logbook entries found for trainees in your department.</p>
-      <p style="font-size:12px;margin-top:6px">Trainees submit entries from Trainee Dashboard &rarr; Digital Logbook every 3 hours.</p>
+      <p style="font-size:14px;font-weight:600;color:#64748b">No logbook entries found.</p>
     </div>
     {% endif %}
+  </div>
 
-  </section>
-
-  <!-- ══════════════════════════ EXPORT TAB ══════════════════════════ -->
-  <section id="sec-export" style="display:none">
-    <div class="data-card" style="max-width:600px">
-      <div style="padding:18px 22px;border-bottom:1px solid #f3f4f6">
-        <div style="font-size:16px;font-weight:700;color:#0d2167"><i class="fas fa-file-download" style="color:#1565c0;margin-right:8px"></i>Export Attachment Report</div>
-        <div style="font-size:13px;color:#6b7280;margin-top:4px">Download your department's trainee attachment records for a specific period.</div>
+  <!-- ════════════════ EXPORT TAB ════════════════ -->
+  <div id="sec-export" style="display:none">
+    <div class="export-panel">
+      <div class="exp-title"><i class="fas fa-file-download" style="color:#1565c0;margin-right:8px"></i>Export Attachment Report</div>
+      <div class="exp-sub">Download your department's trainee attachment records for a specific period.</div>
+      <div class="exp-grid">
+        <div class="exp-fg">
+          <label>Period</label>
+          <select id="exp-period">
+            <option value="">Full Year</option>
+            <option value="1" {% if period_filter=='1' %}selected{% endif %}>January – April</option>
+            <option value="2" {% if period_filter=='2' %}selected{% endif %}>May – August</option>
+            <option value="3" {% if period_filter=='3' %}selected{% endif %}>September – December</option>
+          </select>
+        </div>
+        <div class="exp-fg">
+          <label>Year</label>
+          <select id="exp-year">
+            {% for y in range(2024, 2030) %}
+            <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
-      <div style="padding:22px;display:flex;flex-direction:column;gap:16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div>
-            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Attachment Period</label>
-            <select id="exp-period" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
-              <option value="">Full Year</option>
-              <option value="1">January – April</option>
-              <option value="2">May – August</option>
-              <option value="3">September – December</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Year</label>
-            <select id="exp-year" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
-              {% for y in range(2024, 2028) %}
-              <option value="{{ y }}" {% if y == 2026 %}selected{% endif %}>{{ y }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:4px">
-          <button type="button" onclick="doExport('excel')" class="btn-export btn-excel">
-            <i class="fas fa-file-excel"></i> Download Excel
-          </button>
-          <button type="button" onclick="doExport('pdf')" class="btn-export btn-pdf">
-            <i class="fas fa-file-pdf"></i> Download PDF
-          </button>
-        </div>
-        <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:12px;color:#1d4ed8">
-          <i class="fas fa-info-circle"></i>
-          <strong>Columns included:</strong> Admission No, Full Name, Trainee Phone, Company Attached, Location/Address, Supervisor Name, Supervisor Phone, Start Date, End Date, Status.
-        </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button class="btn-dl btn-excel" onclick="doExp('excel')">
+          <i class="fas fa-file-excel"></i> Download Excel
+        </button>
+        <button class="btn-dl btn-pdf" onclick="doExp('pdf')">
+          <i class="fas fa-file-pdf"></i> Download PDF
+        </button>
+      </div>
+      <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:12px;color:#1d4ed8;margin-top:18px">
+        <i class="fas fa-info-circle"></i>
+        <strong>Includes:</strong> Admission No, Full Name, Phone, Company, City, Mentor, Start Date, End Date, Days Spent, Status.
       </div>
     </div>
-  </section>
+  </div>
 
-</div><!-- /gis-app -->
+</div><!-- /ia-wrap -->
 
-{% block scripts %}{% endblock %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+/* ═══ DATA FROM SERVER ═══ */
+var PLACEMENTS = {{ placements  | tojson | safe }};
+var LIVE_LOCS  = {{ live_locations | tojson | safe }};
+var MAX_DAYS   = {{ max_days }};
+
 /* ═══ TAB SWITCHING ═══ */
-function gTab(tab) {
-  ['gis','logbook','export'].forEach(function(t) {
-    document.getElementById('sec-'+t).style.display = (t === tab) ? '' : 'none';
-    var btn = document.getElementById('tab-'+t);
-    if (t === tab) {
-      btn.className = 'gtab-active px-6 py-2.5 rounded-xl text-sm font-bold border flex items-center gap-2';
-    } else {
-      btn.className = 'px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-transparent hover:bg-slate-50 flex items-center gap-2';
-    }
+function switchTab(name) {
+  ['map','logbook','export'].forEach(function(t) {
+    document.getElementById('sec-'+t).style.display = t === name ? '' : 'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t === name);
   });
 }
 
-/* ═══ EXPORT ═══ */
-function doExport(fmt) {
-  var period = document.getElementById('exp-period').value;
-  var year   = document.getElementById('exp-year').value;
-  window.location.href = '/dept-admin/gis-tracking/export?format=' + fmt + '&period=' + period + '&year=' + year;
-  return false;
-}
-
-/* ═══ MAP SETUP ═══ */
-var PLACEMENTS   = {{ placements    | tojson | safe }};
-var LIVE_LOCS    = {{ live_locations | tojson | safe }};
-
+/* ═══ MAP ═══ */
 var map = L.map('map').setView([-1.038, 37.083], 11);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
 }).addTo(map);
 
-var bounds    = [];
-var allMarkers = [];
+var bounds = [];
+var markerIndex = {};  /* loop.index → leaflet marker */
 
-/* Company / placement site markers */
-PLACEMENTS.forEach(function(p) {
+PLACEMENTS.forEach(function(p, idx) {
   var co  = p.companies || {};
   var st  = p.student   || {};
   var un  = p.units     || {};
@@ -487,28 +670,36 @@ PLACEMENTS.forEach(function(p) {
   var lng = parseFloat(co.longitude);
   if (!lat || !lng) return;
 
-  var color = p.status === 'active' ? '#3b82f6' : p.status === 'approved' ? '#22c55e' : '#f59e0b';
-  var marker = L.circleMarker([lat, lng], {
-    radius: 12, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.85
+  var isOngoing = p._is_ongoing;
+  var color     = isOngoing ? '#1d4ed8' : '#22c55e';
+  var days      = p._days_spent || 0;
+
+  var m = L.circleMarker([lat, lng], {
+    radius: 13, fillColor: color, color: '#fff', weight: 2.5, fillOpacity: 0.88
   }).addTo(map);
 
-  var geofenceR = parseFloat(co.geofence_radius_meters || 300);
-  L.circle([lat, lng], { radius: geofenceR, color: color, fillColor: color, fillOpacity: 0.08, weight: 1 }).addTo(map);
+  /* Geofence ring */
+  var gfR = parseFloat(co.geofence_radius_meters || 300);
+  L.circle([lat, lng], { radius: gfR, color: color, fillColor: color,
+    fillOpacity: 0.06, weight: 1, dashArray: '4 4' }).addTo(map);
 
-  marker.bindPopup(
-    '<div style="font-family:Inter,sans-serif;min-width:200px">' +
-    '<b style="font-size:14px">'+escHtml(co.name || '—')+'</b>' +
-    '<div style="color:#6b7280;font-size:12px;margin-top:2px">'+escHtml(co.city || '')+'</div>' +
-    '<hr style="margin:8px 0;border-color:#f3f4f6">' +
-    '<b>Student:</b> '+escHtml(st.full_name||'—')+' ('+escHtml(st.admission_no||'')+')<br>' +
-    '<b>Unit:</b> '+escHtml(un.code||'')+' '+escHtml(un.name||'')+'<br>' +
-    '<b>Status:</b> '+p.status+'<br>' +
-    '<b>Period:</b> '+(p.start_date||'—')+' → '+(p.end_date||'—') +
+  m.bindPopup(
+    '<div style="font-family:Inter,sans-serif;min-width:220px;font-size:13px">' +
+    '<div style="font-size:15px;font-weight:800;color:#0d2167;margin-bottom:4px">'+esc(co.name||'—')+'</div>' +
+    '<div style="color:#6b7280;font-size:11px;margin-bottom:8px">'+esc(co.city||'')+'</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:8px">' +
+    '<div><span style="color:#9ca3af">Trainee</span><br><strong>'+esc(st.full_name||'—')+'</strong></div>' +
+    '<div><span style="color:#9ca3af">Adm No.</span><br><strong>'+esc(st.admission_no||'—')+'</strong></div>' +
+    '<div><span style="color:#9ca3af">Unit</span><br><strong>'+esc(un.code||'')+' '+esc(un.name||'')+'</strong></div>' +
+    '<div><span style="color:#9ca3af">Days Spent</span><br><strong style="color:#1d4ed8">'+days+' days</strong></div>' +
+    '<div><span style="color:#9ca3af">Start</span><br>'+esc(p.start_date||'—')+'</div>' +
+    '<div><span style="color:#9ca3af">End</span><br>'+(p.end_date ? esc(p.end_date) : '<span style="color:#22c55e;font-weight:700">Ongoing</span>')+'</div>' +
+    '</div>' +
+    (p.mentor_name ? '<div style="font-size:11px;color:#6b7280"><i class="fas fa-user-tie"></i> Mentor: '+esc(p.mentor_name)+'</div>' : '') +
     '</div>'
   );
   bounds.push([lat, lng]);
-  allMarkers.push({ marker: marker, status: p.status,
-                    search: (st.full_name||'').toLowerCase()+' '+(co.name||'').toLowerCase() });
+  markerIndex[idx + 1] = m;  /* 1-based index to match loop.index */
 });
 
 /* Live check-in markers */
@@ -520,101 +711,107 @@ LIVE_LOCS.forEach(function(loc) {
   var lng = parseFloat(loc.longitude);
   if (!lat || !lng) return;
   var st  = loc.student || {};
+  var ci  = loc.check_in_time ? loc.check_in_time.replace('T',' ').slice(0,16) : '—';
 
   var liveIcon = L.divIcon({
     className: '',
-    html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #ef4444;animation:pulseDot 1.4s infinite"></div>',
-    iconSize: [16, 16], iconAnchor: [8, 8]
+    html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #ef4444;animation:pulse-dot 1.4s infinite"></div>',
+    iconSize: [16,16], iconAnchor: [8,8]
   });
-
-  var ci = loc.check_in_time ? loc.check_in_time.replace('T',' ').slice(0,16) : '—';
-  var co = loc.check_out_time ? loc.check_out_time.replace('T',' ').slice(0,16) : 'Still checked in';
 
   var m = L.marker([lat, lng], { icon: liveIcon }).addTo(map);
   m.bindPopup(
-    '<div style="font-family:Inter,sans-serif;min-width:190px">' +
-    '<b style="color:#ef4444"><i class="fas fa-map-pin"></i> Live Location</b>' +
-    '<hr style="margin:6px 0;border-color:#f3f4f6">' +
-    '<b>Student:</b> '+escHtml(st.full_name||'—')+' ('+escHtml(st.admission_no||'')+')<br>' +
-    '<b>Check-in:</b> '+ci+'<br>' +
-    '<b>Check-out:</b> '+co+'<br>' +
-    (loc.accuracy_meters ? '<b>Accuracy:</b> '+loc.accuracy_meters+' m<br>' : '') +
-    '<b>Within geofence:</b> '+(loc.is_within_geofence ? '✅ Yes' : '❌ No') +
+    '<div style="font-family:Inter,sans-serif;min-width:200px;font-size:13px">' +
+    '<div style="color:#ef4444;font-weight:800;margin-bottom:6px"><i class="fas fa-map-pin"></i> Live Check-in</div>' +
+    '<strong>'+esc(st.full_name||'—')+'</strong> ('+esc(st.admission_no||'')+')<br>' +
+    '<span style="color:#9ca3af">Check-in:</span> '+ci+'<br>' +
+    '<span style="color:#9ca3af">Geofence:</span> '+(loc.is_within_geofence ? '<span style="color:#15803d">✓ Inside</span>' : '<span style="color:#b91c1c">✗ Outside</span>') +
     '</div>'
   );
   bounds.push([lat, lng]);
 
-  /* Populate "Last Check-in" column in table */
-  var cell = document.getElementById('checkin-'+loc.student_id);
+  /* Populate checkin cell in table */
+  var cell = document.getElementById('ci-'+loc.student_id);
   if (cell) {
-    cell.innerHTML = '<span style="color:#374151;font-weight:600">'+ci+'</span>' +
-      (loc.is_within_geofence
-        ? '<br><span style="color:#15803d;font-size:10px"><i class="fas fa-check-circle"></i> In geofence</span>'
-        : '<br><span style="color:#b91c1c;font-size:10px"><i class="fas fa-times-circle"></i> Outside geofence</span>');
+    cell.innerHTML =
+      '<div style="font-weight:600;color:#374151;font-size:12px">'+ci+'</div>' +
+      '<div style="font-size:10px;margin-top:2px;color:'+(loc.is_within_geofence?'#15803d':'#b91c1c')+'">' +
+      (loc.is_within_geofence ? '✓ In geofence' : '✗ Outside geofence')+'</div>';
   }
 });
 
-if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
+if (bounds.length) map.fitBounds(bounds, { padding: [36, 36] });
 
-/* ═══ GIS FILTER ═══ */
-function filterGIS() {
-  var q      = document.getElementById('gis-search').value.toLowerCase().trim();
-  var status = document.getElementById('gis-status').value;
-  document.querySelectorAll('#placement-table tbody tr').forEach(function(row) {
-    var ms = status === 'all' || row.dataset.status === status;
-    var mq = !q || (row.dataset.search || '').includes(q);
-    row.style.display = ms && mq ? '' : 'none';
+/* ═══ FLY TO PIN ═══ */
+function flyTo(lat, lng, company, trainee, idx) {
+  /* Reset all pin buttons */
+  document.querySelectorAll('.pin-btn').forEach(function(b){ b.classList.remove('active-pin'); });
+  var btn = document.getElementById('pin-'+idx);
+  if (btn) btn.classList.add('active-pin');
+
+  map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+  if (markerIndex[idx]) markerIndex[idx].openPopup();
+}
+
+/* ═══ TABLE FILTER ═══ */
+function filterTable() {
+  var q = document.getElementById('ia-search').value.toLowerCase().trim();
+  var visible = 0;
+  document.querySelectorAll('#ia-table tbody tr').forEach(function(r) {
+    var show = !q || (r.dataset.search || '').includes(q);
+    r.style.display = show ? '' : 'none';
+    if (show) visible++;
   });
+  document.getElementById('ia-count').textContent = visible + ' shown';
 }
 
 /* ═══ LOGBOOK FILTER ═══ */
-function filterLogbook() {
-  var q    = document.getElementById('lb-search').value.toLowerCase().trim();
-  var stat = document.getElementById('lb-status').value;
-  var from = document.getElementById('lb-date-from').value;
-  var to   = document.getElementById('lb-date-to').value;
+function filterLB() {
+  var q    = document.getElementById('lb-q').value.toLowerCase().trim();
+  var stat = document.getElementById('lb-stat').value;
+  var from = document.getElementById('lb-from').value;
+  var to   = document.getElementById('lb-to').value;
   var vis  = 0;
-  document.querySelectorAll('#lb-cards > .data-card').forEach(function(card) {
-    var ms = stat === 'all' || card.dataset.status === stat;
-    var mq = !q    || (card.dataset.search || '').includes(q);
-    var d  = card.dataset.date || '';
-    var mf = !from || d >= from;
-    var mt = !to   || d <= to;
-    var show = ms && mq && mf && mt;
-    card.style.display = show ? '' : 'none';
-    if (show) vis++;
+  document.querySelectorAll('#lb-list > .lb-card').forEach(function(c) {
+    var ok = (stat==='all'||c.dataset.lbst===stat)
+          && (!q   || (c.dataset.lbq||'').includes(q))
+          && (!from|| c.dataset.lbdate>=from)
+          && (!to  || c.dataset.lbdate<=to);
+    c.style.display = ok ? '' : 'none';
+    if (ok) vis++;
   });
-  var cnt = document.getElementById('lb-count');
-  if (cnt) cnt.textContent = vis + ' entr' + (vis !== 1 ? 'ies' : 'y');
-  var nr = document.getElementById('lb-no-results');
-  if (nr) nr.style.display = (vis === 0) ? '' : 'none';
+  document.getElementById('lb-cnt').textContent = vis + ' entr'+(vis!==1?'ies':'y');
+  document.getElementById('lb-empty').style.display = vis===0 ? '' : 'none';
+}
+function clearLB() {
+  ['lb-q','lb-from','lb-to'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('lb-stat').value='all';
+  filterLB();
 }
 
-function clearLBFilters() {
-  ['lb-search','lb-date-from','lb-date-to'].forEach(function(id) {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('lb-status').value = 'all';
-  filterLogbook();
-}
-
-/* ═══ LIGHTBOX (logbook images) ═══ */
-function openLbLightbox(url) {
-  var lb = document.getElementById('lb-lightbox');
+/* ═══ LIGHTBOX ═══ */
+function openLB(url) {
+  var lb = document.getElementById('ia-lightbox');
   if (!lb) {
-    lb = document.createElement('div');
-    lb.id = 'lb-lightbox';
-    lb.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;';
-    lb.innerHTML = '<span style="position:absolute;top:18px;right:26px;color:#fff;font-size:34px;cursor:pointer;line-height:1" onclick="this.parentElement.style.display=\'none\'">&times;</span><img id="lb-lb-img" style="max-width:90vw;max-height:90vh;border-radius:8px">';
-    lb.addEventListener('click', function(e){ if(e.target===lb) lb.style.display='none'; });
+    lb = document.createElement('div'); lb.id='ia-lightbox';
+    lb.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    lb.innerHTML='<span style="position:absolute;top:16px;right:24px;color:#fff;font-size:36px;cursor:pointer" onclick="document.getElementById(\'ia-lightbox\').remove()">&times;</span>'+
+      '<img id="ia-lb-img" style="max-width:90vw;max-height:90vh;border-radius:8px">';
+    lb.addEventListener('click', function(e){ if(e.target===lb) lb.remove(); });
     document.body.appendChild(lb);
   }
-  document.getElementById('lb-lb-img').src = url;
-  lb.style.display = 'flex';
+  document.getElementById('ia-lb-img').src = url;
+}
+
+/* ═══ EXPORT ═══ */
+function doExp(fmt) {
+  var p = document.getElementById('exp-period').value;
+  var y = document.getElementById('exp-year').value;
+  window.location.href = '/dept-admin/gis-tracking/export?format='+fmt+'&period='+p+'&year='+y;
 }
 
 /* ═══ HELPER ═══ */
-function escHtml(s) {
+function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 </script>

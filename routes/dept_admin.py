@@ -2161,35 +2161,73 @@ def review_logbook(log_id):
 @dept_admin_bp.route("/gis-tracking")
 @dept_admin_required
 def gis_tracking():
-    db = get_service_client()
+    from datetime import date as _date, datetime as _dt
+    import os
+    db      = get_service_client()
     dept_id = _dept_id()
 
-    # ── Students enrolled in this department ────────────────────────────────────
+    # ── Filters ────────────────────────────────────────────────────────────────
+    period_filter = request.args.get("period", "").strip()   # 1=Jan-Apr, 2=May-Aug, 3=Sep-Dec
+    year_filter   = request.args.get("year",   str(_date.today().year)).strip()
+    PERIOD_RANGES = {
+        "1": (f"{year_filter}-01-01", f"{year_filter}-04-30"),
+        "2": (f"{year_filter}-05-01", f"{year_filter}-08-31"),
+        "3": (f"{year_filter}-09-01", f"{year_filter}-12-31"),
+    }
+    PERIOD_LABELS = {"1": "January – April", "2": "May – August", "3": "September – December"}
+
+    # ── Dept students ──────────────────────────────────────────────────────────
     enr = (db.table("enrollments")
            .select("student_id, classes!inner(department_id)")
            .eq("classes.department_id", dept_id)
            .execute().data or [])
     student_ids = list({e["student_id"] for e in enr})
 
-    # ── Industrial attachments (company locations on map) ───────────────────────
+    # ── All placements (no status filter — show everything submitted) ──────────
     placements = []
     try:
         if student_ids:
-            placements = (db.table("industrial_attachments")
-                .select("id, student_id, status, start_date, end_date, "
-                        "companies(name, latitude, longitude, city, "
-                        "  industry_classification, geofence_radius_meters), "
-                        "units(name, code), "
-                        "student:user_profiles!industrial_attachments_student_id_fkey"
-                        "(full_name, admission_no)")
-                .in_("student_id", student_ids)
-                .in_("status", ["active", "approved", "pending"])
-                .order("created_at", desc=True)
-                .execute().data or [])
+            q = (db.table("industrial_attachments")
+                 .select("id, student_id, status, start_date, end_date, "
+                         "mentor_name, mentor_phone, "
+                         "companies(name, address, latitude, longitude, city, "
+                         "  phone, website, industry_classification, geofence_radius_meters), "
+                         "units(name, code), "
+                         "student:user_profiles!industrial_attachments_student_id_fkey"
+                         "(full_name, admission_no, mobile_number)")
+                 .in_("student_id", student_ids)
+                 .order("start_date", desc=True))
+
+            if period_filter and period_filter in PERIOD_RANGES:
+                d0, d1 = PERIOD_RANGES[period_filter]
+                q = q.gte("start_date", d0).lte("start_date", d1)
+            elif year_filter:
+                q = q.gte("start_date", f"{year_filter}-01-01").lte("start_date", f"{year_filter}-12-31")
+
+            placements = q.execute().data or []
     except Exception as e:
         flash(f"Error loading placements: {e}", "warning")
 
-    # ── Live locations: most recent check-in per student ────────────────────────
+    # ── Compute days spent for each placement ──────────────────────────────────
+    today = _date.today()
+    for p in placements:
+        try:
+            sd = _date.fromisoformat(p["start_date"]) if p.get("start_date") else None
+            ed_raw = p.get("end_date")
+            ed = _date.fromisoformat(ed_raw) if ed_raw else None
+            if sd:
+                end = min(ed, today) if ed else today
+                p["_days_spent"]  = max(0, (end - sd).days)
+                p["_total_days"]  = (ed - sd).days if ed else None
+                p["_is_ongoing"]  = not ed or ed >= today
+            else:
+                p["_days_spent"] = p["_total_days"] = 0
+                p["_is_ongoing"] = False
+        except Exception:
+            p["_days_spent"] = p["_total_days"] = 0
+            p["_is_ongoing"] = False
+
+    # ── Live locations ─────────────────────────────────────────────────────────
     live_locations = []
     try:
         if student_ids:
@@ -2209,15 +2247,12 @@ def gis_tracking():
     except Exception as e:
         print(f"[gis_tracking] location_logs: {e}")
 
-    # Attach student info to live locations from placements
-    student_map = {p.get("student_id"): p.get("student") or {}
-                   for p in placements if p.get("student_id")}
+    student_map = {p.get("student_id"): p.get("student") or {} for p in placements}
     for loc in live_locations:
         loc["student"] = student_map.get(loc["student_id"], {})
 
-    # ── Digital Logbook entries ─────────────────────────────────────────────────
-    import os
-    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+    # ── Digital Logbook ────────────────────────────────────────────────────────
+    supabase_url  = os.environ.get("SUPABASE_URL", "").strip()
     logbook_entries = []
     logbook_error   = None
     try:
@@ -2232,30 +2267,24 @@ def gis_tracking():
                         "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
                         "(companies(name))")
                 .in_("student_id", student_ids)
-                .order("log_date", desc=True)
-                .limit(500)
+                .order("log_date", desc=True).limit(500)
                 .execute().data or [])
-
-        # Pre-process evidence URLs
         for entry in logbook_entries:
             ev_paths = entry.get("evidence_urls") or []
             entry["_evidence"] = [
-                {
-                    "url": f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
-                    "ext": p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
-                    "name": p.rsplit("/", 1)[-1],
-                }
+                {"url": f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                 "ext": p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                 "name": p.rsplit("/", 1)[-1]}
                 for p in ev_paths if p
             ]
     except Exception as e:
         logbook_error = str(e)
-        print(f"[gis_tracking] digital_logbook: {e}")
 
-    status_counts = {"active": 0, "approved": 0, "pending": 0}
-    for p in placements:
-        s = p.get("status", "")
-        if s in status_counts:
-            status_counts[s] += 1
+    # ── Summary stats ──────────────────────────────────────────────────────────
+    active_count   = sum(1 for p in placements if p.get("_is_ongoing"))
+    companies_set  = {(p.get("companies") or {}).get("name") for p in placements if (p.get("companies") or {}).get("name")}
+    avg_days       = round(sum(p["_days_spent"] for p in placements) / len(placements), 1) if placements else 0
+    max_days       = max((p["_days_spent"] for p in placements), default=0)
 
     return render_template(
         "dept_admin/gis_tracking.html",
@@ -2263,8 +2292,14 @@ def gis_tracking():
         live_locations=live_locations,
         logbook_entries=logbook_entries,
         logbook_error=logbook_error,
-        status_counts=status_counts,
         total_students=len(student_ids),
+        active_count=active_count,
+        companies_count=len(companies_set),
+        avg_days=avg_days,
+        max_days=max_days,
+        period_filter=period_filter,
+        year_filter=year_filter,
+        PERIOD_LABELS=PERIOD_LABELS,
     )
 
 
