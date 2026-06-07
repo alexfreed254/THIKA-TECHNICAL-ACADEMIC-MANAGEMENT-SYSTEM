@@ -283,10 +283,9 @@
         <a href="/student/attendance" class="q-btn"><i class="fas fa-calendar-check"></i>Attendance</a>
         <a href="/student/marks" class="q-btn"><i class="fas fa-chart-bar"></i>My Marks</a>
         <a href="/student/exam-booking-form" class="q-btn"><i class="fas fa-file-alt"></i>Book Exam</a>
-        <a href="/admission/" class="q-btn"><i class="fas fa-file-upload"></i>Documents</a>
+        <a href="/student/documents" class="q-btn"><i class="fas fa-file-upload"></i>Documents</a>
         <a href="/clearance/" class="q-btn"><i class="fas fa-clipboard-check"></i>Clearance</a>
         <a href="/student/logbook" class="q-btn"><i class="fas fa-book-open"></i>Logbook</a>
-        <a href="/student/jobs" class="q-btn"><i class="fas fa-briefcase"></i>Job Portal</a>
       </div>
     </div>
   </div>
@@ -340,18 +339,6 @@
     {% endif %}
   </div>
 
-  {% else %}
-  <!-- No active attachment -->
-  <div class="c-card" style="margin-bottom:20px">
-    <div class="empty-box">
-      <i class="fas fa-industry"></i>
-      <h4>No Active Industrial Attachment</h4>
-      <p>Apply for industrial attachment to gain hands-on practical experience</p>
-      <a href="/student/industrial-attachment" style="display:inline-flex;align-items:center;gap:7px;margin-top:16px;background:linear-gradient(135deg,#312e81,#6d28d9);color:#fff;border-radius:9999px;padding:10px 22px;font-size:13px;font-weight:700;text-decoration:none">
-        <i class="fas fa-plus"></i> Request Attachment
-      </a>
-    </div>
-  </div>
   {% endif %}
 
   <!-- ── Two column: Attendance + Assessments ──────────────── -->
