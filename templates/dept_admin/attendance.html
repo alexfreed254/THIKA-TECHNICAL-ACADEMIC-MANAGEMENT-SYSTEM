@@ -1,41 +1,262 @@
 {% extends "dept_admin/base.html" %}
-{% block title %}Attendance{% endblock %}
-{% block page_title %}Attendance Overview{% endblock %}
+{% block title %}Unit Attendance{% endblock %}
+{% block page_title %}Unit Attendance{% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-present{background:#e8f5e9;color:#2e7d32}
-.badge-absent{background:#ffebee;color:#c62828}
+<style>
+  .page-wrap { padding: 24px; max-width: 1200px; }
+
+  /* ── Section card ── */
+  .section-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .sc-head {
+    padding: 14px 22px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .sc-title {
+    font-size: 14.5px; font-weight: 700; color: #1e293b;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sc-body { padding: 20px 22px; }
+
+  /* ── Filter grid ── */
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .fg label {
+    display: block; font-size: 11.5px; font-weight: 700;
+    color: #6b7280; text-transform: uppercase;
+    letter-spacing: .04em; margin-bottom: 5px;
+  }
+  .fg select {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; background: #f9fafb;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .fg select:focus {
+    outline: none; border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21,101,192,.1); background: #fff;
+  }
+  .btn-filter {
+    padding: 9px 22px;
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: opacity .15s;
+  }
+  .btn-filter:hover { opacity: .9; }
+  .btn-clear {
+    padding: 9px 16px; background: #f3f4f6; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-clear:hover { background: #e5e7eb; }
+
+  /* ── Summary pills ── */
+  .summary-pills {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .pill {
+    padding: 10px 18px; border-radius: 10px;
+    font-weight: 700; font-size: 13.5px;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .pill-present { background: #dcfce7; color: #15803d; }
+  .pill-absent  { background: #fee2e2; color: #b91c1c; }
+  .pill-total   { background: #dbeafe; color: #1d4ed8; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+
+  table thead th {
+    background: #f9fafb !important;
+    color: #6b7280 !important;
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  table tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 13px; color: #374151;
+    vertical-align: middle;
+  }
+  table tbody tr:last-child td { border-bottom: none; }
+  table tbody tr:hover td { background: #f8fafc; }
+
+  /* Unit badge */
+  .unit-tag {
+    display: inline-block;
+    background: #eff6ff; color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 5px; padding: 2px 8px;
+    font-size: 11px; font-weight: 700;
+  }
+
+  /* Status badges */
+  .badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 11px; font-weight: 700;
+  }
+  .badge-present { background: #dcfce7; color: #15803d; }
+  .badge-absent  { background: #fee2e2; color: #b91c1c; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 52px 20px; color: #9ca3af; }
+  .empty-state i { font-size: 42px; display: block; margin-bottom: 14px; opacity: .35; }
+  .empty-state p { font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #64748b; }
+  .empty-state small { font-size: 13px; }
+</style>
 {% endblock %}
+
 {% block content %}
 <div class="page-wrap">
-  <div class="card">
-    <div class="card-header"><i class="fas fa-clipboard-list"></i> Recent Attendance Records (last 100)</div>
-    <table>
-      <thead>
-        <tr><th>Student</th><th>Unit</th><th>Class</th><th>Week</th><th>Lesson</th><th>Status</th><th>Date</th></tr>
-      </thead>
-      <tbody>
-        {% for a in attendance %}
-        <tr>
-          <td>{{ a.get('user_profiles',{}).get('full_name','—') }}<br><small style="color:#aaa">{{ a.get('user_profiles',{}).get('admission_no','') }}</small></td>
-          <td>{{ a.get('units',{}).get('name','—') }}</td>
-          <td>{{ a.get('classes',{}).get('name','—') }}</td>
-          <td>{{ a.get('week','—') }}</td>
-          <td>{{ a.get('lesson','—') }}</td>
-          <td><span class="badge badge-{{ a.get('status','absent') }}">{{ a.get('status','absent')|title }}</span></td>
-          <td>{{ a.get('attendance_date','—')[:10] if a.get('attendance_date') else '—' }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px">No attendance records found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+  <!-- ── Filter ── -->
+  <div class="section-card">
+    <div class="sc-head">
+      <span class="sc-title">
+        <i class="fas fa-filter" style="color:#1565c0"></i> Filter Attendance Records
+      </span>
+    </div>
+    <div class="sc-body">
+      <form method="get" action="/dept-admin/attendance">
+        <div class="filter-grid">
+          <div class="fg">
+            <label>Class</label>
+            <select name="class_id">
+              <option value="">All Classes</option>
+              {% for c in classes %}
+              <option value="{{ c.id }}" {% if class_filter == c.id %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Unit</label>
+            <select name="unit_id">
+              <option value="">All Units</option>
+              {% for u in units %}
+              <option value="{{ u.id }}" {% if unit_filter == u.id %}selected{% endif %}>{{ u.code }} – {{ u.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="submit" class="btn-filter">
+            <i class="fas fa-search"></i> Filter
+          </button>
+          {% if class_filter or unit_filter %}
+          <a href="/dept-admin/attendance" class="btn-clear">
+            <i class="fas fa-times"></i> Clear
+          </a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
   </div>
+
+  <!-- ── Results ── -->
+  <div class="section-card">
+    <div class="sc-head">
+      <span class="sc-title">
+        <i class="fas fa-clipboard-list" style="color:#1565c0"></i>
+        Attendance Records
+        <span style="background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">
+          {{ attendance|length }}
+        </span>
+      </span>
+    </div>
+
+    {% if attendance %}
+    {% set present_count = attendance | selectattr('status', 'equalto', 'present') | list | length %}
+    {% set absent_count  = attendance | length - present_count %}
+
+    <div style="padding:16px 22px 0">
+      <div class="summary-pills">
+        <div class="pill pill-present">
+          <i class="fas fa-check-circle"></i> Present: {{ present_count }}
+        </div>
+        <div class="pill pill-absent">
+          <i class="fas fa-times-circle"></i> Absent: {{ absent_count }}
+        </div>
+        <div class="pill pill-total">
+          <i class="fas fa-users"></i> Total: {{ attendance|length }}
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student</th>
+            <th>Unit</th>
+            <th>Class</th>
+            <th style="text-align:center">Week</th>
+            <th style="text-align:center">Lesson</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in attendance %}
+          {% set student = a.get('user_profiles') or {} %}
+          {% set unit    = a.get('units') or {} %}
+          {% set cls     = a.get('classes') or {} %}
+          <tr>
+            <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
+            <td>
+              <div style="font-weight:600;color:#111827">{{ student.get('full_name','—') }}</div>
+              <div style="font-size:11.5px;color:#9ca3af;margin-top:2px">{{ student.get('admission_no','') }}</div>
+            </td>
+            <td>
+              <span class="unit-tag">{{ unit.get('code','—') }}</span>
+              <div style="font-size:12px;color:#6b7280;margin-top:3px">{{ unit.get('name','') }}</div>
+            </td>
+            <td style="color:#6b7280">{{ cls.get('name','—') }}</td>
+            <td style="text-align:center;font-weight:600">{{ a.get('week','—') }}</td>
+            <td style="text-align:center;font-weight:600">{{ a.get('lesson','—') }}</td>
+            <td>
+              <span class="badge badge-{{ a.get('status','absent') }}">
+                {% if a.get('status') == 'present' %}✓ Present{% else %}✗ Absent{% endif %}
+              </span>
+            </td>
+            <td style="font-size:12px;color:#9ca3af;white-space:nowrap">
+              {{ a.get('attendance_date','—')[:10] if a.get('attendance_date') else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-clipboard-list"></i>
+      <p>No attendance records found.</p>
+      <small>{% if class_filter or unit_filter %}Try clearing the filters above.{% else %}Records will appear here once trainers mark attendance.{% endif %}</small>
+    </div>
+    {% endif %}
+  </div>
+
 </div>
 {% endblock %}
