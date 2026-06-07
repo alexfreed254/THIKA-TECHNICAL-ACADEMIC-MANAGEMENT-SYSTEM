@@ -1,53 +1,271 @@
 {% extends "super_admin/base.html" %}
-{% block title %}Clearances{% endblock %}
-{% block page_title %}Clearance Requests{% endblock %}
+{% block title %}Clearance Approvals{% endblock %}
+{% block page_title %}Clearance Approvals (Institute-Wide){% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}
-.filter-bar{background:#fff;border-radius:12px;padding:14px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-.filter-bar label{font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px}
-.filter-bar select{padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px}
-.btn-sm{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700}
-.btn-primary{background:#1565c0;color:#fff}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:11px;color:#666;border-bottom:2px solid #eee;text-transform:uppercase}
-td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-pending,.badge-in_progress{background:#fff3e0;color:#e65100}
-.badge-completed{background:#e8f5e9;color:#2e7d32}
-.badge-rejected{background:#ffebee;color:#c62828}
+<style>
+  .cl-wrap { padding: 24px; }
+
+  /* ── Header ── */
+  .cl-banner {
+    background: linear-gradient(135deg, #0a0f1e, #0f1f40);
+    border-radius: 14px; padding: 22px 28px; margin-bottom: 24px;
+    color: #fff; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .cl-banner h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+  .cl-banner p  { font-size: 13px; color: rgba(255,255,255,.6); margin: 0; }
+
+  /* ── Summary pills ── */
+  .summary-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; }
+  .chip {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; border-radius: 12px; background: #fff;
+    border: 1px solid #e5e7eb; flex: 1; min-width: 140px;
+  }
+  .chip-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .chip-num  { font-size: 24px; font-weight: 800; color: #111827; line-height: 1; }
+  .chip-lbl  { font-size: 12px; color: #6b7280; font-weight: 500; margin-top: 3px; }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 16px 22px; margin-bottom: 24px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .filter-bar .fg { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }
+  .filter-bar label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+  .filter-bar select {
+    padding: 9px 13px; border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; background: #f9fafb; width: 100%;
+    transition: border-color .2s;
+  }
+  .filter-bar select:focus { outline: none; border-color: #fbbf24; background: #fff; }
+  .btn-filter {
+    padding: 9px 20px; background: linear-gradient(135deg,#0a0f1e,#0f1f40);
+    color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .btn-filter:hover { opacity: .9; }
+  .btn-reset {
+    padding: 9px 14px; background: #f3f4f6; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-reset:hover { background: #e5e7eb; }
+
+  /* ── Status tabs ── */
+  .tab-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tab-link {
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .tab-link:hover { background: #fefce8; border-color: #fbbf24; color: #92400e; }
+  .tab-link.active { background: linear-gradient(135deg,#0a0f1e,#0f1f40); border-color: #0a0f1e; color: #fbbf24; }
+  .tab-count {
+    display: inline-block; padding: 1px 7px; border-radius: 9999px;
+    font-size: 11px; font-weight: 700; background: rgba(255,255,255,.2);
+  }
+  .tab-link:not(.active) .tab-count { background: #e5e7eb; color: #374151; }
+
+  /* ── Table ── */
+  .table-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+  .table-card-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid #f3f4f6;
+  }
+  .table-card-hdr h2 { font-size: 15px; font-weight: 700; color: #0d2167; margin: 0; }
+
+  .cl-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cl-tbl thead { background: #f0f5fb; }
+  .cl-tbl th {
+    padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700;
+    color: #1565c0; text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 2px solid #dbeafe; white-space: nowrap;
+  }
+  .cl-tbl td {
+    padding: 12px 14px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+  }
+  .cl-tbl tr:last-child td { border-bottom: none; }
+  .cl-tbl tr:hover td { background: #fefce8; }
+
+  /* left accent by status */
+  .row-pending td:first-child, .row-in_progress td:first-child { border-left: 4px solid #f59e0b; }
+  .row-completed td:first-child { border-left: 4px solid #22c55e; }
+  .row-rejected  td:first-child { border-left: 4px solid #ef4444; }
+
+  .student-name { font-weight: 700; color: #111827; }
+  .student-adm  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
+  .b-pending,.b-in_progress { background: #fef3c7; color: #b45309; }
+  .b-completed { background: #dcfce7; color: #15803d; }
+  .b-rejected  { background: #fee2e2; color: #b91c1c; }
+
+  .cert-ok   { color: #15803d; font-weight: 600; font-size: 12px; }
+  .cert-none { color: #d1d5db; font-size: 12px; }
+
+  .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; margin: 0; }
+</style>
 {% endblock %}
+
 {% block content %}
-<div class="page-wrap">
-  <form method="get" class="filter-bar">
-    <div><label>Status</label>
-      <select name="status">
-        <option value="">All Statuses</option>
-        {% for s in ['pending','in_progress','completed','rejected'] %}<option value="{{ s }}" {% if s==status_filter %}selected{% endif %}>{{ s|replace('_',' ')|title }}</option>{% endfor %}
+<div class="cl-wrap">
+
+  <!-- ── Banner ── -->
+  <div class="cl-banner">
+    <div>
+      <h1><i class="fas fa-clipboard-check" style="color:#fbbf24;margin-right:8px"></i>Clearance Approvals</h1>
+      <p>Monitor and manage clearance requests from all trainees across every department.</p>
+    </div>
+    <div style="background:rgba(251,191,36,.2);color:#fbbf24;border:1px solid rgba(251,191,36,.3);padding:7px 18px;border-radius:99px;font-size:13px;font-weight:700">
+      <i class="fas fa-shield-alt" style="margin-right:5px"></i>{{ clearances|length }} total requests
+    </div>
+  </div>
+
+  <!-- ── Summary chips ── -->
+  {% set cnt_all       = clearances|length %}
+  {% set cnt_pending   = clearances | selectattr('status','in',['pending','in_progress']) | list | length %}
+  {% set cnt_completed = clearances | selectattr('status','equalto','completed') | list | length %}
+  {% set cnt_rejected  = clearances | selectattr('status','equalto','rejected')  | list | length %}
+  <div class="summary-row">
+    <div class="chip">
+      <div class="chip-icon" style="background:#dbeafe"><i class="fas fa-list-ol" style="color:#1d4ed8"></i></div>
+      <div><div class="chip-num">{{ cnt_all }}</div><div class="chip-lbl">Total Requests</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#fef3c7"><i class="fas fa-clock" style="color:#b45309"></i></div>
+      <div><div class="chip-num">{{ cnt_pending }}</div><div class="chip-lbl">Pending / In Progress</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
+      <div><div class="chip-num">{{ cnt_completed }}</div><div class="chip-lbl">Completed</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#fee2e2"><i class="fas fa-times-circle" style="color:#b91c1c"></i></div>
+      <div><div class="chip-num">{{ cnt_rejected }}</div><div class="chip-lbl">Rejected</div></div>
+    </div>
+  </div>
+
+  <!-- ── Filters ── -->
+  <form method="get" action="/super-admin/clearances" class="filter-bar">
+    <input type="hidden" name="status" value="{{ status_filter }}">
+    <div class="fg">
+      <label>Department</label>
+      <select name="department">
+        <option value="">All Departments</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {% if dept_filter == d.id %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
       </select>
     </div>
-    <button type="submit" class="btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn-filter"><i class="fas fa-filter"></i> Filter</button>
+      {% if dept_filter or status_filter %}
+      <a href="/super-admin/clearances" class="btn-reset"><i class="fas fa-times"></i> Clear</a>
+      {% endif %}
+    </div>
   </form>
-  <div class="card">
-    <div class="card-header"><i class="fas fa-clipboard-check"></i> Clearance Requests ({{ clearances|length }})</div>
-    <table>
-      <thead><tr><th>Student</th><th>Course</th><th>Department</th><th>Status</th><th>Certificate</th><th>Initiated</th></tr></thead>
-      <tbody>
-        {% for c in clearances %}
-        <tr>
-          <td>{{ c.get('user_profiles',{}).get('full_name','—') }}<br><small style="color:#aaa">{{ c.get('user_profiles',{}).get('admission_no','') }}</small></td>
-          <td>{{ c.get('courses',{}).get('name','—') }}</td>
-          <td>{{ c.get('departments',{}).get('name','—') }}</td>
-          <td><span class="badge badge-{{ c.get('status','pending')|replace(' ','_') }}">{{ c.get('status','pending')|replace('_',' ')|title }}</span></td>
-          <td>{% if c.get('certificate_issued') %}<span style="color:#2e7d32"><i class="fas fa-check-circle"></i> Issued</span>{% else %}—{% endif %}</td>
-          <td>{{ c.get('created_at','—')[:10] if c.get('created_at') else '—' }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6" style="text-align:center;color:#aaa;padding:32px">No clearance requests found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+  <!-- ── Status tabs ── -->
+  <div class="tab-bar">
+    <a href="/super-admin/clearances{% if dept_filter %}?department={{ dept_filter }}&{% else %}?{% endif %}status="
+       class="tab-link {% if not status_filter %}active{% endif %}">
+      <i class="fas fa-list"></i> All
+      <span class="tab-count">{{ cnt_all }}</span>
+    </a>
+    <a href="/super-admin/clearances{% if dept_filter %}?department={{ dept_filter }}&{% else %}?{% endif %}status=pending"
+       class="tab-link {% if status_filter == 'pending' %}active{% endif %}">
+      <i class="fas fa-clock"></i> Pending
+      <span class="tab-count">{{ clearances | selectattr('status','equalto','pending') | list | length }}</span>
+    </a>
+    <a href="/super-admin/clearances{% if dept_filter %}?department={{ dept_filter }}&{% else %}?{% endif %}status=in_progress"
+       class="tab-link {% if status_filter == 'in_progress' %}active{% endif %}">
+      <i class="fas fa-spinner"></i> In Progress
+      <span class="tab-count">{{ clearances | selectattr('status','equalto','in_progress') | list | length }}</span>
+    </a>
+    <a href="/super-admin/clearances{% if dept_filter %}?department={{ dept_filter }}&{% else %}?{% endif %}status=completed"
+       class="tab-link {% if status_filter == 'completed' %}active{% endif %}">
+      <i class="fas fa-check-circle"></i> Completed
+      <span class="tab-count">{{ cnt_completed }}</span>
+    </a>
+    <a href="/super-admin/clearances{% if dept_filter %}?department={{ dept_filter }}&{% else %}?{% endif %}status=rejected"
+       class="tab-link {% if status_filter == 'rejected' %}active{% endif %}">
+      <i class="fas fa-times-circle"></i> Rejected
+      <span class="tab-count">{{ cnt_rejected }}</span>
+    </a>
   </div>
+
+  <!-- ── Table ── -->
+  <div class="table-card">
+    <div class="table-card-hdr">
+      <h2><i class="fas fa-clipboard-list" style="color:#fbbf24;margin-right:6px"></i>Clearance Requests</h2>
+      <span style="font-size:12px;color:#9ca3af">{{ clearances|length }} record{{ 's' if clearances|length != 1 }}</span>
+    </div>
+
+    {% if clearances %}
+    <div style="overflow-x:auto">
+      <table class="cl-tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Trainee</th>
+            <th>Course</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Certificate</th>
+            <th>Initiated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in clearances %}
+          {% set st = c.get('status','pending') %}
+          <tr class="row-{{ st }}">
+            <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
+            <td>
+              <div class="student-name">{{ c.get('user_profiles',{}).get('full_name','—') }}</div>
+              <div class="student-adm"><i class="fas fa-id-card" style="font-size:9px;margin-right:2px"></i>{{ c.get('user_profiles',{}).get('admission_no','') }}</div>
+            </td>
+            <td style="font-size:13px;color:#374151">{{ c.get('courses',{}).get('name','—') }}</td>
+            <td style="font-size:13px;color:#6b7280">{{ c.get('departments',{}).get('name','—') }}</td>
+            <td>
+              <span class="badge b-{{ st }}">
+                {% if st == 'pending' %}<i class="fas fa-clock"></i>
+                {% elif st == 'in_progress' %}<i class="fas fa-spinner"></i>
+                {% elif st == 'completed' %}<i class="fas fa-check-circle"></i>
+                {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+                {{ st | replace('_', ' ') | title }}
+              </span>
+            </td>
+            <td>
+              {% if c.get('certificate_issued') %}
+              <span class="cert-ok"><i class="fas fa-certificate"></i> Issued</span>
+              {% elif c.get('certificate_path') %}
+              <a href="{{ c.certificate_path }}" target="_blank" class="cert-ok" style="text-decoration:none">
+                <i class="fas fa-file-pdf"></i> View
+              </a>
+              {% else %}
+              <span class="cert-none">—</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12px;color:#9ca3af;white-space:nowrap">
+              {{ c.get('created_at','')[:10] if c.get('created_at') else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-clipboard-check"></i>
+      <p>No clearance requests found{% if status_filter %} with status <strong>{{ status_filter | replace('_',' ') | title }}</strong>{% endif %}.</p>
+    </div>
+    {% endif %}
+  </div>
+
 </div>
 {% endblock %}

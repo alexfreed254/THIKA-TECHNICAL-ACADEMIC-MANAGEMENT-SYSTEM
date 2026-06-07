@@ -556,44 +556,159 @@ def courses():
 @super_admin_bp.route("/logs")
 @super_admin_required
 def logs():
-    db = _svc()
-    logs_list = db.table("system_logs").select("*, user_profiles(full_name, role)").order("created_at", desc=True).limit(200).execute().data or []
-    return render_template("super_admin/system_logs.html", logs=logs_list)
+    db      = _svc()
+    page    = max(1, int(request.args.get("page", 1)))
+    q       = request.args.get("q", "").strip()
+    action_filter = request.args.get("action", "").strip()
+    per_page = 100
+    offset   = (page - 1) * per_page
+
+    query = db.table("system_logs").select("*, user_profiles(full_name, role)")
+    if action_filter:
+        query = query.ilike("action", f"%{action_filter}%")
+    logs_list = (query.order("created_at", desc=True)
+                      .range(offset, offset + per_page - 1)
+                      .execute().data or [])
+
+    if q:
+        ql = q.lower()
+        logs_list = [l for l in logs_list if
+                     ql in (l.get("action") or "").lower() or
+                     ql in (l.get("target") or "").lower() or
+                     ql in ((l.get("user_profiles") or {}).get("full_name") or "").lower()]
+
+    # Collect distinct action types for filter dropdown
+    all_actions = []
+    try:
+        all_actions = sorted({l.get("action", "") for l in
+                              (db.table("system_logs").select("action")
+                                  .execute().data or []) if l.get("action")})
+    except Exception:
+        pass
+
+    return render_template("super_admin/system_logs.html",
+                           logs=logs_list, page=page,
+                           q=q, action_filter=action_filter,
+                           all_actions=all_actions,
+                           per_page=per_page)
 
 
-# ── Attendance Overview ────────────────────────────────────────────────────────
+# ── Attendance Matrix (institute-wide) ────────────────────────────────────────
 
 @super_admin_bp.route("/attendance")
 @super_admin_required
 def attendance():
+    from datetime import date as _date
     db = _svc()
-    dept_filter  = request.args.get("department", "")
-    class_filter = request.args.get("class_id", "")
 
-    records = db.table("attendance").select(
-        "*, user_profiles:user_profiles!attendance_student_id_fkey(full_name, admission_no, enrollments(classes(name, department_id))), "
-        "units(name, code)"
-    ).order("attendance_date", desc=True).limit(300).execute().data or []
-    
-    for r in records:
-        student = r.get("user_profiles") or {}
-        enrolls = student.get("enrollments") or []
-        first_enroll = enrolls[0] if enrolls else {}
-        cls = first_enroll.get("classes") or {}
-        r["classes"] = cls
-
-    if dept_filter:
-        records = [r for r in records if r.get("classes", {}).get("department_id") == dept_filter]
-    if class_filter:
-        records = [r for r in records if r.get("class_id") == class_filter]
+    dept_filter  = request.args.get("dept_id",   "").strip()
+    class_filter = request.args.get("class_id",  "").strip()
+    unit_filter  = request.args.get("unit_id",   "").strip()
+    term_filter  = request.args.get("term",      "").strip()
+    year_filter  = request.args.get("year",      str(_date.today().year)).strip()
 
     departments = db.table("departments").select("id, name").order("name").execute().data or []
-    classes     = db.table("classes").select("id, name").order("name").execute().data or []
 
-    return render_template("super_admin/attendance.html",
-                           records=records, departments=departments,
-                           classes=classes, dept_filter=dept_filter,
-                           class_filter=class_filter)
+    # Classes and units scoped to selected department (or all)
+    cq = db.table("classes").select("id, name, department_id")
+    if dept_filter:
+        cq = cq.eq("department_id", dept_filter)
+    classes = cq.order("name").execute().data or []
+
+    uq = db.table("units").select("id, name, code, department_id")
+    if dept_filter:
+        uq = uq.eq("department_id", dept_filter)
+    units = uq.order("name").execute().data or []
+
+    LESSONS = ["L1", "L2", "L3", "L4"]
+    WEEKS   = list(range(1, 13))
+    matrix  = []
+    unit_obj = cls_obj = None
+    term_int = int(term_filter) if term_filter else None
+    year_int = int(year_filter) if year_filter else None
+
+    if class_filter and unit_filter:
+        unit_obj = next((u for u in units if u["id"] == unit_filter), None)
+        cls_obj  = next((c for c in classes if c["id"] == class_filter), None)
+
+        enr_rows = (db.table("enrollments")
+                    .select("student_id, "
+                            "user_profiles!enrollments_student_id_fkey"
+                            "(id, full_name, admission_no)")
+                    .eq("class_id", class_filter)
+                    .execute().data or [])
+
+        students_ordered = []
+        for e in enr_rows:
+            up  = e.get("user_profiles") or {}
+            sid = up.get("id") or e.get("student_id")
+            if sid and not any(s["id"] == sid for s in students_ordered):
+                students_ordered.append({
+                    "id":           sid,
+                    "full_name":    up.get("full_name", "—"),
+                    "admission_no": up.get("admission_no", "—"),
+                })
+        students_ordered.sort(key=lambda s: s["full_name"])
+
+        student_ids = [s["id"] for s in students_ordered]
+        att_rows    = []
+        if student_ids:
+            q = (db.table("attendance")
+                 .select("student_id, week, lesson, status")
+                 .eq("unit_id", unit_filter)
+                 .in_("student_id", student_ids))
+            if term_int:
+                q = q.eq("term", term_int)
+            if year_int:
+                q = q.eq("year", year_int)
+            att_rows = q.execute().data or []
+
+        pivot = {}
+        for r in att_rows:
+            pivot.setdefault(r["student_id"], {})[(r["week"], r["lesson"])] = r["status"]
+
+        for s in students_ordered:
+            cells   = {}
+            present = absent = 0
+            for w in WEEKS:
+                for l in LESSONS:
+                    st = pivot.get(s["id"], {}).get((w, l))
+                    cells[(w, l)] = st
+                    if st == "present":
+                        present += 1
+                    elif st == "absent":
+                        absent += 1
+            total = present + absent
+            pct   = round(present / total * 100, 1) if total else 0
+            matrix.append({
+                "id":           s["id"],
+                "full_name":    s["full_name"],
+                "admission_no": s["admission_no"],
+                "cells":        cells,
+                "present":      present,
+                "absent":       absent,
+                "total":        total,
+                "pct":          pct,
+            })
+
+    return render_template(
+        "super_admin/attendance.html",
+        departments=departments,
+        classes=classes,
+        units=units,
+        dept_filter=dept_filter,
+        class_filter=class_filter,
+        unit_filter=unit_filter,
+        term_filter=term_filter,
+        year_filter=year_filter,
+        term_int=term_int,
+        year_int=year_int,
+        matrix=matrix,
+        unit_obj=unit_obj,
+        cls_obj=cls_obj,
+        WEEKS=WEEKS,
+        LESSONS=LESSONS,
+    )
 
 
 # ── Trainees POE ───────────────────────────────────────────────────────────────
@@ -968,15 +1083,24 @@ def employer_verifications():
 def clearances():
     db = _svc()
     status_filter = request.args.get("status", "")
+    dept_filter   = request.args.get("department", "")
+
     query = db.table("clearance_requests").select(
         "*, user_profiles!clearance_requests_student_id_fkey(full_name, admission_no), "
         "courses(name, code), departments(name)"
-    ).order("created_at", desc=True).limit(300)
+    ).order("created_at", desc=True).limit(500)
     if status_filter:
         query = query.eq("status", status_filter)
+    if dept_filter:
+        query = query.eq("department_id", dept_filter)
     records = query.execute().data or []
+
+    departments = db.table("departments").select("id, name").order("name").execute().data or []
     return render_template("super_admin/clearances.html",
-                           clearances=records, status_filter=status_filter)
+                           clearances=records,
+                           departments=departments,
+                           status_filter=status_filter,
+                           dept_filter=dept_filter)
 
 
 # ── Admission Requests ─────────────────────────────────────────────────────────
@@ -2055,10 +2179,11 @@ def trainer_poe():
 @super_admin_required
 def import_data():
     db = _svc()
-    classes = db.table("classes").select("id,name").order("name").execute().data or []
-    results = []; result_summary = None; error = None
+    departments = db.table("departments").select("id, name").order("name").execute().data or []
+    classes     = db.table("classes").select("id, name, department_id, departments(name)").order("name").execute().data or []
+    result_summary = None; error = None
     if request.method == "POST":
         flash("Import submitted.", "info")
     return render_template("super_admin/import.html",
-                           classes=classes, results=results,
+                           departments=departments, classes=classes,
                            result=result_summary, error=error)

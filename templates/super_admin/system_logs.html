@@ -1,55 +1,251 @@
 {% extends "super_admin/base.html" %}
-{% block title %}System Logs{% endblock %}
+{% block title %}Audit Logs{% endblock %}
 {% block page_title %}System Audit Logs{% endblock %}
 
 {% block extra_style %}
-.page-wrap { padding:24px; }
-.card { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); overflow:hidden; }
-.card-header { background:#1565c0; color:#fff; padding:14px 20px; font-size:14px; font-weight:600; }
-table { width:100%; border-collapse:collapse; font-size:12px; }
-th { background:#f5f5f5; padding:10px 14px; text-align:left; color:#555; border-bottom:2px solid #eee; }
-td { padding:10px 14px; border-bottom:1px solid #f5f5f5; vertical-align:top; }
-.action-badge { display:inline-block; background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
-.pager { display:flex; gap:12px; padding:16px 20px; justify-content:flex-end; }
-.pager a { padding:6px 14px; background:#1565c0; color:#fff; border-radius:6px; text-decoration:none; font-size:13px; }
+<style>
+  .logs-wrap { padding: 24px; }
+
+  /* ── Page header ── */
+  .logs-banner {
+    background: linear-gradient(135deg, #0a0f1e, #0f1f40);
+    border-radius: 14px; padding: 22px 28px; margin-bottom: 24px;
+    color: #fff; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .logs-banner h1 { font-size: 20px; font-weight: 800; margin: 0 0 3px; }
+  .logs-banner p  { font-size: 13px; color: rgba(255,255,255,.6); margin: 0; }
+  .logs-banner .cnt-badge {
+    background: rgba(251,191,36,.2); color: #fbbf24;
+    border: 1px solid rgba(251,191,36,.3);
+    padding: 6px 18px; border-radius: 99px; font-size: 14px; font-weight: 700;
+  }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 16px 22px; margin-bottom: 20px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .filter-bar .fg { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 200px; }
+  .filter-bar label { font-size: 11px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: .05em; }
+  .filter-bar input, .filter-bar select {
+    padding: 9px 13px; border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; background: #f9fafb; width: 100%;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .filter-bar input:focus, .filter-bar select:focus {
+    outline: none; border-color: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251,191,36,.15); background: #fff;
+  }
+  .btn-filter {
+    padding: 9px 20px; background: linear-gradient(135deg, #0a0f1e, #0f1f40);
+    color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .btn-filter:hover { opacity: .9; }
+  .btn-clear {
+    padding: 9px 14px; background: #f3f4f6; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-clear:hover { background: #e5e7eb; }
+
+  /* ── Table card ── */
+  .table-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+  .table-card-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid #f3f4f6; flex-wrap: wrap; gap: 10px;
+  }
+  .table-card-hdr h2 { font-size: 15px; font-weight: 700; color: #0d2167; margin: 0; }
+
+  .logs-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .logs-tbl thead { background: #f0f5fb; }
+  .logs-tbl th {
+    padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700;
+    color: #1565c0; text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 2px solid #dbeafe; white-space: nowrap;
+  }
+  .logs-tbl td {
+    padding: 11px 14px; color: #374151;
+    border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+  }
+  .logs-tbl tr:last-child td { border-bottom: none; }
+  .logs-tbl tr:hover td { background: #fefce8; }
+
+  /* ── Action badge colours ── */
+  .ab { display: inline-block; padding: 3px 9px; border-radius: 6px;
+        font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .ab-create  { background: #dcfce7; color: #15803d; }
+  .ab-delete  { background: #fee2e2; color: #b91c1c; }
+  .ab-update  { background: #dbeafe; color: #1d4ed8; }
+  .ab-login   { background: #ede9fe; color: #6d28d9; }
+  .ab-logout  { background: #f3f4f6; color: #374151; }
+  .ab-send    { background: #fef3c7; color: #b45309; }
+  .ab-export  { background: #e0f2fe; color: #0369a1; }
+  .ab-import  { background: #f0fdf4; color: #15803d; }
+  .ab-verify  { background: #faf5ff; color: #7c3aed; }
+  .ab-other   { background: #f9fafb; color: #6b7280; }
+
+  .actor-name { font-weight: 600; color: #111827; }
+  .actor-role { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  .target-cell { font-size: 12px; color: #6b7280; max-width: 220px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .time-cell { font-size: 12px; color: #9ca3af; white-space: nowrap; }
+  .ip-cell   { font-size: 11px; color: #d1d5db; font-family: monospace; }
+
+  /* ── Pagination ── */
+  .pager {
+    display: flex; gap: 10px; padding: 16px 20px;
+    justify-content: space-between; align-items: center;
+    border-top: 1px solid #f3f4f6; flex-wrap: wrap;
+  }
+  .pager-info { font-size: 13px; color: #6b7280; }
+  .pager-btns { display: flex; gap: 8px; }
+  .pager a {
+    padding: 7px 18px; border-radius: 8px; text-decoration: none;
+    font-size: 13px; font-weight: 600;
+    background: linear-gradient(135deg, #0a0f1e, #0f1f40); color: #fff;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .pager a:hover { opacity: .88; }
+
+  .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; margin: 0; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="page-wrap">
-  <div class="card">
-    <div class="card-header"><i class="fas fa-history"></i> Audit Log — Page {{ page }}</div>
-    <div style="overflow-x:auto;">
-      <table>
+<div class="logs-wrap">
+
+  <!-- ── Banner ── -->
+  <div class="logs-banner">
+    <div>
+      <h1><i class="fas fa-history" style="margin-right:8px;color:#fbbf24"></i>System Audit Logs</h1>
+      <p>All system actions recorded by every user across the institute.</p>
+    </div>
+    <div class="cnt-badge">
+      <i class="fas fa-shield-alt" style="margin-right:6px"></i>
+      Page {{ page }} &nbsp;&bull;&nbsp; {{ logs|length }} entries
+    </div>
+  </div>
+
+  <!-- ── Filter bar ── -->
+  <form method="get" action="/super-admin/logs" class="filter-bar">
+    <div class="fg">
+      <label><i class="fas fa-search"></i> Quick search</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search action, target, actor…" autocomplete="off">
+    </div>
+    <div class="fg" style="max-width:220px">
+      <label><i class="fas fa-tag"></i> Action type</label>
+      <select name="action">
+        <option value="">All Actions</option>
+        {% for a in all_actions %}
+        <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn-filter"><i class="fas fa-filter"></i> Filter</button>
+      {% if q or action_filter %}
+      <a href="/super-admin/logs" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- ── Table ── -->
+  <div class="table-card">
+    <div class="table-card-hdr">
+      <h2><i class="fas fa-list" style="color:#fbbf24;margin-right:6px"></i>Audit Entries</h2>
+      <span style="font-size:12px;color:#9ca3af">{{ logs|length }} record{{ 's' if logs|length != 1 }}</span>
+    </div>
+
+    {% if logs %}
+    <div style="overflow-x:auto">
+      <table class="logs-tbl">
         <thead>
           <tr>
-            <th>Time</th>
+            <th>#</th>
+            <th>Timestamp</th>
             <th>Actor</th>
-            <th>Role</th>
             <th>Action</th>
-            <th>Target</th>
-            <th>IP</th>
+            <th>Target / Detail</th>
+            <th>IP Address</th>
           </tr>
         </thead>
         <tbody>
           {% for log in logs %}
-          <tr>
-            <td style="white-space:nowrap;color:#888;">{{ log.created_at | to_eat('%d %b %Y %H:%M') }}</td>
-            <td>{{ log.actor_id[:8] ~ '…' if log.actor_id else '—' }}</td>
-            <td>{{ log.actor_role or '—' }}</td>
-            <td><span class="action-badge">{{ log.action }}</span></td>
-            <td>{{ log.target or '—' }}</td>
-            <td style="color:#aaa;">{{ log.ip_address or '—' }}</td>
-          </tr>
+          {% set action_lc = (log.action or '') | lower %}
+          {% if 'create' in action_lc or 'add' in action_lc %}
+            {% set ab_cls = 'ab-create' %}
+          {% elif 'delete' in action_lc or 'remov' in action_lc %}
+            {% set ab_cls = 'ab-delete' %}
+          {% elif 'update' in action_lc or 'edit' in action_lc or 'change' in action_lc %}
+            {% set ab_cls = 'ab-update' %}
+          {% elif 'login' in action_lc or 'signin' in action_lc %}
+            {% set ab_cls = 'ab-login' %}
+          {% elif 'logout' in action_lc or 'signout' in action_lc %}
+            {% set ab_cls = 'ab-logout' %}
+          {% elif 'send' in action_lc or 'notice' in action_lc %}
+            {% set ab_cls = 'ab-send' %}
+          {% elif 'export' in action_lc or 'download' in action_lc %}
+            {% set ab_cls = 'ab-export' %}
+          {% elif 'import' in action_lc or 'upload' in action_lc %}
+            {% set ab_cls = 'ab-import' %}
+          {% elif 'verify' in action_lc or 'approv' in action_lc %}
+            {% set ab_cls = 'ab-verify' %}
           {% else %}
-          <tr><td colspan="6" style="text-align:center;color:#aaa;padding:32px;">No logs found.</td></tr>
+            {% set ab_cls = 'ab-other' %}
+          {% endif %}
+          {% set actor = log.get('user_profiles') or {} %}
+          <tr>
+            <td style="color:#9ca3af;font-size:12px">{{ loop.index + (page - 1) * per_page }}</td>
+            <td class="time-cell">{{ log.created_at | to_eat('%d %b %Y') if log.created_at else '—' }}<br>
+              <span style="font-size:10px">{{ log.created_at | to_eat('%H:%M:%S') if log.created_at else '' }}</span>
+            </td>
+            <td>
+              <div class="actor-name">{{ actor.get('full_name') or (log.get('actor_id','')[:12] ~ '…' if log.get('actor_id') else '—') }}</div>
+              <div class="actor-role">{{ (actor.get('role') or log.get('actor_role') or '') | replace('_', ' ') | title }}</div>
+            </td>
+            <td><span class="ab {{ ab_cls }}">{{ log.action or '—' }}</span></td>
+            <td class="target-cell" title="{{ log.target or '' }}">{{ log.target or '—' }}</td>
+            <td class="ip-cell">{{ log.ip_address or '—' }}</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
     <div class="pager">
-      {% if page > 1 %}<a href="?page={{ page - 1 }}">← Previous</a>{% endif %}
-      {% if logs|length == 50 %}<a href="?page={{ page + 1 }}">Next →</a>{% endif %}
+      <span class="pager-info">
+        Page {{ page }} &nbsp;&bull;&nbsp;
+        Showing {{ (page-1)*per_page + 1 }}–{{ (page-1)*per_page + logs|length }}
+      </span>
+      <div class="pager-btns">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}&q={{ q }}&action={{ action_filter }}">
+          <i class="fas fa-arrow-left"></i> Previous
+        </a>
+        {% endif %}
+        {% if logs|length == per_page %}
+        <a href="?page={{ page + 1 }}&q={{ q }}&action={{ action_filter }}">
+          Next <i class="fas fa-arrow-right"></i>
+        </a>
+        {% endif %}
+      </div>
     </div>
+
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-history"></i>
+      <p>No audit log entries found{% if q %} matching "{{ q }}"{% endif %}.</p>
+    </div>
+    {% endif %}
   </div>
+
 </div>
 {% endblock %}
