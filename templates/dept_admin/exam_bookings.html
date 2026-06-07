@@ -151,11 +151,29 @@
     <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
       <div>
         <label style="display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:4px">Status</label>
-        <select id="exp-status" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;min-width:140px">
+        <select id="exp-status" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;min-width:130px">
           <option value="">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:4px">Year</label>
+        <select id="exp-year" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;min-width:100px">
+          <option value="">All Years</option>
+          {% for y in range(2024, 2030) %}
+          <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:4px">Term</label>
+        <select id="exp-term" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;min-width:130px">
+          <option value="">All Terms</option>
+          <option value="1" {% if term_filter == '1' %}selected{% endif %}>Term 1 (Jan–Apr)</option>
+          <option value="2" {% if term_filter == '2' %}selected{% endif %}>Term 2 (May–Aug)</option>
+          <option value="3" {% if term_filter == '3' %}selected{% endif %}>Term 3 (Sep–Dec)</option>
         </select>
       </div>
       <a href="#" onclick="doExport();return false"
@@ -171,16 +189,34 @@
     </div>
   </div>
 
-  <!-- ── Search bar ──────────────────────────────────────── -->
+  <!-- ── Search + filter bar ─────────────────────────────── -->
   <form method="get" action="/dept-admin/exam-bookings" class="top-bar">
     <input type="hidden" name="status" value="{{ status_filter }}">
     <div class="search-fg">
       <label><i class="fas fa-search"></i> Search trainee</label>
       <input name="q" type="text" value="{{ q }}" placeholder="Name or admission number…" autocomplete="off">
     </div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Year</label>
+      <select name="year" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#f9fafb">
+        <option value="">All Years</option>
+        {% for y in range(2024, 2030) %}
+        <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Term</label>
+      <select name="term" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#f9fafb">
+        <option value="">All Terms</option>
+        <option value="1" {% if term_filter == '1' %}selected{% endif %}>Term 1 (Jan–Apr)</option>
+        <option value="2" {% if term_filter == '2' %}selected{% endif %}>Term 2 (May–Aug)</option>
+        <option value="3" {% if term_filter == '3' %}selected{% endif %}>Term 3 (Sep–Dec)</option>
+      </select>
+    </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
-      <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
-      {% if q %}
+      <button type="submit" class="btn-search"><i class="fas fa-search"></i> Filter</button>
+      {% if q or year_filter or term_filter %}
       <a href="/dept-admin/exam-bookings?status={{ status_filter }}" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
       {% endif %}
     </div>
@@ -330,6 +366,15 @@
                 "{{ b.rejection_reason }}"
               </div>
               {% endif %}
+              {% if b.status == 'approved' %}
+              <a href="/dept-admin/exam-bookings/trainee/{{ b.student_id }}/approved-pdf"
+                 target="_blank"
+                 style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;
+                        padding:4px 10px;background:#1565c0;color:#fff;border-radius:6px;
+                        font-size:11px;font-weight:700;text-decoration:none">
+                <i class="fas fa-file-pdf"></i> View Approved
+              </a>
+              {% endif %}
             </div>
             {% endif %}
           </td>
@@ -361,7 +406,11 @@
 <script>
 function doExport() {
   var status = document.getElementById('exp-status').value;
-  var url = '/dept-admin/exam-bookings/export?status=' + encodeURIComponent(status);
+  var year   = document.getElementById('exp-year').value;
+  var term   = document.getElementById('exp-term').value;
+  var url = '/dept-admin/exam-bookings/export?status=' + encodeURIComponent(status)
+          + '&year=' + encodeURIComponent(year)
+          + '&term=' + encodeURIComponent(term);
   window.location.href = url;
 }
 </script>

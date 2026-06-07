@@ -631,18 +631,22 @@ def download_unit_report(unit_id):
 @dept_admin_bp.route("/exam-bookings")
 @dept_admin_required
 def exam_bookings():
+    from datetime import date as _date
     db = get_service_client()
     dept_id       = _dept_id()
     status_filter = request.args.get("status", "all")
     q             = request.args.get("q", "").strip()
+    year_filter   = request.args.get("year",  "").strip()
+    term_filter   = request.args.get("term",  "").strip()
 
-    # Filter by students enrolled in THIS department (not by unit.department_id)
+    # term → month range
+    TERM_MONTHS = {"1": ("01","04"), "2": ("05","08"), "3": ("09","12")}
+
     enr = (db.table("enrollments")
            .select("student_id, classes!inner(department_id, name)")
            .eq("classes.department_id", dept_id)
            .execute().data or [])
 
-    # Build student_id → class_name map
     student_class = {}
     for e in enr:
         sid = e.get("student_id")
@@ -666,29 +670,31 @@ def exam_bookings():
         if status_filter and status_filter != "all":
             query = query.eq("status", status_filter)
 
+        yr = year_filter or str(_date.today().year)
+        if year_filter:
+            query = query.gte("exam_date", f"{yr}-01-01").lte("exam_date", f"{yr}-12-31")
+        if term_filter and term_filter in TERM_MONTHS:
+            m0, m1 = TERM_MONTHS[term_filter]
+            query = query.gte("exam_date", f"{yr}-{m0}-01").lte("exam_date", f"{yr}-{m1}-31")
+
         bookings = query.execute().data or []
 
-    # Flatten nested aliases and attach class name
     for b in bookings:
-        b["student_user"]    = b.get("student")  or {}
+        b["student_user"]     = b.get("student")  or {}
         b["approved_by_user"] = b.get("reviewer") or {}
-        b["class_name"]      = student_class.get(b.get("student_id"), "—")
+        b["class_name"]       = student_class.get(b.get("student_id"), "—")
 
-    # Name/admission search (client-side friendly — done server-side here)
     if q:
         ql = q.lower()
         bookings = [b for b in bookings
                     if ql in b["student_user"].get("full_name",  "").lower()
                     or ql in b["student_user"].get("admission_no", "").lower()]
 
-    # Counts for tab badges
     all_student_bookings = []
     if student_ids:
         try:
             all_student_bookings = (db.table("exam_bookings")
-                .select("status")
-                .in_("student_id", student_ids)
-                .execute().data or [])
+                .select("status").in_("student_id", student_ids).execute().data or [])
         except Exception:
             pass
     counts = {
@@ -702,6 +708,8 @@ def exam_bookings():
                            bookings=bookings,
                            status_filter=status_filter,
                            q=q,
+                           year_filter=year_filter,
+                           term_filter=term_filter,
                            counts=counts)
 
 
@@ -710,11 +718,15 @@ def exam_bookings():
 def export_exam_bookings():
     """Export exam bookings per class as a styled Excel workbook."""
     import io
+    from datetime import date as _date
     db      = get_service_client()
     dept_id = _dept_id()
 
-    status_filter = request.args.get("status", "")   # blank = all
-    class_filter  = request.args.get("class_id", "")  # blank = all classes
+    status_filter = request.args.get("status", "")
+    class_filter  = request.args.get("class_id", "")
+    year_filter   = request.args.get("year",  "").strip()
+    term_filter   = request.args.get("term",  "").strip()
+    TERM_MONTHS   = {"1": ("01","04"), "2": ("05","08"), "3": ("09","12")}
 
     # Get all enrollments for this department
     enr = (db.table("enrollments")
@@ -745,6 +757,13 @@ def export_exam_bookings():
 
     if status_filter and status_filter != "all":
         query = query.eq("status", status_filter)
+
+    yr = year_filter or str(_date.today().year)
+    if year_filter:
+        query = query.gte("exam_date", f"{yr}-01-01").lte("exam_date", f"{yr}-12-31")
+    if term_filter and term_filter in TERM_MONTHS:
+        m0, m1 = TERM_MONTHS[term_filter]
+        query = query.gte("exam_date", f"{yr}-{m0}-01").lte("exam_date", f"{yr}-{m1}-31")
 
     bookings = query.execute().data or []
 
@@ -870,8 +889,9 @@ def export_exam_bookings():
                 sn += 1
 
         # ── Column widths + freeze ────────────────────────────────────────────────
+        from openpyxl.utils import get_column_letter
         for ci, w in enumerate(WIDTHS, 1):
-            ws.column_dimensions[ws.cell(row=1, column=ci).column_letter].width = w
+            ws.column_dimensions[get_column_letter(ci)].width = w
         ws.freeze_panes = ws.cell(row=hdr_row + 1, column=1)
 
     if not wb.sheetnames:
@@ -887,6 +907,38 @@ def export_exam_bookings():
         buf.read(),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={fname}"}
+    )
+
+
+@dept_admin_bp.route("/exam-bookings/trainee/<student_id>/approved-pdf")
+@dept_admin_required
+def trainee_approved_bookings_pdf(student_id):
+    """Printable PDF of all approved exam bookings for one trainee."""
+    db      = get_service_client()
+    dept    = db.table("departments").select("name").eq("id", _dept_id()).single().execute().data or {}
+    student = (db.table("user_profiles")
+               .select("full_name, admission_no, mobile_number")
+               .eq("id", student_id).single().execute().data or {})
+
+    enr = (db.table("enrollments")
+           .select("classes(name)").eq("student_id", student_id)
+           .limit(1).execute().data or [])
+    class_name = ((enr[0].get("classes") or {}).get("name", "")) if enr else ""
+
+    bookings = (db.table("exam_bookings")
+                .select("*, units(name, code)")
+                .eq("student_id", student_id)
+                .eq("status", "approved")
+                .order("exam_date")
+                .execute().data or [])
+
+    return render_template(
+        "dept_admin/trainee_approved_bookings_pdf.html",
+        student=student,
+        class_name=class_name,
+        dept_name=dept.get("name", ""),
+        bookings=bookings,
+        date_gen=datetime.now().strftime("%d %B %Y"),
     )
 
 
