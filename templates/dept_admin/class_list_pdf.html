@@ -2,96 +2,192 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Class List — {{ cls.name }}</title>
+  <title>Class List — {{ cls.name if cls else '' }}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Arial', sans-serif; line-height:1.5; }
-    @media print { .no-print { display:none; } @page { size:A4; margin:0.5in; } }
-    .container { max-width:8.5in; margin:0 auto; padding:24px; }
-    .header { text-align:center; border-bottom:3px solid #1565c0; padding-bottom:16px; margin-bottom:20px; }
-    .header img { height:60px; margin-bottom:10px; }
-    .header h1 { font-size:18px; color:#333; margin-bottom:4px; }
-    .header h2 { font-size:14px; color:#555; font-weight:400; }
-    .header h3 { font-size:15px; color:#1565c0; margin-top:6px; text-decoration:underline; font-weight:700; }
-    .meta { display:flex; justify-content:space-between; font-size:12px; color:#555; margin-bottom:20px; background:#f3f4f6; padding:10px 14px; border-radius:6px; flex-wrap:wrap; gap:8px; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    thead { background:#1565c0; }
-    th { padding:10px 14px; text-align:left; font-weight:700; color:#fff; border:1px solid #0d47a1; }
-    td { padding:10px 14px; border:1px solid #ddd; vertical-align:middle; }
-    tbody tr:nth-child(even) { background:#f5f8ff; }
-    .num { color:#888; font-size:12px; text-align:center; }
-    .adm { font-family:monospace; font-weight:700; color:#1565c0; }
-    .footer-sig { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:50px; padding-top:20px; border-top:1px solid #ddd; }
+    body { font-family:'Arial', sans-serif; line-height:1.5; background:#f4f6f9; }
+    @media print { .no-print { display:none; } body { background:#fff; padding:0; }
+      .page { box-shadow:none; border:none; border-radius:0; max-width:100%; } @page { size:A4; margin:0.5in; } }
+
+    .page {
+      background:#fff; max-width:820px; margin:0 auto;
+      border-radius:6px; border:1px solid #d0d7e2;
+      overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,.10);
+    }
+    .accent-bar { height:6px; background:linear-gradient(90deg,#0d2f6e,#1565c0,#2196f3); }
+
+    /* Letterhead */
+    .letterhead {
+      padding:22px 32px 16px;
+      display:flex; align-items:center; gap:20px;
+      border-bottom:2px solid #0d2f6e;
+    }
+    .letterhead img { height:72px; flex-shrink:0; }
+    .lh-text { flex:1; }
+    .lh-institute { font-size:17px; font-weight:900; text-transform:uppercase;
+      letter-spacing:.8px; color:#0d2f6e; line-height:1.2; }
+    .lh-dept { font-size:12px; font-weight:600; color:#444; margin-top:4px; }
+    .lh-title { font-size:13px; font-weight:800; color:#1565c0;
+      text-transform:uppercase; letter-spacing:.6px; margin-top:6px;
+      text-decoration:underline; text-underline-offset:3px; }
+    .lh-stamp { text-align:right; flex-shrink:0; }
+    .stamp-box { border:2px solid #0d2f6e; border-radius:6px; padding:7px 13px;
+      color:#0d2f6e; font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.4px; background:#e8f0fb; }
+    .stamp-date { font-size:11px; color:#555; margin-top:5px; text-align:right; }
+
+    /* Body */
+    .body { padding:20px 32px 28px; }
+
+    /* Meta bar */
+    .meta {
+      display:flex; flex-wrap:wrap; gap:0;
+      border:1px solid #c8d6e8; border-radius:5px;
+      overflow:hidden; margin-bottom:22px; font-size:12px;
+    }
+    .meta span {
+      flex:1; padding:10px 14px;
+      background:#f0f5fb; border-right:1px solid #c8d6e8;
+      line-height:1.6;
+    }
+    .meta span:last-child { border-right:none; background:#e8f0fb; }
+    .meta strong { display:block; font-size:10px; color:#0d2f6e;
+      text-transform:uppercase; letter-spacing:.05em; font-weight:800; margin-bottom:2px; }
+
+    /* Section heading */
+    .section-heading {
+      font-size:11px; font-weight:800; text-transform:uppercase;
+      letter-spacing:.9px; color:#0d2f6e; margin-bottom:10px;
+      padding-bottom:5px; border-bottom:1.5px solid #c8d6e8;
+      display:flex; align-items:center; gap:6px;
+    }
+    .section-heading::before { content:''; display:inline-block;
+      width:4px; height:14px; background:#1565c0; border-radius:2px; }
+
+    /* Table */
+    table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:28px; }
+    thead tr { background:#0d2f6e; }
+    thead th { color:#fff; padding:9px 12px; text-align:left; font-weight:700;
+      font-size:10.5px; text-transform:uppercase; letter-spacing:.04em;
+      border:1px solid #0d2f6e; }
+    tbody td { padding:9px 12px; border:1px solid #d4dde8; color:#222; vertical-align:middle; }
+    tbody tr:nth-child(even) td { background:#f4f8fc; }
+    .num { color:#999; font-size:11px; text-align:center; }
+    .adm { font-family:monospace; font-weight:700; color:#0d2f6e; }
+
+    /* Signature */
+    .sig-section { padding-top:18px; border-top:1px solid #d0d7e2; }
+    .sig-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:10px; }
     .sig-box { text-align:center; }
-    .sig-line { border-bottom:1px solid #333; height:50px; margin-bottom:8px; }
-    .sig-label { font-weight:700; font-size:12px; }
-    .sig-sub { font-size:11px; color:#666; }
-    .btn-row { margin-top:20px; text-align:right; }
-    .btn { padding:9px 18px; margin-left:8px; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; }
-    .btn-print { background:#1565c0; color:#fff; }
-    .btn-back  { background:#666; color:#fff; }
+    .sig-space { height:46px; }
+    .sig-line { border-top:1.5px solid #333; margin-bottom:8px; }
+    .sig-role { font-weight:800; font-size:11px; text-transform:uppercase;
+      letter-spacing:.04em; color:#0d2f6e; margin-bottom:3px; }
+    .sig-name { font-size:10.5px; color:#333; margin-bottom:2px; }
+    .sig-label { font-size:10px; color:#888; }
+
+    /* Footer bar */
+    .footer-bar { background:#0d2f6e; color:rgba(255,255,255,.75);
+      text-align:center; font-size:10px; padding:9px 20px; margin-top:20px;
+      display:flex; justify-content:space-between; align-items:center; }
+
+    /* Print controls */
+    .no-print { max-width:820px; margin:20px auto 0;
+      display:flex; gap:10px; justify-content:center; }
+    .btn-print { padding:11px 32px; background:linear-gradient(135deg,#1565c0,#0d2f6e);
+      color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700;
+      cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+      box-shadow:0 4px 14px rgba(21,101,192,.35); }
+    .btn-back { padding:11px 24px; background:#64748b; color:#fff; border:none;
+      border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;
+      display:inline-flex; align-items:center; gap:8px; }
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <img src="{{ LOGO_URL }}" alt="Logo">
-    <h1>THIKA TECHNICAL TRAINING INSTITUTE</h1>
-    <h2>Department of {{ dept_name }}</h2>
-    <h3>CLASS LIST — {{ cls.name }}</h3>
+
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">&#128424; Print / Save PDF</button>
+  <button class="btn-back" onclick="history.back()">&#8592; Back</button>
+</div>
+
+<div class="page">
+  <div class="accent-bar"></div>
+
+  <div class="letterhead">
+    <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+    <div class="lh-text">
+      <div class="lh-institute">Thika Technical Training Institute</div>
+      <div class="lh-dept">Department of {{ dept_name }}</div>
+      <div class="lh-title">Class List — {{ cls.name if cls else '' }}</div>
+    </div>
+    <div class="lh-stamp">
+      <div class="stamp-box">Official Record</div>
+      <div class="stamp-date">{{ date_gen }}</div>
+    </div>
   </div>
 
-  <div class="meta">
-    <span><strong>Class:</strong> {{ cls.name }}</span>
-    <span><strong>Department:</strong> {{ dept_name }}</span>
-    <span><strong>Total Students:</strong> {{ students|length }}</span>
-    <span><strong>Date Generated:</strong> {{ date_gen }}</span>
-  </div>
+  <div class="body">
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width:50px;text-align:center;">#</th>
-        <th style="width:160px;">Admission No</th>
-        <th>Student Name</th>
-        <th style="width:120px;">Signature</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if students %}
-        {% for s in students %}
+    <div class="meta">
+      <span><strong>Class</strong>{{ cls.name if cls else '—' }}</span>
+      <span><strong>Department</strong>{{ dept_name }}</span>
+      <span><strong>Total Students</strong>{{ students|length }}</span>
+      <span><strong>Date Generated</strong>{{ date_gen }}</span>
+    </div>
+
+    <div class="section-heading">Student Register</div>
+
+    <table>
+      <thead>
         <tr>
-          <td class="num">{{ loop.index }}</td>
-          <td class="adm">{{ s.admission_number }}</td>
-          <td>{{ s.full_name }}</td>
-          <td></td>
+          <th style="width:44px;text-align:center">#</th>
+          <th style="width:160px">Admission No</th>
+          <th>Full Name</th>
+          <th style="width:120px">Signature</th>
         </tr>
-        {% endfor %}
-      {% else %}
-        <tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">No students found.</td></tr>
-      {% endif %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% if students %}
+          {% for s in students %}
+          <tr>
+            <td class="num">{{ loop.index }}</td>
+            <td class="adm">{{ s.admission_number }}</td>
+            <td>{{ s.full_name }}</td>
+            <td></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" style="text-align:center;color:#aaa;padding:24px;font-style:italic">No students found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
 
-  <div class="footer-sig">
-    <div class="sig-box">
-      <div class="sig-line"></div>
-      <div class="sig-label">CLASS TEACHER / TRAINER</div>
-      <div class="sig-sub">Name: _______________</div>
-      <div class="sig-sub">Signature &amp; Date</div>
+    <div class="sig-section">
+      <div class="sig-grid">
+        <div class="sig-box">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <div class="sig-role">Class Teacher / Trainer</div>
+          <div class="sig-name">Name: ___________________________</div>
+          <div class="sig-label">Signature &amp; Date</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-space"></div>
+          <div class="sig-line"></div>
+          <div class="sig-role">Head of Department</div>
+          <div class="sig-name">Name: ___________________________</div>
+          <div class="sig-label">Signature &amp; Date</div>
+        </div>
+      </div>
     </div>
-    <div class="sig-box">
-      <div class="sig-line"></div>
-      <div class="sig-label">HEAD OF DEPARTMENT</div>
-      <div class="sig-sub">Name: _______________</div>
-      <div class="sig-sub">Signature &amp; Date</div>
-    </div>
+
   </div>
 
-  <div class="btn-row no-print">
-    <button class="btn btn-print" onclick="window.print()">Print / Save PDF</button>
-    <button class="btn btn-back" onclick="history.back()">Back</button>
+  <div class="footer-bar">
+    <span>&copy; 2026 Thika Technical Training Institute — All Rights Reserved</span>
+    <span>Generated: {{ date_gen }}</span>
   </div>
+
 </div>
 </body>
 </html>
