@@ -1170,21 +1170,13 @@ def _resolve_doc_url(doc):
 
 def _parse_hod_verification(docs):
     """
-    HOD verification: read the `status` field directly from student_personal_documents.
-    Falls back to the old HOD_STATUS=… description encoding for backward compat.
-    Returns (status_str, comment_str).
+    Read overall verification status from student_personal_documents.
+    Returns (status_str, comment_str) using the first non-null status found.
     """
-    import re
     for d in docs.values():
-        # New: direct status column set by verify route
         st = d.get("status") or ""
         if st in ("approved", "rejected", "pending"):
-            return st, d.get("description") or ""
-        # Legacy: encoded in description
-        desc = d.get("description") or ""
-        m = re.match(r"^HOD_STATUS=(\w+)\n?(.*)", desc, re.DOTALL)
-        if m:
-            return m.group(1), m.group(2).strip()
+            return st, d.get("rejection_reason") or ""
     return "pending", ""
 
 
@@ -1313,19 +1305,30 @@ def verify_trainee_documents(student_id):
     if status not in ("pending", "approved", "rejected"):
         status = "pending"
 
+    from datetime import datetime as _dt
+    verified_at = _dt.utcnow().isoformat()
+    admin_id    = current_user().get("id")
+
     existing = (db.table(_TRAINEE_DOCS_TABLE)
                 .select("id")
                 .eq("student_id", student_id)
                 .execute().data or [])
 
+    errors = []
     for doc in existing:
         try:
             db.table(_TRAINEE_DOCS_TABLE).update({
-                "status":      status,
-                "description": comment,
+                "status":           status,
+                "rejection_reason": comment or None,
+                "verified_by":      admin_id,
+                "verified_at":      verified_at,
             }).eq("id", doc["id"]).execute()
         except Exception as e:
+            errors.append(str(e))
             print(f"[verify_trainee_documents] update error: {e}")
+
+    if errors:
+        flash(f"Some documents could not be updated: {errors[0]}", "warning")
 
     write_audit_log("verify_trainee_documents",
                     target=f"student:{student_id}",
