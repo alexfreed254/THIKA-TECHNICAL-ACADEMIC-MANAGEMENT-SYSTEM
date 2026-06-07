@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@latest/Control.FullScreen.css"/>
 {% endblock %}
 
 {% block extra_style %}
@@ -640,6 +641,7 @@
 </div><!-- /ia-wrap -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.fullscreen@latest/Control.FullScreen.js"></script>
 <script>
 /* ═══ DATA FROM SERVER ═══ */
 var PLACEMENTS = {{ placements  | tojson | safe }};
@@ -655,7 +657,7 @@ function switchTab(name) {
 }
 
 /* ═══ MAP ═══ */
-var map = L.map('map').setView([-1.038, 37.083], 11);
+var map = L.map('map', { fullscreenControl: true, fullscreenControlOptions: { position: 'topleft', title: 'Enter fullscreen', titleCancel: 'Exit fullscreen' } }).setView([-1.038, 37.083], 11);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
 }).addTo(map);
