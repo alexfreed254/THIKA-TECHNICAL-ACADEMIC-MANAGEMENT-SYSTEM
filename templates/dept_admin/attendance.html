@@ -4,58 +4,45 @@
 
 {% block extra_style %}
 <style>
-  .page-wrap { padding: 24px; max-width: 1200px; }
+  .page-wrap { padding: 24px; max-width: 100%; }
 
-  /* ── Section card ── */
-  .section-card {
-    background: #fff;
-    border-radius: 14px;
+  /* ── Filter card ── */
+  .filter-card {
+    background: #fff; border-radius: 14px;
     border: 1px solid #e5e7eb;
     box-shadow: 0 2px 10px rgba(0,0,0,.05);
-    margin-bottom: 24px;
-    overflow: hidden;
+    margin-bottom: 24px; overflow: hidden;
   }
-  .sc-head {
-    padding: 14px 22px;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 10px;
-  }
-  .sc-title {
-    font-size: 14.5px; font-weight: 700; color: #1e293b;
+  .filter-head {
+    padding: 14px 22px; border-bottom: 1px solid #f1f5f9;
+    font-size: 14px; font-weight: 700; color: #1e293b;
     display: flex; align-items: center; gap: 8px;
   }
-  .sc-body { padding: 20px 22px; }
-
-  /* ── Filter grid ── */
+  .filter-body { padding: 20px 22px; }
   .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
-    margin-bottom: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px; margin-bottom: 18px;
   }
   .fg label {
-    display: block; font-size: 11.5px; font-weight: 700;
+    display: block; font-size: 11px; font-weight: 700;
     color: #6b7280; text-transform: uppercase;
-    letter-spacing: .04em; margin-bottom: 5px;
+    letter-spacing: .05em; margin-bottom: 5px;
   }
   .fg select {
     width: 100%; padding: 9px 12px;
-    border: 1px solid #d1d5db; border-radius: 8px;
+    border: 1.5px solid #d1d5db; border-radius: 8px;
     font-size: 13px; background: #f9fafb;
-    transition: border-color .2s, box-shadow .2s;
+    transition: border-color .2s;
   }
-  .fg select:focus {
-    outline: none; border-color: #1565c0;
-    box-shadow: 0 0 0 3px rgba(21,101,192,.1); background: #fff;
-  }
+  .fg select:focus { outline: none; border-color: #1565c0; background: #fff; }
+  .fg select.required-sel { border-color: #fbbf24; }
   .btn-filter {
     padding: 9px 22px;
     background: linear-gradient(135deg, #1565c0, #0d47a1);
     color: #fff; border: none; border-radius: 8px;
     font-size: 13px; font-weight: 700; cursor: pointer;
     display: inline-flex; align-items: center; gap: 7px;
-    transition: opacity .15s;
   }
   .btn-filter:hover { opacity: .9; }
   .btn-clear {
@@ -66,64 +53,169 @@
   }
   .btn-clear:hover { background: #e5e7eb; }
 
+  /* ── Info bar ── */
+  .info-bar {
+    background: linear-gradient(135deg, #0f2c54, #1565c0);
+    border-radius: 12px; padding: 14px 22px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 16px;
+    margin-bottom: 20px; color: #fff;
+  }
+  .info-bar .ib-item { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .info-bar .ib-label { opacity: .7; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; }
+  .info-bar .ib-val { font-weight: 800; font-size: 14px; }
+
   /* ── Summary pills ── */
-  .summary-pills {
-    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+  .summary-row {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
   }
-  .pill {
-    padding: 10px 18px; border-radius: 10px;
-    font-weight: 700; font-size: 13.5px;
-    display: inline-flex; align-items: center; gap: 7px;
+  .s-pill {
+    padding: 8px 16px; border-radius: 9999px;
+    font-size: 12.5px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 6px;
   }
-  .pill-present { background: #dcfce7; color: #15803d; }
-  .pill-absent  { background: #fee2e2; color: #b91c1c; }
-  .pill-total   { background: #dbeafe; color: #1d4ed8; }
+  .sp-green  { background: #dcfce7; color: #15803d; }
+  .sp-red    { background: #fee2e2; color: #b91c1c; }
+  .sp-blue   { background: #dbeafe; color: #1d4ed8; }
+  .sp-yellow { background: #fef3c7; color: #b45309; }
 
-  /* ── Table ── */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; }
+  /* ── Matrix table wrapper ── */
+  .matrix-wrap {
+    background: #fff; border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    overflow: hidden;
+  }
+  .matrix-scroll { overflow-x: auto; }
 
-  table thead th {
-    background: #f9fafb !important;
-    color: #6b7280 !important;
-    padding: 10px 16px;
-    text-align: left;
-    font-size: 11.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .04em;
-    border-bottom: 2px solid #e5e7eb;
+  /* ── Matrix table ── */
+  .matrix-table {
+    width: max-content; min-width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  /* Top header row: Week labels */
+  .matrix-table .week-hdr {
+    background: linear-gradient(135deg, #0f2c54, #1565c0);
+    color: #fff;
+  }
+  .matrix-table .week-hdr th {
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border-right: 2px solid rgba(255,255,255,.15);
     white-space: nowrap;
   }
-  table tbody td {
-    padding: 11px 16px;
-    border-bottom: 1px solid #f3f4f6;
-    font-size: 13px; color: #374151;
+  .matrix-table .week-hdr th.name-col {
+    min-width: 200px;
+    text-align: left;
+    padding-left: 16px;
+    border-right: 2px solid rgba(255,255,255,.3);
+  }
+  .matrix-table .week-hdr th.summary-col {
+    min-width: 110px;
+    border-left: 2px solid rgba(255,255,255,.3);
+    border-right: none;
+  }
+
+  /* Sub-header row: Lesson labels */
+  .matrix-table .lesson-hdr {
+    background: #f0f5fb;
+  }
+  .matrix-table .lesson-hdr th {
+    padding: 5px 2px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #1565c0;
+    border-right: 1px solid #e2e8f0;
+    white-space: nowrap;
+  }
+  .matrix-table .lesson-hdr th.name-col {
+    text-align: left;
+    padding-left: 16px;
+    color: #374151;
+    border-right: 2px solid #d1d5db;
+  }
+  .matrix-table .lesson-hdr th.summary-col {
+    color: #374151;
+    border-left: 2px solid #d1d5db;
+    border-right: none;
+  }
+
+  /* Data rows */
+  .matrix-table tbody tr:nth-child(odd) td { background: #fff; }
+  .matrix-table tbody tr:nth-child(even) td { background: #f8fafc; }
+  .matrix-table tbody tr:hover td { background: #eff6ff !important; }
+
+  .matrix-table td {
+    padding: 0;
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: center;
     vertical-align: middle;
   }
-  table tbody tr:last-child td { border-bottom: none; }
-  table tbody tr:hover td { background: #f8fafc; }
-
-  /* Unit badge */
-  .unit-tag {
-    display: inline-block;
-    background: #eff6ff; color: #1d4ed8;
-    border: 1px solid #bfdbfe;
-    border-radius: 5px; padding: 2px 8px;
-    font-size: 11px; font-weight: 700;
+  .matrix-table td.name-td {
+    padding: 10px 16px 10px 16px;
+    text-align: left;
+    border-right: 2px solid #d1d5db;
+    min-width: 200px;
+    position: sticky; left: 0;
+    background: inherit;
+    z-index: 2;
+    box-shadow: 2px 0 4px rgba(0,0,0,.06);
+  }
+  .matrix-table td.summary-td {
+    padding: 8px 12px;
+    border-left: 2px solid #d1d5db;
+    border-right: none;
+    min-width: 110px;
+    white-space: nowrap;
+  }
+  .matrix-table td.week-sep {
+    border-right: 2px solid #d1d5db !important;
   }
 
-  /* Status badges */
-  .badge {
-    display: inline-block; padding: 3px 10px;
-    border-radius: 20px; font-size: 11px; font-weight: 700;
+  /* Cell icons */
+  .cell-inner {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 4px auto; border-radius: 6px;
+    font-size: 13px; font-weight: 900;
   }
-  .badge-present { background: #dcfce7; color: #15803d; }
-  .badge-absent  { background: #fee2e2; color: #b91c1c; }
+  .cell-present { background: #dcfce7; color: #15803d; }
+  .cell-absent  { background: #fee2e2; color: #b91c1c; }
+  .cell-none    { color: #d1d5db; font-size: 10px; }
 
-  /* Empty state */
-  .empty-state { text-align: center; padding: 52px 20px; color: #9ca3af; }
-  .empty-state i { font-size: 42px; display: block; margin-bottom: 14px; opacity: .35; }
-  .empty-state p { font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #64748b; }
-  .empty-state small { font-size: 13px; }
+  /* Student info in name cell */
+  .s-name { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.2; }
+  .s-adm  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  /* Summary bar in last col */
+  .pct-bar { height: 5px; background: #e5e7eb; border-radius: 99px; overflow: hidden; margin-top: 4px; }
+  .pct-fill-high { background: #22c55e; }
+  .pct-fill-med  { background: #f59e0b; }
+  .pct-fill-low  { background: #ef4444; }
+  .pct-val {
+    font-size: 13px; font-weight: 800;
+  }
+  .pct-high { color: #15803d; }
+  .pct-med  { color: #b45309; }
+  .pct-low  { color: #b91c1c; }
+
+  /* Empty / prompt states */
+  .prompt-card {
+    background: #fff; border-radius: 14px;
+    border: 2px dashed #e2e8f0;
+    padding: 56px 24px; text-align: center; color: #94a3b8;
+  }
+  .prompt-card i { font-size: 48px; display: block; margin-bottom: 16px; opacity: .35; }
+  .prompt-card h3 { font-size: 16px; color: #64748b; margin-bottom: 8px; }
+  .prompt-card p  { font-size: 13px; }
 </style>
 {% endblock %}
 
@@ -131,33 +223,35 @@
 <div class="page-wrap">
 
   <!-- ── Filter ── -->
-  <div class="section-card">
-    <div class="sc-head">
-      <span class="sc-title">
-        <i class="fas fa-filter" style="color:#1565c0"></i> Filter Attendance Records
-      </span>
+  <div class="filter-card">
+    <div class="filter-head">
+      <i class="fas fa-filter" style="color:#1565c0"></i>
+      Select Class, Unit &amp; Term to view attendance matrix
     </div>
-    <div class="sc-body">
+    <div class="filter-body">
       <form method="get" action="/dept-admin/attendance">
         <div class="filter-grid">
+
           <div class="fg">
-            <label>Class</label>
-            <select name="class_id">
-              <option value="">All Classes</option>
+            <label>Class <span style="color:#dc2626">*</span></label>
+            <select name="class_id" class="{% if not class_filter %}required-sel{% endif %}">
+              <option value="">— Select Class —</option>
               {% for c in classes %}
               <option value="{{ c.id }}" {% if class_filter == c.id %}selected{% endif %}>{{ c.name }}</option>
               {% endfor %}
             </select>
           </div>
+
           <div class="fg">
-            <label>Unit</label>
-            <select name="unit_id">
-              <option value="">All Units</option>
+            <label>Unit <span style="color:#dc2626">*</span></label>
+            <select name="unit_id" class="{% if not unit_filter %}required-sel{% endif %}">
+              <option value="">— Select Unit —</option>
               {% for u in units %}
               <option value="{{ u.id }}" {% if unit_filter == u.id %}selected{% endif %}>{{ u.code }} – {{ u.name }}</option>
               {% endfor %}
             </select>
           </div>
+
           <div class="fg">
             <label>Term</label>
             <select name="term">
@@ -167,131 +261,201 @@
               <option value="3" {% if term_filter == '3' %}selected{% endif %}>Term 3 (Sep–Dec)</option>
             </select>
           </div>
+
           <div class="fg">
             <label>Year</label>
             <select name="year">
-              <option value="">All Years</option>
               {% for y in range(2024, 2030) %}
               <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
               {% endfor %}
             </select>
           </div>
+
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button type="submit" class="btn-filter">
-            <i class="fas fa-search"></i> Filter
+            <i class="fas fa-table"></i> Generate Matrix
           </button>
-          {% if class_filter or unit_filter or term_filter or year_filter %}
+          {% if class_filter or unit_filter or term_filter %}
           <a href="/dept-admin/attendance" class="btn-clear">
             <i class="fas fa-times"></i> Clear
           </a>
           {% endif %}
+          <span style="font-size:12px;color:#9ca3af;margin-left:4px">
+            * Class and Unit are required
+          </span>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ── Results ── -->
-  <div class="section-card">
-    <div class="sc-head">
-      <span class="sc-title">
-        <i class="fas fa-clipboard-list" style="color:#1565c0"></i>
-        Attendance Records
-        <span style="background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">
-          {{ attendance|length }}
-        </span>
-      </span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        {% if term_filter %}
-        <span style="background:#ede9fe;color:#6d28d9;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">
-          Term {{ term_filter }}
-        </span>
-        {% endif %}
-        {% if year_filter %}
-        <span style="background:#fef3c7;color:#b45309;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">
-          {{ year_filter }}
-        </span>
-        {% endif %}
+  {% if class_filter and unit_filter %}
+
+    {% if matrix %}
+
+    <!-- ── Info bar ── -->
+    <div class="info-bar">
+      <div class="ib-item">
+        <i class="fas fa-door-open"></i>
+        <div>
+          <div class="ib-label">Class</div>
+          <div class="ib-val">{{ cls_obj.name if cls_obj else '—' }}</div>
+        </div>
+      </div>
+      <div class="ib-item">
+        <i class="fas fa-book-open"></i>
+        <div>
+          <div class="ib-label">Unit</div>
+          <div class="ib-val">{{ unit_obj.code if unit_obj else '—' }} – {{ unit_obj.name if unit_obj else '' }}</div>
+        </div>
+      </div>
+      {% if term_int %}
+      <div class="ib-item">
+        <i class="fas fa-calendar-alt"></i>
+        <div>
+          <div class="ib-label">Term</div>
+          <div class="ib-val">Term {{ term_int }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if year_filter %}
+      <div class="ib-item">
+        <i class="fas fa-calendar"></i>
+        <div>
+          <div class="ib-label">Year</div>
+          <div class="ib-val">{{ year_filter }}</div>
+        </div>
+      </div>
+      {% endif %}
+      <div class="ib-item" style="margin-left:auto">
+        <i class="fas fa-users"></i>
+        <div>
+          <div class="ib-label">Trainees</div>
+          <div class="ib-val">{{ matrix|length }}</div>
+        </div>
       </div>
     </div>
 
-    {% if attendance %}
-    {% set present_count = attendance | selectattr('status', 'equalto', 'present') | list | length %}
-    {% set absent_count  = attendance | length - present_count %}
-
-    <div style="padding:16px 22px 0">
-      <div class="summary-pills">
-        <div class="pill pill-present">
-          <i class="fas fa-check-circle"></i> Present: {{ present_count }}
-        </div>
-        <div class="pill pill-absent">
-          <i class="fas fa-times-circle"></i> Absent: {{ absent_count }}
-        </div>
-        <div class="pill pill-total">
-          <i class="fas fa-users"></i> Total: {{ attendance|length }}
-        </div>
-      </div>
+    <!-- ── Class summary ── -->
+    {% set total_present = matrix | sum(attribute='present') %}
+    {% set total_absent  = matrix | sum(attribute='absent') %}
+    {% set total_all     = total_present + total_absent %}
+    {% set class_pct     = ((total_present / total_all) * 100) | round(1) if total_all > 0 else 0 %}
+    <div class="summary-row">
+      <span class="s-pill sp-blue"><i class="fas fa-users"></i> {{ matrix|length }} trainees</span>
+      <span class="s-pill sp-green"><i class="fas fa-check-circle"></i> {{ total_present }} present</span>
+      <span class="s-pill sp-red"><i class="fas fa-times-circle"></i> {{ total_absent }} absent</span>
+      <span class="s-pill sp-yellow"><i class="fas fa-chart-pie"></i> Class avg: {{ class_pct }}%</span>
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Student</th>
-            <th>Unit</th>
-            <th>Class</th>
-            <th style="text-align:center">Term</th>
-            <th style="text-align:center">Week</th>
-            <th style="text-align:center">Lesson</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for a in attendance %}
-          {% set student = a.get('user_profiles') or {} %}
-          {% set unit    = a.get('units') or {} %}
-          {% set cls     = a.get('classes') or {} %}
-          <tr>
-            <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
-            <td>
-              <div style="font-weight:600;color:#111827">{{ student.get('full_name','—') }}</div>
-              <div style="font-size:11.5px;color:#9ca3af;margin-top:2px">{{ student.get('admission_no','') }}</div>
-            </td>
-            <td>
-              <span class="unit-tag">{{ unit.get('code','—') }}</span>
-              <div style="font-size:12px;color:#6b7280;margin-top:3px">{{ unit.get('name','') }}</div>
-            </td>
-            <td style="color:#6b7280">{{ cls.get('name','—') }}</td>
-            <td style="text-align:center;font-weight:600">
-              {% set t = a.get('term') %}
-              {% if t %}T{{ t }}{% else %}—{% endif %}
-            </td>
-            <td style="text-align:center;font-weight:600">{{ a.get('week','—') }}</td>
-            <td style="text-align:center;font-weight:600">{{ a.get('lesson','—') }}</td>
-            <td>
-              <span class="badge badge-{{ a.get('status','absent') }}">
-                {% if a.get('status') == 'present' %}✓ Present{% else %}✗ Absent{% endif %}
-              </span>
-            </td>
-            <td style="font-size:12px;color:#9ca3af;white-space:nowrap">
-              {{ a.get('attendance_date','—')[:10] if a.get('attendance_date') else '—' }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <!-- ── Matrix table ── -->
+    <div class="matrix-wrap">
+      <div class="matrix-scroll">
+        <table class="matrix-table">
+
+          <!-- Row 1: Week group headers -->
+          <thead>
+            <tr class="week-hdr">
+              <th class="name-col" rowspan="2">
+                Trainee
+              </th>
+              {% for w in WEEKS %}
+              <th colspan="{{ LESSONS|length }}"
+                  {% if not loop.last %}style="border-right:2px solid rgba(255,255,255,.3)"{% endif %}>
+                Week {{ w }}
+              </th>
+              {% endfor %}
+              <th class="summary-col" rowspan="2">Summary</th>
+            </tr>
+
+            <!-- Row 2: Lesson sub-headers -->
+            <tr class="lesson-hdr">
+              {% for w in WEEKS %}
+                {% for l in LESSONS %}
+                <th class="{% if loop.last and not loop.revindex0 == 0 %}week-sep{% endif %}"
+                    style="{% if loop.last %}border-right:2px solid #d1d5db{% endif %}">
+                  {{ l }}
+                </th>
+                {% endfor %}
+              {% endfor %}
+            </tr>
+          </thead>
+
+          <!-- Data rows -->
+          <tbody>
+            {% for row in matrix %}
+            {% set pct_cls = 'high' if row.pct >= 75 else ('med' if row.pct >= 50 else 'low') %}
+            <tr>
+              <!-- Name cell (sticky) -->
+              <td class="name-td">
+                <div class="s-name">{{ row.full_name }}</div>
+                <div class="s-adm">{{ row.admission_no }}</div>
+              </td>
+
+              <!-- Attendance cells -->
+              {% for w in WEEKS %}
+                {% for l in LESSONS %}
+                {% set st = row.cells.get((w, l)) %}
+                <td class="{% if loop.last %}week-sep{% endif %}">
+                  {% if st == 'present' %}
+                    <div class="cell-inner cell-present" title="Week {{ w }} {{ l }}: Present">
+                      &#10003;
+                    </div>
+                  {% elif st == 'absent' %}
+                    <div class="cell-inner cell-absent" title="Week {{ w }} {{ l }}: Absent">
+                      &#10007;
+                    </div>
+                  {% else %}
+                    <div class="cell-inner cell-none" title="Week {{ w }} {{ l }}: No record">
+                      &middot;
+                    </div>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              {% endfor %}
+
+              <!-- Summary cell -->
+              <td class="summary-td">
+                <div class="pct-val pct-{{ pct_cls }}">{{ row.pct }}%</div>
+                <div style="font-size:11px;color:#6b7280;margin-top:1px">
+                  {{ row.present }}/{{ row.total }}
+                </div>
+                <div class="pct-bar">
+                  <div class="pct-fill-{{ pct_cls }}" style="width:{{ row.pct }}%"></div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div><!-- /scroll -->
+    </div><!-- /matrix-wrap -->
 
     {% else %}
-    <div class="empty-state">
-      <i class="fas fa-clipboard-list"></i>
-      <p>No attendance records found.</p>
-      <small>{% if class_filter or unit_filter %}Try clearing the filters above.{% else %}Records will appear here once trainers mark attendance.{% endif %}</small>
+    <!-- No records for this selection -->
+    <div class="prompt-card">
+      <i class="fas fa-calendar-times"></i>
+      <h3>No attendance records found</h3>
+      <p>
+        No records exist for <strong>{{ cls_obj.name if cls_obj else 'this class' }}</strong>
+        in <strong>{{ unit_obj.code if unit_obj else 'this unit' }}</strong>
+        {% if term_int %}— Term {{ term_int }}{% endif %}
+        {% if year_filter %}{{ year_filter }}{% endif %}.
+        Check that the trainer has recorded attendance for this selection.
+      </p>
     </div>
     {% endif %}
+
+  {% else %}
+  <!-- Prompt to select class + unit -->
+  <div class="prompt-card">
+    <i class="fas fa-table"></i>
+    <h3>Select a Class and Unit above</h3>
+    <p>The attendance matrix shows every trainee's Week 1–12 record at a glance —
+       green tick for present, red cross for absent.</p>
   </div>
+  {% endif %}
 
 </div>
 {% endblock %}

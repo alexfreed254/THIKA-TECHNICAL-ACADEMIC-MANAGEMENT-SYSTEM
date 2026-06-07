@@ -460,67 +460,118 @@ def trainer_units():
 @dept_admin_bp.route("/attendance")
 @dept_admin_required
 def attendance():
-    db          = get_service_client()
-    dept_id     = _dept_id()
+    from datetime import date as _date
+    db       = get_service_client()
+    dept_id  = _dept_id()
+
     class_filter = request.args.get("class_id", "").strip()
     unit_filter  = request.args.get("unit_id",  "").strip()
     term_filter  = request.args.get("term",     "").strip()
-    year_filter  = request.args.get("year",     "").strip()
+    year_filter  = request.args.get("year",     str(_date.today().year)).strip()
 
     classes = (db.table("classes").select("id, name")
                .eq("department_id", dept_id).order("name").execute().data or [])
     units   = (db.table("units").select("id, name, code")
                .eq("department_id", dept_id).order("name").execute().data or [])
 
-    # Build query — push indexed filters to the DB, not Python
-    q = (db.table("attendance")
-         .select("*, "
-                 "user_profiles:user_profiles!attendance_student_id_fkey"
-                 "(full_name, admission_no, "
-                 "enrollments(class_id, classes(id, name))), "
-                 "units(name, code, department_id)")
-         .order("attendance_date", desc=True))
+    LESSONS = ["L1", "L2", "L3", "L4"]
+    WEEKS   = list(range(1, 13))          # weeks 1-12
+    matrix  = []                          # list of student rows
+    unit_obj = cls_obj = None
+    term_int = int(term_filter) if term_filter else None
+    year_int = int(year_filter) if year_filter else None
 
-    if unit_filter:
-        q = q.eq("unit_id", unit_filter)
-    if term_filter:
-        q = q.eq("term", int(term_filter))
-    if year_filter:
-        q = q.eq("year", int(year_filter))
-
-    records = q.limit(500).execute().data or []
-
-    # Resolve class from enrollment join; filter to this department
-    dept_records = []
-    for r in records:
-        if (r.get("units") or {}).get("department_id") != dept_id:
-            continue
-        student = r.get("user_profiles") or {}
-        enrolls = student.get("enrollments") or []
-        cls = {}
-        for enr in enrolls:
-            cls = enr.get("classes") or {}
-            if cls:
+    if class_filter and unit_filter:
+        # Resolve unit and class objects for display
+        for u in units:
+            if u["id"] == unit_filter:
+                unit_obj = u
                 break
-        r["classes"] = cls
-        dept_records.append(r)
+        for c in classes:
+            if c["id"] == class_filter:
+                cls_obj = c
+                break
 
-    # Class filter: match via resolved class id (attendance has no class_id col)
-    if class_filter:
-        dept_records = [
-            r for r in dept_records
-            if (r.get("classes") or {}).get("id") == class_filter
-        ]
+        # All students enrolled in this class
+        enr_rows = (db.table("enrollments")
+                    .select("student_id, "
+                            "user_profiles!enrollments_student_id_fkey"
+                            "(id, full_name, admission_no)")
+                    .eq("class_id", class_filter)
+                    .execute().data or [])
+
+        students_ordered = []
+        for e in enr_rows:
+            up = e.get("user_profiles") or {}
+            sid = up.get("id") or e.get("student_id")
+            if sid and not any(s["id"] == sid for s in students_ordered):
+                students_ordered.append({
+                    "id":           sid,
+                    "full_name":    up.get("full_name", "—"),
+                    "admission_no": up.get("admission_no", "—"),
+                })
+        students_ordered.sort(key=lambda s: s["full_name"])
+
+        # Fetch all attendance for these students / unit / term / year
+        student_ids = [s["id"] for s in students_ordered]
+        if student_ids:
+            q = (db.table("attendance")
+                 .select("student_id, week, lesson, status")
+                 .eq("unit_id", unit_filter)
+                 .in_("student_id", student_ids))
+            if term_int:
+                q = q.eq("term", term_int)
+            if year_int:
+                q = q.eq("year", year_int)
+            att_rows = q.execute().data or []
+        else:
+            att_rows = []
+
+        # Pivot: {student_id: {(week, lesson): status}}
+        pivot = {}
+        for r in att_rows:
+            pivot.setdefault(r["student_id"], {})[(r["week"], r["lesson"])] = r["status"]
+
+        # Build matrix rows
+        for s in students_ordered:
+            cells = {}
+            present = absent = 0
+            for w in WEEKS:
+                for l in LESSONS:
+                    st = pivot.get(s["id"], {}).get((w, l))
+                    cells[(w, l)] = st
+                    if st == "present":
+                        present += 1
+                    elif st == "absent":
+                        absent += 1
+            total = present + absent
+            pct   = round(present / total * 100, 1) if total else 0
+            matrix.append({
+                "id":           s["id"],
+                "full_name":    s["full_name"],
+                "admission_no": s["admission_no"],
+                "cells":        cells,
+                "present":      present,
+                "absent":       absent,
+                "total":        total,
+                "pct":          pct,
+            })
 
     return render_template(
         "dept_admin/attendance.html",
-        attendance=dept_records,
         classes=classes,
         units=units,
         class_filter=class_filter,
         unit_filter=unit_filter,
         term_filter=term_filter,
         year_filter=year_filter,
+        term_int=term_int,
+        year_int=year_int,
+        matrix=matrix,
+        unit_obj=unit_obj,
+        cls_obj=cls_obj,
+        WEEKS=WEEKS,
+        LESSONS=LESSONS,
     )
 
 
