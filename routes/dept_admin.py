@@ -1595,7 +1595,7 @@ def assessment_sheet():
             if year:
                 att_query = att_query.eq("year", int(year))
             if term:
-                att_query = att_query.eq("term", term)
+                att_query = att_query.eq("term", int(term))
             att_records = att_query.execute().data or []
             total = len(att_records)
             if total == 0:
@@ -1652,7 +1652,7 @@ def assessment_sheet_pdf():
             if year:
                 att_query = att_query.eq("year", int(year))
             if term:
-                att_query = att_query.eq("term", term)
+                att_query = att_query.eq("term", int(term))
             att_records = att_query.execute().data or []
             total = len(att_records)
             if total == 0:
