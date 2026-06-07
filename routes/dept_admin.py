@@ -2188,10 +2188,10 @@ def gis_tracking():
     try:
         if student_ids:
             q = (db.table("industrial_attachments")
-                 .select("id, student_id, status, start_date, end_date, "
-                         "mentor_name, mentor_phone, "
-                         "companies(name, address, latitude, longitude, city, "
-                         "  phone, website, industry_classification, geofence_radius_meters), "
+                 .select("*, "
+                         "companies(name, address, latitude, longitude, "
+                         "  contact_person, contact_phone, city, "
+                         "  industry_classification, geofence_radius_meters), "
                          "units(name, code), "
                          "student:user_profiles!industrial_attachments_student_id_fkey"
                          "(full_name, admission_no, mobile_number)")

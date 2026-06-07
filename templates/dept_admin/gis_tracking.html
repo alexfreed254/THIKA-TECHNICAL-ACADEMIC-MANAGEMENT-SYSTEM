@@ -401,9 +401,10 @@
               <td>
                 <div class="company-name">{{ co.get('name','—') }}</div>
                 <div class="company-city">{{ co.get('city','') }}{% if co.get('industry_classification') %} · {{ co.industry_classification }}{% endif %}</div>
-                {% if p.get('mentor_name') %}
+                {% if co.get('contact_person') %}
                 <div style="font-size:11px;color:#6b7280;margin-top:2px">
-                  <i class="fas fa-user-tie" style="font-size:9px"></i> {{ p.mentor_name }}
+                  <i class="fas fa-user-tie" style="font-size:9px"></i> {{ co.contact_person }}
+                  {% if co.get('contact_phone') %} · {{ co.contact_phone }}{% endif %}
                 </div>
                 {% endif %}
               </td>
@@ -695,7 +696,7 @@ PLACEMENTS.forEach(function(p, idx) {
     '<div><span style="color:#9ca3af">Start</span><br>'+esc(p.start_date||'—')+'</div>' +
     '<div><span style="color:#9ca3af">End</span><br>'+(p.end_date ? esc(p.end_date) : '<span style="color:#22c55e;font-weight:700">Ongoing</span>')+'</div>' +
     '</div>' +
-    (p.mentor_name ? '<div style="font-size:11px;color:#6b7280"><i class="fas fa-user-tie"></i> Mentor: '+esc(p.mentor_name)+'</div>' : '') +
+    (co.contact_person ? '<div style="font-size:11px;color:#6b7280;margin-top:4px"><i class="fas fa-user-tie"></i> Contact: '+esc(co.contact_person)+(co.contact_phone?' · '+esc(co.contact_phone):'')+'</div>' : '') +
     '</div>'
   );
   bounds.push([lat, lng]);
