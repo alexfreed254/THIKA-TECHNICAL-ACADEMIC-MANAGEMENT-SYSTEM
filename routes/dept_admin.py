@@ -640,7 +640,8 @@ def exam_bookings():
     term_filter   = request.args.get("term",  "").strip()
 
     # term → month range
-    TERM_MONTHS = {"1": ("01","04"), "2": ("05","08"), "3": ("09","12")}
+    # (start_month, end_month, last_day_of_end_month)
+    TERM_MONTHS = {"1": ("01","04","30"), "2": ("05","08","31"), "3": ("09","12","31")}
 
     enr = (db.table("enrollments")
            .select("student_id, classes!inner(department_id, name)")
@@ -674,8 +675,8 @@ def exam_bookings():
         if year_filter:
             query = query.gte("exam_date", f"{yr}-01-01").lte("exam_date", f"{yr}-12-31")
         if term_filter and term_filter in TERM_MONTHS:
-            m0, m1 = TERM_MONTHS[term_filter]
-            query = query.gte("exam_date", f"{yr}-{m0}-01").lte("exam_date", f"{yr}-{m1}-31")
+            m0, m1, last = TERM_MONTHS[term_filter]
+            query = query.gte("exam_date", f"{yr}-{m0}-01").lte("exam_date", f"{yr}-{m1}-{last}")
 
         bookings = query.execute().data or []
 
@@ -726,7 +727,7 @@ def export_exam_bookings():
     class_filter  = request.args.get("class_id", "")
     year_filter   = request.args.get("year",  "").strip()
     term_filter   = request.args.get("term",  "").strip()
-    TERM_MONTHS   = {"1": ("01","04"), "2": ("05","08"), "3": ("09","12")}
+    TERM_MONTHS   = {"1": ("01","04","30"), "2": ("05","08","31"), "3": ("09","12","31")}
 
     # Get all enrollments for this department
     enr = (db.table("enrollments")
@@ -762,8 +763,8 @@ def export_exam_bookings():
     if year_filter:
         query = query.gte("exam_date", f"{yr}-01-01").lte("exam_date", f"{yr}-12-31")
     if term_filter and term_filter in TERM_MONTHS:
-        m0, m1 = TERM_MONTHS[term_filter]
-        query = query.gte("exam_date", f"{yr}-{m0}-01").lte("exam_date", f"{yr}-{m1}-31")
+        m0, m1, last = TERM_MONTHS[term_filter]
+        query = query.gte("exam_date", f"{yr}-{m0}-01").lte("exam_date", f"{yr}-{m1}-{last}")
 
     bookings = query.execute().data or []
 
