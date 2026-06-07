@@ -1048,71 +1048,66 @@ def unit_detail():
 @student_bp.route("/unit-report-pdf")
 @student_required
 def unit_report_pdf():
-    """Generate a PDF attendance report for a unit."""
-    from flask import make_response
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet
-    import io
+    """Render the printable HTML attendance report for a unit."""
+    from datetime import date as _date
 
-    db = get_service_client()
-    user = current_user()
+    db         = get_service_client()
+    user       = current_user()
     student_id = user["id"]
-    unit_id = request.args.get("unit_id")
+    unit_id    = request.args.get("unit_id")
 
     if not unit_id:
         flash("Unit ID is required.", "error")
         return redirect(url_for("student.dashboard"))
 
-    unit = db.table("units").select("*").eq("id", unit_id).single().execute().data or {}
-    student = db.table("user_profiles").select("full_name, admission_no").eq("id", student_id).single().execute().data or {}
+    unit    = db.table("units").select("*").eq("id", unit_id).single().execute().data or {}
+    student = (db.table("user_profiles")
+               .select("full_name, admission_no")
+               .eq("id", student_id).single().execute().data or {})
 
     records = (db.table("attendance")
-              .select("*")
-              .eq("student_id", student_id)
-              .eq("unit_id", unit_id)
-              .order("attendance_date", desc=True)
-              .execute().data or [])
+               .select("*")
+               .eq("student_id", student_id)
+               .eq("unit_id", unit_id)
+               .order("attendance_date", desc=False)
+               .execute().data or [])
 
-    total = len(records)
+    total   = len(records)
     present = sum(1 for r in records if r.get("status") == "present")
-    pct = round(present / total * 100, 1) if total > 0 else 0
+    absent  = total - present
+    pct     = round(present / total * 100, 1) if total > 0 else 0
 
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elems = []
+    # Resolve class & department from the student's enrollment
+    info = {"class_name": "", "dept_name": ""}
+    try:
+        enr = (db.table("enrollments")
+               .select("classes(name, departments(name))")
+               .eq("student_id", student_id)
+               .limit(1).execute().data or [])
+        if enr:
+            cls  = (enr[0].get("classes") or {})
+            dept = (cls.get("departments") or {})
+            info["class_name"] = cls.get("name", "")
+            info["dept_name"]  = dept.get("name", "")
+    except Exception:
+        pass
 
-    elems.append(Paragraph("Attendance Report", styles["Title"]))
-    elems.append(Spacer(1, 12))
-    elems.append(Paragraph(f"Student: {student.get('full_name', 'N/A')} ({student.get('admission_no', '')})", styles["Normal"]))
-    elems.append(Paragraph(f"Unit: {unit.get('name', 'N/A')} ({unit.get('code', '')})", styles["Normal"]))
-    elems.append(Paragraph(f"Attendance: {present}/{total} ({pct}%)", styles["Normal"]))
-    elems.append(Spacer(1, 20))
+    term_label = {1: "Term 1", 2: "Term 2", 3: "Term 3"}
+    date_gen   = _date.today().strftime("%d %B %Y")
 
-    data = [["Date", "Status"]]
-    for r in records:
-        data.append([r.get("attendance_date", ""), r.get("status", "").capitalize()])
-
-    t = Table(data)
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1565c0")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 12),
-        ("GRID", (0, 0), (-1, -1), 1, colors.grey),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-    ]))
-    elems.append(t)
-
-    doc.build(elems)
-    buf.seek(0)
-
-    return make_response(buf.getvalue(),
-                         200,
-                         {"Content-Type": "application/pdf",
-                          "Content-Disposition": f"attachment; filename=attendance_{unit.get('code', 'unit')}.pdf"})
+    return render_template(
+        "student/unit_report_pdf.html",
+        unit=unit,
+        student=student,
+        records=records,
+        attended=present,
+        absent=absent,
+        total=total,
+        pct=pct,
+        info=info,
+        term_label=term_label,
+        date_gen=date_gen,
+    )
 
 
 # ── Portfolio of Evidence View ─────────────────────────────────────────────────
