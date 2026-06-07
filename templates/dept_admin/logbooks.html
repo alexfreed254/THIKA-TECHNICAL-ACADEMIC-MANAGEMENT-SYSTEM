@@ -115,6 +115,7 @@
     <div>
       <label>Year</label>
       <select name="year">
+        <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Years</option>
         {% for y in range(2024, 2030) %}
         <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
         {% endfor %}
@@ -146,8 +147,8 @@
     {% if logbooks %}
     <div id="lb-list" style="background:#f8f9fb;padding:16px">
       {% for e in logbooks %}
-      {% set st   = e.student    or {} %}
-      {% set att  = e.attachment or {} %}
+      {% set st   = e.student     or {} %}
+      {% set att  = e._attachment or {} %}
       {% set co   = (att.get('companies') or {}) if att else {} %}
       {% set lb_st = e.get('mentor_approval_status') or 'pending' %}
       {% set ev   = e._evidence or [] %}

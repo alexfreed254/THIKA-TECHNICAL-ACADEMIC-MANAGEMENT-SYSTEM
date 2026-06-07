@@ -2076,27 +2076,27 @@ def logbooks():
 
     records = []
     if student_ids:
+        # ── Step 1: fetch logbook entries (no risky FK-name joins) ─────────────
         query = (db.table("digital_logbook")
-                   .select("id, student_id, log_date, entry_time, tasks_performed, "
-                           "skills_applied, hours_worked, challenges_encountered, "
-                           "achievements, mentor_approval_status, mentor_comments, "
+                   .select("id, student_id, attachment_id, log_date, entry_time, "
+                           "tasks_performed, skills_applied, hours_worked, "
+                           "challenges_encountered, achievements, "
+                           "mentor_approval_status, mentor_comments, "
                            "trainer_comments, evidence_urls, created_at, "
                            "student:user_profiles!digital_logbook_student_id_fkey"
-                           "(full_name, admission_no), "
-                           "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
-                           "(start_date, end_date, companies(name))")
+                           "(full_name, admission_no)")
                    .in_("student_id", student_ids)
                    .order("log_date", desc=True)
-                   .limit(800))
+                   .limit(1000))
 
         if status_filter:
             query = query.eq("mentor_approval_status", status_filter)
 
-        # Date range filter on log_date
+        # Date range on log_date — only apply when explicitly set
         if period_filter and period_filter in PERIOD_RANGES:
             d0, d1 = PERIOD_RANGES[period_filter]
             query = query.gte("log_date", d0).lte("log_date", d1)
-        elif year_filter:
+        elif year_filter and year_filter != "all":
             query = query.gte("log_date", f"{year_filter}-01-01").lte("log_date", f"{year_filter}-12-31")
 
         records = query.execute().data or []
@@ -2105,7 +2105,22 @@ def logbooks():
             records = [r for r in records
                        if adm_filter in (r.get("student") or {}).get("admission_no", "").upper()]
 
+        # ── Step 2: enrich with company name via attachment_id (best-effort) ──
+        att_ids = list({r["attachment_id"] for r in records if r.get("attachment_id")})
+        att_map = {}
+        if att_ids:
+            try:
+                att_rows = (db.table("industrial_attachments")
+                            .select("id, start_date, end_date, companies(name)")
+                            .in_("id", att_ids)
+                            .execute().data or [])
+                for a in att_rows:
+                    att_map[a["id"]] = a
+            except Exception:
+                pass
+
         for entry in records:
+            entry["_attachment"] = att_map.get(entry.get("attachment_id"), {})
             ev_paths = entry.get("evidence_urls") or []
             entry["_evidence"] = [
                 {"url":  f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
