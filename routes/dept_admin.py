@@ -460,33 +460,68 @@ def trainer_units():
 @dept_admin_bp.route("/attendance")
 @dept_admin_required
 def attendance():
-    db = get_service_client()
-    dept_id = _dept_id()
-    class_filter = request.args.get("class_id", "")
-    unit_filter  = request.args.get("unit_id", "")
-    records = (db.table("attendance")
-        .select("*, user_profiles:user_profiles!attendance_student_id_fkey(full_name, admission_no, enrollments(classes(name))), units(name, code, department_id)")
-        .order("attendance_date", desc=True).limit(200).execute().data or [])
-        
+    db          = get_service_client()
+    dept_id     = _dept_id()
+    class_filter = request.args.get("class_id", "").strip()
+    unit_filter  = request.args.get("unit_id",  "").strip()
+    term_filter  = request.args.get("term",     "").strip()
+    year_filter  = request.args.get("year",     "").strip()
+
+    classes = (db.table("classes").select("id, name")
+               .eq("department_id", dept_id).order("name").execute().data or [])
+    units   = (db.table("units").select("id, name, code")
+               .eq("department_id", dept_id).order("name").execute().data or [])
+
+    # Build query — push indexed filters to the DB, not Python
+    q = (db.table("attendance")
+         .select("*, "
+                 "user_profiles:user_profiles!attendance_student_id_fkey"
+                 "(full_name, admission_no, "
+                 "enrollments(class_id, classes(id, name))), "
+                 "units(name, code, department_id)")
+         .order("attendance_date", desc=True))
+
+    if unit_filter:
+        q = q.eq("unit_id", unit_filter)
+    if term_filter:
+        q = q.eq("term", int(term_filter))
+    if year_filter:
+        q = q.eq("year", int(year_filter))
+
+    records = q.limit(500).execute().data or []
+
+    # Resolve class from enrollment join; filter to this department
+    dept_records = []
     for r in records:
+        if (r.get("units") or {}).get("department_id") != dept_id:
+            continue
         student = r.get("user_profiles") or {}
         enrolls = student.get("enrollments") or []
-        first_enroll = enrolls[0] if enrolls else {}
-        cls = first_enroll.get("classes") or {}
+        cls = {}
+        for enr in enrolls:
+            cls = enr.get("classes") or {}
+            if cls:
+                break
         r["classes"] = cls
-        
-    records = [r for r in records if r.get("units", {}).get("department_id") == dept_id]
+        dept_records.append(r)
 
+    # Class filter: match via resolved class id (attendance has no class_id col)
     if class_filter:
-        records = [r for r in records if r.get("class_id") == class_filter]
-    if unit_filter:
-        records = [r for r in records if r.get("unit_id") == unit_filter]
+        dept_records = [
+            r for r in dept_records
+            if (r.get("classes") or {}).get("id") == class_filter
+        ]
 
-    classes = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
-    units   = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
-    return render_template("dept_admin/attendance.html",
-                           attendance=records, classes=classes, units=units,
-                           class_filter=class_filter, unit_filter=unit_filter)
+    return render_template(
+        "dept_admin/attendance.html",
+        attendance=dept_records,
+        classes=classes,
+        units=units,
+        class_filter=class_filter,
+        unit_filter=unit_filter,
+        term_filter=term_filter,
+        year_filter=year_filter,
+    )
 
 
 # ── Assessments Overview ──────────────────────────────────────────────────────

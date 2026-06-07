@@ -158,12 +158,30 @@
               {% endfor %}
             </select>
           </div>
+          <div class="fg">
+            <label>Term</label>
+            <select name="term">
+              <option value="">All Terms</option>
+              <option value="1" {% if term_filter == '1' %}selected{% endif %}>Term 1 (Jan–Apr)</option>
+              <option value="2" {% if term_filter == '2' %}selected{% endif %}>Term 2 (May–Aug)</option>
+              <option value="3" {% if term_filter == '3' %}selected{% endif %}>Term 3 (Sep–Dec)</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Year</label>
+            <select name="year">
+              <option value="">All Years</option>
+              {% for y in range(2024, 2030) %}
+              <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button type="submit" class="btn-filter">
             <i class="fas fa-search"></i> Filter
           </button>
-          {% if class_filter or unit_filter %}
+          {% if class_filter or unit_filter or term_filter or year_filter %}
           <a href="/dept-admin/attendance" class="btn-clear">
             <i class="fas fa-times"></i> Clear
           </a>
@@ -183,6 +201,18 @@
           {{ attendance|length }}
         </span>
       </span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        {% if term_filter %}
+        <span style="background:#ede9fe;color:#6d28d9;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">
+          Term {{ term_filter }}
+        </span>
+        {% endif %}
+        {% if year_filter %}
+        <span style="background:#fef3c7;color:#b45309;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">
+          {{ year_filter }}
+        </span>
+        {% endif %}
+      </div>
     </div>
 
     {% if attendance %}
@@ -211,6 +241,7 @@
             <th>Student</th>
             <th>Unit</th>
             <th>Class</th>
+            <th style="text-align:center">Term</th>
             <th style="text-align:center">Week</th>
             <th style="text-align:center">Lesson</th>
             <th>Status</th>
@@ -233,6 +264,10 @@
               <div style="font-size:12px;color:#6b7280;margin-top:3px">{{ unit.get('name','') }}</div>
             </td>
             <td style="color:#6b7280">{{ cls.get('name','—') }}</td>
+            <td style="text-align:center;font-weight:600">
+              {% set t = a.get('term') %}
+              {% if t %}T{{ t }}{% else %}—{% endif %}
+            </td>
             <td style="text-align:center;font-weight:600">{{ a.get('week','—') }}</td>
             <td style="text-align:center;font-weight:600">{{ a.get('lesson','—') }}</td>
             <td>
