@@ -1,43 +1,117 @@
 {% extends "student/base.html" %}
 {% block title %}Unit Detail{% endblock %}
-{% block page_title %}Unit Detail{% endblock %}
+{% block page_title %}Unit Attendance Detail{% endblock %}
+
 {% block extra_style %}
-.page{padding:24px;max-width:900px;margin:0 auto}
-.stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
-.stat-pill{flex:1;min-width:100px;text-align:center;padding:14px 10px;border-radius:10px}
-.stat-pill .num{font-size:28px;font-weight:800;line-height:1}
-.stat-pill .lbl{font-size:12px;margin-top:4px;font-weight:600}
-.box-present{background:#e8f5e9;color:#2e7d32}
-.box-absent{background:#ffebee;color:#c62828}
-.box-total{background:#e3f2fd;color:#1e5a9f}
-.box-pct{background:#fff3e0;color:#e65100}
-.progress-bar{height:12px;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:20px}
-.progress-fill{height:100%;border-radius:6px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;margin-bottom:20px}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-.card-body{padding:20px}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:10px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
-.status-present{color:#28a745;font-weight:700}
-.status-absent{color:#dc3545;font-weight:700}
-.btn{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.btn-success{background:#2e7d32;color:#fff}
-.header-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
-.header-row h1{color:#1e5a9f;font-size:20px;margin:0 0 4px}
-.header-row .sub{color:#888;font-size:13px;margin:0}
+<style>
+  .page { padding: 24px; max-width: 920px; }
+
+  /* ── Back link ── */
+  .back-link {
+    display: inline-flex; align-items: center; gap: 7px;
+    color: #1d4ed8; font-size: 13px; font-weight: 600;
+    text-decoration: none; margin-bottom: 20px;
+    padding: 6px 14px; background: #eff6ff; border-radius: 8px;
+    border: 1px solid #dbeafe; transition: background .15s;
+  }
+  .back-link:hover { background: #dbeafe; }
+
+  /* ── Page heading row ── */
+  .header-row {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; flex-wrap: wrap; gap: 12px;
+    margin-bottom: 24px;
+  }
+  .header-row h1 { color: #1e3a5f; font-size: 20px; font-weight: 800; margin: 0 0 5px; }
+  .header-row .sub { color: #6b7280; font-size: 13px; margin: 0; }
+  .btn-pdf-dl {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 20px; background: #15803d; color: #fff;
+    border-radius: 9px; font-size: 13px; font-weight: 700;
+    text-decoration: none; border: none; transition: opacity .15s;
+    white-space: nowrap;
+  }
+  .btn-pdf-dl:hover { opacity: .88; }
+
+  /* ── Stat pills ── */
+  .stat-row {
+    display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .stat-pill {
+    flex: 1; min-width: 100px; text-align: center;
+    padding: 16px 12px; border-radius: 12px;
+    border: 1px solid transparent;
+  }
+  .stat-pill .num { font-size: 30px; font-weight: 800; line-height: 1; }
+  .stat-pill .lbl { font-size: 12px; margin-top: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .box-present { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+  .box-absent  { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+  .box-total   { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+  .box-pct     { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+
+  /* ── Progress bar ── */
+  .prog-bar-outer {
+    height: 12px; background: #e5e7eb; border-radius: 99px;
+    overflow: hidden; margin-bottom: 24px;
+  }
+  .prog-bar-inner { height: 100%; border-radius: 99px; transition: width .8s ease; }
+
+  /* ── Card ── */
+  .att-card {
+    background: #fff; border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .att-card-header {
+    background: linear-gradient(135deg, #1e5a9f, #2e75b6);
+    color: #fff; padding: 14px 20px;
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-body { padding: 20px; text-align: center; color: #9ca3af; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: #f9fafb; padding: 10px 16px;
+    text-align: left; font-size: 11.5px; font-weight: 700;
+    color: #6b7280; text-transform: uppercase; letter-spacing: .04em;
+    border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+  }
+  tbody td {
+    padding: 10px 16px; border-bottom: 1px solid #f3f4f6;
+    font-size: 13px; color: #374151;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #f9fafb; }
+
+  .status-present { color: #15803d; font-weight: 700; }
+  .status-absent  { color: #b91c1c; font-weight: 700; }
+  .row-num { color: #9ca3af; font-size: 12px; }
+</style>
 {% endblock %}
+
 {% block content %}
 <div class="page">
+
+  <a href="/student/attendance" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to Attendance
+  </a>
+
+  <!-- Heading row -->
   <div class="header-row">
     <div>
-      <h1><i class="fas fa-book"></i> {{ unit.code }} — {{ unit.name }}</h1>
-      <p class="sub">{{ info.class_name if info else '' }} &bull; {{ info.dept_name if info else '' }}</p>
+      <h1><i class="fas fa-book" style="color:#1d4ed8;margin-right:8px"></i>{{ unit.code }} — {{ unit.name }}</h1>
+      <p class="sub">{{ info.class_name if info else '' }}{% if info and info.class_name and info.dept_name %} &bull; {% endif %}{{ info.dept_name if info else '' }}</p>
     </div>
-    <a href="/student/unit-report-pdf?unit_id={{ unit.id }}" target="_blank" class="btn btn-success"><i class="fas fa-file-pdf"></i> Download PDF Report</a>
+    <a href="/student/unit-report-pdf?unit_id={{ unit.id }}" target="_blank" class="btn-pdf-dl">
+      <i class="fas fa-file-pdf"></i> Download PDF Report
+    </a>
   </div>
 
+  <!-- Stat pills -->
   <div class="stat-row">
     <div class="stat-pill box-present"><div class="num">{{ present }}</div><div class="lbl">Present</div></div>
     <div class="stat-pill box-absent"><div class="num">{{ absent }}</div><div class="lbl">Absent</div></div>
@@ -45,35 +119,53 @@ td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
     <div class="stat-pill box-pct"><div class="num">{{ pct }}%</div><div class="lbl">Attendance</div></div>
   </div>
 
-  <div class="progress-bar">
-    <div class="progress-fill" style="width:{{ pct }}%;background:{% if pct >= 75 %}#27ae60{% elif pct >= 50 %}#f39c12{% else %}#e74c3c{% endif %}"></div>
+  <!-- Progress bar -->
+  <div class="prog-bar-outer">
+    <div class="prog-bar-inner"
+         style="width:{{ pct }}%;background:{% if pct >= 75 %}linear-gradient(90deg,#22c55e,#16a34a){% elif pct >= 50 %}linear-gradient(90deg,#f59e0b,#d97706){% else %}linear-gradient(90deg,#ef4444,#b91c1c){% endif %}"></div>
   </div>
 
-  <div class="card">
-    <div class="card-header"><i class="fas fa-clipboard-list"></i> Attendance Records</div>
+  <!-- Records table -->
+  <div class="att-card">
+    <div class="att-card-header">
+      <i class="fas fa-clipboard-list"></i> Attendance Records
+    </div>
     {% if records %}
     <div class="table-wrap">
       <table>
-        <thead><tr><th>#</th><th>Week</th><th>Lesson</th><th>Status</th><th>Date &amp; Time</th></tr></thead>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Week</th>
+            <th>Lesson</th>
+            <th>Status</th>
+            <th>Date &amp; Time</th>
+          </tr>
+        </thead>
         <tbody>
           {% for r in records %}
           <tr>
-            <td>{{ loop.index }}</td>
+            <td class="row-num">{{ loop.index }}</td>
             <td>Week {{ r.week }}</td>
             <td>{{ r.lesson }}</td>
-            <td class="status-{{ r.status | lower }}">{% if r.status == 'present' %}&#10003; Present{% else %}&#10007; Absent{% endif %}</td>
-            <td style="font-size:12px;color:#888">{{ r.attendance_date | to_eat }}</td>
+            <td class="status-{{ r.status | lower }}">
+              {% if r.status == 'present' %}&#10003; Present{% else %}&#10007; Absent{% endif %}
+            </td>
+            <td style="font-size:12px;color:#9ca3af;white-space:nowrap">
+              {{ r.attendance_date | to_eat }}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-    <div class="card-body" style="text-align:center;color:#aaa;padding:30px">
-      <i class="fas fa-clipboard" style="font-size:36px;margin-bottom:10px;display:block"></i>
+    <div class="card-body">
+      <i class="fas fa-clipboard" style="font-size:38px;display:block;margin-bottom:12px;opacity:.35"></i>
       No attendance records found for this unit yet.
     </div>
     {% endif %}
   </div>
+
 </div>
 {% endblock %}
