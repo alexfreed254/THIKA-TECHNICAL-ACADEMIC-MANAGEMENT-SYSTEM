@@ -1145,19 +1145,23 @@ def trainee_poe():
 # ── Trainees Documents ────────────────────────────────────────────────────────
 
 TRAINEE_DOC_TYPES = [
-    ("passport_photo",     "Passport Photo",          True),
-    ("admission_letter",   "Admission Letter",         True),
-    ("medical_form",       "Medical Examination Form", True),
-    ("personal_data_form", "Personal Data Form",       True),
-    ("declaration_form",   "Declaration Form",         True),
-    ("kcse_result_slip",   "KCSE Result Slip",         True),
-    ("kcse_certificate",   "KCSE Certificate",         True),
-    ("kcpe_result_slip",   "KCPE Result Slip",         True),
-    ("birth_certificate",  "Birth Certificate",        True),
-    ("national_id",        "National ID",              True),
-    ("guardian_id",        "Guardian ID Copies",       False),
-    ("consent_form",       "Consent Form",             True),
+    ("passport_photo",          "Passport Photo",                             True),
+    ("admission_letter",        "Admission Letter",                           True),
+    ("medical_form",            "Medical Examination Form",                   True),
+    ("personal_data_form",      "Personal Data Form",                         True),
+    ("declaration_form",        "Declaration Form",                           True),
+    ("kcse_result_slip",        "KCSE Result Slip",                           True),
+    ("kcse_certificate",        "KCSE Certificate",                           True),
+    ("kcpe_result_slip",        "KCPE Result Slip",                           True),
+    ("birth_certificate",       "Birth Certificate",                          True),
+    ("national_id",             "National ID",                                True),
+    ("guardian_id",             "Guardian ID Copies",                         False),
+    ("consent_form",            "Consent Form",                               True),
+    ("most_recent_result_slip", "Previous Module Result Slip (Continuing)",   False),
 ]
+
+# Table that trainee uploads go into (matches routes/student.py)
+_TRAINEE_DOCS_TABLE = "student_personal_documents"
 
 
 def _resolve_doc_url(doc):
@@ -1166,12 +1170,17 @@ def _resolve_doc_url(doc):
 
 def _parse_hod_verification(docs):
     """
-    HOD verification is stored in description as:
-        HOD_STATUS=approved\nComment text here
+    HOD verification: read the `status` field directly from student_personal_documents.
+    Falls back to the old HOD_STATUS=… description encoding for backward compat.
     Returns (status_str, comment_str).
     """
     import re
     for d in docs.values():
+        # New: direct status column set by verify route
+        st = d.get("status") or ""
+        if st in ("approved", "rejected", "pending"):
+            return st, d.get("description") or ""
+        # Legacy: encoded in description
         desc = d.get("description") or ""
         m = re.match(r"^HOD_STATUS=(\w+)\n?(.*)", desc, re.DOTALL)
         if m:
@@ -1216,7 +1225,7 @@ def trainees_documents():
     doc_map = {}
     if student_ids:
         try:
-            td_rows = (db.table("trainee_documents")
+            td_rows = (db.table(_TRAINEE_DOCS_TABLE)
                        .select("*")
                        .in_("student_id", student_ids)
                        .execute().data or [])
@@ -1269,7 +1278,7 @@ def trainee_document_detail(student_id):
 
     td_rows = []
     try:
-        td_rows = (db.table("trainee_documents")
+        td_rows = (db.table(_TRAINEE_DOCS_TABLE)
                    .select("*")
                    .eq("student_id", student_id)
                    .execute().data or [])
@@ -1304,18 +1313,16 @@ def verify_trainee_documents(student_id):
     if status not in ("pending", "approved", "rejected"):
         status = "pending"
 
-    # Encode status + comment into description field (no status column exists)
-    new_desc = f"HOD_STATUS={status}\n{comment}".strip()
-
-    existing = (db.table("trainee_documents")
+    existing = (db.table(_TRAINEE_DOCS_TABLE)
                 .select("id")
                 .eq("student_id", student_id)
                 .execute().data or [])
 
     for doc in existing:
         try:
-            db.table("trainee_documents").update({
-                "description": new_desc,
+            db.table(_TRAINEE_DOCS_TABLE).update({
+                "status":      status,
+                "description": comment,
             }).eq("id", doc["id"]).execute()
         except Exception as e:
             print(f"[verify_trainee_documents] update error: {e}")
