@@ -104,11 +104,19 @@
       </select>
     </div>
     <div>
-      <label>Term</label>
-      <select name="term">
-        <option value="">All Terms</option>
-        {% for t in ['Jan-Apr','May-Aug','Sept-Dec'] %}
-        <option value="{{ t }}" {% if t == term_filter %}selected{% endif %}>{{ t }}</option>
+      <label>Period</label>
+      <select name="period">
+        <option value="">Full Year</option>
+        <option value="1" {% if period_filter=='1' %}selected{% endif %}>Jan – Apr</option>
+        <option value="2" {% if period_filter=='2' %}selected{% endif %}>May – Aug</option>
+        <option value="3" {% if period_filter=='3' %}selected{% endif %}>Sep – Dec</option>
+      </select>
+    </div>
+    <div>
+      <label>Year</label>
+      <select name="year">
+        {% for y in range(2024, 2030) %}
+        <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
         {% endfor %}
       </select>
     </div>
@@ -155,11 +163,8 @@
           <span class="lb-company"><i class="fas fa-building" style="font-size:10px;margin-right:3px"></i>{{ co.get('name') }}</span>
           {% endif %}
           <div class="lb-meta">
-            {% if att.get('attachment_term') %}
-            <span class="lb-chip lb-chip-term"><i class="fas fa-calendar" style="font-size:9px"></i> {{ att.attachment_term }}{% if att.get('attachment_year') %} {{ att.attachment_year }}{% endif %}</span>
-            {% endif %}
-            {% if att.get('trainee_role') %}
-            <span class="lb-chip"><i class="fas fa-id-badge" style="font-size:9px"></i> {{ att.trainee_role }}</span>
+            {% if att.get('start_date') %}
+            <span class="lb-chip lb-chip-term"><i class="fas fa-calendar" style="font-size:9px"></i> {{ att.start_date }}{% if att.get('end_date') %} → {{ att.end_date }}{% endif %}</span>
             {% endif %}
             <span class="lb-chip"><i class="fas fa-calendar-day" style="font-size:9px"></i> {{ e.get('log_date','—') }}</span>
             {% if e.get('entry_time') %}<span class="lb-chip"><i class="fas fa-clock" style="font-size:9px"></i> {{ e.entry_time }}</span>{% endif %}

@@ -2046,20 +2046,33 @@ def review_application(app_id):
 def logbooks():
     """View all digital logbook entries for students in this department."""
     import os
-    db = get_service_client()
-    dept_id    = _dept_id()
+    from datetime import date as _date
+    db           = get_service_client()
+    dept_id      = _dept_id()
     supabase_url = os.environ.get("SUPABASE_URL", "").strip()
 
     status_filter = request.args.get("status", "")
-    term_filter   = request.args.get("term", "")
     adm_filter    = request.args.get("admission_no", "").strip().upper()
+    year_filter   = request.args.get("year",  str(_date.today().year)).strip()
+    period_filter = request.args.get("period", "").strip()   # 1=Jan-Apr 2=May-Aug 3=Sep-Dec
 
-    students = (db.table("user_profiles")
-                  .select("id")
-                  .eq("role", "student")
-                  .eq("department_id", dept_id)
-                  .execute().data or [])
-    student_ids = [s["id"] for s in students]
+    PERIOD_RANGES = {
+        "1": (f"{year_filter}-01-01", f"{year_filter}-04-30"),
+        "2": (f"{year_filter}-05-01", f"{year_filter}-08-31"),
+        "3": (f"{year_filter}-09-01", f"{year_filter}-12-31"),
+    }
+    PERIOD_LABELS = {
+        "1": "January – April",
+        "2": "May – August",
+        "3": "September – December",
+    }
+
+    # ── Students via enrollments (reliable across all setups) ─────────────────
+    enr = (db.table("enrollments")
+           .select("student_id, classes!inner(department_id)")
+           .eq("classes.department_id", dept_id)
+           .execute().data or [])
+    student_ids = list({e["student_id"] for e in enr})
 
     records = []
     if student_ids:
@@ -2071,13 +2084,20 @@ def logbooks():
                            "student:user_profiles!digital_logbook_student_id_fkey"
                            "(full_name, admission_no), "
                            "attachment:industrial_attachments!digital_logbook_attachment_id_fkey"
-                           "(companies(name), attachment_term, attachment_year, trainee_role)")
+                           "(start_date, end_date, companies(name))")
                    .in_("student_id", student_ids)
                    .order("log_date", desc=True)
-                   .limit(600))
+                   .limit(800))
 
         if status_filter:
             query = query.eq("mentor_approval_status", status_filter)
+
+        # Date range filter on log_date
+        if period_filter and period_filter in PERIOD_RANGES:
+            d0, d1 = PERIOD_RANGES[period_filter]
+            query = query.gte("log_date", d0).lte("log_date", d1)
+        elif year_filter:
+            query = query.gte("log_date", f"{year_filter}-01-01").lte("log_date", f"{year_filter}-12-31")
 
         records = query.execute().data or []
 
@@ -2088,19 +2108,19 @@ def logbooks():
         for entry in records:
             ev_paths = entry.get("evidence_urls") or []
             entry["_evidence"] = [
-                {
-                    "url":  f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
-                    "ext":  p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
-                    "name": p.rsplit("/", 1)[-1],
-                }
+                {"url":  f"{supabase_url}/storage/v1/object/public/assessment-evidence/{p}",
+                 "ext":  p.rsplit(".", 1)[-1].lower() if "." in p else "bin",
+                 "name": p.rsplit("/", 1)[-1]}
                 for p in ev_paths if p
             ]
 
     return render_template("dept_admin/logbooks.html",
                            logbooks=records,
                            status_filter=status_filter,
-                           term_filter=term_filter,
-                           adm_filter=adm_filter)
+                           adm_filter=adm_filter,
+                           year_filter=year_filter,
+                           period_filter=period_filter,
+                           PERIOD_LABELS=PERIOD_LABELS)
 
 
 @dept_admin_bp.route("/logbooks/<log_id>/review", methods=["POST"])
