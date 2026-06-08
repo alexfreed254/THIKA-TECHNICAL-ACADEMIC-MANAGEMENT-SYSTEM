@@ -63,33 +63,12 @@ COMMENT ON COLUMN workshop_inventory.condition IS 'Physical condition: good, fai
 COMMENT ON COLUMN workshop_inventory.last_serviced IS 'Last maintenance/calibration date for the equipment';
 
 -- ────────────────────────────────────────────────────────────
--- ENSURE WORKSHOP_TECHNICIAN ROLE EXISTS IN USER_PROFILES
+-- NOTE: workshop_technician role constraint
 -- ────────────────────────────────────────────────────────────
-
--- Update the role CHECK constraint to include workshop_technician
-ALTER TABLE user_profiles DROP CONSTRAINT IF EXISTS user_profiles_role_check;
-ALTER TABLE user_profiles ADD CONSTRAINT user_profiles_role_check 
-    CHECK (role IN (
-        'super_admin',
-        'dept_admin',
-        'trainer',
-        'student',
-        'employer',
-        'examination_officer',
-        'industry_mentor',
-        'internal_verifier',
-        'sports_hod',
-        'environment_hod',
-        'dean_students',
-        'library_hod',
-        'finance_officer',
-        'registrar',
-        'deputy_principal',
-        'quality_assurance_officer',
-        'liaison_officer',
-        'cdacc_verifier',
-        'workshop_technician'
-    ));
+-- The workshop_technician role was already added to the
+-- user_profiles_role_check constraint by new_roles_migration.sql.
+-- No constraint change needed here.
+-- To verify: SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'user_profiles_role_check';
 
 -- ────────────────────────────────────────────────────────────
 -- SAMPLE DATA (OPTIONAL - FOR TESTING)
