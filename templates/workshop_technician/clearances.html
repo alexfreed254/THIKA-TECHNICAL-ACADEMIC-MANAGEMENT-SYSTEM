@@ -193,18 +193,21 @@
             </td>
             <td>
               {% if my_status == 'pending' %}
+              {% set t_name = trainee.get('full_name') or 'this trainee' %}
               <div class="action-cell">
                 <!-- Approve -->
                 <form method="post" action="/clearance/approve/{{ a.id }}" style="display:inline">
                   <input type="hidden" name="comments" value="Approved by Workshop Technician">
                   <button type="submit" class="btn-approve"
-                          onclick="return confirm('Approve clearance for {{ trainee.get(\'full_name\',\'this trainee\') }}?')">
+                          data-name="{{ t_name | e }}"
+                          onclick="return confirm('Approve clearance for ' + this.dataset.name + '?')">
                     <i class="fas fa-check"></i> Approve
                   </button>
                 </form>
                 <!-- Reject -->
                 <button type="button" class="btn-reject"
-                        onclick="openReject('{{ a.id }}', '{{ trainee.get(\'full_name\',\'Trainee\') | e }}')">
+                        data-id="{{ a.id }}" data-name="{{ t_name | e }}"
+                        onclick="openReject(this.dataset.id, this.dataset.name)">
                   <i class="fas fa-times"></i> Reject
                 </button>
               </div>
