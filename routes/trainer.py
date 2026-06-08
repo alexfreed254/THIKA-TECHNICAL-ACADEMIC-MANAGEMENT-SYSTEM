@@ -944,11 +944,12 @@ def attendance_weekly_export():
     ws["A2"].font = Font(italic=True, size=9, color="374151")
     ws["A2"].alignment = Alignment(horizontal="center")
 
-    ws.append([])  # blank row 3
+    # Row 3 is blank (intentionally left empty — ws.append([]) does NOT
+    # advance max_row, so we hard-code row positions to avoid writing
+    # into already-merged cells and triggering MergedCell read-only error)
 
     # Row 4 — Week group headers (merged per week)
-    ws.append([])
-    week_row = ws.max_row
+    week_row = 4
     for ci in range(1, n_fix + 1):
         hdr_cell(week_row, ci, "")
     # Merge cells per week
