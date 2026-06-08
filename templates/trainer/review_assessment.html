@@ -93,7 +93,7 @@
       {% if assessment.get('script_file_path') %}
       <div style="margin-bottom:16px">
         <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:8px">Script File</label>
-        <a href="{{ assessment.script_file_path }}" target="_blank" class="script-link">
+        <a href="{{ storage_url(BUCKET_SCRIPTS, assessment.script_file_path) }}" target="_blank" class="script-link">
           <i class="fas fa-file-pdf"></i> {{ assessment.get('script_file_name','View Script') }}
           <i class="fas fa-external-link-alt" style="font-size:10px"></i>
         </a>
@@ -108,11 +108,15 @@
     <div class="card-body">
       <div class="evidence-grid">
         {% for e in evidence %}
-        <div class="evidence-item" onclick="openPreview('{{ e.file_path }}')">
+        {% set ev_url = storage_url(BUCKET_EVIDENCE, e.file_path) %}
+        <div class="evidence-item"
+             onclick="{% if e.file_type == 'photo' %}openPreview('{{ ev_url }}'){% else %}window.open('{{ ev_url }}','_blank'){% endif %}">
           {% if e.file_type == 'photo' %}
-          <img src="{{ e.file_path }}" alt="{{ e.file_name }}" onerror="this.src='/static/assets/THIKATTILOGO.jpg'">
-          {% else %}
+          <img src="{{ ev_url }}" alt="{{ e.file_name }}" onerror="this.src='/static/assets/THIKATTILOGO.jpg'">
+          {% elif e.file_type == 'video' %}
           <div class="vid-placeholder"><i class="fas fa-video fa-2x" style="color:#7b1fa2"></i></div>
+          {% else %}
+          <div class="vid-placeholder"><i class="fas fa-music fa-2x" style="color:#7b1fa2"></i></div>
           {% endif %}
           <p>{{ e.caption or e.file_name }}</p>
         </div>

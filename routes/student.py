@@ -869,9 +869,22 @@ def add_evidence(assessment_id):
             return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
         
         caption = request.form.get("caption", "")
-        
+
+        # Build structured evidence filename: adm-unit-type-no-cycle-term-ev{n}.ext
+        _eprof = (db.table("user_profiles").select("admission_no")
+                  .eq("id", student_id).single().execute().data or {})
+        _adm_slug  = _file_slug(_eprof.get("admission_no") or student_id)
+        _unit_slug = _file_slug((assessment.get("units") or {}).get("name") or "unit")
+        _atype_s   = _file_slug(assessment.get("assessment_type") or "FA")
+        _ano       = str(assessment.get("assessment_no") or "1")
+        _cyc       = str(assessment.get("cycle") or "1")
+        _trm       = str(assessment.get("term") or "1")
+        _ev_num    = len(evidence_list) + 1
+        _base_ev   = f"{_adm_slug}-{_unit_slug}-{_atype_s}-{_ano}-{_cyc}-{_trm}-ev{_ev_num}"
+
         try:
-            filename = f"evidence/{student_id}_{assessment_id}_{uuid.uuid4().hex}.{ext}"
+            display_ev_name = f"{_base_ev}.{ext}"
+            filename = f"evidence/{student_id}/{display_ev_name}"
             file_data = file.read()
             get_service_client().storage.from_("assessment-evidence").upload(
                 filename, file_data, {"content-type": content_type}
@@ -880,7 +893,7 @@ def add_evidence(assessment_id):
                 "assessment_id": assessment_id,
                 "student_id": student_id,
                 "file_path": filename,
-                "file_name": file.filename,
+                "file_name": display_ev_name,
                 "file_type": file_type,
                 "file_size": len(file_data),
                 "caption": caption

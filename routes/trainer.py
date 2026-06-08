@@ -106,6 +106,49 @@ def _rename_script_file(db, assessment_id: str, action: str, trainer_name: str):
             "script_file_path": new_path,
         }).eq("id", assessment_id).execute()
 
+        # ── Rename all evidence files for this assessment ──────────────────
+        ext_ct = {
+            'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+            'gif': 'image/gif',  'webp': 'image/webp',
+            'mp4': 'video/mp4',  'mov': 'video/quicktime', 'avi': 'video/avi',
+            'mkv': 'video/x-matroska', 'webm': 'video/webm',
+            'mp3': 'audio/mpeg', 'wav': 'audio/wav',  'ogg': 'audio/ogg',
+            'm4a': 'audio/mp4',  'flac': 'audio/flac', 'aac': 'audio/aac',
+        }
+        evidence_list = (db.table("evidence")
+                         .select("id, file_path, file_name")
+                         .eq("assessment_id", assessment_id)
+                         .order("uploaded_at").execute().data or [])
+        ev_storage = get_service_client().storage
+        for ev_idx, ev in enumerate(evidence_list, 1):
+            old_ev = ev.get("file_path")
+            if not old_ev:
+                continue
+            ev_ext     = old_ev.rsplit(".", 1)[-1].lower() if "." in old_ev else "jpg"
+            page_sfx   = f"-ev{ev_idx}" if len(evidence_list) > 1 else ""
+            new_ev_name = (
+                f"{admission_slug}_{unit_slug}_{atype_slug}_{ano}_"
+                f"{cycle_str}_{term_str}_{status_str}-{trainer_slug}{page_sfx}.{ev_ext}"
+            )
+            ev_folder  = old_ev.rsplit("/", 1)[0] if "/" in old_ev else "evidence"
+            new_ev_path = f"{ev_folder}/{new_ev_name}"
+            try:
+                ev_bytes = bytes(ev_storage.from_("assessment-evidence").download(old_ev))
+                ev_storage.from_("assessment-evidence").upload(
+                    new_ev_path, ev_bytes,
+                    {"content-type": ext_ct.get(ev_ext, "application/octet-stream")}
+                )
+                try:
+                    ev_storage.from_("assessment-evidence").remove([old_ev])
+                except Exception:
+                    pass
+                db.table("evidence").update({
+                    "file_name": new_ev_name,
+                    "file_path": new_ev_path,
+                }).eq("id", ev["id"]).execute()
+            except Exception:
+                pass
+
     except Exception:
         pass
 
@@ -550,15 +593,12 @@ def delete_assessment(assessment_id):
     try:
         evidence_list = db.table("evidence").select("*").eq("assessment_id", assessment_id).execute().data or []
 
-        # Delete evidence files from storage
+        # Delete evidence files from storage (file_path is a relative storage path)
         svc = get_service_client()
         for e in evidence_list:
             try:
-                path_parts = e["file_path"].split("/storage/v1/object/public/")
-                if len(path_parts) > 1:
-                    storage_path = path_parts[1].split("/", 1)[1] if "/" in path_parts[1] else path_parts[1]
-                    bucket = path_parts[1].split("/")[0]
-                    svc.storage.from_(bucket).remove([storage_path])
+                if e.get("file_path"):
+                    svc.storage.from_("assessment-evidence").remove([e["file_path"]])
             except Exception:
                 pass
 
@@ -566,11 +606,7 @@ def delete_assessment(assessment_id):
         try:
             sfp = assessment.get("script_file_path", "")
             if sfp:
-                path_parts = sfp.split("/storage/v1/object/public/")
-                if len(path_parts) > 1:
-                    storage_path = path_parts[1].split("/", 1)[1] if "/" in path_parts[1] else path_parts[1]
-                    bucket = path_parts[1].split("/")[0]
-                    svc.storage.from_(bucket).remove([storage_path])
+                svc.storage.from_("assessment-scripts").remove([sfp])
         except Exception:
             pass
 
