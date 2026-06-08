@@ -23,7 +23,7 @@ td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px}
           <td><strong>{{ c.name }}</strong></td>
           <td>{{ c.get('industry_classification','—') }}</td>
           <td>{{ c.get('city','—') or '—' }}</td>
-          <td>{{ c.get('departments',{}).get('name','—') }}</td>
+          <td>{{ (c.get('departments') or {}).get('name','—') }}</td>
           <td>{{ c.get('available_slots',0) }}</td>
           <td>{{ c.get('contact_person','—') or '—' }}<br><small style="color:#aaa">{{ c.get('contact_phone','') or '' }}</small></td>
           <td><span class="badge-{{ 'active' if c.get('is_active') else 'inactive' }}">{{ 'Active' if c.get('is_active') else 'Inactive' }}</span></td>
