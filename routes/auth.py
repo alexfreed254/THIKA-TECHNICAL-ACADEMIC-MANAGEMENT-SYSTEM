@@ -96,7 +96,7 @@ def login():
         elif role == "cdacc_verifier":
             return redirect(url_for("cdacc_verifier.dashboard"))
         elif role == "workshop_technician":
-            return redirect(url_for("trainer.dashboard"))
+            return redirect(url_for("workshop_technician.dashboard"))
         return redirect(url_for("auth.profile"))
 
     if request.method == "POST":
@@ -159,7 +159,7 @@ def login():
                     elif role == "cdacc_verifier":
                         return redirect(url_for("cdacc_verifier.dashboard"))
                     elif role == "workshop_technician":
-                        return redirect(url_for("trainer.dashboard"))
+                        return redirect(url_for("workshop_technician.dashboard"))
 
                     flash("Login successful", "success")
                     return redirect(url_for("auth.profile"))

@@ -1,0 +1,163 @@
+{% extends "workshop_technician/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Workshop Technician Dashboard{% endblock %}
+
+{% block extra_style %}
+<style>
+  .wt-wrap { padding: 24px; }
+
+  /* ── Banner ── */
+  .wt-banner {
+    background: linear-gradient(135deg, #0a0f1e, #1c1917);
+    border-radius: 14px; padding: 22px 28px; margin-bottom: 24px;
+    color: #fff; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .wt-banner h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+  .wt-banner p  { font-size: 13px; color: rgba(255,255,255,.6); margin: 0; }
+
+  /* ── Stat cards ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    padding: 20px 22px; display: flex; align-items: center; gap: 16px;
+  }
+  .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .stat-num  { font-size: 28px; font-weight: 800; color: #111827; line-height: 1; }
+  .stat-lbl  { font-size: 12px; color: #6b7280; font-weight: 500; margin-top: 4px; }
+
+  /* ── Recent inventory ── */
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+  .card-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid #f3f4f6;
+  }
+  .card-hdr h2 { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+  .card-hdr a  { font-size: 12px; color: #f97316; font-weight: 600; text-decoration: none; }
+  .card-hdr a:hover { text-decoration: underline; }
+
+  .item-list { padding: 0; }
+  .item-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px; border-bottom: 1px solid #f9fafb;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-icon { width: 36px; height: 36px; border-radius: 9px; background: #fff7ed; color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .item-name  { font-weight: 700; font-size: 13px; color: #111827; }
+  .item-cat   { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .item-qty   { margin-left: auto; font-size: 13px; font-weight: 700; color: #374151; }
+  .cond-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .cond-good    { background: #dcfce7; color: #15803d; }
+  .cond-fair    { background: #fef3c7; color: #b45309; }
+  .cond-poor    { background: #ffedd5; color: #c2410c; }
+  .cond-damaged { background: #fee2e2; color: #b91c1c; }
+
+  .empty-box { padding: 40px; text-align: center; color: #9ca3af; }
+  .empty-box i { font-size: 36px; display: block; margin-bottom: 10px; }
+  .empty-box p { font-size: 13px; margin: 0; }
+
+  .quick-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .quick-link {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 16px 18px; text-decoration: none; color: #111827;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .quick-link:hover { border-color: #f97316; box-shadow: 0 4px 14px rgba(249,115,22,.12); color: #111827; }
+  .quick-link-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .quick-link span  { font-weight: 700; font-size: 13px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wt-wrap">
+
+  <!-- Banner -->
+  <div class="wt-banner">
+    <div>
+      <h1><i class="fas fa-tools" style="color:#f97316;margin-right:8px"></i>
+        Workshop Technician Portal
+        {% if dept_name %}<span style="font-size:14px;font-weight:500;opacity:.7;margin-left:8px">— {{ dept_name }}</span>{% endif %}
+      </h1>
+      <p>Manage workshop equipment inventory and approve trainee clearances for your department.</p>
+    </div>
+    <div style="background:rgba(249,115,22,.2);color:#f97316;border:1px solid rgba(249,115,22,.3);padding:7px 18px;border-radius:99px;font-size:13px;font-weight:700">
+      <i class="fas fa-calendar-day" style="margin-right:5px"></i>
+      {{ now().strftime('%d %b %Y') }}
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff7ed"><i class="fas fa-boxes" style="color:#f97316"></i></div>
+      <div><div class="stat-num">{{ inv_total }}</div><div class="stat-lbl">Total Items</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i></div>
+      <div><div class="stat-num">{{ inv_low }}</div><div class="stat-lbl">Low Stock (qty &lt; 3)</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fee2e2"><i class="fas fa-times-circle" style="color:#b91c1c"></i></div>
+      <div><div class="stat-num">{{ inv_damaged }}</div><div class="stat-lbl">Poor / Damaged</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dcfce7"><i class="fas fa-clipboard-check" style="color:#15803d"></i></div>
+      <div><div class="stat-num">{{ pending_clearances }}</div><div class="stat-lbl">Pending Clearances</div></div>
+    </div>
+  </div>
+
+  <!-- Quick links -->
+  <div class="quick-links">
+    <a href="/workshop-technician/inventory" class="quick-link">
+      <div class="quick-link-icon" style="background:#fff7ed"><i class="fas fa-boxes" style="color:#f97316"></i></div>
+      <span>Manage Inventory</span>
+    </a>
+    <a href="/workshop-technician/inventory?condition=damaged" class="quick-link">
+      <div class="quick-link-icon" style="background:#fee2e2"><i class="fas fa-wrench" style="color:#b91c1c"></i></div>
+      <span>Damaged Items</span>
+    </a>
+    <a href="/workshop-technician/clearances" class="quick-link">
+      <div class="quick-link-icon" style="background:#dcfce7"><i class="fas fa-clipboard-check" style="color:#15803d"></i></div>
+      <span>Clearance Approvals</span>
+      {% if pending_clearances %}<span style="margin-left:4px;background:#f97316;color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:9999px">{{ pending_clearances }}</span>{% endif %}
+    </a>
+    <a href="/auth/profile" class="quick-link">
+      <div class="quick-link-icon" style="background:#f0f9ff"><i class="fas fa-user-circle" style="color:#0369a1"></i></div>
+      <span>My Profile</span>
+    </a>
+  </div>
+
+  <!-- Recent inventory -->
+  <div class="card">
+    <div class="card-hdr">
+      <h2><i class="fas fa-history" style="color:#f97316;margin-right:6px"></i>Recently Added Items</h2>
+      <a href="/workshop-technician/inventory">View all <i class="fas fa-arrow-right" style="font-size:10px"></i></a>
+    </div>
+
+    {% if recent_items %}
+    <div class="item-list">
+      {% for item in recent_items %}
+      <div class="item-row">
+        <div class="item-icon"><i class="fas fa-tools"></i></div>
+        <div>
+          <div class="item-name">{{ item.item_name }}</div>
+          <div class="item-cat">{{ item.category or 'Uncategorised' }}{% if item.serial_number %} &bull; S/N: {{ item.serial_number }}{% endif %}</div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <span class="cond-badge cond-{{ item.condition or 'good' }}">{{ (item.condition or 'good') | title }}</span>
+          <span class="item-qty">Qty: {{ item.quantity }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-box">
+      <i class="fas fa-boxes"></i>
+      <p>No inventory items yet. <a href="/workshop-technician/inventory" style="color:#f97316;font-weight:600">Add the first item</a></p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

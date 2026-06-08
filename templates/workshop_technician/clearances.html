@@ -1,0 +1,272 @@
+{% extends "workshop_technician/base.html" %}
+{% block title %}Clearance Approvals{% endblock %}
+{% block page_title %}Clearance Approvals{% endblock %}
+
+{% block extra_style %}
+<style>
+  .cl-wrap { padding: 24px; }
+
+  /* Banner */
+  .cl-banner {
+    background: linear-gradient(135deg, #0a0f1e, #1c1917);
+    border-radius: 14px; padding: 22px 28px; margin-bottom: 24px;
+    color: #fff; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .cl-banner h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+  .cl-banner p  { font-size: 13px; color: rgba(255,255,255,.6); margin: 0; }
+
+  /* Summary chips */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+  .chip { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; flex: 1; min-width: 130px; }
+  .chip-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .chip-num  { font-size: 22px; font-weight: 800; color: #111827; line-height: 1; }
+  .chip-lbl  { font-size: 11px; color: #6b7280; font-weight: 500; margin-top: 3px; }
+
+  /* Tab bar */
+  .tab-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .tab-link { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+  .tab-link:hover { background: #fff7ed; border-color: #f97316; color: #c2410c; }
+  .tab-link.active { background: linear-gradient(135deg,#0a0f1e,#1c1917); border-color: #0a0f1e; color: #f97316; }
+  .tab-count { display: inline-block; padding: 1px 7px; border-radius: 9999px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,.2); }
+  .tab-link:not(.active) .tab-count { background: #e5e7eb; color: #374151; }
+
+  /* Table card */
+  .table-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+  .table-card-hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; flex-wrap: wrap; gap: 10px; }
+  .table-card-hdr h2 { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+
+  .cl-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cl-tbl thead { background: #f9fafb; }
+  .cl-tbl th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: .05em; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
+  .cl-tbl td { padding: 12px 14px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  .cl-tbl tr:last-child td { border-bottom: none; }
+  .cl-tbl tr:hover td { background: #fff7ed; }
+
+  /* Status row accents */
+  .row-pending td:first-child   { border-left: 4px solid #f97316; }
+  .row-approved td:first-child  { border-left: 4px solid #22c55e; }
+  .row-rejected td:first-child  { border-left: 4px solid #ef4444; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
+  .b-pending  { background: #ffedd5; color: #c2410c; }
+  .b-approved { background: #dcfce7; color: #15803d; }
+  .b-rejected { background: #fee2e2; color: #b91c1c; }
+
+  .trainee-name { font-weight: 700; color: #111827; }
+  .trainee-adm  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  .stage-lbl { font-size: 12px; color: #6b7280; }
+
+  /* Approve/Reject forms inline */
+  .action-cell { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn-approve { padding: 5px 14px; background: linear-gradient(135deg,#16a34a,#15803d); color: #fff; border: none; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .btn-approve:hover { opacity: .9; }
+  .btn-reject  { padding: 5px 14px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .btn-reject:hover  { background: #fee2e2; }
+
+  /* Reject reason modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 9998; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #fff; border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; position: relative; }
+  .modal-box h3 { font-size: 15px; font-weight: 800; color: #0a0f1e; margin: 0 0 16px; }
+  .modal-close { position: absolute; top: 14px; right: 14px; background: #f3f4f6; border: none; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; font-size: 13px; }
+  .modal-box textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 13px; min-height: 80px; resize: vertical; font-family: inherit; }
+  .modal-box textarea:focus { outline: none; border-color: #f97316; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .btn-confirm-reject { padding: 9px 20px; background: linear-gradient(135deg,#dc2626,#b91c1c); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-cancel { padding: 9px 14px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+  .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; margin: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cl-wrap">
+
+  <!-- Banner -->
+  <div class="cl-banner">
+    <div>
+      <h1><i class="fas fa-clipboard-check" style="color:#f97316;margin-right:8px"></i>Clearance Approvals</h1>
+      <p>Review and approve or reject trainee clearance requests assigned to you.</p>
+    </div>
+    <div style="background:rgba(249,115,22,.2);color:#f97316;border:1px solid rgba(249,115,22,.3);padding:7px 18px;border-radius:99px;font-size:13px;font-weight:700">
+      <i class="fas fa-clock" style="margin-right:5px"></i>{{ cnt_pending }} pending
+    </div>
+  </div>
+
+  <!-- Summary chips -->
+  <div class="chip-row">
+    <div class="chip">
+      <div class="chip-icon" style="background:#fff7ed"><i class="fas fa-list" style="color:#f97316"></i></div>
+      <div><div class="chip-num">{{ approvals|length }}</div><div class="chip-lbl">Total</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#ffedd5"><i class="fas fa-hourglass-half" style="color:#c2410c"></i></div>
+      <div><div class="chip-num">{{ cnt_pending }}</div><div class="chip-lbl">Pending</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
+      <div><div class="chip-num">{{ cnt_approved }}</div><div class="chip-lbl">Approved</div></div>
+    </div>
+    <div class="chip">
+      <div class="chip-icon" style="background:#fee2e2"><i class="fas fa-times-circle" style="color:#b91c1c"></i></div>
+      <div><div class="chip-num">{{ cnt_rejected }}</div><div class="chip-lbl">Rejected</div></div>
+    </div>
+  </div>
+
+  <!-- Status tabs -->
+  <div class="tab-bar">
+    <a href="/workshop-technician/clearances"
+       class="tab-link {% if not status_filter %}active{% endif %}">
+      <i class="fas fa-list"></i> All <span class="tab-count">{{ approvals|length }}</span>
+    </a>
+    <a href="/workshop-technician/clearances?status=pending"
+       class="tab-link {% if status_filter == 'pending' %}active{% endif %}">
+      <i class="fas fa-hourglass-half"></i> Pending <span class="tab-count">{{ cnt_pending }}</span>
+    </a>
+    <a href="/workshop-technician/clearances?status=approved"
+       class="tab-link {% if status_filter == 'approved' %}active{% endif %}">
+      <i class="fas fa-check-circle"></i> Approved <span class="tab-count">{{ cnt_approved }}</span>
+    </a>
+    <a href="/workshop-technician/clearances?status=rejected"
+       class="tab-link {% if status_filter == 'rejected' %}active{% endif %}">
+      <i class="fas fa-times-circle"></i> Rejected <span class="tab-count">{{ cnt_rejected }}</span>
+    </a>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-card-hdr">
+      <h2><i class="fas fa-clipboard-list" style="color:#f97316;margin-right:6px"></i>Clearance Requests</h2>
+      <span style="font-size:12px;color:#9ca3af">{{ approvals|length }} record{{ 's' if approvals|length != 1 }}</span>
+    </div>
+
+    {% if approvals %}
+    <div style="overflow-x:auto">
+      <table class="cl-tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Trainee</th>
+            <th>Stage</th>
+            <th>Request Status</th>
+            <th>My Status</th>
+            <th>Date</th>
+            <th style="text-align:center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in approvals %}
+          {% set cr    = a.get('clearance_requests') or {} %}
+          {% set stage = a.get('clearance_stages') or {} %}
+          {% set trainee = cr.get('user_profiles') or {} %}
+          {% set my_status = a.get('status', 'pending') %}
+          <tr class="row-{{ my_status }}">
+            <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
+            <td>
+              <div class="trainee-name">{{ trainee.get('full_name', '—') }}</div>
+              <div class="trainee-adm"><i class="fas fa-id-card" style="font-size:9px;margin-right:2px"></i>{{ trainee.get('admission_no', '') }}</div>
+            </td>
+            <td>
+              <div class="stage-lbl">{{ stage.get('stage_name', '—') }}</div>
+              <div style="font-size:11px;color:#9ca3af">{{ (stage.get('approver_role','') or '') | replace('_',' ') | title }}</div>
+            </td>
+            <td>
+              {% set rs = cr.get('status', '—') %}
+              <span class="badge {% if rs == 'completed' %}b-approved{% elif rs == 'rejected' %}b-rejected{% else %}b-pending{% endif %}">
+                {{ rs | replace('_',' ') | title }}
+              </span>
+            </td>
+            <td>
+              <span class="badge b-{{ my_status }}">
+                {% if my_status == 'pending' %}<i class="fas fa-hourglass-half"></i>
+                {% elif my_status == 'approved' %}<i class="fas fa-check-circle"></i>
+                {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+                {{ my_status | title }}
+              </span>
+            </td>
+            <td style="font-size:12px;color:#9ca3af;white-space:nowrap">
+              {{ a.get('created_at','')[:10] if a.get('created_at') else '—' }}
+            </td>
+            <td>
+              {% if my_status == 'pending' %}
+              <div class="action-cell">
+                <!-- Approve -->
+                <form method="post" action="/clearance/approve/{{ a.id }}" style="display:inline">
+                  <input type="hidden" name="comments" value="Approved by Workshop Technician">
+                  <button type="submit" class="btn-approve"
+                          onclick="return confirm('Approve clearance for {{ trainee.get(\'full_name\',\'this trainee\') }}?')">
+                    <i class="fas fa-check"></i> Approve
+                  </button>
+                </form>
+                <!-- Reject -->
+                <button type="button" class="btn-reject"
+                        onclick="openReject('{{ a.id }}', '{{ trainee.get(\'full_name\',\'Trainee\') | e }}')">
+                  <i class="fas fa-times"></i> Reject
+                </button>
+              </div>
+              {% else %}
+              <span style="font-size:12px;color:#9ca3af">
+                {{ a.get('approved_at','')[:10] if a.get('approved_at') else 'Actioned' }}
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% if a.get('comments') and my_status != 'pending' %}
+          <tr>
+            <td colspan="7" style="background:#f9fafb;padding:6px 14px 10px 52px;font-size:12px;color:#6b7280">
+              <i class="fas fa-comment-dots" style="margin-right:4px"></i><em>{{ a.comments }}</em>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-clipboard-check"></i>
+      <p>No clearance requests{% if status_filter %} with status <strong>{{ status_filter | title }}</strong>{% endif %} found.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Reject reason modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeReject()"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-times-circle" style="color:#b91c1c;margin-right:6px"></i>Reject Clearance</h3>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 14px">Rejecting clearance for: <strong id="rejectTraineeName"></strong></p>
+    <form method="post" id="rejectForm">
+      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Reason for rejection <span style="color:#ef4444">*</span></label>
+      <textarea name="comments" id="rejectComments" placeholder="Enter the reason for rejection…" required></textarea>
+      <div class="modal-actions">
+        <button type="submit" class="btn-confirm-reject"><i class="fas fa-times"></i> Confirm Rejection</button>
+        <button type="button" class="btn-cancel" onclick="closeReject()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openReject(approvalId, traineeName) {
+  document.getElementById('rejectTraineeName').textContent = traineeName;
+  document.getElementById('rejectForm').action = '/clearance/reject/' + approvalId;
+  document.getElementById('rejectComments').value = '';
+  document.getElementById('rejectModal').classList.add('open');
+}
+function closeReject() {
+  document.getElementById('rejectModal').classList.remove('open');
+}
+document.getElementById('rejectModal').addEventListener('click', function(e) {
+  if (e.target === this) closeReject();
+});
+</script>
+{% endblock %}
