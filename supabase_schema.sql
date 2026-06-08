@@ -522,6 +522,13 @@ CREATE TABLE IF NOT EXISTS trainer_documents (
     unit_id UUID REFERENCES units(id) ON DELETE SET NULL,
     class_id UUID REFERENCES classes(id) ON DELETE SET NULL,
     document_type TEXT NOT NULL CHECK (document_type IN (
+        'occupational_standards',
+        'modularized_curricula',
+        'course_outline',
+        'modularized_training_schedules',
+        'learning_plans',
+        'session_plans',
+        'training_timetables',
         'assessment_plan',
         'competency_standard',
         'assessment_tools',

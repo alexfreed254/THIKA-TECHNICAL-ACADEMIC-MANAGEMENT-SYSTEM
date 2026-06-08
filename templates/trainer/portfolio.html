@@ -162,6 +162,13 @@
         <label for="document_type">Document Type</label>
         <select id="document_type" name="document_type">
           <option value="">All Types</option>
+          <option value="occupational_standards" {% if document_type == 'occupational_standards' %}selected{% endif %}>Occupational Standards (OS)</option>
+          <option value="modularized_curricula" {% if document_type == 'modularized_curricula' %}selected{% endif %}>Modularized Curricula / Syllabus</option>
+          <option value="course_outline" {% if document_type == 'course_outline' %}selected{% endif %}>Course Outline</option>
+          <option value="modularized_training_schedules" {% if document_type == 'modularized_training_schedules' %}selected{% endif %}>Modularized Training Schedules</option>
+          <option value="learning_plans" {% if document_type == 'learning_plans' %}selected{% endif %}>Learning Plans</option>
+          <option value="session_plans" {% if document_type == 'session_plans' %}selected{% endif %}>Session Plans</option>
+          <option value="training_timetables" {% if document_type == 'training_timetables' %}selected{% endif %}>Training Timetables</option>
           <option value="assessment_plan" {% if document_type == 'assessment_plan' %}selected{% endif %}>Assessment Plan</option>
           <option value="competency_standard" {% if document_type == 'competency_standard' %}selected{% endif %}>Competency Standard</option>
           <option value="assessment_tools" {% if document_type == 'assessment_tools' %}selected{% endif %}>Assessment Tools</option>
@@ -217,6 +224,13 @@
         <label for="document_type">Document Type *</label>
         <select id="document_type" name="document_type" required>
           <option value="">Select Type</option>
+          <option value="occupational_standards">Occupational Standards (OS)</option>
+          <option value="modularized_curricula">Modularized Curricula / Syllabus</option>
+          <option value="course_outline">Course Outline</option>
+          <option value="modularized_training_schedules">Modularized Training Schedules</option>
+          <option value="learning_plans">Learning Plans</option>
+          <option value="session_plans">Session Plans</option>
+          <option value="training_timetables">Training Timetables</option>
           <option value="assessment_plan">Assessment Plan</option>
           <option value="competency_standard">Competency Standard</option>
           <option value="assessment_tools">Assessment Tools</option>
