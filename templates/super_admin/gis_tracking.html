@@ -7,94 +7,553 @@
 {% endblock %}
 
 {% block extra_style %}
-#gis-app { font-family: 'Inter', sans-serif; }
+#gis-app { 
+  font-family: 'Inter', sans-serif; 
+}
 
-.gtab-active { background:#1565c0 !important; color:#fff !important; border-color:#1565c0 !important; }
+/* Tab Navigation Styling */
+.gtab-active { 
+  background: #1565c0 !important; 
+  color: #fff !important; 
+  border-color: #1565c0 !important; 
+}
+
+/* Stat Card Grid System */
+.stat-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
 
 .schip {
-  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-  padding:16px 20px; display:flex; align-items:center; gap:14px; flex:1; min-width:130px;
+  background: #fff; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 12px;
+  padding: 16px 20px; 
+  display: flex; 
+  align-items: center; 
+  gap: 14px; 
+  flex: 1; 
+  min-width: 200px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-.schip-icon { width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
-.schip-num  { font-size:26px;font-weight:800;color:#111827;line-height:1; }
-.schip-lbl  { font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
 
-#map { height:480px; border-radius:12px; border:1px solid #e5e7eb; }
+.schip-icon { 
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0; 
+}
 
+.schip-num { 
+  font-size: 26px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1; 
+  margin-bottom: 4px;
+}
+
+.schip-lbl { 
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em; 
+}
+
+/* Map Components */
+#map { 
+  height: 480px; 
+  border-radius: 12px; 
+  border: 1px solid #e5e7eb; 
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.map-legend { 
+  background: #fff; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 10px; 
+  padding: 12px 16px; 
+  font-size: 12px; 
+  margin-bottom: 16px; 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 16px; 
+  align-items: center; 
+}
+
+.legend-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.legend-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-weight: 600; 
+  color: #374151; 
+}
+
+.legend-circle-company { 
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #3b82f6; 
+}
+
+.legend-circle-live { 
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #ef4444; 
+}
+
+/* Structural Filters and Wrappers */
 .filter-wrap {
-  display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
-  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-  padding:16px 20px; margin-bottom:20px;
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 12px; 
+  align-items: flex-end;
+  background: #fff; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 12px;
+  padding: 16px 20px; 
+  margin-bottom: 20px;
 }
-.filter-wrap input, .filter-wrap select {
-  padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
-  font-size:13px; background:#f9fafb; outline:none; transition:border-color .2s;
-}
-.filter-wrap input:focus, .filter-wrap select:focus { border-color:#1565c0; background:#fff; }
-.filter-wrap input[type=text] { min-width:200px; flex:1; }
 
-.data-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
-.data-tbl  { width:100%; border-collapse:collapse; }
-.data-tbl thead { background:#f0f7ff; }
+.filter-wrap input, 
+.filter-wrap select {
+  padding: 8px 12px; 
+  border: 1px solid #d1d5db; 
+  border-radius: 8px;
+  font-size: 13px; 
+  background: #f9fafb; 
+  outline: none; 
+  transition: border-color .2s, background-color .2s;
+}
+
+.filter-wrap input:focus, 
+.filter-wrap select:focus { 
+  border-color: #1565c0; 
+  background: #fff; 
+}
+
+.filter-wrap input[type=text] { 
+  min-width: 220px; 
+  flex: 1; 
+}
+
+.inline-filter-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.btn-filter-submit {
+  padding: 8px 14px;
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color .2s;
+}
+
+.btn-filter-submit:hover {
+  background: #0d47a1;
+}
+
+.btn-clear-filters {
+  padding: 8px 14px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .2s;
+}
+
+.btn-clear-filters:hover {
+  background: #e5e7eb;
+}
+
+/* Data Tables & Cards */
+.data-card { 
+  background: #fff; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 12px; 
+  overflow: hidden; 
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.data-card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.data-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0d2167;
+}
+
+.data-card-counter {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.data-tbl { 
+  width: 100%; 
+  border-collapse: collapse; 
+}
+
+.data-tbl thead { 
+  background: #f0f7ff; 
+}
+
 .data-tbl th {
-  padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
-  color:#1565c0; text-transform:uppercase; letter-spacing:.05em;
-  border-bottom:2px solid #dbeafe; white-space:nowrap;
+  padding: 12px 14px; 
+  text-align: left; 
+  font-size: 11px; 
+  font-weight: 700;
+  color: #1565c0; 
+  text-transform: uppercase; 
+  letter-spacing: .05em;
+  border-bottom: 2px solid #dbeafe; 
+  white-space: nowrap;
 }
-.data-tbl td { padding:12px 14px; font-size:13px; color:#374151; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
-.data-tbl tr:last-child td { border-bottom:none; }
-.data-tbl tr:hover td { background:#f8fbff; }
-.sname { font-weight:600; color:#111827; }
-.sadm  { font-size:11px; color:#9ca3af; margin-top:2px; }
 
-.badge { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
-.b-active   { background:#dbeafe; color:#1d4ed8; }
-.b-approved { background:#dcfce7; color:#15803d; }
-.b-pending  { background:#fef3c7; color:#b45309; }
-.b-terminated { background:#fee2e2; color:#b91c1c; }
-.b-lb-approved { background:#dcfce7; color:#15803d; }
-.b-lb-pending  { background:#fef3c7; color:#b45309; }
-.b-lb-rejected { background:#fee2e2; color:#b91c1c; }
-
-.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
-.dot-active   { background:#3b82f6; }
-.dot-approved { background:#22c55e; }
-.dot-pending  { background:#f59e0b; }
-
-.live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;
-            animation:pulseDot 1.4s infinite; }
-@keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
-
-.lb-text { font-size:12px; color:#374151; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.map-legend { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 16px; font-size:12px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
-.legend-item { display:flex; align-items:center; gap:6px; font-weight:600; color:#374151; }
-.legend-circle-company { width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 2px #3b82f6; }
-.legend-circle-live    { width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px #ef4444; }
-
-.empty-state { padding:48px 24px; text-align:center; color:#9ca3af; }
-.empty-state i { font-size:36px; display:block; margin-bottom:10px; }
-
-/* Export panel */
-.export-panel {
-  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-  padding:14px 20px; margin-bottom:20px;
-  display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
+.data-tbl td { 
+  padding: 12px 14px; 
+  font-size: 13px; 
+  color: #374151; 
+  border-bottom: 1px solid #f3f4f6; 
+  vertical-align: middle; 
 }
-.export-panel label { font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:4px; }
-.export-panel select, .export-panel input { padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; background:#f9fafb; }
-.btn-export { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; }
-.btn-excel { background:#1a7f3c; color:#fff; }
-.btn-pdf   { background:#c0392b; color:#fff; }
 
-@media(max-width:640px) {
-  .data-tbl th:nth-child(n+5), .data-tbl td:nth-child(n+5) { display:none; }
+.data-tbl tr:last-child td { 
+  border-bottom: none; 
+}
+
+.data-tbl tr:hover td { 
+  background: #f8fbff; 
+}
+
+.sname { 
+  font-weight: 600; 
+  color: #111827; 
+}
+
+.sadm { 
+  font-size: 11px; 
+  color: #9ca3af; 
+  margin-top: 2px; 
+}
+
+.text-muted-sm {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.text-bold-secondary {
+  font-weight: 600;
+  color: #0d2167;
+}
+
+/* Status Badges & Indicators */
+.badge { 
+  display: inline-block; 
+  padding: 3px 10px; 
+  border-radius: 9999px; 
+  font-size: 11px; 
+  font-weight: 700; 
+}
+
+.b-active { background: #dbeafe; color: #1d4ed8; }
+.b-approved { background: #dcfce7; color: #15803d; }
+.b-pending { background: #fef3c7; color: #b45309; }
+.b-terminated { background: #fee2e2; color: #b91c1c; }
+.b-lb-approved { background: #dcfce7; color: #15803d; }
+.b-lb-pending { background: #fef3c7; color: #b45309; }
+.b-lb-rejected { background: #fee2e2; color: #b91c1c; }
+
+.dot { 
+  display: inline-block; 
+  width: 8px; 
+  height: 8px; 
+  border-radius: 50%; 
+  margin-right: 5px; 
+}
+.dot-active { background: #3b82f6; }
+.dot-approved { background: #22c55e; }
+.dot-pending { background: #f59e0b; }
+
+.live-dot { 
+  display: inline-block; 
+  width: 8px; 
+  height: 8px; 
+  border-radius: 50%; 
+  background: #ef4444;
+  animation: pulseDot 1.4s infinite; 
+}
+
+@keyframes pulseDot { 
+  0%, 100% { opacity: 1; transform: scale(1); } 
+  50% { opacity: .5; transform: scale(1.3); } 
+}
+
+/* Logbook Card Layouts */
+.lb-header-row {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.lb-student-meta {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.lb-student-meta i {
+  font-size: 9px;
+}
+
+.lb-tag-container {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  align-items: center;
+}
+
+.lb-time-tag {
+  background: #ede9fe;
+  color: #6d28d9;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lb-hours-tag {
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lb-grid-body {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.lb-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+
+.lb-section-content {
+  font-size: 13px;
+  color: #374151;
+}
+
+.lb-evidence-bar {
+  padding: 10px 16px;
+  border-top: 1px solid #f9fafb;
+  background: #fafbfd;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.lb-evidence-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.lb-img-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: transform .15s;
+  flex-shrink: 0;
+}
+
+.lb-img-thumb:hover {
+  transform: scale(1.08);
+}
+
+.lb-media-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.lb-media-video { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+.lb-media-audio { background: #f5f3ff; border: 1px solid #ddd6fe; color: #6d28d9; }
+.lb-media-pdf   { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.lb-media-file  { background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; }
+
+.lb-comment-box {
+  padding: 10px 16px 12px;
+  border-top: 1px solid #f9fafb;
+}
+
+.lb-comment-line {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+.lb-comment-line:last-child {
+  margin-bottom: 0;
+}
+
+.empty-state { 
+  padding: 48px 24px; 
+  text-align: center; 
+  color: #9ca3af; 
+}
+
+.empty-state i { 
+  font-size: 36px; 
+  display: block; 
+  margin-bottom: 10px; 
+}
+
+/* Export Panel Settings */
+.export-card {
+  max-width: 680px;
+}
+
+.export-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.export-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+
+.export-field-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.export-field-group select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.export-btn-container {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.btn-export { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px; 
+  padding: 9px 16px; 
+  border: none; 
+  border-radius: 8px; 
+  font-size: 13px; 
+  font-weight: 700; 
+  cursor: pointer; 
+  text-decoration: none; 
+  transition: opacity .15s;
+}
+
+.btn-export:hover {
+  opacity: 0.9;
+}
+
+.btn-excel { background: #1a7f3c; color: #fff; }
+.btn-pdf { background: #c0392b; color: #fff; }
+
+.export-info-banner {
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #1d4ed8;
+}
+
+/* Responsive Table Adaptations */
+@media(max-width: 640px) {
+  .data-tbl th:nth-child(n+5), 
+  .data-tbl td:nth-child(n+5) { 
+    display: none; 
+  }
+  .export-grid {
+    grid-template-columns: 1fr;
+  }
 }
 {% endblock %}
 
 {% block content %}
 <div id="gis-app" class="p-4">
 
-  <!-- ── Tab nav ── -->
   <nav class="flex p-1.5 bg-white rounded-2xl shadow-sm border border-slate-200 mb-8 w-fit gap-1">
     <button id="tab-gis" onclick="gTab('gis')"
       class="gtab-active px-6 py-2.5 rounded-xl text-sm font-bold border border-transparent flex items-center gap-2">
@@ -111,41 +570,52 @@
     </button>
   </nav>
 
-  <!-- ══════════════════════════ GIS TAB ══════════════════════════ -->
   <section id="sec-gis">
 
-    <!-- Stat chips -->
-    <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:24px">
+    <div class="stat-container">
       <div class="schip">
         <div class="schip-icon" style="background:#dbeafe"><i class="fas fa-users" style="color:#1d4ed8"></i></div>
-        <div><div class="schip-num">{{ total_students }}</div><div class="schip-lbl">Total Students</div></div>
+        <div>
+          <div class="schip-num">{{ total_students }}</div>
+          <div class="schip-lbl">Total Students</div>
+        </div>
       </div>
       <div class="schip">
         <div class="schip-icon" style="background:#dcfce7"><i class="fas fa-check-circle" style="color:#15803d"></i></div>
-        <div><div class="schip-num">{{ status_counts.active }}</div><div class="schip-lbl">Active</div></div>
+        <div>
+          <div class="schip-num">{{ status_counts.active }}</div>
+          <div class="schip-lbl">Active</div>
+        </div>
       </div>
       <div class="schip">
         <div class="schip-icon" style="background:#ede9fe"><i class="fas fa-clipboard-check" style="color:#6d28d9"></i></div>
-        <div><div class="schip-num">{{ status_counts.approved }}</div><div class="schip-lbl">Approved</div></div>
+        <div>
+          <div class="schip-num">{{ status_counts.approved }}</div>
+          <div class="schip-lbl">Approved</div>
+        </div>
       </div>
       <div class="schip">
         <div class="schip-icon" style="background:#fef3c7"><i class="fas fa-clock" style="color:#b45309"></i></div>
-        <div><div class="schip-num">{{ status_counts.pending }}</div><div class="schip-lbl">Pending</div></div>
+        <div>
+          <div class="schip-num">{{ status_counts.pending }}</div>
+          <div class="schip-lbl">Pending</div>
+        </div>
       </div>
       <div class="schip">
         <div class="schip-icon" style="background:#fee2e2"><i class="fas fa-map-pin" style="color:#b91c1c"></i></div>
-        <div><div class="schip-num">{{ live_locations|length }}</div><div class="schip-lbl">Live Check-ins</div></div>
+        <div>
+          <div class="schip-num">{{ live_locations|length }}</div>
+          <div class="schip-lbl">Live Check-ins</div>
+        </div>
       </div>
     </div>
 
-    <!-- Map legend -->
     <div class="map-legend">
-      <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;">Map Legend:</span>
+      <span class="legend-title">Map Legend:</span>
       <span class="legend-item"><span class="legend-circle-company"></span> Company / Placement Site</span>
       <span class="legend-item"><span class="legend-circle-live"></span> <span class="live-dot" style="width:8px;height:8px;margin-right:0"></span>&nbsp;Trainee Last Check-in</span>
     </div>
 
-    <!-- Filter bar -->
     <div class="filter-wrap">
       <input type="text" id="gis-search" placeholder="Search student, company or department…" oninput="filterGIS()">
       <select id="gis-dept" onchange="filterGIS()">
@@ -160,28 +630,26 @@
         <option value="approved">Approved</option>
         <option value="pending">Pending</option>
       </select>
-      <!-- Reload with server-side dept filter -->
-      <form method="get" style="display:flex;gap:8px;align-items:flex-end">
-        <select name="department" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#f9fafb">
+      
+      <form method="get" class="inline-filter-form">
+        <select name="department">
           <option value="">All Departments</option>
           {% for d in departments %}
           <option value="{{ d.id }}" {% if dept_filter == d.id|string %}selected{% endif %}>{{ d.name }}</option>
           {% endfor %}
         </select>
-        <button type="submit" style="padding:8px 14px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+        <button type="submit" class="btn-filter-submit">
           <i class="fas fa-filter"></i> Filter Dept
         </button>
       </form>
     </div>
 
-    <!-- Leaflet map -->
-    <div id="map" style="margin-bottom:24px"></div>
+    <div id="map"></div>
 
-    <!-- Placements table -->
     <div class="data-card">
-      <div style="padding:14px 18px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:15px;font-weight:700;color:#0d2167"><i class="fas fa-table" style="color:#1565c0;margin-right:6px"></i>All Placements</span>
-        <span style="font-size:12px;color:#9ca3af">{{ placements|length }} placement{{ 's' if placements|length!=1 }}</span>
+      <div class="data-card-header">
+        <span class="data-card-title"><i class="fas fa-table" style="color:#1565c0;margin-right:6px"></i>All Placements</span>
+        <span class="data-card-counter">{{ placements|length }} placement{{ 's' if placements|length!=1 }}</span>
       </div>
       {% if placements %}
       <div style="overflow-x:auto">
@@ -210,21 +678,21 @@
                 <div class="sname">{{ st.get('full_name','—') }}</div>
                 <div class="sadm">{{ st.get('admission_no','') }}</div>
               </td>
-              <td style="font-size:12px;color:#6b7280">{{ p._department or '—' }}</td>
+              <td class="text-muted-sm">{{ p._department or '—' }}</td>
               <td style="font-weight:600">{{ co.get('name','—') }}</td>
-              <td style="color:#6b7280;font-size:12px">{{ co.get('city','') }}</td>
+              <td class="text-muted-sm">{{ co.get('city','') }}</td>
               <td>
-                <span style="font-weight:600;color:#0d2167">{{ un.get('code','') }}</span>
-                <div style="font-size:11px;color:#9ca3af">{{ un.get('name','') }}</div>
+                <span class="text-bold-secondary">{{ un.get('code','') }}</span>
+                <div class="sadm">{{ un.get('name','') }}</div>
               </td>
               <td>
                 <span class="dot dot-{{ p.status }}"></span>
                 <span class="badge b-{{ p.status }}">{{ p.status|title }}</span>
               </td>
-              <td style="font-size:12px;color:#6b7280;white-space:nowrap">
+              <td class="text-muted-sm" style="white-space:nowrap">
                 {{ p.start_date or '—' }} → {{ p.end_date or '—' }}
               </td>
-              <td id="checkin-{{ p.student_id }}" style="font-size:12px;color:#9ca3af">—</td>
+              <td id="checkin-{{ p.student_id }}" class="text-muted-sm">—</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -236,7 +704,6 @@
     </div>
   </section>
 
-  <!-- ══════════════════════════ LOGBOOK TAB ══════════════════════════ -->
   <section id="sec-logbook" style="display:none">
 
     {% if logbook_error %}
@@ -245,26 +712,26 @@
     </div>
     {% endif %}
 
-    <div class="filter-wrap" style="align-items:flex-end">
-      <input type="text"  id="lb-search"    placeholder="Search trainee name or admission no…" oninput="filterLogbook()" style="flex:2;min-width:200px">
+    <div class="filter-wrap">
+      <input type="text" id="lb-search" placeholder="Search trainee name or admission no…" oninput="filterLogbook()" style="flex:2;min-width:200px">
       <select id="lb-status" onchange="filterLogbook()">
         <option value="all">All Statuses</option>
         <option value="approved">Approved</option>
         <option value="pending">Pending</option>
         <option value="rejected">Rejected</option>
       </select>
-      <input type="date" id="lb-date-from" onchange="filterLogbook()" title="From date" style="min-width:0">
-      <input type="date" id="lb-date-to"   onchange="filterLogbook()" title="To date"   style="min-width:0">
-      <button onclick="clearLBFilters()" style="padding:8px 14px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+      <input type="date" id="lb-date-from" onchange="filterLogbook()" title="From date">
+      <input type="date" id="lb-date-to"   onchange="filterLogbook()" title="To date">
+      <button onclick="clearLBFilters()" class="btn-clear-filters">
         <i class="fas fa-undo"></i> Clear
       </button>
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <span style="font-size:15px;font-weight:700;color:#0d2167">
+      <span class="data-card-title">
         <i class="fas fa-book-open" style="color:#1565c0;margin-right:6px"></i>Digital Logbook Entries
       </span>
-      <span id="lb-count" style="font-size:12px;color:#9ca3af">
+      <span id="lb-count" class="data-card-counter">
         {{ logbook_entries|length }} entr{{ 'ies' if logbook_entries|length!=1 else 'y' }}
       </span>
     </div>
@@ -281,17 +748,18 @@
            data-status="{{ lb_st }}"
            data-search="{{ st.get('full_name','')|lower }} {{ st.get('admission_no','')|lower }}"
            data-date="{{ e.get('log_date','') }}">
-        <div style="padding:12px 16px;border-bottom:1px solid #f3f4f6;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between">
+        
+        <div class="lb-header-row">
           <div>
             <div style="font-weight:700;font-size:14px;color:#111827">{{ st.get('full_name','Unknown') }}</div>
-            <div style="font-size:11px;color:#9ca3af;margin-top:1px">
-              <i class="fas fa-id-card" style="font-size:9px"></i> {{ st.get('admission_no','—') }}
-              {% if co.get('name') %} &nbsp;&bull;&nbsp; <i class="fas fa-building" style="font-size:9px"></i> {{ co.name }}{% endif %}
+            <div class="lb-student-meta">
+              <i class="fas fa-id-card"></i> {{ st.get('admission_no','—') }}
+              {% if co.get('name') %} &nbsp;&bull;&nbsp; <i class="fas fa-building"></i> {{ co.name }}{% endif %}
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">
+            <div class="lb-tag-container">
               <span style="font-size:13px;font-weight:600;color:#374151"><i class="fas fa-calendar-day" style="color:#9ca3af;font-size:11px"></i> {{ e.get('log_date','—') }}</span>
-              {% if e.get('entry_time') %}<span style="background:#ede9fe;color:#6d28d9;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700"><i class="fas fa-clock"></i> {{ e.entry_time }}</span>{% endif %}
-              {% if e.get('hours_worked') %}<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700"><i class="fas fa-hourglass-half"></i> {{ e.hours_worked }}h</span>{% endif %}
+              {% if e.get('entry_time') %}<span class="lb-time-tag"><i class="fas fa-clock"></i> {{ e.entry_time }}</span>{% endif %}
+              {% if e.get('hours_worked') %}<span class="lb-hours-tag"><i class="fas fa-hourglass-half"></i> {{ e.hours_worked }}h</span>{% endif %}
             </div>
           </div>
           <span class="badge b-lb-{{ lb_st }}">
@@ -299,61 +767,53 @@
             {{ lb_st|title }}
           </span>
         </div>
-        <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+        <div class="lb-grid-body">
           <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-tasks" style="color:#6d28d9"></i> Tasks Performed</div>
-            <div style="font-size:13px;color:#374151">{{ e.get('tasks_performed') or '—' }}</div>
+            <div class="lb-section-title"><i class="fas fa-tasks" style="color:#6d28d9"></i> Tasks Performed</div>
+            <div class="lb-section-content">{{ e.get('tasks_performed') or '—' }}</div>
           </div>
           <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-brain" style="color:#1d4ed8"></i> Skills Applied</div>
-            <div style="font-size:13px;color:#374151">{{ e.get('skills_applied') or '—' }}</div>
+            <div class="lb-section-title"><i class="fas fa-brain" style="color:#1d4ed8"></i> Skills Applied</div>
+            <div class="lb-section-content">{{ e.get('skills_applied') or '—' }}</div>
           </div>
           {% if e.get('challenges_encountered') %}
           <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i> Challenges</div>
-            <div style="font-size:13px;color:#374151">{{ e.challenges_encountered }}</div>
+            <div class="lb-section-title"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i> Challenges</div>
+            <div class="lb-section-content">{{ e.challenges_encountered }}</div>
           </div>
           {% endif %}
           {% if e.get('achievements') %}
           <div>
-            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px"><i class="fas fa-star" style="color:#15803d"></i> Achievements</div>
-            <div style="font-size:13px;color:#374151">{{ e.achievements }}</div>
+            <div class="lb-section-title"><i class="fas fa-star" style="color:#15803d"></i> Achievements</div>
+            <div class="lb-section-content">{{ e.achievements }}</div>
           </div>
           {% endif %}
         </div>
-        <!-- Evidence (horizontal row) - super admin GIS logbook tab -->
+
         {% set ev_list = e._evidence or [] %}
-        <div style="padding:10px 16px;border-top:1px solid #f9fafb;background:#fafbfd;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <span style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;margin-right:2px;flex-shrink:0">
-            <i class="fas fa-paperclip"></i> Evidence
-          </span>
+        <div class="lb-evidence-bar">
+          <span class="lb-evidence-label"><i class="fas fa-paperclip"></i> Evidence</span>
           {% if ev_list %}
             {% for ev in ev_list %}
               {% if ev.ext in ['jpg','jpeg','png','webp','gif'] %}
               <a href="{{ ev.url }}" target="_blank" onclick="openLbLightbox('{{ ev.url }}');return false" title="{{ ev.name }}">
-                <img src="{{ ev.url }}" alt="{{ ev.name }}"
-                     style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;cursor:pointer;transition:transform .15s;flex-shrink:0"
-                     onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'"
-                     loading="lazy" onerror="this.style.display='none'">
+                <img src="{{ ev.url }}" alt="{{ ev.name }}" class="lb-img-thumb" loading="lazy" onerror="this.style.display='none'">
               </a>
               {% elif ev.ext in ['mp4','mov','avi','webm','mkv'] %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;color:#15803d;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}" class="lb-media-btn lb-media-video">
                 <i class="fas fa-play-circle"></i> Video
               </a>
               {% elif ev.ext in ['mp3','wav','ogg','m4a','aac','flac'] %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:7px;color:#6d28d9;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}" class="lb-media-btn lb-media-audio">
                 <i class="fas fa-headphones"></i> Audio
               </a>
               {% elif ev.ext == 'pdf' %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;color:#b91c1c;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}" class="lb-media-btn lb-media-pdf">
                 <i class="fas fa-file-pdf"></i> PDF
               </a>
               {% else %}
-              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}"
-                 style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:7px;color:#374151;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">
+              <a href="{{ ev.url }}" target="_blank" title="{{ ev.name }}" class="lb-media-btn lb-media-file">
                 <i class="fas fa-file"></i> File
               </a>
               {% endif %}
@@ -364,14 +824,14 @@
         </div>
 
         {% if e.get('mentor_comments') or e.get('trainer_comments') %}
-        <div style="padding:8px 16px 12px;border-top:1px solid #f9fafb">
+        <div class="lb-comment-box">
           {% if e.get('mentor_comments') %}
-          <div style="font-size:12px;color:#6b7280;font-style:italic;margin-bottom:4px">
+          <div class="lb-comment-line">
             <i class="fas fa-comment-alt" style="color:#1d4ed8;margin-right:4px"></i><strong>Supervisor:</strong> "{{ e.mentor_comments }}"
           </div>
           {% endif %}
           {% if e.get('trainer_comments') %}
-          <div style="font-size:12px;color:#6b7280;font-style:italic">
+          <div class="lb-comment-line">
             <i class="fas fa-chalkboard-teacher" style="color:#6d28d9;margin-right:4px"></i><strong>Trainer:</strong> "{{ e.trainer_comments }}"
           </div>
           {% endif %}
@@ -391,35 +851,34 @@
     {% endif %}
   </section>
 
-  <!-- ══════════════════════════ EXPORT TAB ══════════════════════════ -->
   <section id="sec-export" style="display:none">
-    <div class="data-card" style="max-width:680px">
-      <div style="padding:18px 22px;border-bottom:1px solid #f3f4f6">
-        <div style="font-size:16px;font-weight:700;color:#0d2167"><i class="fas fa-file-download" style="color:#1565c0;margin-right:8px"></i>Export Attachment Report</div>
+    <div class="data-card export-card">
+      <div class="data-card-header" style="flex-direction: column; align-items: flex-start;">
+        <div class="data-card-title"><i class="fas fa-file-download" style="color:#1565c0;margin-right:8px"></i>Export Attachment Report</div>
         <div style="font-size:13px;color:#6b7280;margin-top:4px">Download trainee attachment records for a specific period as Excel or PDF.</div>
       </div>
-      <div style="padding:22px;display:flex;flex-direction:column;gap:16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
-          <div>
-            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Attachment Period</label>
-            <select id="exp-period" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+      <div class="export-body">
+        <div class="export-grid">
+          <div class="export-field-group">
+            <label>Attachment Period</label>
+            <select id="exp-period">
               <option value="">Full Year</option>
               <option value="1">January – April</option>
               <option value="2">May – August</option>
               <option value="3">September – December</option>
             </select>
           </div>
-          <div>
-            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Year</label>
-            <select id="exp-year" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+          <div class="export-field-group">
+            <label>Year</label>
+            <select id="exp-year">
               {% for y in range(2024, 2028) %}
               <option value="{{ y }}" {% if y == 2026 %}selected{% endif %}>{{ y }}</option>
               {% endfor %}
             </select>
           </div>
-          <div>
-            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Department</label>
-            <select id="exp-dept" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+          <div class="export-field-group">
+            <label>Department</label>
+            <select id="exp-dept">
               <option value="">All Departments</option>
               {% for d in departments %}
               <option value="{{ d.id }}">{{ d.name }}</option>
@@ -427,7 +886,7 @@
             </select>
           </div>
         </div>
-        <div style="display:flex;gap:12px;margin-top:4px">
+        <div class="export-btn-container">
           <button type="button" onclick="doExport('excel')" class="btn-export btn-excel">
             <i class="fas fa-file-excel"></i> Download Excel
           </button>
@@ -435,7 +894,7 @@
             <i class="fas fa-file-pdf"></i> Download PDF
           </button>
         </div>
-        <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:12px;color:#1d4ed8">
+        <div class="export-info-banner">
           <i class="fas fa-info-circle"></i>
           <strong>Columns included:</strong> Admission No, Full Name, Trainee Phone, Company Attached, Location/Address, Supervisor Name, Supervisor Phone, Start Date, End Date, Status.
         </div>
@@ -443,9 +902,7 @@
     </div>
   </section>
 
-</div><!-- /gis-app -->
-
-{% block scripts %}{% endblock %}
+</div>{% block scripts %}{% endblock %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* ═══ TAB SWITCHING ═══ */
@@ -592,13 +1049,10 @@ function filterLogbook() {
 }
 
 function clearLBFilters() {
-  ['lb-search','lb-date-from','lb-date-to'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['lb-search','lb-date-from','lb-date-to'].forEach(function(id) { 
+    document.getElementById(id).value = ''; 
+  });
   document.getElementById('lb-status').value = 'all';
   filterLogbook();
 }
-
-function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
 </script>
-{% endblock %}
