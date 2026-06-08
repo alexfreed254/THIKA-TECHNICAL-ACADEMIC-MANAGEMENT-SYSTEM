@@ -56,7 +56,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; vertica
             <select name="year">
               <option value="">All Years</option>
               {% for y in range(2026, 2036) %}
-                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                <option value="{{ y }}" {% if year == y|string %}selected{% endif %}>{{ y }}</option>
               {% endfor %}
             </select>
           </div>
@@ -65,9 +65,9 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; vertica
             <label>Term</label>
             <select name="term">
               <option value="">All Terms</option>
-              <option value="1" {% if term == 1 %}selected{% endif %}>Term 1 (Jan–Apr)</option>
-              <option value="2" {% if term == 2 %}selected{% endif %}>Term 2 (May–Aug)</option>
-              <option value="3" {% if term == 3 %}selected{% endif %}>Term 3 (Sep–Dec)</option>
+              <option value="1" {% if term == '1' %}selected{% endif %}>Term 1 (Jan–Apr)</option>
+              <option value="2" {% if term == '2' %}selected{% endif %}>Term 2 (May–Aug)</option>
+              <option value="3" {% if term == '3' %}selected{% endif %}>Term 3 (Sep–Dec)</option>
             </select>
           </div>
 

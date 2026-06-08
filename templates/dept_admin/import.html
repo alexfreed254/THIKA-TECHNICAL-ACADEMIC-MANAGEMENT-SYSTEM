@@ -79,27 +79,27 @@ table.preview td { padding:6px 10px; border-bottom:1px solid #eee; }
         <div class="template-box">
           <h4><i class="fas fa-info-circle"></i> Required Excel Columns (Row 1 = Header, Row 2+ = Data)</h4>
           <div class="col-list">
-            <span class="col-chip required">A: admission_number</span>
+            <span class="col-chip required">A: admission_no</span>
             <span class="col-chip required">B: full_name</span>
-            <span class="col-chip required">C: class_id (number)</span>
+            <span class="col-chip required">C: email</span>
+            <span class="col-chip">D: mobile_number (optional)</span>
           </div>
-          {% if classes %}
-          <p style="margin-top:10px;font-size:12px;color:#555;font-weight:600;">Your department's classes:</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-            {% for c in classes %}
-            <span style="background:#e3f2fd;color:#1565c0;padding:3px 10px;border-radius:20px;font-size:12px;">
-              ID {{ c.id }}: {{ c.name }}
-            </span>
-            {% endfor %}
-          </div>
-          {% endif %}
           <table class="preview" style="margin-top:10px;">
-            <tr><th>A: admission_number</th><th>B: full_name</th><th>C: class_id</th></tr>
-            <tr><td>ADM001</td><td>JOHN DOE</td><td>{{ classes[0].id if classes else 1 }}</td></tr>
+            <tr><th>A: admission_no</th><th>B: full_name</th><th>C: email</th><th>D: mobile_number</th></tr>
+            <tr><td>ADM001</td><td>JOHN DOE</td><td>john@example.com</td><td>0712345678</td></tr>
           </table>
         </div>
         <form method="post" enctype="multipart/form-data">
           <input type="hidden" name="import_type" value="students">
+          {% if classes %}
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px;">Enroll into Class (optional)</label>
+            <select name="class_id" style="padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;min-width:220px;">
+              <option value="">— No class enrollment —</option>
+              {% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
           <div class="upload-area" onclick="document.getElementById('file-students').click()">
             <i class="fas fa-cloud-upload-alt"></i>
             <p>Click to select your Excel file or drag and drop here</p>

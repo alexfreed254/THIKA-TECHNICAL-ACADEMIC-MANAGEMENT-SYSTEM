@@ -2578,8 +2578,9 @@ def send_notice():
             action_url="/notifications",
             class_id=class_id
         )
-        write_audit_log(user["id"], "send_dept_notice",
-                        f"Sent notice '{title}' to {count} trainees in dept {dept_id}")
+        write_audit_log("send_dept_notice",
+                        target=f"dept:{dept_id}",
+                        detail={"title": title, "recipients": count})
         flash(f"Notice sent successfully to {count} trainee(s).", "success")
     except Exception as e:
         flash(f"Failed to send notice: {e}", "danger")

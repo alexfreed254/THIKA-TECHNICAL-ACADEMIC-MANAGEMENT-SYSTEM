@@ -53,7 +53,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
            class="result-item {{ 'selected' if student_id == s.id }}">
           <div>
             <strong style="font-size:15px;">{{ s.full_name }}</strong>
-            <span style="margin-left:12px;color:#555;font-size:13px;">{{ s.admission_number }}</span>
+            <span style="margin-left:12px;color:#555;font-size:13px;">{{ s.admission_no }}</span>
             <span style="margin-left:12px;color:#888;font-size:12px;">{{ s.classes.name if s.classes else '—' }}</span>
           </div>
           <i class="fas fa-chevron-right" style="color:#1565c0;"></i>
@@ -100,7 +100,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
     <div class="card-body">
       <!-- Student info -->
       <div style="background:#f5f8ff;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;display:flex;gap:24px;flex-wrap:wrap;">
-        <div><strong>Adm No:</strong> {{ student.admission_number }}</div>
+        <div><strong>Adm No:</strong> {{ student.admission_no }}</div>
         <div><strong>Class:</strong> {{ student.classes.name if student.classes else '—' }}</div>
       </div>
 
