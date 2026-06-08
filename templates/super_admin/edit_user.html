@@ -37,7 +37,7 @@
         <div class="form-group">
           <label>Role</label>
           <select name="role" required>
-            {% for r in ['super_admin','dept_admin','trainer','student','employer','examination_officer','industry_mentor','internal_verifier','registrar','deputy_principal','quality_assurance_officer'] %}
+            {% for r in ['super_admin','dept_admin','trainer','student','examination_officer','industry_mentor','internal_verifier','registrar','deputy_principal','quality_assurance_officer'] %}
             <option value="{{ r }}" {% if r == user.role %}selected{% endif %}>{{ r|replace('_',' ')|title }}</option>
             {% endfor %}
           </select>

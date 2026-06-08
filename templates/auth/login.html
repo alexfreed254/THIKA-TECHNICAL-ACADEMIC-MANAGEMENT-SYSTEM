@@ -195,29 +195,16 @@
 
         <form method="post" action="/auth/login" class="form" id="loginForm">
           <input type="hidden" name="login_type" id="loginType" value="{{ request.form.get('login_type', 'staff') }}">
-          <input type="hidden" name="origin"     id="origin"    value="{{ request.form.get('origin', 'auth') }}">
 
-          <!-- Staff / employer email field -->
+          <!-- Staff email field -->
           <div class="field" id="staffField">
             <label for="email">Email Address</label>
             <div class="input-wrap">
-              <i class="fas fa-envelope" id="staffIcon"></i>
+              <i class="fas fa-envelope"></i>
               <input id="email" type="email" name="email"
                      placeholder="you@example.com"
                      value="{{ request.form.get('email', '') }}"
                      autocomplete="email">
-            </div>
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setStaffMode()">
-                <input type="radio" name="staff_type" value="staff"
-                       {% if request.form.get('origin') != 'employer' %}checked{% endif %}
-                       style="accent-color:#2563eb"> Staff / Admin
-              </label>
-              <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setEmployerMode()">
-                <input type="radio" name="staff_type" value="employer"
-                       {% if request.form.get('origin') == 'employer' %}checked{% endif %}
-                       style="accent-color:#e65100"> Employer
-              </label>
             </div>
           </div>
 
@@ -247,7 +234,7 @@
 
           <div class="meta">
             <label><input type="checkbox" name="remember"> Remember me</label>
-            <a href="/auth/forgot-password" id="forgotPwdLink" style="display:none">Forgot Password?</a>
+            <a href="/auth/forgot-password">Forgot Password?</a>
           </div>
 
           <button type="submit" class="btn-login">
@@ -255,41 +242,17 @@
           </button>
         </form>
 
-        <div class="login-footer">
-          <span id="employerRegisterSpan" style="display:none">
-            New employer? <a href="/employer/register">Create employer account</a>
-          </span>
-        </div>
+        <div class="login-footer"></div>
       </div>
     </section>
 
   </div>
 
   <script>
-    const tabs               = document.querySelectorAll('.tab');
-    const staffField         = document.getElementById('staffField');
-    const studentField       = document.getElementById('studentField');
-    const loginType          = document.getElementById('loginType');
-    const origin             = document.getElementById('origin');
-    const staffIcon          = document.getElementById('staffIcon');
-    const forgotPwdLink      = document.getElementById('forgotPwdLink');
-    const employerRegisterSpan = document.getElementById('employerRegisterSpan');
-
-    function setStaffMode() {
-      origin.value = 'auth';
-      staffIcon.className = 'fas fa-envelope';
-      document.getElementById('email').placeholder = 'you@example.com';
-      forgotPwdLink.style.display = 'none';
-      employerRegisterSpan.style.display = 'none';
-    }
-
-    function setEmployerMode() {
-      origin.value = 'employer';
-      staffIcon.className = 'fas fa-building';
-      document.getElementById('email').placeholder = 'employer@company.com';
-      forgotPwdLink.style.display = '';
-      employerRegisterSpan.style.display = '';
-    }
+    const tabs         = document.querySelectorAll('.tab');
+    const staffField   = document.getElementById('staffField');
+    const studentField = document.getElementById('studentField');
+    const loginType    = document.getElementById('loginType');
 
     tabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
@@ -298,29 +261,14 @@
         var type = tab.dataset.type;
         loginType.value = type;
         if (type === 'student') {
-          staffField.style.display  = 'none';
+          staffField.style.display   = 'none';
           studentField.style.display = 'grid';
-          origin.value = 'auth';
-          forgotPwdLink.style.display = 'none';
-          employerRegisterSpan.style.display = 'none';
         } else {
-          staffField.style.display  = 'grid';
+          staffField.style.display   = 'grid';
           studentField.style.display = 'none';
-          var checked = document.querySelector('input[name="staff_type"]:checked');
-          if (checked) checked.click();
         }
       });
     });
-
-    // Restore correct mode on page load (e.g. after a failed POST)
-    (function init() {
-      var checked = document.querySelector('input[name="staff_type"]:checked');
-      if (checked && checked.value === 'employer') {
-        setEmployerMode();
-      } else {
-        setStaffMode();
-      }
-    })();
   </script>
 </body>
 </html>

@@ -75,8 +75,6 @@ def login():
             return redirect(url_for("trainer.dashboard"))
         elif role == "student":
             return redirect(url_for("student.dashboard"))
-        elif role == "employer":
-            return redirect(url_for("employer.dashboard"))
         elif role == "examination_officer":
             return redirect(url_for("examination_officer.dashboard"))
         elif role == "industry_mentor":
@@ -114,12 +112,6 @@ def login():
             profile = authenticate_staff(email, password)
             
             if profile:
-                # Check if employer is unverified — block login with clear message
-                if profile.pop("_unverified_employer", False):
-                    flash("Your employer account is pending verification by the administrator. "
-                          "You will be notified once approved.", "warning")
-                    return render_template("auth/login.html", departments=departments)
-
                 # Session tokens are already attached by authenticate_staff — no second call needed
                 sb_session = profile.pop("_session", None)
                 
@@ -138,8 +130,6 @@ def login():
                         return redirect(url_for("dept_admin.dashboard"))
                     elif role == "trainer":
                         return redirect(url_for("trainer.dashboard"))
-                    elif role == "employer":
-                        return redirect(url_for("employer.dashboard"))
                     elif role == "examination_officer":
                         return redirect(url_for("examination_officer.dashboard"))
                     elif role == "industry_mentor":
@@ -371,7 +361,6 @@ def _get_base_template(role: str) -> str:
         "dept_admin": "dept_admin/base.html",
         "trainer": "trainer/base.html",
         "student": "student/base.html",
-        "employer": "employer/base.html",
         "examination_officer": "examination_officer/base.html",
         "industry_mentor": "industry_mentor/base.html",
         "internal_verifier": "internal_verifier/base.html",

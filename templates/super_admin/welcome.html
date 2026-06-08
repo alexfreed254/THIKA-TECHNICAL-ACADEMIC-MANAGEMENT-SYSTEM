@@ -104,18 +104,6 @@
 {% block content %}
 <div class="page-wrap">
 
-  <!-- ── Pending employer alert ─── -->
-  {% if stats.get('pending_employers',0) > 0 %}
-  <div class="alert-pending">
-    <i class="fas fa-exclamation-triangle fa-lg"></i>
-    <div>
-      <strong>{{ stats.get('pending_employers',0) }} Employer Account(s) Awaiting Verification</strong>
-      &nbsp;—&nbsp;
-      <a href="/super-admin/employers?status=pending" style="color:#92400e;font-weight:700;text-decoration:underline">Review Now &rarr;</a>
-    </div>
-  </div>
-  {% endif %}
-
   <!-- ── System Overview Stats ─── -->
   <p class="section-title"><i class="fas fa-chart-bar"></i> System Overview</p>
   <div class="stats-grid">
@@ -155,27 +143,9 @@
       <div class="s-info"><h3>Assessments</h3><p>{{ stats.get('assessments',0) }}</p></div>
     </div>
 
-    <div class="s-card" style="--accent:linear-gradient(90deg,#059669,#34d399)">
-      <div class="s-icon" style="background:linear-gradient(135deg,#059669,#047857)"><i class="fas fa-briefcase"></i></div>
-      <div class="s-info"><h3>Job Postings</h3><p>{{ stats.get('job_postings',0) }}</p></div>
-    </div>
-
-    <div class="s-card" style="--accent:linear-gradient(90deg,#7c3aed,#a78bfa)">
-      <div class="s-icon" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)"><i class="fas fa-paper-plane"></i></div>
-      <div class="s-info"><h3>Applications</h3><p>{{ stats.get('job_applications',0) }}</p></div>
-    </div>
-
     <div class="s-card" style="--accent:linear-gradient(90deg,#1d4ed8,#60a5fa)">
       <div class="s-icon" style="background:linear-gradient(135deg,#1d4ed8,#1e5a9f)"><i class="fas fa-clipboard-check"></i></div>
       <div class="s-info"><h3>Clearances</h3><p>{{ stats.get('clearances',0) }}</p></div>
-    </div>
-
-    <div class="s-card {% if stats.get('pending_employers',0) > 0 %}s-card--urgent{% endif %}" style="--accent:linear-gradient(90deg,#dc2626,#f87171);{% if stats.get('pending_employers',0) > 0 %}border:2px solid #fca5a5;{% endif %}">
-      <div class="s-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fas fa-building"></i></div>
-      <div class="s-info">
-        <h3>Pending Employers</h3>
-        <p style="{% if stats.get('pending_employers',0) > 0 %}color:#dc2626{% endif %}">{{ stats.get('pending_employers',0) }}</p>
-      </div>
     </div>
 
   </div>
@@ -184,10 +154,6 @@
   <p class="section-title"><i class="fas fa-bolt"></i> Quick Actions</p>
   <div class="p-card" style="margin-bottom:24px">
     <div class="quick-actions">
-      <a href="/super-admin/employers?status=pending" class="qa-btn {% if stats.get('pending_employers',0) > 0 %}urgent{% endif %}">
-        <i class="fas fa-building"></i> Verify Employers
-        {% if stats.get('pending_employers',0) > 0 %}<span style="background:#dc2626;color:#fff;border-radius:9999px;padding:1px 8px;font-size:10px">{{ stats.get('pending_employers',0) }}</span>{% endif %}
-      </a>
       <a href="/super-admin/users" class="qa-btn"><i class="fas fa-user-plus"></i> Add User</a>
       <a href="/super-admin/departments" class="qa-btn"><i class="fas fa-sitemap"></i> Departments</a>
       <a href="/super-admin/courses" class="qa-btn"><i class="fas fa-graduation-cap"></i> Courses</a>
@@ -196,16 +162,14 @@
       <a href="/super-admin/assessments?status=pending" class="qa-btn"><i class="fas fa-clock"></i> Pending POE</a>
       <a href="/super-admin/attendance" class="qa-btn"><i class="fas fa-clipboard-list"></i> Attendance</a>
       <a href="/super-admin/marks" class="qa-btn"><i class="fas fa-chart-line"></i> Marks</a>
-      <a href="/super-admin/job-postings" class="qa-btn"><i class="fas fa-briefcase"></i> Job Postings</a>
       <a href="/super-admin/clearances" class="qa-btn"><i class="fas fa-clipboard-check"></i> Clearances</a>
-      <a href="/super-admin/admissions" class="qa-btn"><i class="fas fa-file-upload"></i> Admissions</a>
       <a href="/super-admin/companies" class="qa-btn"><i class="fas fa-industry"></i> Companies</a>
       <a href="/super-admin/logs" class="qa-btn"><i class="fas fa-history"></i> Audit Logs</a>
     </div>
   </div>
 
-  <!-- ── Assessment + Job Portal ─── -->
-  <div class="two-col">
+  <!-- ── Assessments ─── -->
+  <div>
     <div class="p-card">
       <div class="p-card-header">
         <span><i class="fas fa-file-alt" style="color:#dc2626;margin-right:6px"></i>Assessments</span>
@@ -236,38 +200,10 @@
         </tbody>
       </table>
     </div>
-
-    <div class="p-card">
-      <div class="p-card-header">
-        <span><i class="fas fa-briefcase" style="color:#16a34a;margin-right:6px"></i>Job Portal</span>
-        <a href="/super-admin/job-postings">View All &rarr;</a>
-      </div>
-      <div class="mini-stats">
-        <div class="mini-stat"><p>{{ stats.get('job_postings',0) }}</p><span>Postings</span></div>
-        <div class="mini-stat"><p>{{ stats.get('job_applications',0) }}</p><span>Applications</span></div>
-        <div class="mini-stat"><p>{{ stats.get('employers',0) }}</p><span>Employers</span></div>
-        <div class="mini-stat"><p>{{ stats.get('verifications',0) }}</p><span>Verifications</span></div>
-      </div>
-      <table>
-        <thead><tr><th>Job Title</th><th>Company</th><th>Type</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for j in recent_jobs[:6] %}
-          <tr>
-            <td><strong>{{ j.get('title','—') }}</strong></td>
-            <td style="font-size:12px;color:#64748b">{{ j.get('employers',{}).get('company_name','—') }}</td>
-            <td style="font-size:12px">{{ j.get('type','—')|title }}</td>
-            <td><span class="b b-{{ 'active' if j.get('is_active') else 'inactive' }}">{{ 'Active' if j.get('is_active') else 'Inactive' }}</span></td>
-          </tr>
-          {% else %}
-          <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4"></i>No job postings yet.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
   </div>
 
-  <!-- ── Clearance + Admission ─── -->
-  <div class="two-col">
+  <!-- ── Clearance ─── -->
+  <div>
     <div class="p-card">
       <div class="p-card-header">
         <span><i class="fas fa-clipboard-check" style="color:#1d4ed8;margin-right:6px"></i>Clearance Requests</span>
@@ -294,32 +230,6 @@
           </tr>
           {% else %}
           <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px">No clearance requests.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="p-card">
-      <div class="p-card-header">
-        <span><i class="fas fa-file-upload" style="color:#7c3aed;margin-right:6px"></i>Admission Requests</span>
-        <a href="/super-admin/admissions">View All &rarr;</a>
-      </div>
-      <div class="mini-stats">
-        <div class="mini-stat"><p>{{ stats.get('admissions',0) }}</p><span>Total</span></div>
-        <div class="mini-stat"><p style="color:#ea580c">{{ stats.get('admissions_pending',0) }}</p><span>Pending</span></div>
-        <div class="mini-stat"><p style="color:#16a34a">{{ stats.get('admissions_approved',0) }}</p><span>Approved</span></div>
-      </div>
-      <table>
-        <thead><tr><th>Student</th><th>Course</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for a in recent_admissions[:5] %}
-          <tr>
-            <td>{{ a.get('user_profiles',{}).get('full_name','—') }}</td>
-            <td style="font-size:12px;color:#64748b">{{ a.get('courses',{}).get('name','—') }}</td>
-            <td><span class="b b-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
-          </tr>
-          {% else %}
-          <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px">No admission requests.</td></tr>
           {% endfor %}
         </tbody>
       </table>

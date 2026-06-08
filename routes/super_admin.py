@@ -102,9 +102,7 @@ def dashboard():
     stats = {}
     recent_assessments = []
     recent_logs = []
-    recent_jobs = []
     recent_clearances = []
-    recent_admissions = []
     dept_stats = []
 
     try:
@@ -121,7 +119,6 @@ def dashboard():
         stats['dept_admins'] = sum(1 for u in all_users if u['role'] == 'dept_admin')
         stats['trainers']    = sum(1 for u in all_users if u['role'] == 'trainer')
         stats['students']    = sum(1 for u in all_users if u['role'] == 'student')
-        stats['employers']   = sum(1 for u in all_users if u['role'] == 'employer')
 
         # ── Assessment status breakdown ───────────────────────────────────────
         all_assess = db.table("assessments").select("status").execute().data or []
@@ -129,22 +126,11 @@ def dashboard():
         stats['approved'] = sum(1 for a in all_assess if a['status'] == 'approved')
         stats['rejected'] = sum(1 for a in all_assess if a['status'] == 'rejected')
 
-        # ── Job portal counts ─────────────────────────────────────────────────
-        stats['job_postings']    = db.table("job_postings").select("id", count="exact").execute().count or 0
-        stats['job_applications']= db.table("job_applications").select("id", count="exact").execute().count or 0
-        stats['verifications']   = db.table("employer_verifications").select("id", count="exact").execute().count or 0
-
         # ── Clearance counts ──────────────────────────────────────────────────
         all_cl = db.table("clearance_requests").select("status").execute().data or []
         stats['clearances']           = len(all_cl)
         stats['clearances_pending']   = sum(1 for c in all_cl if c['status'] in ('pending','in_progress'))
         stats['clearances_completed'] = sum(1 for c in all_cl if c['status'] == 'completed')
-
-        # ── Admission counts ──────────────────────────────────────────────────
-        all_adm = db.table("admission_requests").select("status").execute().data or []
-        stats['admissions']         = len(all_adm)
-        stats['admissions_pending'] = sum(1 for a in all_adm if a['status'] == 'pending')
-        stats['admissions_approved']= sum(1 for a in all_adm if a['status'] == 'approved')
 
         # ── Recent assessments ────────────────────────────────────────────────
         recent_assessments = (
@@ -153,25 +139,11 @@ def dashboard():
             .order("uploaded_at", desc=True).limit(8).execute().data or []
         )
 
-        # ── Recent job postings ───────────────────────────────────────────────
-        recent_jobs = (
-            db.table("job_postings")
-            .select("*, employers(company_name)")
-            .order("created_at", desc=True).limit(6).execute().data or []
-        )
-
         # ── Recent clearances ─────────────────────────────────────────────────
         recent_clearances = (
             db.table("clearance_requests")
             .select("*, user_profiles!clearance_requests_student_id_fkey(full_name, admission_no), courses(name)")
             .order("created_at", desc=True).limit(5).execute().data or []
-        )
-
-        # ── Recent admissions ─────────────────────────────────────────────────
-        recent_admissions = (
-            db.table("admission_requests")
-            .select("*, user_profiles!admission_requests_student_id_fkey(full_name, admission_no), courses(name)")
-            .order("submitted_at", desc=True).limit(5).execute().data or []
         )
 
         # ── Department stats ──────────────────────────────────────────────────
@@ -191,10 +163,6 @@ def dashboard():
             .order("created_at", desc=True).limit(10).execute().data or []
         )
 
-        # ── Pending employer count (for sidebar badge) ────────────────────────
-        all_emp = db.table("employers").select("is_verified").execute().data or []
-        stats['pending_employers'] = sum(1 for e in all_emp if not e.get("is_verified"))
-
     except Exception as e:
         flash(f'Error loading dashboard: {e}', 'danger')
 
@@ -207,9 +175,7 @@ def dashboard():
                            students_count=stats.get('students', 0),
                            units_count=stats.get('units', 0),
                            recent_assessments=recent_assessments,
-                           recent_jobs=recent_jobs,
                            recent_clearances=recent_clearances,
-                           recent_admissions=recent_admissions,
                            recent_logs=recent_logs,
                            dept_stats=dept_stats)
 
@@ -949,133 +915,6 @@ def marks():
                            pass_rate=pass_rate)
 
 
-# ── Job Postings ───────────────────────────────────────────────────────────────
-
-@super_admin_bp.route("/job-postings")
-@super_admin_required
-def job_postings():
-    db = _svc()
-    jobs = db.table("job_postings").select(
-        "*, employers(company_name, official_email)"
-    ).order("created_at", desc=True).execute().data or []
-    return render_template("super_admin/job_postings.html", jobs=jobs)
-
-
-@super_admin_bp.route("/job-postings/<job_id>/toggle", methods=["POST"])
-@super_admin_required
-def toggle_job(job_id):
-    db = _svc()
-    row = db.table("job_postings").select("is_active").eq("id", job_id).single().execute().data
-    if row:
-        db.table("job_postings").update({"is_active": not row["is_active"]}).eq("id", job_id).execute()
-        write_audit_log("toggle_job_posting", target=f"job:{job_id}")
-        flash("Job posting updated.", "success")
-    return redirect(url_for("super_admin.job_postings"))
-
-
-@super_admin_bp.route("/job-postings/<job_id>/delete", methods=["POST"])
-@super_admin_required
-def delete_job(job_id):
-    db = _svc()
-    db.table("job_postings").delete().eq("id", job_id).execute()
-    write_audit_log("delete_job_posting", target=f"job:{job_id}")
-    flash("Job posting deleted.", "success")
-    return redirect(url_for("super_admin.job_postings"))
-
-
-# ── Job Applications ───────────────────────────────────────────────────────────
-
-@super_admin_bp.route("/job-applications")
-@super_admin_required
-def job_applications():
-    db = _svc()
-    status_filter = request.args.get("status", "")
-    query = db.table("job_applications").select(
-        "*, job_postings(title, type, employers(company_name)), "
-        "user_profiles!job_applications_student_id_fkey(full_name, admission_no)"
-    ).order("applied_at", desc=True).limit(300)
-    if status_filter:
-        query = query.eq("status", status_filter)
-    apps = query.execute().data or []
-    return render_template("super_admin/job_applications.html",
-                           apps=apps, status_filter=status_filter)
-
-
-# ── Employer Verification Management ──────────────────────────────────────────
-
-@super_admin_bp.route("/employers")
-@super_admin_required
-def employers():
-    """List all employer accounts with verify/reject controls."""
-    db = _svc()
-    status_filter = request.args.get("status", "pending")  # pending | verified | all
-
-    employers_list = db.table("employers").select(
-        "*, user_profiles!employers_profile_id_fkey(full_name, email, is_active, created_at)"
-    ).order("created_at", desc=True).execute().data or []
-
-    if status_filter == "pending":
-        employers_list = [e for e in employers_list if not e.get("is_verified")]
-    elif status_filter == "verified":
-        employers_list = [e for e in employers_list if e.get("is_verified")]
-
-    pending_count = sum(1 for e in db.table("employers").select("is_verified").execute().data or [] if not e.get("is_verified"))
-
-    return render_template("super_admin/employers.html",
-                           employers=employers_list,
-                           status_filter=status_filter,
-                           pending_count=pending_count)
-
-
-@super_admin_bp.route("/employers/<employer_id>/verify", methods=["POST"])
-@super_admin_required
-def verify_employer(employer_id):
-    """Approve an employer account — grants login access."""
-    db = _svc()
-    try:
-        db.table("employers").update({"is_verified": True, "is_active": True}).eq("id", employer_id).execute()
-        # Also ensure user_profiles is_active = True
-        emp = db.table("employers").select("profile_id").eq("id", employer_id).single().execute().data
-        if emp:
-            db.table("user_profiles").update({"is_active": True}).eq("id", emp["profile_id"]).execute()
-        write_audit_log("verify_employer", target=f"employer:{employer_id}")
-        flash("Employer verified. They can now log in.", "success")
-    except Exception as exc:
-        flash(f"Error: {exc}", "danger")
-    return redirect(url_for("super_admin.employers"))
-
-
-@super_admin_bp.route("/employers/<employer_id>/reject", methods=["POST"])
-@super_admin_required
-def reject_employer(employer_id):
-    """Reject/deactivate an employer account."""
-    db = _svc()
-    reason = request.form.get("reason", "")
-    try:
-        db.table("employers").update({"is_verified": False, "is_active": False}).eq("id", employer_id).execute()
-        emp = db.table("employers").select("profile_id").eq("id", employer_id).single().execute().data
-        if emp:
-            db.table("user_profiles").update({"is_active": False}).eq("id", emp["profile_id"]).execute()
-        write_audit_log("reject_employer", target=f"employer:{employer_id}", detail={"reason": reason})
-        flash("Employer account rejected and deactivated.", "warning")
-    except Exception as exc:
-        flash(f"Error: {exc}", "danger")
-    return redirect(url_for("super_admin.employers"))
-
-
-# ── Employer Verifications ─────────────────────────────────────────────────────
-
-@super_admin_bp.route("/employer-verifications")
-@super_admin_required
-def employer_verifications():
-    db = _svc()
-    records = db.table("employer_verifications").select(
-        "*, user_profiles!employer_verifications_trainee_id_fkey(full_name, admission_no), "
-        "employers(company_name)"
-    ).order("submitted_at", desc=True).execute().data or []
-    return render_template("super_admin/employer_verifications.html", records=records)
-
-
 # ── Clearance Requests ─────────────────────────────────────────────────────────
 
 @super_admin_bp.route("/clearances")
@@ -1101,29 +940,6 @@ def clearances():
                            departments=departments,
                            status_filter=status_filter,
                            dept_filter=dept_filter)
-
-
-# ── Admission Requests ─────────────────────────────────────────────────────────
-
-@super_admin_bp.route("/admissions")
-@super_admin_required
-def admissions():
-    db = _svc()
-    status_filter = request.args.get("status", "")
-    dept_filter   = request.args.get("department", "")
-    query = db.table("admission_requests").select(
-        "*, user_profiles!admission_requests_student_id_fkey(full_name, admission_no, email), "
-        "courses(name, code), departments(name)"
-    ).order("submitted_at", desc=True).limit(300)
-    if status_filter:
-        query = query.eq("status", status_filter)
-    if dept_filter:
-        query = query.eq("department_id", dept_filter)
-    records = query.execute().data or []
-    departments = db.table("departments").select("id, name").order("name").execute().data or []
-    return render_template("super_admin/admissions.html",
-                           admissions=records, departments=departments,
-                           status_filter=status_filter, dept_filter=dept_filter)
 
 
 # ── Industry Partners (Companies) ─────────────────────────────────────────────

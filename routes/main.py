@@ -24,8 +24,6 @@ def index():
             return redirect(url_for("trainer.dashboard"))
         elif role == "student":
             return redirect(url_for("student.dashboard"))
-        elif role == "employer":
-            return redirect(url_for("employer.dashboard"))
         elif role == "examination_officer":
             return redirect(url_for("examination_officer.dashboard"))
         elif role == "industry_mentor":

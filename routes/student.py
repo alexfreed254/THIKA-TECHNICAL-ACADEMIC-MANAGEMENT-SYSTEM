@@ -3412,22 +3412,6 @@ def add_logbook():
     return redirect(url_for("student.logbook"))
 
 
-# ── My Job Applications ──────────────────────────────────────────────────────
-
-@student_bp.route("/jobs")
-@student_required
-def my_jobs():
-    db = get_service_client()
-    user = current_user()
-    student_id = user["id"]
-    apps = (db.table("job_applications")
-            .select("*, job_postings(title, type, location, employers(company_name))")
-            .eq("student_id", student_id)
-            .order("created_at", desc=True)
-            .execute().data or [])
-    return render_template("student/jobs.html", applications=apps)
-
-
 # ── Post-Training Employment Tracking ─────────────────────────────────────────
 
 @student_bp.route("/employment-status", methods=["GET", "POST"])

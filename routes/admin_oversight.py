@@ -31,7 +31,6 @@ def registrar_dashboard():
     stats = {
         'total_students': 0,
         'total_courses': 0,
-        'pending_admissions': 0,
         'pending_clearances': 0,
         'completed_clearances': 0
     }
@@ -49,16 +48,7 @@ def registrar_dashboard():
         courses_query = courses_query.eq("department_id", department_filter)
     courses = courses_query.execute().data or []
     stats['total_courses'] = len(courses)
-    
-    # Build query for pending admissions
-    admissions_query = (db.table("admission_requests")
-                       .select("*, departments(name)")
-                       .eq("status", "pending"))
-    if department_filter:
-        admissions_query = admissions_query.eq("department_id", department_filter)
-    pending_admissions = admissions_query.execute().data or []
-    stats['pending_admissions'] = len(pending_admissions)
-    
+
     # Build query for pending clearances
     clearances_query = (db.table("clearance_requests")
                        .select("*, departments(name)")
@@ -81,42 +71,8 @@ def registrar_dashboard():
                           stats=stats,
                           departments=departments,
                           department_filter=department_filter,
-                          pending_admissions=pending_admissions,
                           pending_clearances=pending_clearances,
                           completed_clearances=completed_clearances)
-
-
-@admin_oversight_bp.route("/registrar/admissions")
-@login_required
-@registrar_required
-def registrar_admissions():
-    """Registrar view of all admission requests."""
-    db = get_service_client()
-    
-    department_filter = request.args.get('department', '')
-    status_filter = request.args.get('status', '')
-    
-    departments = (db.table("departments")
-                  .select("*")
-                  .execute().data or [])
-    
-    # Build query
-    query = (db.table("admission_requests")
-            .select("*, courses(name, code), departments(name), user_profiles(full_name, admission_no, email)"))
-    
-    if department_filter:
-        query = query.eq("department_id", department_filter)
-    
-    if status_filter:
-        query = query.eq("status", status_filter)
-    
-    admissions = query.order("submitted_at", desc=True).execute().data or []
-    
-    return render_template("admin_oversight/registrar_admissions.html",
-                          admissions=admissions,
-                          departments=departments,
-                          department_filter=department_filter,
-                          status_filter=status_filter)
 
 
 @admin_oversight_bp.route("/registrar/clearances")
@@ -363,16 +319,7 @@ def quality_assurance_dashboard():
         trainers_query = trainers_query.eq("department_id", department_filter)
     trainers = trainers_query.execute().data or []
     stats['total_trainers'] = len(trainers)
-    
-    # Build query for pending admissions
-    admissions_query = (db.table("admission_requests")
-                       .select("*, departments(name)")
-                       .eq("status", "pending"))
-    if department_filter:
-        admissions_query = admissions_query.eq("department_id", department_filter)
-    pending_admissions = admissions_query.execute().data or []
-    stats['pending_admissions'] = len(pending_admissions)
-    
+
     # Build query for pending clearances
     clearances_query = (db.table("clearance_requests")
                        .select("*, departments(name)")
@@ -412,7 +359,6 @@ def quality_assurance_dashboard():
                           stats=stats,
                           departments=departments,
                           department_filter=department_filter,
-                          pending_admissions=pending_admissions,
                           pending_clearances=pending_clearances,
                           completed_clearances=completed_clearances)
 

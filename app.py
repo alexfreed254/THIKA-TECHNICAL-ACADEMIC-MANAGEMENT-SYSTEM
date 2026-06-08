@@ -42,12 +42,10 @@ from routes.super_admin import super_admin_bp
 from routes.dept_admin import dept_admin_bp
 from routes.trainer import trainer_bp
 from routes.student import student_bp
-from routes.employer import employer_bp
 from routes.examination_officer import examination_officer_bp
 from routes.industry_mentor import industry_mentor_bp
 from routes.internal_verifier import internal_verifier_bp
 from routes.clearance import clearance_bp
-from routes.admission import admission_bp
 from routes.admin_oversight import admin_oversight_bp
 from routes.notifications import notifications_bp
 from routes.main import main_bp
@@ -61,12 +59,10 @@ app.register_blueprint(super_admin_bp, url_prefix="/super-admin")
 app.register_blueprint(dept_admin_bp, url_prefix="/dept-admin")
 app.register_blueprint(trainer_bp, url_prefix="/trainer")
 app.register_blueprint(student_bp, url_prefix="/student")
-app.register_blueprint(employer_bp, url_prefix="/employer")
 app.register_blueprint(examination_officer_bp, url_prefix="/examination-officer")
 app.register_blueprint(industry_mentor_bp, url_prefix="/industry-mentor")
 app.register_blueprint(internal_verifier_bp, url_prefix="/internal-verifier")
 app.register_blueprint(clearance_bp, url_prefix="/clearance")
-app.register_blueprint(admission_bp, url_prefix="/admission")
 app.register_blueprint(admin_oversight_bp, url_prefix="/admin-oversight")
 app.register_blueprint(notifications_bp, url_prefix="/notifications")
 app.register_blueprint(liaison_officer_bp, url_prefix="/liaison-officer")
@@ -81,7 +77,6 @@ def inject_globals():
 
     user = current_user()
     unread_count = 0
-    pending_employers = 0
     dept_name = None
 
     if user:
@@ -103,17 +98,6 @@ def inject_globals():
                 )
                 if dept_row:
                     dept_name = dept_row.get("name")
-            except Exception:
-                pass
-
-        # Expose pending employer count for super_admin sidebar badge
-        if user.get("role") == "super_admin":
-            try:
-                from db import get_service_client
-
-                svc = get_service_client()
-                emp_rows = svc.table("employers").select("is_verified").execute().data or []
-                pending_employers = sum(1 for e in emp_rows if not e.get("is_verified"))
             except Exception:
                 pass
 
@@ -153,7 +137,6 @@ def inject_globals():
         "current_user": user,
         "department_name": dept_name,
         "unread_notification_count": unread_count,
-        "pending_employers_count": pending_employers,
         "get_alert_classes": get_alert_classes,
         "get_file_icon_class": get_file_icon_class,
         "get_filename_from_url": get_filename_from_url,
