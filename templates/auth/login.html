@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       min-height: 100vh;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -23,13 +24,14 @@
       min-height: 640px;
       background: rgba(255,255,255,0.05);
       border-radius: 28px;
-      box-shadow: 0 40px 90px rgba(15, 23, 42, 0.35);
+      box-shadow: 0 40px 90px rgba(15,23,42,0.35);
       overflow: hidden;
       display: grid;
       grid-template-columns: 1fr 1fr;
       border: 1px solid rgba(255,255,255,0.12);
     }
 
+    /* ── Hero (left panel) ── */
     .hero {
       background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
       color: #f8fafc;
@@ -39,330 +41,112 @@
       justify-content: center;
       gap: 28px;
     }
-
     .hero .logo {
-      width: 92px;
-      height: 92px;
-      border-radius: 50%;
-      background: #fff;
-      display: grid;
-      place-items: center;
-      margin: 0 auto;
-      box-shadow: 0 20px 40px rgba(15,23,42,0.35);
+      width: 92px; height: 92px; border-radius: 50%;
+      background: #fff; display: grid; place-items: center;
+      margin: 0 auto; box-shadow: 0 20px 40px rgba(15,23,42,0.35);
     }
-
-    .hero .logo img {
-      width: 70px;
-      height: 70px;
-      object-fit: contain;
-    }
-
+    .hero .logo img { width: 70px; height: 70px; object-fit: contain; }
     .hero h1 {
-      font-size: clamp(2rem, 2.8vw, 2.8rem);
-      line-height: 1.15;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      text-align: center;
+      font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+      line-height: 1.15; letter-spacing: 0.04em;
+      text-transform: uppercase; text-align: center;
     }
-
     .hero p {
-      max-width: 520px;
-      font-size: 1rem;
-      line-height: 1.8;
-      color: rgba(248,250,252,0.82);
-      text-align: center;
-      margin: 0 auto;
+      max-width: 520px; font-size: 1rem; line-height: 1.8;
+      color: rgba(248,250,252,0.82); text-align: center; margin: 0 auto;
     }
-
     .stats {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
+      display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px;
     }
-
     .stat {
-      padding: 20px 18px;
-      border-radius: 18px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.14);
-      text-align: center;
-      backdrop-filter: blur(12px);
+      padding: 20px 18px; border-radius: 18px;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.14);
+      text-align: center; backdrop-filter: blur(12px);
     }
+    .stat strong { display: block; font-size: 1.9rem; font-weight: 800; margin-bottom: 8px; }
+    .stat small  { text-transform: uppercase; letter-spacing: 0.12em; color: rgba(248,250,252,0.72); font-size: 0.8rem; }
 
-    .stat strong {
-      display: block;
-      font-size: 1.9rem;
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
-
-    .stat small {
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: rgba(248,250,252,0.72);
-      font-size: 0.8rem;
-    }
-
-    .hero > div:has(h1) {
-      text-align: center;
-    }
-
-    .hero-footer {
-      padding: 24px;
-      border-radius: 22px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: rgba(248,250,252,0.85);
-      line-height: 1.75;
-    }
-
-    .hero-apply {
-      padding: 28px 24px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, rgba(21,101,192,0.12), rgba(13,71,161,0.06));
-      border: 1px solid rgba(33,150,243,0.2);
-      text-align: center;
-    }
-    .hero-apply p {
-      font-size: 0.88rem;
-      color: rgba(248,250,252,0.72);
-      margin-top: 14px;
-      line-height: 1.6;
-    }
-    .hero-apply-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 16px 32px;
-      border-radius: 999px;
-      font-weight: 800;
-      font-size: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      background: linear-gradient(135deg, #1565c0, #0d47a1);
-      color: #fff;
-      text-decoration: none;
-      box-shadow: 0 12px 30px rgba(21,101,192,0.35);
-      transition: transform .2s, filter .2s;
-    }
-    .hero-apply-btn:hover { filter: brightness(1.08); transform: translateY(-2px); color: #fff; }
-    .hero-apply-btn i { font-size: 1.15rem; }
-
+    /* ── Login panel (right) ── */
     .login-panel {
       background: #ffffff;
       padding: 50px 48px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 28px;
+      display: flex; flex-direction: column; justify-content: center; gap: 28px;
     }
+    .login-panel .top { display: grid; gap: 16px; }
 
-    .login-panel .top {
-      display: grid;
-      gap: 16px;
-    }
-
-    .tabs {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-
+    .tabs { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
     .tab {
-      border: 1px solid #dbeafe;
-      border-radius: 999px;
-      padding: 12px 10px;
-      text-align: center;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 0.82rem;
-      color: #475569;
-      background: #f8fafc;
-      transition: all 0.2s ease;
+      border: 1px solid #dbeafe; border-radius: 999px; padding: 12px 10px;
+      text-align: center; cursor: pointer; font-weight: 700; font-size: 0.82rem;
+      color: #475569; background: #f8fafc; transition: all 0.2s ease;
     }
+    .tab.active { color: #1d4ed8; background: #eff6ff; border-color: #93c5fd; }
 
-    .tab.active {
-      color: #1d4ed8;
-      background: #eff6ff;
-      border-color: #93c5fd;
-    }
+    .login-panel h2 { font-size: clamp(1.8rem, 2.4vw, 2.5rem); line-height: 1.05; }
+    .login-panel > p { color: #64748b; line-height: 1.8; }
 
-    .login-panel h2 {
-      font-size: clamp(2rem, 2.4vw, 2.5rem);
-      line-height: 1.05;
-    }
+    .form  { display: grid; gap: 18px; }
+    .field { display: grid; gap: 10px; font-size: 0.95rem; }
+    .field label { font-weight: 700; color: #0f172a; }
 
-    .login-panel p {
-      color: #64748b;
-      line-height: 1.8;
-      max-width: 520px;
-    }
-
-    .form {
-      display: grid;
-      gap: 18px;
-    }
-
-    .field {
-      display: grid;
-      gap: 10px;
-      font-size: 0.95rem;
-    }
-
-    .field label {
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .input-wrap {
-      position: relative;
-    }
-
+    .input-wrap { position: relative; }
     .input-wrap i {
-      position: absolute;
-      top: 50%;
-      left: 16px;
-      transform: translateY(-50%);
-      color: #94a3b8;
-      font-size: 1rem;
+      position: absolute; top: 50%; left: 16px;
+      transform: translateY(-50%); color: #94a3b8; font-size: 1rem;
     }
-
     .field input {
-      width: 100%;
-      padding: 16px 18px 16px 46px;
-      border-radius: 16px;
-      border: 1px solid #e2e8f0;
-      background: #f8fafc;
-      color: #0f172a;
+      width: 100%; padding: 16px 18px 16px 46px;
+      border-radius: 16px; border: 1px solid #e2e8f0;
+      background: #f8fafc; color: #0f172a;
       transition: border-color .2s, box-shadow .2s;
     }
-
     .field input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      outline: none; border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
     }
 
     .meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      font-size: 0.95rem;
-      color: #64748b;
+      display: flex; justify-content: space-between;
+      align-items: center; gap: 16px; font-size: 0.95rem; color: #64748b;
     }
-
-    .meta label {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-    }
-
-    .meta input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: #2563eb;
-      cursor: pointer;
-    }
+    .meta label { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+    .meta input[type="checkbox"] { width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; }
 
     .btn-login {
-      width: 100%;
-      padding: 16px 18px;
-      border: none;
-      border-radius: 999px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      width: 100%; padding: 16px 18px; border: none; border-radius: 999px;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
       background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      color: #fff;
-      cursor: pointer;
-      box-shadow: 0 18px 40px rgba(37, 99, 235, 0.22);
+      color: #fff; cursor: pointer;
+      box-shadow: 0 18px 40px rgba(37,99,235,0.22);
       transition: transform .2s, filter .2s;
     }
-
-    .btn-login:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .btn-login:hover  { filter: brightness(1.05); transform: translateY(-1px); }
     .btn-login:active { transform: translateY(0); }
 
     .login-footer {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 12px;
-      color: #64748b;
-      font-size: 0.94rem;
+      display: flex; flex-wrap: wrap; justify-content: space-between;
+      gap: 12px; color: #64748b; font-size: 0.94rem;
     }
+    .login-footer a { color: #2563eb; text-decoration: none; font-weight: 700; }
 
-    .login-footer a {
-      color: #2563eb;
-      text-decoration: none;
-      font-weight: 700;
-    }
-
-    .apply-form { display: none; }
-    .apply-form.visible { display: grid; gap: 16px; }
-    .apply-form select, .apply-form textarea {
-      width: 100%; padding: 14px 16px; border-radius: 16px;
-      border: 1px solid #e2e8f0; background: #f8fafc;
-      color: #0f172a; font-family: inherit; font-size: 0.95rem;
-      transition: border-color .2s, box-shadow .2s;
-    }
-    .apply-form select:focus, .apply-form textarea:focus {
-      outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,.12);
-    }
-    .apply-form textarea { resize: vertical; min-height: 60px; }
-    .apply-form .field-file {
-      border: 2px dashed #dbeafe; border-radius: 16px; padding: 18px; text-align: center;
-      background: #f8fafc; cursor: pointer; transition: border-color .2s;
-    }
-    .apply-form .field-file:hover { border-color: #2563eb; }
-    .apply-form .field-file i { font-size: 1.6rem; color: #2563eb; margin-bottom: 6px; }
-    .apply-form .field-file p { color: #64748b; font-size: 0.85rem; }
-    .btn-apply {
-      width: 100%; padding: 16px 18px; border: none; border-radius: 999px;
-      font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
-      background: linear-gradient(135deg, #1565c0, #0d47a1); color: #fff; cursor: pointer;
-      box-shadow: 0 18px 40px rgba(21,101,192,0.22);
-      transition: transform .2s, filter .2s;
-    }
-    .btn-apply:hover { filter: brightness(1.05); transform: translateY(-1px); }
-
+    /* ── Flash alerts ── */
     .alert {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      border: 1px solid #fecaca;
-      background: #fef2f2;
-      color: #991b1b;
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-radius: 16px;
       font-size: 0.95rem;
+      border: 1px solid #fecaca; background: #fef2f2; color: #991b1b;
     }
+    .alert-success, .alert-info    { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
+    .alert-warning                 { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+    .alert-error                   { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
 
-    .alert-success, .alert-info {
-      border-color: #bbf7d0;
-      background: #f0fdf4;
-      color: #15803d;
-    }
-
-    .alert-warning {
-      border-color: #fde68a;
-      background: #fffbeb;
-      color: #92400e;
-    }
-
-    .alert-error {
-      border-color: #fecaca;
-      background: #fef2f2;
-      color: #991b1b;
-    }
-
+    /* ── Responsive ── */
     @media (max-width: 960px) {
       .page-shell { grid-template-columns: 1fr; min-height: auto; }
       .hero, .login-panel { padding: 36px 28px; }
       .stats { grid-template-columns: 1fr; }
     }
-
     @media (max-width: 680px) {
       body { padding: 14px; }
       .page-shell { border-radius: 22px; }
@@ -371,23 +155,24 @@
 </head>
 <body>
   <div class="page-shell">
+
+    <!-- ── Left: hero panel ── -->
     <section class="hero">
       <div class="logo">
-        <img src="{{ LOGO_URL }}" alt="TTTTI Logo">
+        <img src="{{ LOGO_URL }}" alt="TTTI Logo">
       </div>
-      <div>
+      <div style="text-align:center">
         <h1>Thika Technical Training Institute</h1>
-        <p>Secure access for administrators, trainers, trainees, and employer partners. Manage attendance, results, portfolios, and job placements from one modern portal.</p>
+        <p>Secure portal for administrators, trainers, trainees, and employer partners. Manage attendance, results, portfolios, and job placements from one place.</p>
       </div>
-
       <div class="stats">
+        <div class="stat"><strong>9+</strong><small>Roles</small></div>
         <div class="stat"><strong>1</strong><small>Platform</small></div>
-        <div class="stat"><strong>4</strong><small>Roles</small></div>
         <div class="stat"><strong>24/7</strong><small>Access</small></div>
       </div>
-
     </section>
 
+    <!-- ── Right: login panel ── -->
     <section class="login-panel">
       <div class="top">
         <div class="tabs">
@@ -396,86 +181,99 @@
         </div>
         <h2 id="welcomeHeading">Welcome back</h2>
         <p id="welcomeSubtext">Sign in to your account to continue.</p>
-      {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category in ('error','danger') else 'warning' if category == 'warning' else 'success' if category == 'info' else 'info' }}">
-          <i class="fas fa-{{ 'check-circle' if category in ('success','info') else 'exclamation-triangle' if category == 'warning' else 'exclamation-circle' }}"></i>
-          {{ message }}
-        </div>
-        {% endfor %}
-      {% endif %}
-      {% endwith %}
 
-      <form method="post" action="/auth/login" class="form" id="loginForm">
-        <input type="hidden" name="login_type" id="loginType" value="{{ request.form.get('login_type', 'staff') }}">
-        <input type="hidden" name="origin" id="origin" value="{{ request.form.get('origin', 'auth') }}">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category in ('success','info') else 'warning' if category == 'warning' else 'error' }}">
+              <i class="fas fa-{% if category in ('success','info') %}check-circle{% elif category == 'warning' %}exclamation-triangle{% else %}exclamation-circle{% endif %}"></i>
+              {{ message }}
+            </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
-        <div class="field" id="staffField">
-          <label for="email">Email Address</label>
-          <div class="input-wrap">
-            <i class="fas fa-envelope" id="staffIcon"></i>
-            <input id="email" type="email" name="email" placeholder="you@example.com" value="{{ request.form.get('email', '') }}" autocomplete="email">
+        <form method="post" action="/auth/login" class="form" id="loginForm">
+          <input type="hidden" name="login_type" id="loginType" value="{{ request.form.get('login_type', 'staff') }}">
+          <input type="hidden" name="origin"     id="origin"    value="{{ request.form.get('origin', 'auth') }}">
+
+          <!-- Staff / employer email field -->
+          <div class="field" id="staffField">
+            <label for="email">Email Address</label>
+            <div class="input-wrap">
+              <i class="fas fa-envelope" id="staffIcon"></i>
+              <input id="email" type="email" name="email"
+                     placeholder="you@example.com"
+                     value="{{ request.form.get('email', '') }}"
+                     autocomplete="email">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setStaffMode()">
+                <input type="radio" name="staff_type" value="staff"
+                       {% if request.form.get('origin') != 'employer' %}checked{% endif %}
+                       style="accent-color:#2563eb"> Staff / Admin
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setEmployerMode()">
+                <input type="radio" name="staff_type" value="employer"
+                       {% if request.form.get('origin') == 'employer' %}checked{% endif %}
+                       style="accent-color:#e65100"> Employer
+              </label>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:4px">
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setStaffMode()">
-              <input type="radio" name="staff_type" value="staff" {% if request.form.get('origin') != 'employer' %}checked{% endif %} style="accent-color:#2563eb"> Staff / Admin
-            </label>
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:600;cursor:pointer;color:#475569" onclick="setEmployerMode()">
-              <input type="radio" name="staff_type" value="employer" {% if request.form.get('origin') == 'employer' %}checked{% endif %} style="accent-color:#e65100"> Employer
-            </label>
+
+          <!-- Trainee admission number field -->
+          <div class="field" id="studentField"
+               style="{% if request.form.get('login_type','staff') == 'student' %}display:grid{% else %}display:none{% endif %}">
+            <label for="admissionNo">Admission Number</label>
+            <div class="input-wrap">
+              <i class="fas fa-id-badge"></i>
+              <input id="admissionNo" type="text" name="admission_no"
+                     placeholder="A123456"
+                     value="{{ request.form.get('admission_no', '') }}"
+                     autocomplete="username">
+            </div>
           </div>
-        </div>
 
-        <div class="field" id="studentField" style="{% if request.form.get('login_type', 'staff') == 'student' %}display:grid;{% else %}display:none;{% endif %}">
-          <label for="admissionNo">Admission Number</label>
-          <div class="input-wrap">
-            <i class="fas fa-id-badge"></i>
-            <input id="admissionNo" type="text" name="admission_no" placeholder="A123456" value="{{ request.form.get('admission_no', '') }}" autocomplete="username">
+          <!-- Password -->
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <i class="fas fa-lock"></i>
+              <input id="password" type="password" name="password"
+                     placeholder="Enter your password"
+                     required autocomplete="current-password">
+            </div>
           </div>
-        </div>
 
-        <div class="field">
-          <label for="password">Password</label>
-          <div class="input-wrap">
-            <i class="fas fa-lock"></i>
-            <input id="password" type="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+          <div class="meta">
+            <label><input type="checkbox" name="remember"> Remember me</label>
+            <a href="/auth/forgot-password" id="forgotPwdLink" style="display:none">Forgot Password?</a>
           </div>
+
+          <button type="submit" class="btn-login">
+            <i class="fas fa-arrow-right"></i> Sign In
+          </button>
+        </form>
+
+        <div class="login-footer">
+          <span id="employerRegisterSpan" style="display:none">
+            New employer? <a href="/employer/register">Create employer account</a>
+          </span>
         </div>
-
-        <div class="meta">
-          <label><input type="checkbox" name="remember"> Remember me</label>
-          <a href="/auth/forgot-password" id="forgotPwdLink">Forgot Password?</a>
-        </div>
-
-        <button type="submit" class="btn-login"><i class="fas fa-arrow-right"></i> Sign In</button>
-      </form>
-
-      <div class="login-footer">
-        <span id="employerRegisterSpan" style="display:none">New employer? <a href="/employer/register">Create employer account</a></span>
       </div>
-
     </section>
+
   </div>
 
   <script>
-    const tabs = document.querySelectorAll('.tab');
-    const staffField     = document.getElementById('staffField');
-    const studentField   = document.getElementById('studentField');
-    const loginType      = document.getElementById('loginType');
-    const origin         = document.getElementById('origin');
-    const loginForm      = document.getElementById('loginForm');
-    const welcomeHeading = document.getElementById('welcomeHeading');
-    const welcomeSubtext = document.getElementById('welcomeSubtext');
-    const staffIcon      = document.getElementById('staffIcon');
-    const forgotPwdLink   = document.getElementById('forgotPwdLink');
+    const tabs               = document.querySelectorAll('.tab');
+    const staffField         = document.getElementById('staffField');
+    const studentField       = document.getElementById('studentField');
+    const loginType          = document.getElementById('loginType');
+    const origin             = document.getElementById('origin');
+    const staffIcon          = document.getElementById('staffIcon');
+    const forgotPwdLink      = document.getElementById('forgotPwdLink');
     const employerRegisterSpan = document.getElementById('employerRegisterSpan');
-
-    function showLogin() {
-      loginForm.style.display = 'grid';
-      welcomeHeading.textContent = 'Welcome back';
-      welcomeSubtext.textContent = 'Sign in to your account to continue.';
-    }
 
     function setStaffMode() {
       origin.value = 'auth';
@@ -484,6 +282,7 @@
       forgotPwdLink.style.display = 'none';
       employerRegisterSpan.style.display = 'none';
     }
+
     function setEmployerMode() {
       origin.value = 'employer';
       staffIcon.className = 'fas fa-building';
@@ -498,14 +297,14 @@
         tab.classList.add('active');
         var type = tab.dataset.type;
         loginType.value = type;
-
-        showLogin();
         if (type === 'student') {
-          staffField.style.display = 'none';
+          staffField.style.display  = 'none';
           studentField.style.display = 'grid';
           origin.value = 'auth';
+          forgotPwdLink.style.display = 'none';
+          employerRegisterSpan.style.display = 'none';
         } else {
-          staffField.style.display = 'grid';
+          staffField.style.display  = 'grid';
           studentField.style.display = 'none';
           var checked = document.querySelector('input[name="staff_type"]:checked');
           if (checked) checked.click();
@@ -513,8 +312,8 @@
       });
     });
 
-    // Init on page load
-    (function initVisibility() {
+    // Restore correct mode on page load (e.g. after a failed POST)
+    (function init() {
       var checked = document.querySelector('input[name="staff_type"]:checked');
       if (checked && checked.value === 'employer') {
         setEmployerMode();
