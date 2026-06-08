@@ -23,6 +23,15 @@ from notifications import create_notification
 clearance_bp = Blueprint("clearance", __name__)
 
 
+def _approver_back(role: str) -> str:
+    """Return the correct post-action redirect URL based on the approver's role."""
+    if role == "workshop_technician":
+        return url_for("workshop_technician.clearances")
+    if role == "trainer":
+        return url_for("clearance.approver_dashboard")
+    return url_for("clearance.approver_dashboard")
+
+
 # ── Global stage-order mapping ────────────────────────────────────────────────
 # Digital groups 1–5; groups 6+ are manual (signed on the physical PDF form).
 
@@ -289,10 +298,10 @@ def initiate_clearance():
             else:
                 _insert()
 
-        # Notify trainers
+        # Notify trainers and workshop technicians
         try:
             sp = db.table("user_profiles").select("full_name").eq("id", student_id).single().execute().data
-            sname = sp["full_name"] if sp else "A student"
+            sname = sp["full_name"] if sp else "A trainee"
             for tid in trainer_ids:
                 create_notification(
                     user_id=tid,
@@ -300,6 +309,14 @@ def initiate_clearance():
                     message=f"{sname} has initiated clearance and requires your sign-off.",
                     notification_type="info",
                     action_url="/clearance/approver",
+                )
+            for tid in tech_ids:
+                create_notification(
+                    user_id=tid,
+                    title="Trainee Clearance — Workshop Sign-Off Needed",
+                    message=f"{sname} requires your workshop clearance approval.",
+                    notification_type="info",
+                    action_url="/workshop-technician/clearances",
                 )
         except Exception:
             pass
@@ -413,7 +430,7 @@ def approve_clearance(approval_id):
 
         if not approval:
             flash("Approval record not found.", "error")
-            return redirect(url_for("clearance.approver_dashboard"))
+            return redirect(_approver_back(role))
 
         stage = approval.get("clearance_stages") or {}
         req   = approval.get("clearance_requests") or {}
@@ -431,7 +448,7 @@ def approve_clearance(approval_id):
         if not _groups_complete_before(all_app, group):
             flash("Previous clearance stages must be fully approved before you can act on this stage.",
                   "warning")
-            return redirect(url_for("clearance.approver_dashboard"))
+            return redirect(_approver_back(role))
 
         # Mark this approval as approved
         db.table("clearance_approvals").update({
@@ -460,7 +477,7 @@ def approve_clearance(approval_id):
     except Exception as e:
         flash(f"Error: {e}", "error")
 
-    return redirect(url_for("clearance.approver_dashboard"))
+    return redirect(_approver_back(role))
 
 
 # ── Reject a clearance stage ──────────────────────────────────────────────────
@@ -475,7 +492,7 @@ def reject_clearance(approval_id):
 
     if not comments:
         flash("Reason for rejection is required.", "error")
-        return redirect(url_for("clearance.approver_dashboard"))
+        return redirect(_approver_back(role))
 
     try:
         approval = (db.table("clearance_approvals")
@@ -487,7 +504,7 @@ def reject_clearance(approval_id):
 
         if not approval:
             flash("Approval record not found.", "error")
-            return redirect(url_for("clearance.approver_dashboard"))
+            return redirect(_approver_back(role))
 
         stage = approval.get("clearance_stages") or {}
         req   = approval.get("clearance_requests") or {}
@@ -521,7 +538,7 @@ def reject_clearance(approval_id):
     except Exception as e:
         flash(f"Error: {e}", "error")
 
-    return redirect(url_for("clearance.approver_dashboard"))
+    return redirect(_approver_back(role))
 
 
 # ── Clearance certificate (download) ─────────────────────────────────────────

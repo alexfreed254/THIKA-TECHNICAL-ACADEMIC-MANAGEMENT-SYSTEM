@@ -181,27 +181,61 @@ def inventory():
 
 # ── Clearances ────────────────────────────────────────────────────────────────
 
+_CL_SELECT = ("*, "
+              "clearance_requests(id, status, department_id, initiated_at, "
+              "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
+              "  (full_name, admission_no)), "
+              "clearance_stages(stage_name, approver_role, stage_order, "
+              "  clearance_departments(name, clearance_type))")
+
+
 @workshop_technician_bp.route("/clearances")
 @workshop_technician_required
 def clearances():
-    db   = get_service_client()
-    user = current_user()
+    db      = get_service_client()
+    user    = current_user()
+    dept_id = user.get("department_id")
 
     status_filter = request.args.get("status", "").strip()
 
-    query = (db.table("clearance_approvals")
-             .select("*, "
-                     "clearance_requests(id, status, department_id, initiated_at, "
-                     "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
-                     "  (full_name, admission_no)), "
-                     "clearance_stages(stage_name, approver_role, stage_order, "
-                     "  clearance_departments(name, clearance_type))")
-             .eq("approver_id", user["id"]))
-
+    # ── Query 1: explicitly pre-assigned to this technician ──────────────────
+    q1 = (db.table("clearance_approvals")
+          .select(_CL_SELECT)
+          .eq("approver_id", user["id"]))
     if status_filter:
-        query = query.eq("status", status_filter)
+        q1 = q1.eq("status", status_filter)
+    assigned = q1.order("created_at", desc=True).execute().data or []
 
-    approvals = query.order("created_at", desc=True).execute().data or []
+    # ── Query 2: role-based (approver_id NULL, stage role = workshop_technician,
+    #             clearance dept matches this technician's department)
+    # Covers cases where the stage was created before the technician account
+    # existed, or the stage name didn't match the "technician" keyword.
+    role_based = []
+    if dept_id:
+        try:
+            q2 = (db.table("clearance_approvals")
+                  .select(_CL_SELECT)
+                  .is_("approver_id", "null"))
+            if status_filter:
+                q2 = q2.eq("status", status_filter)
+            raw2 = q2.execute().data or []
+            for a in raw2:
+                stage = a.get("clearance_stages") or {}
+                cr    = a.get("clearance_requests") or {}
+                if (stage.get("approver_role") == "workshop_technician"
+                        and cr.get("department_id") == dept_id):
+                    role_based.append(a)
+        except Exception:
+            pass
+
+    # ── Merge & deduplicate ───────────────────────────────────────────────────
+    seen: set = set()
+    approvals = []
+    for a in assigned + role_based:
+        if a["id"] not in seen:
+            seen.add(a["id"])
+            approvals.append(a)
+    approvals.sort(key=lambda x: x.get("created_at") or "", reverse=True)
 
     cnt_pending  = sum(1 for a in approvals if a.get("status") == "pending")
     cnt_approved = sum(1 for a in approvals if a.get("status") == "approved")
