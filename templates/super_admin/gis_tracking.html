@@ -659,8 +659,8 @@
               <th>Trainee</th>
               <th>Department</th>
               <th>Company</th>
-              <th>City</th>
-              <th>Unit</th>
+              <th>City / Address</th>
+              <th>Course</th>
               <th>Status</th>
               <th>Period</th>
               <th>Last Check-in</th>
@@ -680,10 +680,10 @@
               </td>
               <td class="text-muted-sm">{{ p._department or '—' }}</td>
               <td style="font-weight:600">{{ co.get('name','—') }}</td>
-              <td class="text-muted-sm">{{ co.get('city','') }}</td>
+              <td class="text-muted-sm">{{ co.get('city') or co.get('address') or '—' }}</td>
               <td>
                 <span class="text-bold-secondary">{{ un.get('code','') }}</span>
-                <div class="sadm">{{ un.get('name','') }}</div>
+                <div class="sadm">{{ un.get('name','') or '—' }}</div>
               </td>
               <td>
                 <span class="dot dot-{{ p.status }}"></span>
@@ -962,11 +962,11 @@ PLACEMENTS.forEach(function(p) {
   marker.bindPopup(
     '<div style="font-family:Inter,sans-serif;min-width:200px">' +
     '<b style="font-size:14px">'+escHtml(co.name||'—')+'</b>' +
-    '<div style="color:#6b7280;font-size:12px;margin-top:2px">'+escHtml(co.city||'')+' '+escHtml(co.address||'')+'</div>' +
+    '<div style="color:#6b7280;font-size:12px;margin-top:2px">'+escHtml(co.city||co.address||'')+'</div>' +
     '<hr style="margin:8px 0;border-color:#f3f4f6">' +
     '<b>Student:</b> '+escHtml(st.full_name||'—')+' ('+escHtml(st.admission_no||'')+')<br>' +
     '<b>Department:</b> '+escHtml(p._department||'—')+'<br>' +
-    '<b>Unit:</b> '+escHtml(un.code||'')+' '+escHtml(un.name||'')+'<br>' +
+    '<b>Course:</b> '+escHtml(un.code||'')+' '+escHtml(un.name||'')+'<br>' +
     '<b>Status:</b> '+p.status+'<br>' +
     '<b>Period:</b> '+(p.start_date||'—')+' → '+(p.end_date||'—') +
     '</div>'
