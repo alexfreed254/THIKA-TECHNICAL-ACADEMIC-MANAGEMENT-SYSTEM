@@ -858,11 +858,8 @@ def attendance_weekly_export():
         flash("Class and Unit are required for export.", "error")
         return redirect(url_for("trainer.attendance"))
 
-    # Access check
-    cu = (db.table("class_units").select("id")
-            .eq("class_id", class_id).eq("unit_id", unit_id)
-            .eq("trainer_id", user["id"]).limit(1).execute().data or [])
-    if not cu:
+    # Access check — use same logic as every other trainer route
+    if not _check_unit_access(db, unit_id):
         flash("Access denied.", "error")
         return redirect(url_for("trainer.attendance"))
 
@@ -870,7 +867,8 @@ def attendance_weekly_export():
     unit = db.table("units").select("code, name").eq("id", unit_id).single().execute().data or {}
 
     students = (db.table("enrollments")
-                  .select("student_id, user_profiles(full_name, admission_no)")
+                  .select("student_id, "
+                          "user_profiles!enrollments_student_id_fkey(full_name, admission_no)")
                   .eq("class_id", class_id)
                   .order("student_id")
                   .execute().data or [])
@@ -1030,9 +1028,13 @@ def attendance_weekly_export():
 
     ws.freeze_panes = ws.cell(row=sub_row + 1, column=n_fix + 1)
 
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
+    try:
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+    except Exception as exc:
+        flash(f"Excel build error: {exc}", "error")
+        return redirect(url_for("trainer.attendance"))
 
     safe_cls  = (cls.get("name","Class") or "Class").replace("/", "-").replace(" ", "_")
     safe_unit = (unit.get("code","Unit") or "Unit").replace("/", "-")
