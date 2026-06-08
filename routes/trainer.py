@@ -39,33 +39,73 @@ def _check_unit_access(db, unit_id: str) -> bool:
     return bool(assigned) and unit_id in assigned
 
 
+def _file_slug(text: str) -> str:
+    """Sanitize text into a filename-safe slug (alphanumeric + underscore)."""
+    text = str(text or "").strip()
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s]+', '_', text)
+    return text.strip('_-') or 'unknown'
+
+
 def _rename_script_file(db, assessment_id: str, action: str, trainer_name: str):
     """
-    Append '— approved by <Trainer> — <TraineeName>' or
-           '— rejected by <Trainer> — <TraineeName>'
-    to the script_file_name stored in the DB (cosmetic label only).
+    Rename the assessment script file in Supabase storage and update DB.
+
+    Approval format:
+        AdmNo_UnitName_Type_No_Cycle_Term_STATUS-TrainerName.pdf
+    e.g.: ADM001_Introduction_to_ICT_FA_1_1_2_APPROVED-John_Doe.pdf
     """
     try:
         a = (db.table("assessments")
-             .select("script_file_name, student_id")
+             .select("student_id, unit_id, assessment_type, assessment_no, "
+                     "cycle, term, script_file_path, "
+                     "user_profiles!assessments_student_id_fkey(admission_no), "
+                     "units(name)")
              .eq("id", assessment_id).single().execute().data)
         if not a:
             return
-        trainee = (db.table("user_profiles").select("full_name")
-                   .eq("id", a["student_id"]).single().execute().data)
-        trainee_name = trainee["full_name"] if trainee else "Trainee"
 
-        original = a.get("script_file_name", "")
-        # Strip any previous approval/rejection suffix
-        original = re.sub(r'\s*[—–-]+\s*(approved|rejected) by .+$', '', original, flags=re.IGNORECASE)
-        # Remove .pdf extension, append suffix, re-add extension
-        if original.lower().endswith('.pdf'):
-            base = original[:-4]
-        else:
-            base = original
-        suffix = f" — {action} by {trainer_name} — {trainee_name}.pdf"
-        new_name = base + suffix
-        db.table("assessments").update({"script_file_name": new_name}).eq("id", assessment_id).execute()
+        student_info   = a.get("user_profiles") or {}
+        unit_info      = a.get("units") or {}
+        admission_slug = _file_slug(student_info.get("admission_no") or a["student_id"])
+        unit_slug      = _file_slug(unit_info.get("name") or a.get("unit_id", "unit"))
+        atype_slug     = _file_slug(a.get("assessment_type") or "FA")
+        ano            = str(a.get("assessment_no") or "1")
+        cycle_str      = str(a.get("cycle") or "1")
+        term_str       = str(a.get("term") or "1")
+        status_str     = "APPROVED" if action == "approved" else "REJECTED"
+        trainer_slug   = _file_slug(trainer_name)
+
+        new_display = (
+            f"{admission_slug}_{unit_slug}_{atype_slug}_{ano}_"
+            f"{cycle_str}_{term_str}_{status_str}-{trainer_slug}.pdf"
+        )
+
+        old_path = a.get("script_file_path")
+        if not old_path:
+            db.table("assessments").update({"script_file_name": new_display}).eq("id", assessment_id).execute()
+            return
+
+        # Derive new storage path — keep same folder, swap filename
+        folder   = old_path.rsplit("/", 1)[0] if "/" in old_path else "scripts"
+        new_path = f"{folder}/{new_display}"
+
+        # Copy to new path then remove old file
+        storage    = get_service_client().storage
+        file_bytes = bytes(storage.from_("assessment-scripts").download(old_path))
+        storage.from_("assessment-scripts").upload(
+            new_path, file_bytes, {"content-type": "application/pdf"}
+        )
+        try:
+            storage.from_("assessment-scripts").remove([old_path])
+        except Exception:
+            pass
+
+        db.table("assessments").update({
+            "script_file_name": new_display,
+            "script_file_path": new_path,
+        }).eq("id", assessment_id).execute()
+
     except Exception:
         pass
 

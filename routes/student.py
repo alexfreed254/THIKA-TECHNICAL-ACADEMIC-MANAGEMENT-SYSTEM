@@ -23,6 +23,14 @@ student_bp = Blueprint("student", __name__)
 EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 ALLOWED_PASSPORT_IMAGES = {'jpg', 'jpeg', 'png', 'webp'}
 
+
+def _file_slug(text: str) -> str:
+    """Sanitize arbitrary text into a filename-safe slug (alphanumeric + underscore)."""
+    text = str(text or "").strip()
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s]+', '_', text)
+    return text.strip('_-') or 'unknown'
+
 # Template helper functions
 def get_file_icon_class(url):
     """Get CSS class for file icon based on extension."""
@@ -649,17 +657,34 @@ def upload_assessment():
             flash('At least one PDF file is required.', 'danger')
             return redirect(url_for("student.upload_assessment"))
         
+        # Fetch admission_no and unit name once — used for structured filenames
+        _profile = (db.table("user_profiles").select("admission_no")
+                    .eq("id", student_id).single().execute().data or {})
+        _unit_row = (db.table("units").select("name")
+                     .eq("id", unit_id).single().execute().data or {})
+        adm_slug  = _file_slug(_profile.get("admission_no") or student_id)
+        unit_slug = _file_slug(_unit_row.get("name") or unit_id)
+        # Format: admission_no-unitname-assessmenttype-assessmentno-cycle-term
+        base_name = f"{adm_slug}-{unit_slug}-{assessment_type}-{assessment_no}-{cycle}-{term}"
+
+        pdf_files = [f for f in files if f.filename.lower().endswith('.pdf')]
+        multi_pdf = len(pdf_files) > 1
+
         uploaded = 0
         errors = []
+        pdf_idx = 0
         for file in files:
             if not file.filename.lower().endswith('.pdf'):
                 errors.append(f"'{file.filename}' is not a PDF — skipped.")
                 continue
+            pdf_idx += 1
             try:
-                filename = f"scripts/{student_id}_{unit_id}_{assessment_type}_{assessment_no}_{uuid.uuid4().hex}.pdf"
+                page_sfx     = f"-p{pdf_idx}" if multi_pdf else ""
+                display_name = f"{base_name}{page_sfx}.pdf"
+                storage_path = f"scripts/{student_id}/{display_name}"
                 file_data = file.read()
                 get_service_client().storage.from_("assessment-scripts").upload(
-                    filename, file_data, {"content-type": "application/pdf"}
+                    storage_path, file_data, {"content-type": "application/pdf"}
                 )
                 result = db.table("assessments").insert({
                     "student_id": student_id,
@@ -670,8 +695,8 @@ def upload_assessment():
                     "term": term,
                     "cycle": cycle,
                     "year": year,
-                    "script_file_path": filename,
-                    "script_file_name": file.filename,
+                    "script_file_path": storage_path,
+                    "script_file_name": display_name,
                     "script_file_size": len(file_data),
                     "status": "pending"
                 }).execute()
@@ -1231,11 +1256,14 @@ def poe_upload():
             # Get file extension
             orig_ext = os.path.splitext(file.filename)[1].lower()
             
-            # Generate clean filename
-            clean_filename = f"{admission_no}-{unit_name.replace(' ', '_')}-CYCLE{cycle}-TERM{term}-{year}-{assessment_type}-{assessment_no}_{upload_choice}{orig_ext}"
-            
+            # Generate clean filename: admission_no-unitname-type-no-cycle-term
+            clean_filename = (
+                f"{_file_slug(admission_no)}-{_file_slug(unit_name)}"
+                f"-{_file_slug(assessment_type)}-{assessment_no}-{cycle}-{term}{orig_ext}"
+            )
+
             # Create storage path: POE/CLASS/UNIT/ADMISSION_NO/
-            storage_path = f"POE/{class_name.replace(' ', '_')}/{unit_name.replace(' ', '_')}/{admission_no}/{clean_filename}"
+            storage_path = f"POE/{_file_slug(class_name)}/{_file_slug(unit_name)}/{_file_slug(admission_no)}/{clean_filename}"
             
             # Read file data
             file_data = file.read()
