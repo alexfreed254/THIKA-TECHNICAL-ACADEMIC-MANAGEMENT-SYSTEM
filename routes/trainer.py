@@ -1810,14 +1810,14 @@ def upload_document():
         
         # Upload to storage bucket using the service client (already configured)
         svc = get_service_client()
-        svc.storage.from_("documents").upload(
+        svc.storage.from_("assessment-scripts").upload(
             path=storage_path,
             file=file_data,
             file_options={"content-type": file.content_type}
         )
-        
+
         # Get public URL
-        file_url = f"{os.getenv('SUPABASE_URL')}/storage/v1/object/public/documents/{storage_path}"
+        file_url = f"{os.getenv('SUPABASE_URL')}/storage/v1/object/public/assessment-scripts/{storage_path}"
         
         # Save document record
         db.table("trainer_documents").insert({
@@ -1858,9 +1858,10 @@ def delete_document(document_id):
             abort(403)
         
         # Delete from storage
-        storage_path = document["file_url"].split("documents/")[-1]
+        _furl = document.get("file_url", "")
+        storage_path = _furl.split("/assessment-scripts/")[-1] if "/assessment-scripts/" in _furl else _furl.split("documents/")[-1]
         svc = get_service_client()
-        svc.storage.from_("documents").remove([storage_path])
+        svc.storage.from_("assessment-scripts").remove([storage_path])
         
         # Delete record
         db.table("trainer_documents").delete().eq("id", document_id).execute()
