@@ -1813,7 +1813,7 @@ def upload_document():
         svc.storage.from_("assessment-scripts").upload(
             path=storage_path,
             file=file_data,
-            file_options={"content-type": file.content_type}
+            file_options={"content-type": file.content_type, "content-disposition": "inline"}
         )
 
         # Get public URL
@@ -1841,6 +1841,33 @@ def upload_document():
         flash(f"Error uploading document: {e}", "error")
     
     return redirect(url_for("trainer.portfolio"))
+
+
+@trainer_bp.route("/portfolio/view/<document_id>")
+@trainer_required
+def view_document(document_id):
+    db = get_service_client()
+    user = current_user()
+    result = db.table("trainer_documents").select("*").eq("id", document_id).eq("trainer_id", user["id"]).execute()
+    doc = result.data[0] if result.data else None
+    if not doc:
+        abort(404)
+    file_url = doc.get("file_url", "")
+    bucket = "assessment-scripts" if "/assessment-scripts/" in file_url else "documents"
+    split_key = f"/{bucket}/"
+    storage_path = file_url.split(split_key)[-1] if split_key in file_url else None
+    if not storage_path:
+        return redirect(file_url)
+    try:
+        raw = bytes(db.storage.from_(bucket).download(storage_path))
+    except Exception:
+        abort(404)
+    ct = doc.get("file_type") or "application/octet-stream"
+    fn = doc.get("file_name") or "document"
+    resp = make_response(raw)
+    resp.headers["Content-Type"] = ct
+    resp.headers["Content-Disposition"] = f"inline; filename=\"{fn}\""
+    return resp
 
 
 @trainer_bp.route("/portfolio/delete/<document_id>", methods=["POST"])

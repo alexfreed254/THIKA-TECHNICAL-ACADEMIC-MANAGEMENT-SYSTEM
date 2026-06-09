@@ -2879,7 +2879,7 @@ def upload_document():
         svc.storage.from_("assessment-scripts").upload(
             path=storage_path,
             file=file_data,
-            file_options={"content-type": file.content_type}
+            file_options={"content-type": file.content_type, "content-disposition": "inline"}
         )
 
         # Get public URL
