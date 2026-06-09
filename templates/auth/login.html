@@ -234,7 +234,7 @@
 
           <div class="meta">
             <label><input type="checkbox" name="remember"> Remember me</label>
-            <a href="/auth/forgot-password">Forgot Password?</a>
+            <a href="/auth/forgot-password" id="forgotLink">Forgot Password?</a>
           </div>
 
           <button type="submit" class="btn-login">
@@ -253,6 +253,22 @@
     const staffField   = document.getElementById('staffField');
     const studentField = document.getElementById('studentField');
     const loginType    = document.getElementById('loginType');
+    const forgotLink   = document.getElementById('forgotLink');
+
+    function applyTab(type) {
+      if (type === 'student') {
+        staffField.style.display   = 'none';
+        studentField.style.display = 'grid';
+        forgotLink.style.display   = 'inline';
+      } else {
+        staffField.style.display   = 'grid';
+        studentField.style.display = 'none';
+        forgotLink.style.display   = 'none';
+      }
+    }
+
+    // Set initial state based on active tab
+    applyTab(loginType.value || 'staff');
 
     tabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
@@ -260,13 +276,7 @@
         tab.classList.add('active');
         var type = tab.dataset.type;
         loginType.value = type;
-        if (type === 'student') {
-          staffField.style.display   = 'none';
-          studentField.style.display = 'grid';
-        } else {
-          staffField.style.display   = 'grid';
-          studentField.style.display = 'none';
-        }
+        applyTab(type);
       });
     });
   </script>
