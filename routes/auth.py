@@ -207,34 +207,47 @@ def logout():
 
 
 # ─────────────────────────────────────────────────────────────
-# FORGOT PASSWORD (staff only)
+# FORGOT PASSWORD (trainee — generates system password shown on screen)
 # ─────────────────────────────────────────────────────────────
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
+    generated_password = None
+    trainee_name = None
+    error = None
+
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        
-        if not email:
-            flash("Email is required", "error")
-            return render_template("auth/forgot_password.html")
-        
-        # Check if user exists
-        svc = get_service_client()
-        try:
-            res = svc.table("user_profiles").select("*").eq("email", email).limit(1).execute()
-            if res.data:
-                # Send password reset email via Supabase Auth
-                from db import get_anon_client
-                client = get_anon_client()
-                client.auth.reset_password_for_email(email)
-                flash("Password reset email sent. Check your inbox.", "success")
-            else:
-                flash("If an account exists with this email, a reset link has been sent.", "info")
-        except Exception as exc:
-            print(f"[auth] forgot_password error: {exc}")
-            flash("Error sending reset email. Please try again.", "error")
-    
-    return render_template("auth/forgot_password.html")
+        admission_no = request.form.get("admission_no", "").strip()
+
+        if not admission_no:
+            error = "Admission number is required."
+        else:
+            svc = get_service_client()
+            try:
+                res = svc.table("user_profiles").select("id, full_name, role").eq("admission_no", admission_no).limit(1).execute()
+                trainee = res.data[0] if res.data else None
+
+                if not trainee or trainee.get("role") != "student":
+                    error = "No trainee account found with that admission number."
+                else:
+                    import random, string
+                    from werkzeug.security import generate_password_hash
+                    chars = string.ascii_uppercase + string.ascii_lowercase + string.digits
+                    new_password = ''.join(random.choices(chars, k=10))
+                    svc.table("user_profiles").update({
+                        "password_hash": generate_password_hash(new_password),
+                        "must_change_password": True
+                    }).eq("id", trainee["id"]).execute()
+                    write_audit_log("password_reset_generated", target=f"student:{trainee['id']}")
+                    generated_password = new_password
+                    trainee_name = trainee.get("full_name", "Trainee")
+            except Exception as exc:
+                print(f"[auth] forgot_password error: {exc}")
+                error = "An error occurred. Please try again."
+
+    return render_template("auth/forgot_password.html",
+                           generated_password=generated_password,
+                           trainee_name=trainee_name,
+                           error=error)
 
 
 # ─────────────────────────────────────────────────────────────
