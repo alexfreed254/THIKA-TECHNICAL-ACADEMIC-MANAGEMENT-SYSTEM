@@ -1,0 +1,258 @@
+{% extends "trainer/base.html" %}
+{% block title %}Live Biometric Session{% endblock %}
+{% block page_title %}Live Biometric Session{% endblock %}
+
+{% block extra_style %}
+.page-wrap { padding:24px; }
+.card { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:20px; overflow:hidden; }
+.card-header { background:#7b1fa2; color:#fff; padding:14px 20px; font-size:14px; font-weight:600; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.card-header.closed { background:#616161; }
+.card-body  { padding:20px; }
+
+/* Stats row */
+.stat-row  { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
+.stat-box  { flex:1; min-width:100px; padding:16px; border-radius:10px; text-align:center; }
+.stat-box .num { font-size:30px; font-weight:800; line-height:1; }
+.stat-box .lbl { font-size:11px; text-transform:uppercase; letter-spacing:.07em; margin-top:5px; opacity:.75; }
+
+/* Progress bar */
+.progress-wrap { height:10px; background:#e0e0e0; border-radius:5px; overflow:hidden; margin-bottom:20px; }
+.progress-fill  { height:100%; border-radius:5px; background:#7b1fa2; transition:width .5s ease; }
+
+/* Student grid */
+.student-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+.student-card {
+  border:2px solid #e0e0e0; border-radius:10px; padding:12px 14px;
+  display:flex; align-items:center; gap:10px;
+  transition:border-color .25s, background .25s;
+}
+.student-card.scanned {
+  border-color:#2e7d32; background:#f0fdf4;
+}
+.student-card .icon {
+  width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+  background:#f3e5f5; color:#7b1fa2;
+}
+.student-card.scanned .icon { background:#dcfce7; color:#15803d; }
+.student-card .info { font-size:13px; line-height:1.4; overflow:hidden; }
+.student-card .info .name { font-weight:700; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.student-card .info .adm  { color:#888; font-size:11px; }
+
+/* Scan ticker */
+.ticker { background:#f3e5f5; border-radius:8px; padding:12px 16px; font-size:13px; min-height:52px; display:flex; align-items:center; gap:10px; }
+.ticker .dot { width:10px; height:10px; border-radius:50%; background:#7b1fa2; animation:pulse 1.5s ease-in-out infinite; flex-shrink:0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.ticker.success .dot  { background:#16a34a; }
+.ticker.success       { background:#f0fdf4; }
+.ticker.error   .dot  { background:#dc2626; animation:none; opacity:1; }
+.ticker.error         { background:#fef2f2; }
+
+/* Buttons */
+.btn { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700;
+       display:inline-flex; align-items:center; gap:7px; text-decoration:none; transition:opacity .15s; }
+.btn:hover { opacity:.85; }
+.btn-close  { background:#c62828; color:#fff; }
+.btn-back   { background:#f5f5f5; color:#333; }
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+
+  <!-- Header bar -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+    <a href="{{ url_for('biometric.biometric_home') }}" class="btn btn-back">
+      <i class="fas fa-arrow-left"></i> Back
+    </a>
+    {% if sess.status == 'open' %}
+    <form method="post" action="{{ url_for('biometric.biometric_close', session_id=sess.id) }}"
+          onsubmit="return confirm('Close this session? Students not yet scanned will be marked absent.')">
+      <button type="submit" class="btn btn-close">
+        <i class="fas fa-stop-circle"></i> Close Session
+      </button>
+    </form>
+    {% endif %}
+    <span style="margin-left:auto;font-size:12px;color:#888;" id="lastUpdate">Waiting…</span>
+  </div>
+
+  <!-- Session info -->
+  <div class="card">
+    <div class="card-header {% if sess.status == 'closed' %}closed{% endif %}">
+      <span>
+        <i class="fas fa-fingerprint"></i>
+        {{ cls.name }} — {{ unit.code }} {{ unit.name }}
+        &nbsp;|&nbsp; Week {{ sess.week }} · Lesson {{ sess.lesson }} · Term {{ sess.term }} · {{ sess.year }}
+      </span>
+      <span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;
+                   background:{% if sess.status=='open' %}rgba(255,255,255,.25){% else %}rgba(255,255,255,.15){% endif %};">
+        {% if sess.status == 'open' %}
+          <i class="fas fa-circle" style="font-size:8px;color:#4caf50;"></i> Live
+        {% else %}
+          <i class="fas fa-check-circle"></i> Closed
+        {% endif %}
+      </span>
+    </div>
+    <div class="card-body">
+
+      <!-- Stats -->
+      <div class="stat-row">
+        <div class="stat-box" style="background:#f3e5f5;color:#6a1b9a;">
+          <div class="num" id="scanCount">{{ scanned_count }}</div>
+          <div class="lbl">Scanned</div>
+        </div>
+        <div class="stat-box" style="background:#e8f5e9;color:#1b5e20;">
+          <div class="num" id="presentCount">{{ scanned_count }}</div>
+          <div class="lbl">Present</div>
+        </div>
+        <div class="stat-box" style="background:#fce4ec;color:#880e4f;">
+          <div class="num" id="absentCount">{{ total_count - scanned_count }}</div>
+          <div class="lbl">Not Scanned</div>
+        </div>
+        <div class="stat-box" style="background:#e3f2fd;color:#0d47a1;">
+          <div class="num">{{ total_count }}</div>
+          <div class="lbl">Enrolled</div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap">
+        <div class="progress-fill" id="progressBar"
+             style="width:{{ ((scanned_count / total_count) * 100) | round(0) if total_count else 0 }}%"></div>
+      </div>
+
+      <!-- Scan ticker (last scan result) -->
+      <div class="ticker" id="ticker">
+        <div class="dot"></div>
+        <span id="tickerMsg">
+          {% if sess.status == 'open' %}
+            Waiting for fingerprint scans…
+          {% else %}
+            Session closed.
+          {% endif %}
+        </span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Student grid -->
+  <div class="card">
+    <div class="card-header"><i class="fas fa-users"></i> Students ({{ total_count }})</div>
+    <div class="card-body">
+      <div class="student-grid" id="studentGrid">
+        {% for s in students %}
+        <div class="student-card {% if s.scanned %}scanned{% endif %}" id="sc-{{ s.id }}">
+          <div class="icon">
+            {% if s.scanned %}
+              <i class="fas fa-check"></i>
+            {% else %}
+              <i class="fas fa-fingerprint"></i>
+            {% endif %}
+          </div>
+          <div class="info">
+            <div class="name">{{ s.full_name }}</div>
+            <div class="adm">{{ s.admission_no }}{% if s.biometric_id %} · <i class="fas fa-fingerprint" title="Fingerprint ID: {{ s.biometric_id }}"></i>{% endif %}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% if not students %}
+      <p style="text-align:center;color:#aaa;padding:24px 0;">No enrolled students found for this class.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Device info (collapsed) -->
+  {% if sess.status == 'open' %}
+  <div class="card">
+    <div class="card-header" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+      <span><i class="fas fa-wifi"></i> Device Scan Endpoint</span>
+      <i class="fas fa-chevron-down" style="font-size:12px"></i>
+    </div>
+    <div class="card-body" style="display:none">
+      <p style="font-size:13px;color:#555;margin-bottom:8px;">
+        Configure BioEntry W to POST to:</p>
+      <code style="display:block;background:#f5f5f5;padding:10px 14px;border-radius:6px;font-size:13px;word-break:break-all;">
+        POST {{ scan_url }}
+      </code>
+      <p style="font-size:12px;color:#888;margin-top:8px;">
+        Body: <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px">{"fingerprint_id":"&lt;device_user_id&gt;"}</code>
+        {% if sess.device_ip %}&nbsp;·&nbsp; Device IP: <strong>{{ sess.device_ip }}</strong>{% endif %}
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if sess.status == 'open' %}
+<script>
+const SESSION_ID  = "{{ sess.id }}";
+const CLASS_ID    = "{{ sess.class_id }}";
+const TOTAL       = {{ total_count }};
+let   knownIds    = new Set({{ students | selectattr('scanned') | map(attribute='id') | list | tojson }});
+
+function fmt(d) {
+  return d.toTimeString().slice(0,8);
+}
+
+function setTicker(msg, type) {
+  const t = document.getElementById("ticker");
+  t.className = "ticker " + (type || "");
+  document.getElementById("tickerMsg").textContent = msg;
+}
+
+function poll() {
+  fetch(`/trainer/biometric/session/${SESSION_ID}/status?class_id=${CLASS_ID}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.session_status === 'closed') {
+        setTicker("Session has been closed.", "");
+        document.getElementById("lastUpdate").textContent = "Session closed";
+        return;
+      }
+
+      const count = data.scanned_count || 0;
+      document.getElementById("scanCount").textContent   = count;
+      document.getElementById("presentCount").textContent = count;
+      document.getElementById("absentCount").textContent  = Math.max(0, TOTAL - count);
+      const pct = TOTAL > 0 ? Math.round((count / TOTAL) * 100) : 0;
+      document.getElementById("progressBar").style.width  = pct + "%";
+      document.getElementById("lastUpdate").textContent   = "Updated " + fmt(new Date());
+
+      // Mark newly scanned students
+      let newScan = null;
+      (data.scanned || []).forEach(function(s) {
+        if (!knownIds.has(s.id)) {
+          knownIds.add(s.id);
+          newScan = s;
+          const card = document.getElementById("sc-" + s.id);
+          if (card) {
+            card.classList.add("scanned");
+            card.querySelector(".icon").innerHTML = '<i class="fas fa-check"></i>';
+          }
+        }
+      });
+
+      if (newScan) {
+        setTicker("✓ " + newScan.full_name + " (" + newScan.admission_no + ") — marked present", "success");
+        setTimeout(function() {
+          setTicker("Waiting for fingerprint scans…", "");
+        }, 4000);
+      }
+
+      setTimeout(poll, 3000);
+    })
+    .catch(function() {
+      document.getElementById("lastUpdate").textContent = "Connection error — retrying…";
+      setTimeout(poll, 5000);
+    });
+}
+
+// Start polling after a short delay
+setTimeout(poll, 3000);
+</script>
+{% endif %}
+{% endblock %}

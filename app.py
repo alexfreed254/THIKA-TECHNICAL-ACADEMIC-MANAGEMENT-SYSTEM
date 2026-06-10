@@ -52,6 +52,7 @@ from routes.main import main_bp
 from routes.liaison_officer import liaison_officer_bp
 from routes.cdacc_verifier import cdacc_verifier_bp
 from routes.workshop_technician import workshop_technician_bp
+from routes.biometric import biometric_bp
 
 app.register_blueprint(main_bp)
 app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -68,6 +69,7 @@ app.register_blueprint(notifications_bp, url_prefix="/notifications")
 app.register_blueprint(liaison_officer_bp, url_prefix="/liaison-officer")
 app.register_blueprint(cdacc_verifier_bp, url_prefix="/cdacc-verifier")
 app.register_blueprint(workshop_technician_bp, url_prefix="/workshop-technician")
+app.register_blueprint(biometric_bp)
 
 # ── Template globals ──────────────────────────────────────────────────────────
 @app.context_processor
