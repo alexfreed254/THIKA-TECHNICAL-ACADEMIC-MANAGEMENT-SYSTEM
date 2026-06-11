@@ -450,7 +450,7 @@
     input.value = '';
     const loader = addMsg('…', 'bot-typing');
     aiTyping = true;
-    fetch('/student/ai-ask', {
+    fetch('/api/ai-ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: text })
