@@ -29,17 +29,13 @@
   display: flex; align-items: center; gap: 16px;
   margin-bottom: 24px; border: 2px solid; flex-wrap: wrap;
 }
-.status-banner.active   { background:#eff6ff;border-color:#bfdbfe; }
-.status-banner.pending  { background:#fffbeb;border-color:#fde68a; }
-.status-banner.approved { background:#f0fdf4;border-color:#bbf7d0; }
-.status-banner.completed{ background:#f8fafc;border-color:#e2e8f0; }
-.status-banner.rejected { background:#fef2f2;border-color:#fecaca; }
+.status-banner.active    { background:#eff6ff;border-color:#bfdbfe; }
+.status-banner.pending   { background:#fffbeb;border-color:#fde68a; }
+.status-banner.completed { background:#f8fafc;border-color:#e2e8f0; }
 .status-icon { font-size: 36px; flex-shrink: 0; }
-.status-banner.active   .status-icon { color: #2563eb; }
-.status-banner.pending  .status-icon { color: #d97706; }
-.status-banner.approved .status-icon { color: #16a34a; }
-.status-banner.completed .status-icon{ color: #64748b; }
-.status-banner.rejected .status-icon { color: #dc2626; }
+.status-banner.active    .status-icon { color: #2563eb; }
+.status-banner.pending   .status-icon { color: #d97706; }
+.status-banner.completed .status-icon { color: #64748b; }
 
 /* Info grid */
 .info-grid {
@@ -197,11 +193,9 @@
   padding: 3px 10px; border-radius: 9999px;
   font-size: 11.5px; font-weight: 700;
 }
-.pill-active   { background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe; }
-.pill-pending  { background:#fffbeb;color:#92400e;border:1px solid #fde68a; }
-.pill-approved { background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0; }
-.pill-completed{ background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
-.pill-rejected { background:#fef2f2;color:#991b1b;border:1px solid #fecaca; }
+.pill-active    { background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe; }
+.pill-pending   { background:#fffbeb;color:#92400e;border:1px solid #fde68a; }
+.pill-completed { background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
 
 /* Delete button */
 .btn-del {
@@ -236,15 +230,16 @@
 <div class="status-banner {{ st }}">
   <div class="status-icon">
     {% if st == 'active' %}<i class="fas fa-circle-check"></i>
-    {% elif st == 'pending' %}<i class="fas fa-clock"></i>
-    {% elif st == 'approved' %}<i class="fas fa-thumbs-up"></i>
+    {% elif st == 'pending' %}<i class="fas fa-paper-plane"></i>
     {% elif st == 'completed' %}<i class="fas fa-flag-checkered"></i>
-    {% else %}<i class="fas fa-times-circle"></i>{% endif %}
+    {% else %}<i class="fas fa-industry"></i>{% endif %}
   </div>
   <div style="flex:1">
     <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px">
       {{ co.get('name','—') }}
-      <span class="pill pill-{{ st }}" style="margin-left:10px">{{ st|title }}</span>
+      <span class="pill pill-{{ st if st in ('active','pending','completed') else 'pending' }}" style="margin-left:10px">
+        {% if st == 'pending' %}Submitted{% else %}{{ st|title }}{% endif %}
+      </span>
     </div>
     <div style="font-size:13px;color:#64748b">
       <i class="fas fa-map-marker-alt" style="margin-right:5px;color:#1e5a9f"></i>{{ co.get('address','—') }}
@@ -312,12 +307,6 @@
       {% endif %}
     </div>
 
-    {% if current_attachment.get('supervisor_notes') %}
-    <div style="margin-top:14px;background:#eff6ff;border-radius:10px;padding:13px 16px;border:1px solid #bfdbfe">
-      <div class="info-label">Supervisor Notes</div>
-      <div style="font-size:13.5px;color:#1d4ed8;margin-top:5px">{{ current_attachment.get('supervisor_notes') }}</div>
-    </div>
-    {% endif %}
   </div>
 </div>
 
@@ -478,10 +467,13 @@
           </td>
           <td style="white-space:nowrap;font-size:12.5px">{{ att.get('start_date','—') }}</td>
           <td style="white-space:nowrap;font-size:12.5px">{{ att.get('end_date','—') }}</td>
-          <td><span class="pill pill-{{ att.get('status','pending') }}">{{ att.get('status','pending')|title }}</span></td>
+          {% set _st = att.get('status','pending') %}
+          <td><span class="pill pill-{{ _st if _st in ('active','pending','completed') else 'pending' }}">
+            {% if _st == 'pending' %}Submitted{% else %}{{ _st|title }}{% endif %}
+          </span></td>
           <td style="font-weight:700;color:#1e5a9f">{{ att.get('final_grade','—') }}</td>
           <td>
-            {% if att.get('status') in ('pending','rejected') %}
+            {% if att.get('status') == 'pending' %}
             <form method="POST" action="/student/industrial-attachment/{{ att.get('id') }}/delete"
                   onsubmit="return confirmDel(event)">
               <button type="submit" class="btn-del" title="Delete this registration">

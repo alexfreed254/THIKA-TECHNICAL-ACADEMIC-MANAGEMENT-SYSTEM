@@ -3120,8 +3120,8 @@ def delete_attachment(att_id):
         return redirect(url_for("student.industrial_attachment"))
 
     att = row[0]
-    if att.get("status") not in ("pending", "rejected"):
-        flash("Only pending or rejected attachments can be deleted.", "error")
+    if att.get("status") != "pending":
+        flash("Only submitted (pending) attachments can be deleted.", "error")
         return redirect(url_for("student.industrial_attachment"))
 
     try:
