@@ -351,10 +351,12 @@
       </button>
     </div>
     <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
-      <button onclick="quickAI('How do I upload POE?')" class="ai-chip">Upload POE</button>
-      <button onclick="quickAI('What is my attendance status?')" class="ai-chip">Attendance</button>
-      <button onclick="quickAI('How to book an exam?')" class="ai-chip">Exam Booking</button>
-      <button onclick="quickAI('How to apply for clearance?')" class="ai-chip">Clearance</button>
+      <button onclick="quickAI('What is my attendance status?')" class="ai-chip">My Attendance</button>
+      <button onclick="quickAI('Show my POE upload status')" class="ai-chip">My POE</button>
+      <button onclick="quickAI('Can I book an exam?')" class="ai-chip">Exam Booking</button>
+      <button onclick="quickAI('What is my clearance status?')" class="ai-chip">Clearance</button>
+      <button onclick="quickAI('Show my marks and grades')" class="ai-chip">My Marks</button>
+      <button onclick="quickAI('What documents have I uploaded?')" class="ai-chip">My Documents</button>
     </div>
   </div>
 </div>
@@ -432,33 +434,37 @@
 
   /* ── AI Guardian ─────────────────────────────────────────── */
   const aiPanel = document.getElementById('ai-panel');
-  const aiReplies = {
-    poe:        'To upload POE: go to Upload POE in the sidebar. Select your unit, fill in task details (title, description, skills, hours), and attach supporting files. Your trainer will review and approve it.',
-    attendance: 'Check Lesson Attendance in the sidebar. You need ≥75% to book exams. If your attendance is low, contact your trainer immediately.',
-    exam:       'Click Exam Booking Form in the sidebar. Ensure your admission documents are complete and attendance is ≥75%. Your HOD must approve before the Exam Officer confirms.',
-    clearance:  'Go to Course Clearance. The 7-stage process: Trainer → HOD → Library → Store → Games → Finance → Deputy Principal. All fees must be cleared before final approval.',
-    admission:  'Go to Admission Documents. Upload all 9 required documents. Your HOD will verify each one. Once approved, download the Departmental Checklist.',
-    default:    'I can help with: POE uploads, attendance checks, exam booking, clearance steps, admission documents, and industrial attachment. What do you need?'
-  };
+  let aiTyping = false;
 
-  function toggleAI() { aiPanel.style.display = aiPanel.style.display === 'none' ? 'block' : 'none'; }
+  function toggleAI() {
+    const open = aiPanel.style.display !== 'none';
+    aiPanel.style.display = open ? 'none' : 'block';
+    if (!open) document.getElementById('ai-input').focus();
+  }
 
   function sendAI() {
     const input = document.getElementById('ai-input');
     const text  = input.value.trim();
-    if (!text) return;
+    if (!text || aiTyping) return;
     addMsg(text, 'user');
     input.value = '';
-    setTimeout(() => {
-      const lower = text.toLowerCase();
-      let resp = aiReplies.default;
-      if (lower.includes('poe') || lower.includes('portfolio') || lower.includes('upload')) resp = aiReplies.poe;
-      else if (lower.includes('attend')) resp = aiReplies.attendance;
-      else if (lower.includes('exam') || lower.includes('book')) resp = aiReplies.exam;
-      else if (lower.includes('clear')) resp = aiReplies.clearance;
-      else if (lower.includes('admit') || lower.includes('document')) resp = aiReplies.admission;
-      addMsg(resp, 'bot');
-    }, 500);
+    const loader = addMsg('…', 'bot-typing');
+    aiTyping = true;
+    fetch('/student/ai-ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: text })
+    })
+    .then(r => r.json())
+    .then(d => {
+      loader.remove();
+      addMsg(d.reply || 'Sorry, I could not process that.', 'bot');
+    })
+    .catch(() => {
+      loader.remove();
+      addMsg('Connection error — please try again.', 'bot');
+    })
+    .finally(() => { aiTyping = false; });
   }
 
   function quickAI(q) { document.getElementById('ai-input').value = q; sendAI(); }
@@ -466,12 +472,19 @@
   function addMsg(text, role) {
     const box = document.getElementById('ai-messages');
     const div = document.createElement('div');
-    div.style.cssText = role === 'user'
-      ? 'background:#eff6ff;border-radius:12px 12px 4px 12px;padding:9px 13px;color:#1d4ed8;align-self:flex-end;max-width:88%;font-size:13px;border:1px solid #dbeafe'
-      : 'background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#0e7490;max-width:90%;font-size:13px;border:1px solid #bae6fd';
-    div.textContent = text;
+    if (role === 'user') {
+      div.style.cssText = 'background:#eff6ff;border-radius:12px 12px 4px 12px;padding:9px 13px;color:#1d4ed8;align-self:flex-end;max-width:88%;font-size:13px;border:1px solid #dbeafe;word-break:break-word';
+      div.textContent = text;
+    } else if (role === 'bot-typing') {
+      div.style.cssText = 'background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#94a3b8;max-width:90%;font-size:13px;border:1px solid #bae6fd;font-style:italic';
+      div.textContent = 'Thinking…';
+    } else {
+      div.style.cssText = 'background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#0e7490;max-width:90%;font-size:13px;border:1px solid #bae6fd;white-space:pre-line;word-break:break-word';
+      div.textContent = text;
+    }
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
+    return div;
   }
 
   // ── Notification dropdown ──────────────────────────────────────────────────

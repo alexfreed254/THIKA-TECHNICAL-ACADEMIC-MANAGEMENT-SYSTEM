@@ -3616,3 +3616,179 @@ def delete_employment_project(project_id):
         flash(f"Error deleting project: {e}", "error")
 
     return redirect(url_for("student.employment_projects"))
+
+
+# ── TTTI Guardian AI Ask ───────────────────────────────────────────────────────
+
+@student_bp.route("/ai-ask", methods=["POST"])
+@student_required
+def ai_ask():
+    """Return a data-driven answer for the TTTI Guardian AI Assistant."""
+    data = request.get_json(silent=True) or {}
+    question = (data.get("q") or "").strip().lower()
+    if not question:
+        return jsonify({"reply": "Please type a question so I can help you."})
+
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    # ── helpers ──────────────────────────────────────────────────────────────
+    def _att():
+        rows = db.table("attendance").select("status").eq("student_id", student_id).execute().data or []
+        total = len(rows)
+        present = sum(1 for r in rows if r.get("status") == "present")
+        pct = round(present / total * 100, 1) if total else 0
+        return total, present, pct
+
+    def _docs():
+        rows = db.table("student_personal_documents").select("document_type, status").eq("student_id", student_id).execute().data or []
+        return {r["document_type"]: r.get("status", "uploaded") for r in rows}
+
+    def _clearance():
+        rows = db.table("clearance_requests").select("status, stage").eq("student_id", student_id).order("created_at", desc=True).limit(1).execute().data or []
+        return rows[0] if rows else None
+
+    def _exam_bookings():
+        rows = db.table("exam_bookings").select("status, units(name, code)").eq("student_id", student_id).order("created_at", desc=True).limit(5).execute().data or []
+        return rows
+
+    def _poe():
+        rows = db.table("assessments").select("status").eq("student_id", student_id).execute().data or []
+        total = len(rows)
+        approved = sum(1 for r in rows if r.get("status") == "approved")
+        pending  = sum(1 for r in rows if r.get("status") == "pending")
+        rejected = sum(1 for r in rows if r.get("status") == "rejected")
+        return total, approved, pending, rejected
+
+    def _attachment():
+        rows = db.table("industrial_attachments").select("status, companies(name)").eq("student_id", student_id).order("created_at", desc=True).limit(1).execute().data or []
+        return rows[0] if rows else None
+
+    def _logbook():
+        rows = db.table("digital_logbook").select("id").eq("student_id", student_id).execute().data or []
+        return len(rows)
+
+    def _marks():
+        rows = db.table("marks").select("unit_id, marks_obtained, grade, units(name, code)").eq("student_id", student_id).order("created_at", desc=True).execute().data or []
+        return rows
+
+    # ── intent detection ─────────────────────────────────────────────────────
+    kw = question
+
+    # Attendance
+    if any(x in kw for x in ("attend", "present", "absent", "lesson", "75")):
+        total, present, pct = _att()
+        if total == 0:
+            return jsonify({"reply": "You have no attendance records yet. Your trainer marks attendance each lesson — come back after your first class."})
+        status = "Good standing" if pct >= 75 else "Below threshold"
+        tip = "" if pct >= 75 else " You must reach 75% to be eligible for exam booking. Speak to your trainer immediately."
+        return jsonify({"reply": f"Your attendance: {present}/{total} lessons = {pct}% ({status}).{tip}"})
+
+    # POE / Assessment uploads
+    if any(x in kw for x in ("poe", "portfolio", "assessment", "upload", "evidence", "submit")):
+        total, approved, pending, rejected = _poe()
+        if total == 0:
+            return jsonify({"reply": "You haven't uploaded any POE yet. Go to Upload POE in the sidebar, select your unit, fill in the task details, and attach your evidence files."})
+        parts = [f"Total: {total}"]
+        if approved: parts.append(f"{approved} approved")
+        if pending:  parts.append(f"{pending} pending review")
+        if rejected: parts.append(f"{rejected} need resubmission")
+        hint = " Check the rejected ones and resubmit with corrections." if rejected else ""
+        return jsonify({"reply": "Your POE status — " + ", ".join(parts) + "." + hint})
+
+    # Exam booking
+    if any(x in kw for x in ("exam", "book", "booking", "examination")):
+        bookings = _exam_bookings()
+        total, present, pct = _att()
+        docs = _docs()
+        required = ['national_id', 'birth_certificate', 'kcse_certificate', 'passport_photo']
+        missing = [d.replace("_", " ").title() for d in required if d not in docs]
+        issues = []
+        if pct < 75 and total > 0: issues.append(f"attendance is {pct}% (need at least 75%)")
+        if total == 0: issues.append("no attendance records found")
+        if missing: issues.append("missing documents: " + ", ".join(missing))
+        if issues:
+            return jsonify({"reply": "You cannot book exams yet — " + "; ".join(issues) + ". Fix these first, then use Exam Booking Form in the sidebar."})
+        if not bookings:
+            return jsonify({"reply": "You are eligible to book an exam. Go to Exam Booking Form in the sidebar. Your HOD approves first, then the Exam Officer confirms."})
+        lines = []
+        for b in bookings:
+            unit = b.get("units") or {}
+            uname = unit.get("name") or unit.get("code") or "Unit"
+            lines.append(f"{uname}: {b.get('status', 'pending')}")
+        return jsonify({"reply": "Your exam bookings:\n" + "\n".join("• " + l for l in lines)})
+
+    # Clearance
+    if any(x in kw for x in ("clear", "clearance", "library", "finance", "games", "store")):
+        cl = _clearance()
+        if not cl:
+            return jsonify({"reply": "You haven't applied for clearance yet. Go to Course Clearance in the sidebar. The 7-stage process: Trainer → HOD → Library → Store → Games → Finance → Deputy Principal. All fees must be cleared first."})
+        st = cl.get("status", "")
+        sg = cl.get("stage", "")
+        return jsonify({"reply": f"Your clearance is currently at stage: {sg}, status: {st}. Check the Clearance page for updates from each approver."})
+
+    # Documents / admission
+    if any(x in kw for x in ("document", "admit", "national id", "birth", "kcse", "passport", "certif")):
+        docs = _docs()
+        required = ['national_id', 'birth_certificate', 'kcse_certificate', 'passport_photo']
+        uploaded = [d.replace("_", " ").title() for d in required if d in docs]
+        missing  = [d.replace("_", " ").title() for d in required if d not in docs]
+        if missing:
+            return jsonify({"reply": f"Documents uploaded: {', '.join(uploaded) or 'none'}.\nStill missing: {', '.join(missing)}.\nUpload them via Admission Documents in the sidebar."})
+        statuses = [f"{d.replace('_', ' ').title()}: {docs[d]}" for d in required]
+        return jsonify({"reply": "All 4 required documents uploaded.\n" + "\n".join("• " + s for s in statuses)})
+
+    # Industrial attachment
+    if any(x in kw for x in ("attach", "industry", "company", "placement", "industrial", "intern")):
+        att = _attachment()
+        if not att:
+            return jsonify({"reply": "You don't have an industrial attachment record yet. Go to Industrial Attachment in the sidebar and submit a request with your company details."})
+        co = (att.get("companies") or {}).get("name") or "your company"
+        st = att.get("status", "pending")
+        label = {"pending": "Submitted (awaiting dept admin review)", "active": "Active", "completed": "Completed", "rejected": "Rejected"}.get(st, st)
+        return jsonify({"reply": f"Industrial Attachment at {co} — Status: {label}."})
+
+    # Logbook
+    if any(x in kw for x in ("logbook", "log book", "log entry", "diary", "daily log")):
+        count = _logbook()
+        att = _attachment()
+        if not att:
+            return jsonify({"reply": "The logbook is for students on active industrial attachment. Submit an attachment request first."})
+        st = att.get("status", "pending")
+        if st != "active":
+            return jsonify({"reply": f"Your attachment is currently '{st}'. The logbook is available once your attachment becomes active."})
+        return jsonify({"reply": f"You have {count} logbook {'entry' if count == 1 else 'entries'} recorded. Add new ones via Digital Logbook in the sidebar. Entries are reviewed by your department admin."})
+
+    # Marks / grades
+    if any(x in kw for x in ("mark", "grade", "score", "result", "pass", "fail")):
+        marks = _marks()
+        if not marks:
+            return jsonify({"reply": "No marks have been recorded for you yet. Marks are entered by your trainer after assessments."})
+        lines = []
+        for m in marks[:8]:
+            u = m.get("units") or {}
+            name = u.get("name") or u.get("code") or "Unit"
+            score = m.get("marks_obtained", "—")
+            grade = m.get("grade") or ""
+            lines.append(f"{name}: {score}" + (f" ({grade})" if grade else ""))
+        return jsonify({"reply": "Your recent marks:\n" + "\n".join("• " + l for l in lines)})
+
+    # Profile / password
+    if any(x in kw for x in ("password", "profile", "change password", "phone", "email")):
+        return jsonify({"reply": "To update your profile or change your password, click your name or avatar in the top bar and select Profile. You can update your phone number, email, and password there."})
+
+    # Fees / finance
+    if any(x in kw for x in ("fee", "fees", "finance", "payment", "pay", "balance", "tuition")):
+        return jsonify({"reply": "For fee balance and payment details, contact the Finance office. Fees must be fully cleared before your Course Clearance can reach the Finance approval stage."})
+
+    # Default — return a personalised snapshot
+    try:
+        _, _, pct = _att()
+        total_p, approved_p, pending_p, _ = _poe()
+        att_info = f"Attendance: {pct}%" if pct > 0 else "No attendance recorded"
+        poe_info  = f"POE: {total_p} uploads ({approved_p} approved)" if total_p > 0 else "No POE uploaded yet"
+    except Exception:
+        att_info = poe_info = ""
+    summary = f" Your quick summary — {att_info} | {poe_info}." if att_info else ""
+    return jsonify({"reply": f"I can help with: attendance, POE uploads, exam booking, clearance, admission documents, industrial attachment, logbook, and marks.{summary}\n\nWhat would you like to know?"})
