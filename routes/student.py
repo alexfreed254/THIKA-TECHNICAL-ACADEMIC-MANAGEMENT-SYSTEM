@@ -3363,19 +3363,9 @@ def logbook():
             ws = datetime.strptime(week_start, "%Y-%m-%d")
             we = ws + timedelta(days=6)
             label = f"{ws.strftime('%d %b')} – {we.strftime('%d %b %Y')}"
-            statuses = [e.get("mentor_approval_status","pending") for e in entries]
-            if all(s == "approved" for s in statuses):
-                week_status = "approved"
-            elif any(s == "rejected" for s in statuses):
-                week_status = "rejected"
-            elif any(s == "approved" for s in statuses):
-                week_status = "partial"
-            else:
-                week_status = "pending"
             weeks_grouped[week_start] = {
                 "label":   label,
                 "entries": entries,
-                "status":  week_status,
             }
 
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -3443,7 +3433,6 @@ def add_logbook():
             "challenges_encountered": challenges_encountered,
             "achievements":         achievements,
             "evidence_urls":        evidence_paths if evidence_paths else None,
-            "mentor_approval_status": "pending",
         }).execute()
 
         write_audit_log("add_logbook", target=f"attachment:{attachment_id}")

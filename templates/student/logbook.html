@@ -399,17 +399,11 @@
     <div class="week-section" style="margin-bottom:0">
 
       <!-- Week header (collapsible) -->
-      <div class="week-header w-{{ week.status }}" onclick="toggleWeek('week-{{ loop.index }}')"
+      <div class="week-header" onclick="toggleWeek('week-{{ loop.index }}')"
            style="margin:0;border-radius:0;{% if loop.first %}border-radius:0;{% endif %}">
         <div style="display:flex;align-items:center;gap:10px">
-          <i class="fas fa-{% if week.status == 'approved' %}check-circle{% elif week.status == 'rejected' %}times-circle{% elif week.status == 'partial' %}adjust{% else %}clock{% endif %}"></i>
+          <i class="fas fa-calendar-week"></i>
           <strong>{{ week.label }}</strong>
-          <span class="week-pill {{ week.status }}">
-            {% if week.status == 'approved' %}All Approved
-            {% elif week.status == 'rejected' %}Has Rejections
-            {% elif week.status == 'partial' %}Partially Approved
-            {% else %}Pending Supervisor Review{% endif %}
-          </span>
           <span style="font-size:12px;opacity:.7">{{ week.entries|length }} entr{{ 'y' if week.entries|length == 1 else 'ies' }}</span>
         </div>
         <i class="fas fa-chevron-down week-arrow {% if loop.first %}open{% endif %}" id="arrow-week-{{ loop.index }}"></i>
@@ -436,10 +430,6 @@
                 {{ entry.get('log_date','—') }}
               </span>
             </div>
-            <span class="entry-status status-{{ entry.get('mentor_approval_status','pending') }}">
-              <i class="fas fa-{% if entry.get('mentor_approval_status') == 'approved' %}check-circle{% elif entry.get('mentor_approval_status') == 'rejected' %}times-circle{% else %}clock{% endif %}"></i>
-              {{ entry.get('mentor_approval_status','pending')|title }}
-            </span>
           </div>
 
           <!-- Tasks -->
@@ -496,13 +486,6 @@
             {% endif %}
           </div>
 
-          <!-- Supervisor / Trainer comments -->
-          {% if entry.get('mentor_comments') %}
-          <div class="sup-comment">
-            <div class="sup-comment-label"><i class="fas fa-hard-hat" style="margin-right:4px"></i>Supervisor Comment</div>
-            {{ entry.get('mentor_comments') }}
-          </div>
-          {% endif %}
           {% if entry.get('trainer_comments') %}
           <div class="sup-comment" style="border-left-color:#7c3aed;background:#faf5ff;color:#6d28d9">
             <div class="sup-comment-label" style="color:#7c3aed"><i class="fas fa-chalkboard-teacher" style="margin-right:4px"></i>Trainer Comment</div>
@@ -513,13 +496,6 @@
         </div>
         {% endfor %}
 
-        <!-- Week approval summary bar -->
-        {% if week.status == 'approved' %}
-        <div style="padding:13px 20px;background:#f0fdf4;border-top:1px solid #bbf7d0;font-size:13px;color:#15803d;font-weight:600">
-          <i class="fas fa-check-circle" style="margin-right:7px"></i>
-          This week has been fully approved.
-        </div>
-        {% endif %}
 
       </div>
     </div>
@@ -546,8 +522,7 @@
     <li>Submit <strong>one entry per 3-hour block</strong> throughout your working day (up to 4 entries per day)</li>
     <li>Attach <strong>photos or videos</strong> as evidence of your work for each entry</li>
     <li>Be specific — describe actual tasks, tools, processes, and skills used</li>
-    <li>Your supervisor reviews and approves all entries at the <strong>end of each week</strong></li>
-    <li>Once approved, your supervisor may add comments or feedback to each entry</li>
+    <li>Your entries are reviewed by the <strong>department admin</strong> and management</li>
   </ul>
 </div>
 
