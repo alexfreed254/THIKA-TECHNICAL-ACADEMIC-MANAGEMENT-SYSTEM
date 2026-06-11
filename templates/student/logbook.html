@@ -3,31 +3,51 @@
 {% block page_title %}Digital Logbook{% endblock %}
 
 {% block extra_style %}
-.lb-wrap { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.lb-wrap { 
+  padding: 24px; 
+  max-width: 1100px; 
+  margin: 0 auto; 
+  box-sizing: border-box;
+}
 
 /* ── Section cards ───────────────────────────── */
 .lb-card {
-  background: #fff; border-radius: 16px;
-  border: 1px solid #e2e8f0; margin-bottom: 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
+  background: #fff; 
+  border-radius: 16px;
+  border: 1px solid #e2e8f0; 
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06); 
+  overflow: hidden;
 }
 .lb-card-head {
   background: linear-gradient(135deg, #0f2c54, #1a3d6e);
-  color: #fff; padding: 14px 22px;
-  font-size: 14px; font-weight: 700;
-  display: flex; align-items: center; gap: 10px;
+  color: #fff; 
+  padding: 14px 22px;
+  font-size: 14px; 
+  font-weight: 700;
+  display: flex; 
+  align-items: center; 
+  gap: 10px;
 }
 .lb-card-head .head-right {
-  margin-left: auto; font-size: 12px; font-weight: 500; opacity: .8;
+  margin-left: auto; 
+  font-size: 12px; 
+  font-weight: 500; 
+  opacity: .8;
 }
 .lb-card-body { padding: 22px; }
 
 /* ── Attachment info bar ─────────────────────── */
 .attach-bar {
   background: linear-gradient(135deg,#eff6ff,#f0f9ff);
-  border: 1.5px solid #bfdbfe; border-radius: 13px;
-  padding: 14px 20px; margin-bottom: 24px;
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  border: 1.5px solid #bfdbfe; 
+  border-radius: 13px;
+  padding: 14px 20px; 
+  margin-bottom: 24px;
+  display: flex; 
+  align-items: center; 
+  gap: 14px; 
+  flex-wrap: wrap;
 }
 .attach-bar i { font-size: 22px; color: #2563eb; flex-shrink: 0; }
 .attach-name  { font-weight: 800; font-size: 15px; color: #1e293b; }
@@ -37,57 +57,94 @@
 .slot-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px; margin-bottom: 18px;
+  gap: 10px; 
+  margin-bottom: 18px;
 }
-@media(max-width:600px){ .slot-grid { grid-template-columns: 1fr 1fr; } }
+@media(max-width: 768px){ .slot-grid { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width: 480px){ .slot-grid { grid-template-columns: 1fr; } }
 
 .slot-card {
-  position: relative; cursor: pointer;
+  position: relative; 
+  cursor: pointer;
+  display: block;
 }
 .slot-card input[type=radio] {
-  position: absolute; opacity: 0; width: 100%; height: 100%;
-  top: 0; left: 0; cursor: pointer; z-index: 1;
+  position: absolute; 
+  opacity: 0; 
+  width: 100%; 
+  height: 100%;
+  top: 0; 
+  left: 0; 
+  cursor: pointer; 
+  z-index: 2;
 }
 .slot-label {
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 14px 10px; border: 2px solid #e2e8f0; border-radius: 12px;
-  background: #f8fafc; transition: all .18s; text-align: center;
-  pointer-events: none;
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  gap: 8px;
+  padding: 16px 10px; 
+  border: 2px solid #e2e8f0; 
+  border-radius: 12px;
+  background: #f8fafc; 
+  transition: all .18s ease-in-out; 
+  text-align: center;
 }
 .slot-card input:checked + .slot-label {
-  border-color: #2563eb; background: #eff6ff;
+  border-color: #2563eb; 
+  background: #eff6ff;
   box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.slot-card input:focus-visible + .slot-label {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.25);
+}
+.slot-card input:checked + .slot-label .slot-icon {
+  color: #2563eb;
 }
 .slot-time { font-size: 13.5px; font-weight: 800; color: #0f172a; }
 .slot-name { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
-.slot-icon { font-size: 20px; }
+.slot-icon { font-size: 22px; color: #64748b; transition: color .18s; }
 
 /* ── Form fields ─────────────────────────────── */
 .f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-@media(max-width:600px){ .f-grid { grid-template-columns: 1fr; } }
+@media(max-width: 600px){ .f-grid { grid-template-columns: 1fr; gap: 0; } }
 
 .f-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .f-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .05em; }
 .f-label .req { color: #dc2626; }
 .f-input, .f-select, .f-textarea {
-  padding: 10px 13px; border: 1.5px solid #e2e8f0;
-  border-radius: 10px; font-size: 13.5px; font-family: 'Inter',sans-serif;
-  color: #0f172a; background: #fff; width: 100%;
+  padding: 10px 13px; 
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px; 
+  font-size: 13.5px; 
+  font-family: 'Inter', sans-serif;
+  color: #0f172a; 
+  background: #fff; 
+  width: 100%;
+  box-sizing: border-box;
   transition: border-color .18s, box-shadow .18s;
 }
-.f-input:focus,.f-select:focus,.f-textarea:focus {
-  outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+.f-input:focus, .f-select:focus, .f-textarea:focus {
+  outline: none; 
+  border-color: #2563eb; 
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
 }
 .f-textarea { resize: vertical; min-height: 90px; }
 
 /* ── Evidence upload zone ────────────────────── */
 .drop-zone {
-  border: 2px dashed #cbd5e1; border-radius: 12px; padding: 28px 20px;
-  text-align: center; cursor: pointer; transition: all .2s;
+  border: 2px dashed #cbd5e1; 
+  border-radius: 12px; 
+  padding: 28px 20px;
+  text-align: center; 
+  cursor: pointer; 
+  transition: all .2s;
   background: #f8fafc;
 }
 .drop-zone:hover, .drop-zone.dragover {
-  border-color: #2563eb; background: #eff6ff;
+  border-color: #2563eb; 
+  background: #eff6ff;
 }
 .drop-zone.has-files { border-color: #16a34a; background: #f0fdf4; }
 .drop-zone-icon { font-size: 36px; color: #94a3b8; margin-bottom: 10px; }
@@ -95,32 +152,54 @@
 .drop-zone-hint { font-size: 11.5px; color: #94a3b8; margin-top: 5px; }
 .file-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; justify-content: center; }
 .file-tag {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: #dcfce7; padding: 4px 11px; border-radius: 9999px;
-  font-size: 12px; color: #15803d; font-weight: 600; border: 1px solid #bbf7d0;
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+  background: #dcfce7; 
+  padding: 4px 11px; 
+  border-radius: 9999px;
+  font-size: 12px; 
+  color: #15803d; 
+  font-weight: 600; 
+  border: 1px solid #bbf7d0;
 }
-.file-tag.video-tag  { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
-.file-tag .rm { cursor: pointer; color: #dc2626; font-weight: 900; margin-left: 2px; }
+.file-tag.video-tag { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+.file-tag .rm { cursor: pointer; color: #dc2626; font-weight: 900; margin-left: 2px; padding: 0 2px; }
 
 /* ── Submit button ───────────────────────────── */
 .btn-submit {
-  display: inline-flex; align-items: center; gap: 9px;
-  padding: 13px 32px; border: none; border-radius: 11px;
-  font-size: 14px; font-weight: 700; font-family: 'Inter',sans-serif;
-  cursor: pointer; transition: all .2s;
+  display: inline-flex; 
+  align-items: center; 
+  gap: 9px;
+  padding: 13px 32px; 
+  border: none; 
+  border-radius: 11px;
+  font-size: 14px; 
+  font-weight: 700; 
+  font-family: 'Inter', sans-serif;
+  cursor: pointer; 
+  transition: all .2s;
   background: linear-gradient(135deg,#0f2c54,#1a3d6e);
-  color: #fff; box-shadow: 0 4px 16px rgba(15,44,84,.3);
+  color: #fff; 
+  box-shadow: 0 4px 16px rgba(15,44,84,.3);
 }
 .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(15,44,84,.4); }
+.btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
 /* ── Week section ────────────────────────────── */
 .week-section { margin-bottom: 24px; }
 
 .week-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px; border-radius: 12px 12px 0 0;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  border: 1px solid #e2e8f0; border-bottom: none;
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+  padding: 12px 18px; 
+  border-radius: 12px 12px 0 0;
+  font-size: 14px; 
+  font-weight: 700; 
+  cursor: pointer;
+  border: 1px solid #e2e8f0; 
+  border-bottom: none;
   user-select: none;
 }
 .week-header.w-pending  { background: #fffbeb; color: #92400e; border-color: #fde68a; }
@@ -128,52 +207,76 @@
 .week-header.w-rejected { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 .week-header.w-partial  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 .week-pill {
-  padding: 3px 11px; border-radius: 9999px;
-  font-size: 11.5px; font-weight: 700;
+  padding: 3px 11px; 
+  border-radius: 9999px;
+  font-size: 11.5px; 
+  font-weight: 700;
 }
 .week-pill.pending  { background: #fde68a; color: #92400e; }
 .week-pill.approved { background: #bbf7d0; color: #15803d; }
 .week-pill.rejected { background: #fecaca; color: #991b1b; }
 .week-pill.partial  { background: #bfdbfe; color: #1d4ed8; }
-.week-arrow { transition: transform .3s; }
+.week-arrow { transition: transform .3s ease; }
 .week-arrow.open { transform: rotate(180deg); }
 
 .week-body {
-  border: 1px solid #e2e8f0; border-top: none;
-  border-radius: 0 0 12px 12px; overflow: hidden;
+  border: 1px solid #e2e8f0; 
+  border-top: none;
+  border-radius: 0 0 12px 12px; 
+  overflow: hidden;
 }
 
 /* ── Entry rows ──────────────────────────────── */
 .entry-row {
-  padding: 16px 20px; border-bottom: 1px solid #f1f5f9;
+  padding: 16px 20px; 
+  border-bottom: 1px solid #f1f5f9;
   transition: background .15s;
 }
 .entry-row:last-child { border-bottom: none; }
 .entry-row:hover { background: #fafafa; }
 
 .entry-top {
-  display: flex; align-items: flex-start; gap: 14px;
-  margin-bottom: 10px; flex-wrap: wrap;
+  display: flex; 
+  align-items: flex-start; 
+  gap: 14px;
+  margin-bottom: 10px; 
+  flex-wrap: wrap;
 }
 .entry-slot {
-  display: flex; flex-direction: column; align-items: center;
+  display: flex; 
+  flex-direction: column; 
+  align-items: center;
   background: linear-gradient(135deg,#0f2c54,#1a3d6e);
-  color: #fff; border-radius: 10px; padding: 8px 14px;
-  min-width: 110px; text-align: center; flex-shrink: 0;
+  color: #fff; 
+  border-radius: 10px; 
+  padding: 8px 14px;
+  min-width: 110px; 
+  text-align: center; 
+  flex-shrink: 0;
 }
+.entry-slot .slot-icon-view { font-size: 16px; margin-bottom: 2px; }
 .entry-slot .slot-t { font-size: 13px; font-weight: 800; }
 .entry-slot .slot-d { font-size: 10px; opacity: .75; margin-top: 2px; text-transform: uppercase; }
 
 .entry-date-tag {
-  font-size: 11.5px; font-weight: 700; color: #64748b;
-  background: #f1f5f9; border-radius: 6px; padding: 3px 9px;
+  font-size: 11.5px; 
+  font-weight: 700; 
+  color: #64748b;
+  background: #f1f5f9; 
+  border-radius: 6px; 
+  padding: 3px 9px;
   align-self: center;
 }
 .entry-status {
-  margin-left: auto; align-self: flex-start;
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 12px; border-radius: 9999px;
-  font-size: 11.5px; font-weight: 700;
+  margin-left: auto; 
+  align-self: flex-start;
+  display: inline-flex; 
+  align-items: center; 
+  gap: 5px;
+  padding: 4px 12px; 
+  border-radius: 9999px;
+  font-size: 11.5px; 
+  font-weight: 700;
 }
 .status-pending  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
 .status-approved { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
@@ -182,42 +285,73 @@
 .entry-tasks { font-size: 13.5px; color: #334155; line-height: 1.6; margin-bottom: 8px; }
 
 .entry-meta {
-  display: flex; gap: 16px; flex-wrap: wrap;
-  font-size: 12px; color: #94a3b8; margin-bottom: 8px;
+  display: flex; 
+  gap: 16px; 
+  flex-wrap: wrap;
+  font-size: 12px; 
+  color: #94a3b8; 
+  margin-bottom: 8px;
 }
-.entry-meta span { display: flex; align-items: center; gap: 5px; }
+.entry-meta span { display: inline-flex; align-items: center; gap: 5px; }
 
 /* ── Evidence gallery ────────────────────────── */
 .evidence-gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .ev-thumb {
-  width: 72px; height: 72px; border-radius: 8px; object-fit: cover;
-  border: 1px solid #e2e8f0; cursor: pointer;
-  transition: transform .2s; flex-shrink: 0;
+  width: 72px; 
+  height: 72px; 
+  border-radius: 8px; 
+  object-fit: cover;
+  border: 1px solid #e2e8f0; 
+  cursor: pointer;
+  transition: transform .2s; 
+  flex-shrink: 0;
 }
 .ev-thumb:hover { transform: scale(1.07); }
 .ev-video-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe;
-  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+  background: #ede9fe; 
+  color: #6d28d9; 
+  border: 1px solid #ddd6fe;
+  border-radius: 8px; 
+  padding: 6px 12px; 
+  font-size: 12px; 
+  font-weight: 700;
   text-decoration: none;
 }
 .ev-video-badge:hover { background: #6d28d9; color: #fff; }
 .ev-pdf-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
-  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+  background: #fef2f2; 
+  color: #dc2626; 
+  border: 1px solid #fecaca;
+  border-radius: 8px; 
+  padding: 6px 12px; 
+  font-size: 12px; 
+  font-weight: 700;
   text-decoration: none;
 }
 
 /* ── Supervisor comments ─────────────────────── */
 .sup-comment {
-  margin-top: 10px; padding: 11px 14px;
-  background: #f0f9ff; border-radius: 10px;
-  border-left: 4px solid #0891b2; font-size: 13px; color: #0e7490;
+  margin-top: 10px; 
+  padding: 11px 14px;
+  background: #f0f9ff; 
+  border-radius: 10px;
+  border-left: 4px solid #0891b2; 
+  font-size: 13px; 
+  color: #0e7490;
 }
 .sup-comment-label {
-  font-size: 11px; font-weight: 700; color: #0891b2;
-  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px;
+  font-size: 11px; 
+  font-weight: 700; 
+  color: #0891b2;
+  text-transform: uppercase; 
+  letter-spacing: .05em; 
+  margin-bottom: 4px;
 }
 
 /* ── Empty state ─────────────────────────────── */
@@ -229,26 +363,20 @@
 .empty-state p  { font-size: 13px; }
 {% endblock %}
 
-{% block content %}
-<div class="lb-wrap">
+{% block content %}<div class="lb-wrap">
 
-{% if not attachment %}
-<!-- ── No attachment ──────────────────────────── -->
-<div class="empty-state" style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+{% if not attachment %}<div class="empty-state" style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.06)">
   <i class="fas fa-industry"></i>
   <h3>No Industrial Attachment Found</h3>
   <p>You need an active industrial attachment to use the logbook.</p>
   <a href="/student/industrial-attachment"
      style="display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:12px 26px;background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;border-radius:11px;font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(15,44,84,.3)">
     <i class="fas fa-arrow-right"></i> Go to Industrial Attachment
-  </a>
-</div>
+  </a></div>
 
 {% else %}
 
-<!-- ── Attachment info bar ────────────────────── -->
-{% set co = attachment.get('companies') or {} %}
-<div class="attach-bar">
+{% set co = attachment.get('companies') or {} %}<div class="attach-bar">
   <i class="fas fa-industry"></i>
   <div>
     <div class="attach-name">{{ co.get('name', attachment.get('company_name','—')) }}</div>
@@ -267,20 +395,17 @@
   <a href="/student/industrial-attachment"
      style="margin-left:auto;font-size:12.5px;color:#1e5a9f;font-weight:700;text-decoration:none">
     <i class="fas fa-arrow-left"></i> Back to Attachment
-  </a>
-</div>
-
-<!-- ── NEW ENTRY FORM ─────────────────────────── -->
-<div class="lb-card">
+  </a></div><div class="lb-card">
   <div class="lb-card-head">
     <i class="fas fa-plus-circle"></i> Log Today's Activity
     <span class="head-right">Every 3 hours — submit one entry per time slot</span>
   </div>
   <div class="lb-card-body">
     <form method="POST" action="/student/logbook/add" enctype="multipart/form-data" id="logForm">
+      {# Django CSFR compatibility layer safety check #}
+      {% if csrf_token %}<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">{% endif %}
       <input type="hidden" name="attachment_id" value="{{ attachment.get('id') }}">
 
-      <!-- Date -->
       <div class="f-grid">
         <div class="f-field">
           <label class="f-label">Activity Date <span class="req">*</span></label>
@@ -289,7 +414,6 @@
         </div>
       </div>
 
-      <!-- 3-Hour Time Slots -->
       <div class="f-field">
         <label class="f-label">Time Slot <span class="req">*</span>
           <span style="font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px">Select the 3-hour period this entry covers</span>
@@ -298,7 +422,7 @@
           <label class="slot-card">
             <input type="radio" name="entry_time" value="08:00-11:00" required>
             <div class="slot-label">
-              <span class="slot-icon">🌅</span>
+              <i class="fas fa-heading slot-icon" aria-hidden="true"></i>
               <span class="slot-time">08:00 – 11:00</span>
               <span class="slot-name">Morning</span>
             </div>
@@ -306,7 +430,7 @@
           <label class="slot-card">
             <input type="radio" name="entry_time" value="11:00-14:00">
             <div class="slot-label">
-              <span class="slot-icon">☀️</span>
+              <i class="fas fa-sun slot-icon" aria-hidden="true"></i>
               <span class="slot-time">11:00 – 14:00</span>
               <span class="slot-name">Late Morning</span>
             </div>
@@ -314,7 +438,7 @@
           <label class="slot-card">
             <input type="radio" name="entry_time" value="14:00-17:00">
             <div class="slot-label">
-              <span class="slot-icon">🌤️</span>
+              <i class="fas fa-cloud-sun slot-icon" aria-hidden="true"></i>
               <span class="slot-time">14:00 – 17:00</span>
               <span class="slot-name">Afternoon</span>
             </div>
@@ -322,7 +446,7 @@
           <label class="slot-card">
             <input type="radio" name="entry_time" value="17:00-20:00">
             <div class="slot-label">
-              <span class="slot-icon">🌆</span>
+              <i class="fas fa-moon slot-icon" aria-hidden="true"></i>
               <span class="slot-time">17:00 – 20:00</span>
               <span class="slot-name">Late Afternoon</span>
             </div>
@@ -330,7 +454,6 @@
         </div>
       </div>
 
-      <!-- Activity description -->
       <div class="f-field">
         <label class="f-label">Tasks / Activities Performed <span class="req">*</span></label>
         <textarea class="f-textarea" name="tasks_performed" required rows="4"
@@ -356,12 +479,11 @@
                   placeholder="What did you complete or accomplish during this period?"></textarea>
       </div>
 
-      <!-- Evidence upload -->
       <div class="f-field">
         <label class="f-label">Evidence (Photos / Videos) <span class="req">*</span>
           <span style="font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px">Upload photos or videos showing your work</span>
         </label>
-        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-zone" id="dropZone">
           <div class="drop-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
           <div class="drop-zone-text">Click to upload or drag &amp; drop files here</div>
           <div class="drop-zone-hint">Photos (JPG, PNG, WEBP) &bull; Videos (MP4, MOV) &bull; Max 50MB per file</div>
@@ -371,22 +493,18 @@
                accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/avi,video/webm,application/pdf">
       </div>
 
-      <div style="display:flex;align-items:center;gap:14px;margin-top:4px">
+      <div style="display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap">
         <button type="submit" class="btn-submit" id="submitBtn">
           <i class="fas fa-paper-plane"></i> Submit Entry
         </button>
-        <span style="font-size:12px;color:#94a3b8">
+        <span style="font-size:12px;color:#94a3b8;max-width:400px">
           <i class="fas fa-info-circle" style="color:#0891b2;margin-right:4px"></i>
           Your supervisor will review and approve entries at the end of each week.
         </span>
       </div>
 
     </form>
-  </div>
-</div>
-
-<!-- ── WEEKLY LOGBOOK ENTRIES ────────────────── -->
-<div class="lb-card">
+  </div></div><div class="lb-card">
   <div class="lb-card-head">
     <i class="fas fa-calendar-week"></i> Weekly Activity Log
     <span class="head-right">{{ logbooks|length }} total entries</span>
@@ -398,9 +516,8 @@
     {% for week_start, week in weeks_grouped.items() %}
     <div class="week-section" style="margin-bottom:0">
 
-      <!-- Week header (collapsible) -->
       <div class="week-header" onclick="toggleWeek('week-{{ loop.index }}')"
-           style="margin:0;border-radius:0;{% if loop.first %}border-radius:0;{% endif %}">
+           style="margin:0;border-radius:0;">
         <div style="display:flex;align-items:center;gap:10px">
           <i class="fas fa-calendar-week"></i>
           <strong>{{ week.label }}</strong>
@@ -409,18 +526,17 @@
         <i class="fas fa-chevron-down week-arrow {% if loop.first %}open{% endif %}" id="arrow-week-{{ loop.index }}"></i>
       </div>
 
-      <!-- Week body -->
       <div id="week-{{ loop.index }}" class="week-body" style="{% if not loop.first %}display:none;{% endif %}border-radius:0;border-left:none;border-right:none;{% if loop.last %}border-radius:0 0 12px 12px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;{% endif %}">
 
         {% for entry in week.entries %}
         {% set slot = entry.get('entry_time','') %}
-        {% set slot_icons = {'08:00-11:00':'🌅','11:00-14:00':'☀️','14:00-17:00':'🌤️','17:00-20:00':'🌆'} %}
+        {% set slot_icons = {'08:00-11:00':'fa-heading','11:00-14:00':'fa-sun','14:00-17:00':'fa-cloud-sun','17:00-20:00':'fa-moon'} %}
         {% set slot_names = {'08:00-11:00':'Morning','11:00-14:00':'Late Morning','14:00-17:00':'Afternoon','17:00-20:00':'Late Afternoon'} %}
 
         <div class="entry-row">
           <div class="entry-top">
             <div class="entry-slot">
-              <span style="font-size:18px">{{ slot_icons.get(slot,'🕐') }}</span>
+              <i class="fas {{ slot_icons.get(slot,'fa-clock') }} slot-icon-view" aria-hidden="true"></i>
               <span class="slot-t">{{ slot or 'N/A' }}</span>
               <span class="slot-d">{{ slot_names.get(slot,'Entry') }}</span>
             </div>
@@ -432,10 +548,8 @@
             </div>
           </div>
 
-          <!-- Tasks -->
           <div class="entry-tasks">{{ entry.get('tasks_performed','') }}</div>
 
-          <!-- Meta chips -->
           <div class="entry-meta">
             {% if entry.get('skills_applied') %}
             <span><i class="fas fa-tools"></i> {{ entry.get('skills_applied','') }}</span>
@@ -446,19 +560,18 @@
             {% if entry.get('achievements') %}
             <span><i class="fas fa-star"></i> {{ entry.get('achievements','') }}</span>
             {% endif %}
-            <span style="margin-left:auto;font-size:11px;color:#cbd5e1">
+            <span style="margin-left:auto;font-size:11px;color:#94a3b8">
               {{ entry.get('created_at','')[:16].replace('T',' ') }}
             </span>
           </div>
 
-          <!-- Evidence (horizontal row) -->
           {% set ev = entry._evidence or [] %}
           <div class="evidence-gallery" style="margin-top:10px;align-items:center">
             <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-right:4px;flex-shrink:0"><i class="fas fa-paperclip"></i> Evidence</span>
             {% if ev %}
               {% for item in ev %}
                 {% if item.ext in ['jpg','jpeg','png','webp','gif'] %}
-                <a href="{{ item.url }}" target="_blank" onclick="window.open(this.href,'_blank');return true" title="{{ item.name }}">
+                <a href="{{ item.url }}" target="_blank" title="{{ item.name }}">
                   <img class="ev-thumb" src="{{ item.url }}" alt="{{ item.name }}" loading="lazy" onerror="this.style.display='none'">
                 </a>
                 {% elif item.ext in ['mp4','mov','avi','webm','mkv'] %}
@@ -488,14 +601,13 @@
 
           {% if entry.get('trainer_comments') %}
           <div class="sup-comment" style="border-left-color:#7c3aed;background:#faf5ff;color:#6d28d9">
-            <div class="sup-comment-label" style="color:#7c3aed"><i class="fas fa-chalkboard-teacher" style="margin-right:4px"></i>Trainer Comment</div>
+            <div class="sup-comment-label" style="color:#7c3aed"><i class="fas fa-user-tie" style="margin-right:4px"></i>Trainer Comment</div>
             {{ entry.get('trainer_comments') }}
           </div>
           {% endif %}
 
         </div>
         {% endfor %}
-
 
       </div>
     </div>
@@ -510,104 +622,99 @@
     </div>
     {% endif %}
 
-  </div>
-</div>
-
-<!-- ── GUIDELINES ────────────────────────────── -->
-<div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:14px;padding:18px 22px;margin-top:4px">
+  </div></div><div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:14px;padding:18px 22px;margin-top:16px">
   <div style="font-size:13px;font-weight:700;color:#0e7490;margin-bottom:10px">
     <i class="fas fa-info-circle" style="margin-right:6px"></i>Logbook Guidelines
   </div>
-  <ul style="font-size:13px;color:#0e7490;padding-left:20px;line-height:2">
+  <ul style="font-size:13px;color:#0e7490;padding-left:20px;line-height:2;margin:0">
     <li>Submit <strong>one entry per 3-hour block</strong> throughout your working day (up to 4 entries per day)</li>
     <li>Attach <strong>photos or videos</strong> as evidence of your work for each entry</li>
     <li>Be specific — describe actual tasks, tools, processes, and skills used</li>
     <li>Your entries are reviewed by the <strong>department admin</strong> and management</li>
-  </ul>
-</div>
+  </ul></div>
 
-{% endif %}{# end if attachment #}
-</div>
+{% endif %}{# end if attachment #}</div>
 {% endblock %}
 
-{% block extra_script %}
-<script>
-/* ── Week accordion ──────────────────────────── */
-function toggleWeek(id) {
-  const body  = document.getElementById(id);
-  const idx   = id.replace('week-','');
+{% block extra_script %}<script>/* ── Week accordion ──────────────────────────── */function toggleWeek(id) {
+  const body   = document.getElementById(id);
+  if (!body) return;
   const arrow = document.getElementById('arrow-' + id);
   const open  = body.style.display !== 'none';
   body.style.display  = open ? 'none' : 'block';
   if (arrow) arrow.classList.toggle('open', !open);
-}
+}/* ── File drag-drop & tags ───────────────────── */const dropZone  = document.getElementById('dropZone');const fileInput = document.getElementById('fileInput');const fileTags  = document.getElementById('fileTags');let allFiles = [];if (dropZone && fileInput) {
+  // Safe trigger click directly on dropZone surface (excluding tags button clicks)
+  dropZone.addEventListener('click', e => {
+    if(!e.target.classList.contains('rm')) {
+      fileInput.click();
+    }
+  });
 
-/* ── File drag-drop & tags ───────────────────── */
-const dropZone  = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const fileTags  = document.getElementById('fileTags');
-
-if (dropZone) {
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragover', e => { 
+    e.preventDefault(); 
+    dropZone.classList.add('dragover'); 
+  });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
   dropZone.addEventListener('drop', e => {
-    e.preventDefault(); dropZone.classList.remove('dragover');
-    mergeFiles(e.dataTransfer.files);
+    e.preventDefault(); 
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files) {
+      mergeFiles(e.dataTransfer.files);
+    }
   });
-  fileInput.addEventListener('change', () => mergeFiles(fileInput.files));
-}
-
-let allFiles = [];
-
-function mergeFiles(incoming) {
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files) {
+      mergeFiles(fileInput.files);
+    }
+  });
+}function mergeFiles(incoming) {
   Array.from(incoming).forEach(f => {
     if (!allFiles.find(x => x.name === f.name && x.size === f.size)) allFiles.push(f);
   });
   renderTags();
   syncInput();
-}
-
-function removeFile(idx) {
+}function removeFile(idx) {
   allFiles.splice(idx, 1);
   renderTags();
   syncInput();
-}
-
-function renderTags() {
+}function renderTags() {
   if (!fileTags) return;
   fileTags.innerHTML = '';
   allFiles.forEach((f, i) => {
     const isVideo = f.type.startsWith('video/');
+    const isPdf = f.type === 'application/pdf';
+    let iconClass = 'image';
+    if(isVideo) iconClass = 'video';
+    if(isPdf) iconClass = 'file-pdf';
+
     const tag = document.createElement('span');
     tag.className = 'file-tag' + (isVideo ? ' video-tag' : '');
-    tag.innerHTML = `<i class="fas fa-${isVideo ? 'video' : 'image'}"></i> ${f.name.length > 20 ? f.name.slice(0,18)+'…' : f.name} <span class="rm" onclick="removeFile(${i})">&times;</span>`;
+    
+    // Scoped event handlers instead of global string maps to prevent event bugs
+    tag.innerHTML = `<i class="fas fa-${iconClass}"></i> <span></span> <span class="rm">&times;</span>`;
+    tag.querySelector('span').textContent = f.name.length > 20 ? f.name.slice(0,18)+'…' : f.name;
+    tag.querySelector('.rm').addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeFile(i);
+    });
+    
     fileTags.appendChild(tag);
   });
   if (dropZone) dropZone.classList.toggle('has-files', allFiles.length > 0);
-}
-
-function syncInput() {
+}function syncInput() {
   if (!fileInput) return;
   const dt = new DataTransfer();
   allFiles.forEach(f => dt.items.add(f));
   fileInput.files = dt.files;
-}
-
-/* ── Form submit spinner ─────────────────────── */
-const logForm = document.getElementById('logForm');
-if (logForm) {
-  logForm.addEventListener('submit', function() {
+}/* ── Form submit spinner ─────────────────────── */const logForm = document.getElementById('logForm');if (logForm) {
+  logForm.addEventListener('submit', function(e) {
     const btn = document.getElementById('submitBtn');
     if (btn) {
-      btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px"></span> Uploading…';
+      btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;"></span> Uploading…';
       btn.disabled = true;
     }
   });
-}
-
-/* ── Spin keyframe ───────────────────────────── */
-const s = document.createElement('style');
-s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
-document.head.appendChild(s);
-</script>
+}/* ── Spin keyframe ───────────────────────────── */const s = document.createElement('style');
+s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';document.head.appendChild(s);</script>
 {% endblock %}
