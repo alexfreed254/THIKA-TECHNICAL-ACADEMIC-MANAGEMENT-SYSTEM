@@ -2269,6 +2269,31 @@ def gis_tracking():
     except Exception as e:
         flash(f"Error loading placements: {e}", "warning")
 
+    # ── Course of study per student (enrollment → class/dept) ─────────────────
+    course_map = {}
+    try:
+        if student_ids:
+            enr_rows = (db.table("enrollments")
+                        .select("student_id, classes(name, departments(name))")
+                        .in_("student_id", student_ids)
+                        .execute().data or [])
+            for e in enr_rows:
+                sid = e.get("student_id")
+                if not sid or sid in course_map:
+                    continue
+                cls  = e.get("classes") or {}
+                dept = cls.get("departments") or {}
+                dept_name  = dept.get("name", "")
+                class_name = cls.get("name", "")
+                if dept_name and class_name:
+                    course_map[sid] = f"{dept_name} – {class_name}"
+                else:
+                    course_map[sid] = dept_name or class_name or "—"
+    except Exception:
+        pass
+    for p in placements:
+        p["_course"] = course_map.get(p.get("student_id"), "—")
+
     # ── Compute days spent for each placement ──────────────────────────────────
     today = _date.today()
     for p in placements:

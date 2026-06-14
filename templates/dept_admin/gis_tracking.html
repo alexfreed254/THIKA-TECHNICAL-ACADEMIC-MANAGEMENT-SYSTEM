@@ -372,7 +372,7 @@
               <th>#</th>
               <th>Trainee</th>
               <th>Company</th>
-              <th>Unit</th>
+              <th>Course of Study</th>
               <th>Start Date</th>
               <th>End Date</th>
               <th>Days in Industry</th>
@@ -384,7 +384,6 @@
             {% for p in placements %}
             {% set co = p.companies or {} %}
             {% set st = p.student   or {} %}
-            {% set un = p.units     or {} %}
             {% set days = p._days_spent %}
             {% set pct  = [((days / max_days) * 100)|int, 100]|min if max_days > 0 else 0 %}
             {% set df   = 'high' if pct >= 66 else ('mid' if pct >= 33 else 'low') %}
@@ -410,10 +409,7 @@
                 {% endif %}
               </td>
               <td>
-                <span style="font-size:11px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:2px 7px;border-radius:5px">
-                  {{ un.get('code','') }}
-                </span>
-                <div style="font-size:11px;color:#9ca3af;margin-top:3px">{{ un.get('name','') }}</div>
+                <div style="font-size:12px;font-weight:600;color:#1d4ed8;line-height:1.4">{{ p._course }}</div>
               </td>
               <td style="font-size:12px;font-weight:600;white-space:nowrap">{{ p.start_date or '—' }}</td>
               <td style="font-size:12px;color:#6b7280;white-space:nowrap">
@@ -668,7 +664,7 @@ var markerIndex = {};  /* loop.index → leaflet marker */
 PLACEMENTS.forEach(function(p, idx) {
   var co  = p.companies || {};
   var st  = p.student   || {};
-  var un  = p.units     || {};
+  var course = p._course || '—';
   var lat = parseFloat(co.latitude);
   var lng = parseFloat(co.longitude);
   if (!lat || !lng) return;
@@ -693,7 +689,7 @@ PLACEMENTS.forEach(function(p, idx) {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:8px">' +
     '<div><span style="color:#9ca3af">Trainee</span><br><strong>'+esc(st.full_name||'—')+'</strong></div>' +
     '<div><span style="color:#9ca3af">Adm No.</span><br><strong>'+esc(st.admission_no||'—')+'</strong></div>' +
-    '<div><span style="color:#9ca3af">Unit</span><br><strong>'+esc(un.code||'')+' '+esc(un.name||'')+'</strong></div>' +
+    '<div><span style="color:#9ca3af">Course of Study</span><br><strong>'+esc(course)+'</strong></div>' +
     '<div><span style="color:#9ca3af">Days Spent</span><br><strong style="color:#1d4ed8">'+days+' days</strong></div>' +
     '<div><span style="color:#9ca3af">Start</span><br>'+esc(p.start_date||'—')+'</div>' +
     '<div><span style="color:#9ca3af">End</span><br>'+(p.end_date ? esc(p.end_date) : '<span style="color:#22c55e;font-weight:700">Ongoing</span>')+'</div>' +
