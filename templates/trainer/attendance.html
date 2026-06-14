@@ -66,6 +66,33 @@
   .att-chk-label { width:28px; height:28px; border-radius:6px; }
   .att-chk-label i { font-size:13px; }
 }
+
+/* ── Lesson time cards ── */
+.lesson-time-section { margin-top: 16px; }
+.lesson-time-hd {
+  font-size: 12px; font-weight: 700; color: #555;
+  text-transform: uppercase; letter-spacing: .04em;
+  margin-bottom: 10px; display: block;
+}
+.lesson-time-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 10px;
+}
+.lesson-time-card {
+  border: 2px solid #e5e7eb; border-radius: 12px;
+  padding: 12px 16px; cursor: pointer;
+  transition: border-color .2s, background .2s;
+  display: flex; align-items: center; gap: 12px;
+  background: #fff;
+}
+.lesson-time-card:hover { border-color: #1e5a9f; background: #f0f5ff; }
+.lesson-time-card input[type=radio] {
+  width: 16px; height: 16px; accent-color: #1e5a9f; flex-shrink: 0;
+}
+.lesson-time-card.lc-selected { border-color: #1e5a9f; background: #eff6ff; }
+.lc-num  { font-size: 13px; font-weight: 700; color: #111827; }
+.lc-time { font-size: 11px; color: #6b7280; margin-top: 2px; }
 {% endblock %}
 
 {% block content %}
@@ -106,15 +133,7 @@
           {% endfor %}
         </select>
       </div>
-      <div class="form-group">
-        <label>Lesson</label>
-        <select id="lessonSelect" class="form-control" onchange="onFilterChange()">
-          <option value="">-- Lesson --</option>
-          {% for l in ['L1','L2','L3','L4'] %}
-            <option value="{{ l }}" {% if lesson == l %}selected{% endif %}>{{ l }}</option>
-          {% endfor %}
-        </select>
-      </div>
+      <!-- lesson cards rendered below the grid -->
       <div class="form-group">
         <label>Year</label>
         <select id="yearSelect" class="form-control" onchange="onFilterChange()">
@@ -130,6 +149,46 @@
           <option value="2" {% if term == 2 %}selected{% endif %}>Term 2 (May&ndash;Aug)</option>
           <option value="3" {% if term == 3 %}selected{% endif %}>Term 3 (Sep&ndash;Dec)</option>
         </select>
+      </div>
+    </div>
+
+    <!-- ── Lesson Time Cards ── -->
+    <div class="lesson-time-section">
+      <span class="lesson-time-hd">Lesson Time <span style="color:#ef4444">*</span></span>
+      <div class="lesson-time-grid">
+
+        <label class="lesson-time-card {% if lesson == '1' %}lc-selected{% endif %}" id="lcard-1" onclick="selectLesson(this,'1')">
+          <input type="radio" name="lesson" value="1" {% if lesson == '1' %}checked{% endif %}>
+          <div>
+            <div class="lc-num">Lesson 1</div>
+            <div class="lc-time">08:00 – 10:00 AM</div>
+          </div>
+        </label>
+
+        <label class="lesson-time-card {% if lesson == '2' %}lc-selected{% endif %}" id="lcard-2" onclick="selectLesson(this,'2')">
+          <input type="radio" name="lesson" value="2" {% if lesson == '2' %}checked{% endif %}>
+          <div>
+            <div class="lc-num">Lesson 2</div>
+            <div class="lc-time">10:15 – 12:15 PM</div>
+          </div>
+        </label>
+
+        <label class="lesson-time-card {% if lesson == '3' %}lc-selected{% endif %}" id="lcard-3" onclick="selectLesson(this,'3')">
+          <input type="radio" name="lesson" value="3" {% if lesson == '3' %}checked{% endif %}>
+          <div>
+            <div class="lc-num">Lesson 3</div>
+            <div class="lc-time">12:45 – 02:45 PM</div>
+          </div>
+        </label>
+
+        <label class="lesson-time-card {% if lesson == '4' %}lc-selected{% endif %}" id="lcard-4" onclick="selectLesson(this,'4')">
+          <input type="radio" name="lesson" value="4" {% if lesson == '4' %}checked{% endif %}>
+          <div>
+            <div class="lc-num">Lesson 4</div>
+            <div class="lc-time">03:00 – 05:00 PM</div>
+          </div>
+        </label>
+
       </div>
     </div>
   </div>
@@ -327,13 +386,22 @@ function syncToggle(sid, type) {
   }
 }
 
+/* ── Lesson card selection ── */
+function selectLesson(card, val) {
+  document.querySelectorAll('.lesson-time-card').forEach(c => c.classList.remove('lc-selected'));
+  card.classList.add('lc-selected');
+  card.querySelector('input[type=radio]').checked = true;
+  onFilterChange();
+}
+
 /* ── Read current filter values ── */
 function currentParams() {
+  var lessonEl = document.querySelector('input[name="lesson"]:checked');
   return {
     class_id: document.getElementById('classSelect').value,
     unit_id:  document.getElementById('unitSelect').value,
     week:     document.getElementById('weekSelect').value,
-    lesson:   document.getElementById('lessonSelect').value,
+    lesson:   lessonEl ? lessonEl.value : '',
     year:     document.getElementById('yearSelect').value,
     term:     document.getElementById('termSelect').value
   };
