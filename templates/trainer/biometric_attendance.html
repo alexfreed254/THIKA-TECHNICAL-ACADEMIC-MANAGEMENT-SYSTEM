@@ -1,163 +1,226 @@
 {% extends "trainer/base.html" %}
 {% block title %}Biometric Attendance{% endblock %}
-{% block page_title %}Biometric Attendance{% endblock %}
+{% block page_title %}Biometric Fingerprint Attendance{% endblock %}
 
 {% block extra_style %}
-.page-wrap { padding:24px; }
-.card { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:24px; overflow:hidden; }
-.card-header { background:#7b1fa2; color:#fff; padding:14px 20px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:10px; }
-.card-header.green  { background:#2e7d32; }
-.card-header.orange { background:#e65100; }
-.card-body { padding:20px; }
-.filter-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; }
-.fg label { display:block; font-size:12px; font-weight:600; color:#555; margin-bottom:5px; }
-.fg select, .fg input { width:100%; padding:9px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px; }
-.btn { padding:10px 22px; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700;
-       display:inline-flex; align-items:center; gap:7px; text-decoration:none; transition:opacity .15s; }
-.btn:hover { opacity:.85; }
-.btn-start  { background:#7b1fa2; color:#fff; }
-.btn-close  { background:#c62828; color:#fff; }
-.btn-back   { background:#f5f5f5; color:#333; }
-.hint { font-size:12px; color:#888; margin-top:6px; }
-.open-session-item { border:2px solid #7b1fa2; border-radius:10px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
-.open-session-item .meta { font-size:13px; color:#555; }
-.open-session-item .meta strong { color:#333; display:block; font-size:14px; }
-.device-tip { background:#f3e5f5; border-radius:8px; padding:14px 16px; font-size:13px; color:#555; line-height:1.7; }
-.device-tip code { background:#e8d5f5; border-radius:4px; padding:2px 6px; font-size:12px; color:#6a1b9a; }
+<style>
+.bio-wrap { padding: 24px; max-width: 860px; margin: 0 auto; }
+
+.bio-banner {
+  background: linear-gradient(135deg,#6d28d9,#5b21b6);
+  border-radius: 16px; padding: 24px 28px; margin-bottom: 24px;
+  color: #fff; box-shadow: 0 8px 24px rgba(109,40,217,.2);
+  display: flex; align-items: center; gap: 18px;
+}
+.bio-banner-icon {
+  width: 52px; height: 52px; background: rgba(255,255,255,.15);
+  border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; flex-shrink: 0;
+}
+.bio-banner h1 { font-size: 20px; font-weight: 800; margin: 0 0 6px; }
+.bio-banner p  { font-size: 13px; margin: 0; opacity: .88; line-height: 1.55; }
+
+.setup-card {
+  background: #fff; border-radius: 16px; padding: 28px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.07); margin-bottom: 20px;
+}
+.setup-card h2 {
+  font-size: 16px; font-weight: 700; color: #111827;
+  margin: 0 0 22px; display: flex; align-items: center; gap: 8px;
+}
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 22px; }
+.fg label {
+  display: block; font-size: 11.5px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px;
+}
+.fg select, .fg input[type=text], .fg input[type=number] {
+  width: 100%; padding: 10px 13px; border: 1.5px solid #d1d5db;
+  border-radius: 10px; font-size: 13.5px; background: #f9fafb;
+  font-family: inherit; transition: border-color .2s, box-shadow .2s;
+}
+.fg select:focus, .fg input:focus {
+  outline: none; border-color: #6d28d9; background: #fff;
+  box-shadow: 0 0 0 3px rgba(109,40,217,.1);
+}
+.fg small { display: block; margin-top: 4px; font-size: 11px; color: #9ca3af; }
+
+/* Lesson time cards */
+.lesson-label-hd { font-size: 11.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px; }
+.lesson-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; margin-bottom: 24px; }
+.lesson-card {
+  border: 2px solid #e5e7eb; border-radius: 12px; padding: 14px 16px;
+  cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 12px;
+  background: #fff;
+}
+.lesson-card:hover { border-color: #6d28d9; background: #faf5ff; }
+.lesson-card input[type=radio] { width: 16px; height: 16px; accent-color: #6d28d9; flex-shrink: 0; }
+.lesson-card.selected { border-color: #6d28d9; background: #faf5ff; }
+.lesson-num  { font-size: 13px; font-weight: 700; color: #111827; }
+.lesson-time-txt { font-size: 11px; color: #6b7280; margin-top: 1px; }
+
+.btn-start {
+  width: 100%; padding: 14px 24px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg,#6d28d9,#5b21b6); color: #fff;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: 0 6px 20px rgba(109,40,217,.3); transition: all .2s;
+}
+.btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109,40,217,.4); }
+
+.info-box {
+  background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 10px;
+  padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 12px;
+}
+.info-box i { color: #22c55e; font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.info-box-title { font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 3px; }
+.info-box-text  { font-size: 12px; color: #15803d; line-height: 1.6; }
+
+.warn-box {
+  background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 10px;
+  padding: 12px 16px; margin-bottom: 20px; display: flex; gap: 10px;
+}
+.warn-box i { color: #f59e0b; font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.warn-box-text { font-size: 12px; color: #b45309; line-height: 1.5; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="page-wrap">
+<div class="bio-wrap">
 
-  <!-- ── Open sessions alert ── -->
-  {% if open_sessions %}
-  <div class="card">
-    <div class="card-header orange"><i class="fas fa-broadcast-tower"></i> Active Biometric Session(s)</div>
-    <div class="card-body">
-      {% for s in open_sessions %}
-      <div class="open-session-item">
-        <div class="meta">
-          <strong>Week {{ s.week }} · Lesson {{ s.lesson }} · Term {{ s.term }} · {{ s.year }}</strong>
-          Started {{ s.created_at[:16].replace('T',' ') }} UTC
-          {% if s.device_ip %}<span style="margin-left:10px;font-size:12px;color:#888;"><i class="fas fa-wifi"></i> {{ s.device_ip }}</span>{% endif %}
-        </div>
-        <a href="{{ url_for('biometric.biometric_session', session_id=s.id) }}" class="btn btn-start">
-          <i class="fas fa-eye"></i> View Live
-        </a>
+  <!-- Banner -->
+  <div class="bio-banner">
+    <div class="bio-banner-icon"><i class="fas fa-fingerprint"></i></div>
+    <div>
+      <h1>Biometric Fingerprint Attendance</h1>
+      <p>Select class, unit and lesson below then click Start. Fingerprint sensors in the room go live — trainees scan their fingers and you see instant updates on screen.</p>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="info-box">
+    <i class="fas fa-info-circle"></i>
+    <div>
+      <div class="info-box-title">How it works</div>
+      <div class="info-box-text">
+        1. Choose your class, unit and lesson details below.<br>
+        2. Click <strong>Start Biometric Session</strong> — this opens the live attendance screen.<br>
+        3. Trainees place their fingers on the sensor in the room — each scan appears on your screen in real-time with a green tick.<br>
+        4. Override any scan manually if needed, then click <strong>Save Attendance</strong> — records go into the same attendance database as manual entries.
       </div>
+    </div>
+  </div>
+
+  <!-- Setup Form -->
+  <form method="POST" class="setup-card" id="setupForm">
+    <h2><i class="fas fa-cog" style="color:#6d28d9"></i> Session Setup</h2>
+
+    <div class="form-grid">
+
+      <!-- Class -->
+      <div class="fg">
+        <label>Class <span style="color:#ef4444">*</span></label>
+        <select name="class_id" id="classSelect" required onchange="filterUnits()">
+          <option value="">— Select Class —</option>
+          {% for c in classes %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <small>Your assigned classes only</small>
+      </div>
+
+      <!-- Unit (filtered by class via JS) -->
+      <div class="fg">
+        <label>Unit <span style="color:#ef4444">*</span></label>
+        <select name="unit_id" id="unitSelect" required>
+          <option value="">— Select Class First —</option>
+        </select>
+        <small>Units you teach in this class</small>
+      </div>
+
+      <!-- Room -->
+      <div class="fg">
+        <label>Room / Lab <span style="color:#ef4444">*</span></label>
+        <input type="text" name="room" placeholder="e.g. Lab 1, Room 302" required>
+        <small>Must match sensor installation location</small>
+      </div>
+
+      <!-- Week -->
+      <div class="fg">
+        <label>Week <span style="color:#ef4444">*</span></label>
+        <input type="number" name="week" min="1" max="52" value="{{ current_week }}" required>
+        <small>Week of the term</small>
+      </div>
+
+      <!-- Term -->
+      <div class="fg">
+        <label>Term <span style="color:#ef4444">*</span></label>
+        <select name="term" required>
+          <option value="1">Term 1</option>
+          <option value="2">Term 2</option>
+          <option value="3">Term 3</option>
+        </select>
+      </div>
+
+      <!-- Year -->
+      <div class="fg">
+        <label>Year <span style="color:#ef4444">*</span></label>
+        <input type="number" name="year" value="{{ current_year }}" min="2020" max="2099" required>
+      </div>
+
+    </div>
+
+    <!-- Lesson Time -->
+    <div class="lesson-label-hd">Lesson Time <span style="color:#ef4444">*</span></div>
+    <div class="lesson-grid">
+      {% for l in lesson_times %}
+      <label class="lesson-card" id="lcard-{{ l.value }}">
+        <input type="radio" name="lesson" value="{{ l.value }}" required
+               onchange="selectLesson('{{ l.value }}')">
+        <div>
+          <div class="lesson-num">{{ l.label }}</div>
+          <div class="lesson-time-txt">{{ l.time }}</div>
+        </div>
+      </label>
       {% endfor %}
     </div>
-  </div>
-  {% endif %}
 
-  <!-- ── Start new session ── -->
-  <div class="card">
-    <div class="card-header"><i class="fas fa-fingerprint"></i> Start Biometric Attendance Session</div>
-    <div class="card-body">
-      <form method="post" action="{{ url_for('biometric.biometric_start') }}">
-        <div class="filter-grid" style="margin-bottom:16px">
-
-          <div class="fg">
-            <label>Class <span style="color:#e53935">*</span></label>
-            <select name="class_id" id="classSelect" required onchange="this.form.submit()">
-              <option value="">— Select Class —</option>
-              {% for c in class_list %}
-                <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="fg">
-            <label>Unit <span style="color:#e53935">*</span></label>
-            <select name="unit_id" required>
-              <option value="">— Select Unit —</option>
-              {% for u in units_list %}
-                {% set un = u.units or {} %}
-                <option value="{{ un.id }}" {% if unit_id == un.id %}selected{% endif %}>
-                  {{ un.code }} — {{ un.name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="fg">
-            <label>Week <span style="color:#e53935">*</span></label>
-            <select name="week" required>
-              {% for w in range(1, 11) %}
-                <option value="{{ w }}">Week {{ w }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="fg">
-            <label>Lesson <span style="color:#e53935">*</span></label>
-            <select name="lesson" required>
-              {% for l in range(1, 5) %}
-                <option value="{{ l }}">Lesson {{ l }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="fg">
-            <label>Year</label>
-            <select name="year">
-              {% for y in range(year - 1, year + 3) %}
-                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="fg">
-            <label>Term</label>
-            <select name="term">
-              <option value="1">Term 1</option>
-              <option value="2">Term 2</option>
-              <option value="3">Term 3</option>
-            </select>
-          </div>
-
-          <div class="fg">
-            <label>Device IP <span style="color:#aaa">(optional)</span></label>
-            <input type="text" name="device_ip" placeholder="192.168.1.20">
-            <div class="hint">Enter BioEntry W IP if multiple devices are active.</div>
-          </div>
-
-        </div>
-
-        {% if class_id %}
-        <button type="submit" class="btn btn-start" name="_action" value="start">
-          <i class="fas fa-play-circle"></i> Start Session
-        </button>
-        {% else %}
-        <p style="color:#888;font-size:13px;margin-top:8px;"><i class="fas fa-info-circle"></i> Select a class first — the unit list will load.</p>
-        {% endif %}
-      </form>
-    </div>
-  </div>
-
-  <!-- ── Device setup tip ── -->
-  <div class="card">
-    <div class="card-header green"><i class="fas fa-cog"></i> BioEntry W Device Configuration</div>
-    <div class="card-body">
-      <div class="device-tip">
-        <strong>Configure the device to POST scans to this URL:</strong><br>
-        <code>POST {{ request.host_url }}api/biometric/scan</code>
-        <br><br>
-        <strong>Expected JSON body from device:</strong><br>
-        <code>{ "fingerprint_id": "1234", "device_id": "BW-001" }</code>
-        <br><br>
-        <strong>Optional security header:</strong><br>
-        <code>X-Device-Token: &lt;your BIOMETRIC_DEVICE_SECRET env value&gt;</code>
-        <br><br>
-        <strong>Test connectivity:</strong><br>
-        <code>GET {{ request.host_url }}api/biometric/scan/test</code>
-        <br><br>
-        <strong>Student fingerprint enrolment:</strong> Each student must have a
-        <em>Biometric ID</em> set in their profile that matches the numeric ID assigned
-        to them in the BioEntry W device. Admins can set this via the student profile page.
+    <div class="warn-box">
+      <i class="fas fa-exclamation-triangle"></i>
+      <div class="warn-box-text">
+        Ensure the fingerprint sensor in the selected room is powered on and connected to the network before starting.
       </div>
     </div>
-  </div>
+
+    <button type="submit" class="btn-start">
+      <i class="fas fa-play-circle"></i>
+      Start Biometric Session
+    </button>
+  </form>
 
 </div>
+
+<script>
+// Class → units mapping (from backend)
+const pairs = {{ pairs_json | tojson }};
+
+function filterUnits() {
+  const cid = document.getElementById('classSelect').value;
+  const sel = document.getElementById('unitSelect');
+  sel.innerHTML = '<option value="">— Select Unit —</option>';
+  if (!cid) return;
+  pairs.filter(p => p.class_id === cid).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.unit_id;
+    opt.textContent = p.unit_code ? `${p.unit_code} – ${p.unit_name}` : p.unit_name;
+    sel.appendChild(opt);
+  });
+}
+
+function selectLesson(val) {
+  document.querySelectorAll('.lesson-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('lcard-' + val);
+  if (card) card.classList.add('selected');
+}
+</script>
 {% endblock %}
