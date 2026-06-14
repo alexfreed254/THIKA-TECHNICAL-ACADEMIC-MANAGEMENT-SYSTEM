@@ -330,6 +330,7 @@
         <tr>
           <th>Term</th>
           <th>Year</th>
+          <th>Course of Study</th>
           <th>Company</th>
           <th>Location</th>
           <th>Supervisor Role</th>
@@ -351,6 +352,7 @@
             {% else %}—{% endif %}
           </td>
           <td style="font-weight:600">{{ att.get('attachment_year','—') }}</td>
+          <td><div style="font-size:12px;font-weight:600;color:#1d4ed8;line-height:1.4">{{ course_name or '—' }}</div></td>
           <td><strong>{{ ac.get('name','—') }}</strong></td>
           <td style="font-size:13px;color:#64748b">{{ ac.get('address','—') }}</td>
           <td style="font-size:13px">{{ att.get('trainee_role','—') }}</td>
