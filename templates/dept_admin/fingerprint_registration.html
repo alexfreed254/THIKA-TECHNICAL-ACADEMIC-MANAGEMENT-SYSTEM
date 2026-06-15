@@ -1,0 +1,601 @@
+{% extends "dept_admin/base.html" %}
+{% block title %}Fingerprint Registration{% endblock %}
+{% block page_title %}Fingerprint Registration{% endblock %}
+
+{% block extra_style %}
+.fp-wrap { padding: 24px; max-width: 1300px; }
+
+/* Hero */
+.fp-hero {
+  background: linear-gradient(135deg, #0f2c54 0%, #1565c0 60%, #1d83de 100%);
+  border-radius: 20px; padding: 28px 32px; margin-bottom: 28px;
+  display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
+}
+.fp-hero-text h1 { color: #fff; font-size: 22px; font-weight: 800; margin: 0 0 6px; }
+.fp-hero-text p  { color: rgba(255,255,255,.75); font-size: 13px; margin: 0; }
+.fp-hero-icon { font-size: 64px; color: rgba(255,255,255,.18); margin-left: auto; }
+
+/* Stat strip */
+.fp-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.fp-stat {
+  flex: 1; min-width: 150px; background: #fff;
+  border-radius: 14px; padding: 20px 22px;
+  border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  display: flex; align-items: center; gap: 16px;
+}
+.fp-stat-icon {
+  width: 46px; height: 46px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.fp-stat-num  { font-size: 26px; font-weight: 900; color: #0f172a; line-height: 1; font-family: 'Poppins',sans-serif; }
+.fp-stat-lbl  { font-size: 11px; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+
+/* How it works */
+.fp-how {
+  background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 16px;
+  padding: 20px 24px; margin-bottom: 20px;
+  display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
+}
+.fp-how-icon { font-size: 28px; color: #0284c7; margin-top: 2px; }
+.fp-how-steps { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.fp-step {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid #bae6fd; border-radius: 10px;
+  padding: 8px 14px; font-size: 12.5px; color: #0369a1;
+}
+.fp-step-num {
+  width: 22px; height: 22px; border-radius: 50%; background: #0284c7;
+  color: #fff; font-weight: 800; font-size: 11px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* Active enrollment banner */
+.enroll-banner {
+  border-radius: 16px; padding: 18px 24px;
+  margin-bottom: 20px; border: 2px solid;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.enroll-banner.waiting  { background: #fffbeb; border-color: #fcd34d; }
+.enroll-banner.done     { background: #f0fdf4; border-color: #86efac; }
+.enroll-banner.error    { background: #fef2f2; border-color: #fca5a5; }
+.enroll-pulse {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  background: #f59e0b; animation: fp-pulse 1.2s infinite;
+}
+@keyframes fp-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.35)} }
+.enroll-banner.done  .enroll-pulse { background: #22c55e; animation: none; }
+.enroll-banner.error .enroll-pulse { background: #ef4444; animation: none; }
+
+/* Filter bar */
+.fp-filter {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+  padding: 16px 20px; margin-bottom: 20px;
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;
+}
+.fp-filter label { display: block; font-size: 11px; font-weight: 700; color: #374151;
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.fp-filter select, .fp-filter input[type=text] {
+  padding: 9px 13px; border: 1.5px solid #d1d5db; border-radius: 9px;
+  font-size: 13px; background: #f9fafb; min-width: 180px; outline: none;
+  transition: border-color .15s;
+}
+.fp-filter select:focus, .fp-filter input:focus { border-color: #1565c0; background: #fff; }
+.fp-filter-btn {
+  padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 700;
+  border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  transition: all .15s;
+}
+.fp-filter-btn.primary { background: #0f2c54; color: #fff; }
+.fp-filter-btn.primary:hover { background: #1a3d6e; }
+.fp-filter-btn.reset   { background: #f3f4f6; color: #374151; }
+.fp-filter-btn.reset:hover { background: #e5e7eb; }
+
+/* Table card */
+.fp-card {
+  background: #fff; border-radius: 16px; border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden; margin-bottom: 24px;
+}
+.fp-card-head {
+  padding: 16px 22px; border-bottom: 1px solid #f1f5f9;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.fp-card-title { font-size: 15px; font-weight: 800; color: #0d2167;
+  display: flex; align-items: center; gap: 8px; }
+
+/* Table */
+.fp-tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.fp-tbl thead th {
+  background: #f9fafb; color: #6b7280; padding: 11px 16px;
+  text-align: left; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+}
+.fp-tbl tbody td {
+  padding: 13px 16px; border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle; color: #374151;
+}
+.fp-tbl tbody tr:last-child td { border-bottom: none; }
+.fp-tbl tbody tr:hover td { background: #f8fbff; }
+
+.fp-name { font-weight: 700; color: #111827; }
+.fp-adm  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.fp-cls  { font-size: 12px; font-weight: 600; color: #1d4ed8; }
+.fp-phone{ font-size: 12px; color: #6b7280; }
+
+/* Bio ID display */
+.bio-id-val {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #f0f9ff; border: 1px solid #bae6fd;
+  border-radius: 8px; padding: 4px 10px;
+  font-family: 'Courier New', monospace; font-size: 13px;
+  font-weight: 700; color: #0369a1;
+}
+.bio-id-none { color: #d1d5db; font-size: 12px; font-style: italic; }
+
+/* Status badges */
+.badge-reg   { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;
+  border-radius: 9999px; font-size: 11.5px; font-weight: 700;
+  background: #dcfce7; color: #15803d; }
+.badge-unreg { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;
+  border-radius: 9999px; font-size: 11.5px; font-weight: 700;
+  background: #f3f4f6; color: #6b7280; }
+.badge-enrolling { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;
+  border-radius: 9999px; font-size: 11.5px; font-weight: 700;
+  background: #fef3c7; color: #b45309; animation: fp-pulse 1.2s infinite; }
+
+/* Action buttons */
+.btn-act {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 13px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  border: none; cursor: pointer; transition: all .15s; text-decoration: none;
+  white-space: nowrap;
+}
+.btn-enroll { background: #eff6ff; color: #1d4ed8; }
+.btn-enroll:hover { background: #dbeafe; }
+.btn-assign { background: #f0fdf4; color: #15803d; }
+.btn-assign:hover { background: #dcfce7; }
+.btn-edit   { background: #fef9c3; color: #b45309; }
+.btn-edit:hover { background: #fef08a; }
+.btn-remove { background: #fef2f2; color: #b91c1c; }
+.btn-remove:hover { background: #fee2e2; }
+
+/* Inline assign form */
+.assign-form {
+  display: none; background: #f8fafc; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; padding: 12px 16px; margin-top: 8px;
+  gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.assign-form.open { display: flex; }
+.assign-form input[type=text] {
+  padding: 8px 12px; border: 1.5px solid #d1d5db; border-radius: 8px;
+  font-size: 13px; font-family: 'Courier New', monospace;
+  outline: none; flex: 1; min-width: 140px; max-width: 220px;
+}
+.assign-form input:focus { border-color: #1565c0; }
+.assign-form-btns { display: flex; gap: 6px; }
+.btn-save-id {
+  padding: 7px 16px; border-radius: 7px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 700; background: #0f2c54; color: #fff;
+  transition: background .15s;
+}
+.btn-save-id:hover { background: #1a3d6e; }
+.btn-cancel-id {
+  padding: 7px 14px; border-radius: 7px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; background: #f3f4f6; color: #374151;
+}
+
+/* Empty state */
+.fp-empty { padding: 56px 24px; text-align: center; color: #9ca3af; }
+.fp-empty i { font-size: 48px; display: block; margin-bottom: 16px; opacity: .3; }
+
+@media (max-width: 768px) {
+  .fp-tbl th:nth-child(n+5), .fp-tbl td:nth-child(n+5) { display: none; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="fp-wrap">
+
+  <!-- Hero -->
+  <div class="fp-hero">
+    <div class="fp-hero-text">
+      <h1><i class="fas fa-fingerprint" style="margin-right:10px"></i>Fingerprint Registration</h1>
+      <p>Register and manage BioEntry W fingerprint IDs for trainees in your department.
+         Link each trainee's fingerprint to their admission record for biometric attendance.</p>
+    </div>
+    <div class="fp-hero-icon"><i class="fas fa-fingerprint"></i></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="fp-stats">
+    <div class="fp-stat">
+      <div class="fp-stat-icon" style="background:#dbeafe"><i class="fas fa-users" style="color:#1d4ed8"></i></div>
+      <div>
+        <div class="fp-stat-num">{{ stats.total }}</div>
+        <div class="fp-stat-lbl">Total Trainees</div>
+      </div>
+    </div>
+    <div class="fp-stat">
+      <div class="fp-stat-icon" style="background:#dcfce7"><i class="fas fa-fingerprint" style="color:#15803d"></i></div>
+      <div>
+        <div class="fp-stat-num">{{ stats.registered }}</div>
+        <div class="fp-stat-lbl">Registered</div>
+      </div>
+    </div>
+    <div class="fp-stat">
+      <div class="fp-stat-icon" style="background:#f3f4f6"><i class="fas fa-user-slash" style="color:#6b7280"></i></div>
+      <div>
+        <div class="fp-stat-num">{{ stats.unregistered }}</div>
+        <div class="fp-stat-lbl">Not Registered</div>
+      </div>
+    </div>
+    {% if stats.total > 0 %}
+    <div class="fp-stat">
+      <div class="fp-stat-icon" style="background:#fef3c7"><i class="fas fa-chart-pie" style="color:#b45309"></i></div>
+      <div>
+        <div class="fp-stat-num">{{ ((stats.registered / stats.total) * 100)|int }}%</div>
+        <div class="fp-stat-lbl">Coverage</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- How It Works -->
+  <div class="fp-how">
+    <div class="fp-how-icon"><i class="fas fa-info-circle"></i></div>
+    <div>
+      <div style="font-size:14px;font-weight:800;color:#0369a1;margin-bottom:8px">
+        How Fingerprint Registration Works
+      </div>
+      <div class="fp-how-steps">
+        <div class="fp-step">
+          <span class="fp-step-num">1</span>
+          <span><strong>Live Enroll:</strong> Click <em>Live Enroll</em> next to a trainee — the system waits for the scanner</span>
+        </div>
+        <div class="fp-step">
+          <span class="fp-step-num">2</span>
+          <span>Ask the trainee to <strong>place their finger</strong> on the BioEntry W sensor</span>
+        </div>
+        <div class="fp-step">
+          <span class="fp-step-num">3</span>
+          <span>The scanner captures the print, assigns an ID, and the system <strong>auto-links</strong> it</span>
+        </div>
+        <div class="fp-step">
+          <span class="fp-step-num">4</span>
+          <span><strong>Manual option:</strong> Enter the fingerprint ID directly from the device's user list</span>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#0369a1;margin-top:10px">
+        <i class="fas fa-plug"></i>
+        <strong>Device API endpoint:</strong>
+        <code style="background:#dbeafe;padding:2px 8px;border-radius:5px;font-size:11.5px">
+          POST /biometric/api/enroll
+        </code>
+        — configure your BioEntry W sensors to POST to this URL when a user is enrolled.
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Enrollment Banner -->
+  <div id="enrollBanner" style="display:none">
+    <div id="enrollBannerInner" class="enroll-banner waiting">
+      <div class="enroll-pulse" id="enrollPulse"></div>
+      <div style="flex:1">
+        <div id="enrollBannerTitle" style="font-size:14px;font-weight:800;color:#b45309">
+          <i class="fas fa-fingerprint"></i> Enrollment Session Active
+        </div>
+        <div id="enrollBannerSub" style="font-size:12.5px;color:#92400e;margin-top:3px">
+          Waiting for trainee to place finger on scanner…
+        </div>
+      </div>
+      <button onclick="cancelEnroll()"
+              style="padding:7px 16px;border-radius:8px;border:1.5px solid #d97706;
+                     background:#fff;color:#b45309;font-size:12px;font-weight:700;cursor:pointer">
+        <i class="fas fa-times"></i> Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <form method="GET" class="fp-filter" id="filterForm">
+    <div>
+      <label><i class="fas fa-door-open"></i> Class</label>
+      <select name="class_id" onchange="this.form.submit()">
+        <option value="">All Classes</option>
+        {% for cls in classes %}
+        <option value="{{ cls.id }}" {% if class_filter == cls.id %}selected{% endif %}>{{ cls.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label><i class="fas fa-search"></i> Search Trainee</label>
+      <input type="text" name="q" value="{{ search_q }}" placeholder="Name or Admission No…">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="fp-filter-btn primary"><i class="fas fa-search"></i> Search</button>
+      <a href="/dept-admin/fingerprint-registration" class="fp-filter-btn reset"><i class="fas fa-undo"></i> Reset</a>
+    </div>
+  </form>
+
+  <!-- Trainees Table -->
+  <div class="fp-card">
+    <div class="fp-card-head">
+      <span class="fp-card-title">
+        <i class="fas fa-list" style="color:#1565c0"></i>
+        Trainee Fingerprint Status
+      </span>
+      <span style="font-size:12px;color:#9ca3af">{{ students|length }} trainee{{ 's' if students|length != 1 }}</span>
+    </div>
+
+    {% if students %}
+    <div style="overflow-x:auto">
+      <table class="fp-tbl" id="fpTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Trainee</th>
+            <th>Class</th>
+            <th>Phone</th>
+            <th>Fingerprint ID</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr id="row-{{ s.id }}"
+              data-search="{{ s.name|lower }} {{ s.admission_no|lower }}">
+            <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
+            <td>
+              <div class="fp-name">{{ s.name or '—' }}</div>
+              <div class="fp-adm"><i class="fas fa-id-card" style="font-size:9px"></i> {{ s.admission_no or '—' }}</div>
+            </td>
+            <td><span class="fp-cls">{{ s.class_name or '—' }}</span></td>
+            <td>
+              {% if s.mobile %}
+              <span class="fp-phone"><i class="fas fa-phone" style="font-size:9px;margin-right:3px"></i>{{ s.mobile }}</span>
+              {% else %}<span style="color:#d1d5db;font-size:12px">—</span>{% endif %}
+            </td>
+            <td id="bioid-{{ s.id }}">
+              {% if s.biometric_id %}
+              <span class="bio-id-val">
+                <i class="fas fa-fingerprint" style="font-size:10px"></i> {{ s.biometric_id }}
+              </span>
+              {% else %}
+              <span class="bio-id-none"><i class="fas fa-ban" style="font-size:9px"></i> Not set</span>
+              {% endif %}
+            </td>
+            <td id="status-{{ s.id }}">
+              {% if s.registered %}
+              <span class="badge-reg"><i class="fas fa-check-circle"></i> Registered</span>
+              {% else %}
+              <span class="badge-unreg"><i class="fas fa-circle" style="font-size:7px"></i> Not Registered</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <!-- Live Enroll -->
+                <button class="btn-act btn-enroll"
+                        id="enroll-btn-{{ s.id }}"
+                        onclick="startEnroll('{{ s.id }}', '{{ s.name|replace("'","\\'")|replace('"','\\"') }}')">
+                  <i class="fas fa-fingerprint"></i> Live Enroll
+                </button>
+                <!-- Assign Manually -->
+                <button class="btn-act btn-assign"
+                        onclick="toggleAssign('{{ s.id }}')">
+                  <i class="fas fa-keyboard"></i> Manual
+                </button>
+                {% if s.registered %}
+                <!-- Remove -->
+                <form method="POST" action="/dept-admin/fingerprint-registration/remove"
+                      onsubmit="return confirm('Remove fingerprint ID for {{ s.name|replace("'","\\'")|replace('"','\\"') }}?')">
+                  <input type="hidden" name="student_id" value="{{ s.id }}">
+                  <input type="hidden" name="class_filter" value="{{ class_filter }}">
+                  <input type="hidden" name="q" value="{{ search_q }}">
+                  <button type="submit" class="btn-act btn-remove">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+              <!-- Inline assign form -->
+              <div class="assign-form" id="assign-form-{{ s.id }}">
+                <form method="POST" action="/dept-admin/fingerprint-registration/assign"
+                      style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%">
+                  <input type="hidden" name="student_id" value="{{ s.id }}">
+                  <input type="hidden" name="class_filter" value="{{ class_filter }}">
+                  <input type="hidden" name="q" value="{{ search_q }}">
+                  <input type="text" name="biometric_id"
+                         placeholder="Enter Fingerprint ID (e.g. 0042)"
+                         value="{{ s.biometric_id }}" autocomplete="off">
+                  <div class="assign-form-btns">
+                    <button type="submit" class="btn-save-id">
+                      <i class="fas fa-save"></i> Save
+                    </button>
+                    <button type="button" class="btn-cancel-id"
+                            onclick="toggleAssign('{{ s.id }}')">Cancel</button>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="fp-empty">
+      <i class="fas fa-fingerprint"></i>
+      <p style="font-size:15px;font-weight:700;color:#374151;margin-bottom:6px">No trainees found</p>
+      <p style="font-size:13px">
+        {% if search_q or class_filter %}
+          Try adjusting your filters.
+        {% else %}
+          No students are enrolled in your department yet.
+        {% endif %}
+      </p>
+    </div>
+    {% endif %}
+  </div>
+
+</div><!-- /fp-wrap -->
+
+<script>
+/* ── Toggle inline assign form ── */
+function toggleAssign(sid) {
+  var form = document.getElementById('assign-form-' + sid);
+  if (!form) return;
+  form.classList.toggle('open');
+  if (form.classList.contains('open')) {
+    var inp = form.querySelector('input[name="biometric_id"]');
+    if (inp) { inp.focus(); inp.select(); }
+  }
+}
+
+/* ── Enrollment state ── */
+var enrollingStudentId   = null;
+var enrollingStudentName = null;
+var enrollPollTimer      = null;
+var ENROLL_TIMEOUT_MS    = 3 * 60 * 1000; // 3 minutes
+var enrollStartedAt      = null;
+
+{% if active_enroll and active_enroll.get('status') == 'waiting' %}
+/* Resume active enrollment session from server */
+enrollingStudentId   = {{ active_enroll.get('student_id')|tojson }};
+enrollingStudentName = {{ active_enroll.get('student_name')|tojson }};
+showEnrollBanner('waiting', enrollingStudentName);
+startPoll();
+{% endif %}
+
+function startEnroll(studentId, studentName) {
+  if (enrollingStudentId) {
+    if (!confirm('Cancel the current enrollment session and start a new one for ' + studentName + '?')) return;
+    cancelEnroll(false);
+  }
+  enrollingStudentId   = studentId;
+  enrollingStudentName = studentName;
+  enrollStartedAt      = Date.now();
+
+  fetch('/dept-admin/fingerprint-registration/start-enroll', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ student_id: studentId, student_name: studentName })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      showEnrollBanner('waiting', studentName);
+      updateRowStatus(studentId, 'enrolling');
+      startPoll();
+    } else {
+      alert('Could not start enrollment: ' + (d.error || 'Unknown error'));
+      enrollingStudentId = null;
+    }
+  })
+  .catch(function() { alert('Network error starting enrollment.'); enrollingStudentId = null; });
+}
+
+function startPoll() {
+  if (enrollPollTimer) clearInterval(enrollPollTimer);
+  enrollPollTimer = setInterval(pollEnrollStatus, 2000);
+}
+
+function pollEnrollStatus() {
+  if (!enrollingStudentId) { clearInterval(enrollPollTimer); return; }
+
+  // Timeout check
+  if (enrollStartedAt && (Date.now() - enrollStartedAt) > ENROLL_TIMEOUT_MS) {
+    cancelEnroll();
+    alert('Enrollment session timed out (3 minutes). Please try again.');
+    return;
+  }
+
+  fetch('/dept-admin/fingerprint-registration/enroll-status')
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'done' && d.biometric_id) {
+      clearInterval(enrollPollTimer);
+      showEnrollBanner('done', enrollingStudentName, d.biometric_id);
+      updateRowBioId(enrollingStudentId, d.biometric_id);
+      updateRowStatus(enrollingStudentId, 'registered');
+      enrollingStudentId = null;
+      setTimeout(function() {
+        document.getElementById('enrollBanner').style.display = 'none';
+      }, 5000);
+    } else if (d.status === 'error') {
+      clearInterval(enrollPollTimer);
+      showEnrollBanner('error', enrollingStudentName);
+      enrollingStudentId = null;
+    }
+  })
+  .catch(function() { /* silently ignore network errors during polling */ });
+}
+
+function cancelEnroll(showMsg) {
+  if (enrollPollTimer) { clearInterval(enrollPollTimer); enrollPollTimer = null; }
+  fetch('/dept-admin/fingerprint-registration/cancel-enroll', { method: 'POST' }).catch(function(){});
+  document.getElementById('enrollBanner').style.display = 'none';
+  if (enrollingStudentId) {
+    updateRowStatus(enrollingStudentId, 'waiting-cancelled');
+  }
+  enrollingStudentId   = null;
+  enrollingStudentName = null;
+}
+
+function showEnrollBanner(state, name, bioId) {
+  var banner  = document.getElementById('enrollBanner');
+  var inner   = document.getElementById('enrollBannerInner');
+  var pulse   = document.getElementById('enrollPulse');
+  var title   = document.getElementById('enrollBannerTitle');
+  var sub     = document.getElementById('enrollBannerSub');
+  banner.style.display = '';
+  inner.className = 'enroll-banner ' + state;
+  if (state === 'waiting') {
+    title.innerHTML = '<i class="fas fa-fingerprint"></i> Enrollment Active — ' + esc(name);
+    sub.textContent = 'Ask the trainee to place their finger on the BioEntry W scanner…';
+    title.style.color = '#b45309';
+    sub.style.color   = '#92400e';
+    pulse.style.background = '#f59e0b';
+  } else if (state === 'done') {
+    title.innerHTML = '<i class="fas fa-check-circle" style="color:#15803d"></i> Fingerprint Registered Successfully!';
+    sub.innerHTML   = '<strong>' + esc(name) + '</strong> — Fingerprint ID: <code style="background:#dcfce7;padding:2px 8px;border-radius:5px;font-family:monospace">' + esc(bioId) + '</code>';
+    title.style.color = '#15803d';
+    sub.style.color   = '#166534';
+    pulse.style.background = '#22c55e';
+  } else {
+    title.innerHTML = '<i class="fas fa-exclamation-circle" style="color:#b91c1c"></i> Enrollment Failed';
+    sub.textContent = 'The scanner returned an error. Please try again.';
+    title.style.color = '#b91c1c';
+    sub.style.color   = '#991b1b';
+    pulse.style.background = '#ef4444';
+  }
+}
+
+function updateRowBioId(sid, bioId) {
+  var cell = document.getElementById('bioid-' + sid);
+  if (cell) {
+    cell.innerHTML = '<span class="bio-id-val"><i class="fas fa-fingerprint" style="font-size:10px"></i> ' + esc(bioId) + '</span>';
+  }
+}
+
+function updateRowStatus(sid, state) {
+  var cell = document.getElementById('status-' + sid);
+  var btn  = document.getElementById('enroll-btn-' + sid);
+  if (!cell) return;
+  if (state === 'registered') {
+    cell.innerHTML = '<span class="badge-reg"><i class="fas fa-check-circle"></i> Registered</span>';
+  } else if (state === 'enrolling') {
+    cell.innerHTML = '<span class="badge-enrolling"><i class="fas fa-spinner fa-spin"></i> Enrolling…</span>';
+    if (btn) btn.disabled = true;
+  } else {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = String(s || '');
+  return d.innerHTML;
+}
+</script>
+{% endblock %}

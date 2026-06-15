@@ -20,6 +20,9 @@ biometric_bp = Blueprint("biometric", __name__)
 _sessions = {}
 _lock = threading.Lock()
 
+# ── Shared enrollment state (imported by dept_admin.py) ──────────────────────
+from routes.biometric_state import active_enrollment as _active_enrollment, enrollment_lock as _enrollment_lock
+
 LESSON_TIMES = [
     {"value": "1", "label": "Lesson 1",  "time": "08:00 – 10:00 AM"},
     {"value": "2", "label": "Lesson 2",  "time": "10:15 – 12:15 PM"},
@@ -401,4 +404,57 @@ def device_scan():
         "student_name":  student["name"],
         "admission_no":  student["admission_no"],
         "scan_time":     scan_time,
+    })
+
+
+# ── Fingerprint enrollment callback (called by scanner hardware) ──────────────
+
+@biometric_bp.route("/api/enroll", methods=["POST"])
+def device_enroll():
+    """
+    Called by BioEntry W sensor when a new fingerprint is enrolled on the device.
+
+    JSON body:
+      { "biometric_id": "1234", "device_secret": "optional" }
+
+    Flow: dept admin starts an enrollment session via the web UI, then the
+    trainee places their finger on the scanner. The device sends this callback,
+    the server links the biometric_id to the pending student, and saves to DB.
+    """
+    secret = os.environ.get("BIOMETRIC_DEVICE_SECRET", "")
+    data   = request.get_json(silent=True) or {}
+
+    if secret and data.get("device_secret") != secret:
+        return jsonify({"status": "error", "message": "Unauthorised device"}), 401
+
+    biometric_id = str(data.get("biometric_id") or "").strip()
+    if not biometric_id:
+        return jsonify({"status": "error", "message": "Missing biometric_id"}), 400
+
+    with _enrollment_lock:
+        if not _active_enrollment or _active_enrollment.get("status") != "waiting":
+            return jsonify({"status": "error", "message": "No active enrollment session"}), 404
+
+        student_id   = _active_enrollment.get("student_id", "")
+        student_name = _active_enrollment.get("student_name", "")
+        _active_enrollment["biometric_id"] = biometric_id
+        _active_enrollment["status"]       = "done"
+
+    if student_id:
+        try:
+            db = get_service_client()
+            db.table("user_profiles").update({"biometric_id": biometric_id}).eq("id", student_id).execute()
+            write_audit_log("fingerprint_enrolled",
+                            target=f"student:{student_id},bio_id:{biometric_id}")
+        except Exception as exc:
+            with _enrollment_lock:
+                _active_enrollment["status"] = "error"
+                _active_enrollment["error"]  = str(exc)
+            return jsonify({"status": "error", "message": str(exc)}), 500
+
+    return jsonify({
+        "status":       "ok",
+        "biometric_id": biometric_id,
+        "student_name": student_name,
+        "student_id":   student_id,
     })

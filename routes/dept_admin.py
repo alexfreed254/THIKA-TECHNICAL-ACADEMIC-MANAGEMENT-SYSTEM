@@ -4,7 +4,7 @@ Manages everything within the HOD's assigned department only.
 """
 
 from flask import (Blueprint, render_template, request,
-                   redirect, url_for, flash, abort, make_response)
+                   redirect, url_for, flash, abort, make_response, jsonify)
 from auth_utils import (dept_admin_required, write_audit_log,
                         current_user, dept_isolation_check)
 from db import get_service_client
@@ -2798,3 +2798,187 @@ def send_notice():
         flash(f"Failed to send notice: {e}", "danger")
 
     return redirect(url_for("dept_admin.notices"))
+
+
+# ── Fingerprint Registration ───────────────────────────────────────────────────
+
+@dept_admin_bp.route("/fingerprint-registration")
+@dept_admin_required
+def fingerprint_registration():
+    from datetime import datetime as _dt
+    db      = get_service_client()
+    dept_id = _dept_id()
+
+    class_filter = request.args.get("class_id", "").strip()
+    search_q     = request.args.get("q", "").strip().lower()
+
+    classes   = (db.table("classes")
+                   .select("id, name")
+                   .eq("department_id", dept_id)
+                   .order("name")
+                   .execute().data or [])
+    class_ids = [c["id"] for c in classes]
+
+    students = []
+    if class_ids:
+        target_ids = [class_filter] if (class_filter and class_filter in class_ids) else class_ids
+        rows = (db.table("enrollments")
+                  .select("student_id, class_id, classes(name), "
+                          "user_profiles!enrollments_student_id_fkey"
+                          "(id, full_name, admission_no, mobile_number, biometric_id)")
+                  .in_("class_id", target_ids)
+                  .execute().data or [])
+        seen = set()
+        for r in rows:
+            p   = r.get("user_profiles") or {}
+            sid = p.get("id") or r.get("student_id")
+            if not sid or sid in seen:
+                continue
+            seen.add(sid)
+            name = p.get("full_name") or ""
+            adm  = p.get("admission_no") or ""
+            if search_q and search_q not in name.lower() and search_q not in adm.lower():
+                continue
+            cls = r.get("classes") or {}
+            bio = (p.get("biometric_id") or "").strip()
+            students.append({
+                "id":           sid,
+                "name":         name,
+                "admission_no": adm,
+                "mobile":       p.get("mobile_number") or "",
+                "class_name":   cls.get("name") or "",
+                "class_id":     r.get("class_id") or "",
+                "biometric_id": bio,
+                "registered":   bool(bio),
+            })
+        students.sort(key=lambda s: (s["class_name"], s["name"]))
+
+    from routes.biometric_state import active_enrollment, enrollment_lock
+    with enrollment_lock:
+        active_enroll = dict(active_enrollment)
+
+    stats = {
+        "total":        len(students),
+        "registered":   sum(1 for s in students if s["registered"]),
+        "unregistered": sum(1 for s in students if not s["registered"]),
+    }
+
+    return render_template(
+        "dept_admin/fingerprint_registration.html",
+        students=students,
+        classes=classes,
+        class_filter=class_filter,
+        search_q=search_q,
+        stats=stats,
+        active_enroll=active_enroll,
+    )
+
+
+@dept_admin_bp.route("/fingerprint-registration/assign", methods=["POST"])
+@dept_admin_required
+def fingerprint_assign():
+    db           = get_service_client()
+    dept_id      = _dept_id()
+    student_id   = (request.form.get("student_id")   or "").strip()
+    biometric_id = (request.form.get("biometric_id") or "").strip()
+    redirect_cls = (request.form.get("class_filter") or "").strip()
+    redirect_q   = (request.form.get("q")           or "").strip()
+
+    if not student_id:
+        flash("Student ID missing.", "error")
+        return redirect(url_for("dept_admin.fingerprint_registration"))
+
+    check = (db.table("enrollments")
+               .select("student_id, classes!inner(department_id)")
+               .eq("student_id", student_id)
+               .eq("classes.department_id", dept_id)
+               .limit(1)
+               .execute().data or [])
+    if not check:
+        flash("Student not found in your department.", "error")
+        return redirect(url_for("dept_admin.fingerprint_registration"))
+
+    try:
+        db.table("user_profiles").update(
+            {"biometric_id": biometric_id if biometric_id else None}
+        ).eq("id", student_id).execute()
+        write_audit_log("fingerprint_assign",
+                        target=f"student:{student_id},bio_id:{biometric_id or 'cleared'}")
+        flash(f'Fingerprint ID "{biometric_id}" saved.' if biometric_id else "Fingerprint ID cleared.", "success")
+    except Exception as e:
+        flash(f"Error saving fingerprint ID: {e}", "error")
+
+    return redirect(url_for("dept_admin.fingerprint_registration",
+                            class_id=redirect_cls, q=redirect_q))
+
+
+@dept_admin_bp.route("/fingerprint-registration/remove", methods=["POST"])
+@dept_admin_required
+def fingerprint_remove():
+    db         = get_service_client()
+    dept_id    = _dept_id()
+    student_id = (request.form.get("student_id") or "").strip()
+    if not student_id:
+        flash("Student ID missing.", "error")
+        return redirect(url_for("dept_admin.fingerprint_registration"))
+    check = (db.table("enrollments")
+               .select("student_id, classes!inner(department_id)")
+               .eq("student_id", student_id)
+               .eq("classes.department_id", dept_id)
+               .limit(1)
+               .execute().data or [])
+    if not check:
+        flash("Student not found in your department.", "error")
+        return redirect(url_for("dept_admin.fingerprint_registration"))
+    try:
+        db.table("user_profiles").update({"biometric_id": None}).eq("id", student_id).execute()
+        write_audit_log("fingerprint_remove", target=f"student:{student_id}")
+        flash("Fingerprint registration removed.", "success")
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("dept_admin.fingerprint_registration"))
+
+
+@dept_admin_bp.route("/fingerprint-registration/start-enroll", methods=["POST"])
+@dept_admin_required
+def fingerprint_start_enroll():
+    from datetime import datetime as _dt
+    from routes.biometric_state import active_enrollment, enrollment_lock
+    data         = request.get_json(silent=True) or {}
+    student_id   = (data.get("student_id")   or "").strip()
+    student_name = (data.get("student_name") or "").strip()
+    if not student_id:
+        return jsonify({"success": False, "error": "student_id required"}), 400
+    dept_id = _dept_id()
+    with enrollment_lock:
+        active_enrollment.clear()
+        active_enrollment.update({
+            "student_id":   student_id,
+            "student_name": student_name,
+            "dept_id":      dept_id,
+            "started_at":   _dt.now().isoformat(),
+            "biometric_id": None,
+            "status":       "waiting",
+        })
+    write_audit_log("fingerprint_enroll_start", target=f"student:{student_id}")
+    return jsonify({"success": True,
+                    "message": f"Enrollment started for {student_name}."})
+
+
+@dept_admin_bp.route("/fingerprint-registration/enroll-status")
+@dept_admin_required
+def fingerprint_enroll_status():
+    from routes.biometric_state import active_enrollment, enrollment_lock
+    with enrollment_lock:
+        session = dict(active_enrollment)
+    return jsonify(session)
+
+
+@dept_admin_bp.route("/fingerprint-registration/cancel-enroll", methods=["POST"])
+@dept_admin_required
+def fingerprint_cancel_enroll():
+    from routes.biometric_state import active_enrollment, enrollment_lock
+    with enrollment_lock:
+        active_enrollment.clear()
+    write_audit_log("fingerprint_enroll_cancel")
+    return jsonify({"success": True})
