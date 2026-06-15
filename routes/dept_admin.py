@@ -2408,8 +2408,9 @@ def _period_label(period: str) -> str:
 @dept_admin_required
 def gis_tracking_export():
     from datetime import date
-    import io
-    db = get_service_client()
+    import io, os
+    from flask import current_app, Response
+    db      = get_service_client()
     dept_id = _dept_id()
     fmt    = request.args.get("format", "excel")
     period = request.args.get("period", "")
@@ -2429,125 +2430,285 @@ def gis_tracking_export():
                   .select("id, student_id, start_date, end_date, status, "
                           "student:user_profiles!industrial_attachments_student_id_fkey"
                           "(full_name, admission_no, mobile_number), "
-                          "companies(name, address, contact_person, contact_phone)")
+                          "companies(name, city, address, contact_person, contact_phone)")
                   .in_("student_id", student_ids)
                   .gte("start_date", start_date)
                   .lte("start_date", end_date)
                   .order("student_id")
                   .execute().data or [])
 
-    rows = []
+    today = date.today()
+    rows  = []
     for r in rows_raw:
         st = r.get("student") or {}
         co = r.get("companies") or {}
+        try:
+            sd = date.fromisoformat(r["start_date"]) if r.get("start_date") else None
+            ed = date.fromisoformat(r["end_date"])   if r.get("end_date")   else None
+            days_spent = max(0, (min(ed, today) if ed else today) - sd).days if sd else 0
+        except Exception:
+            days_spent = 0
         rows.append({
-            "Admission No":       st.get("admission_no", ""),
-            "Full Name":          st.get("full_name", ""),
-            "Trainee Phone":      st.get("mobile_number", ""),
-            "Company Attached":   co.get("name", ""),
-            "Location / Address": co.get("address", ""),
-            "Supervisor Name":    co.get("contact_person", ""),
-            "Supervisor Phone":   co.get("contact_phone", ""),
-            "Start Date":         r.get("start_date", ""),
-            "End Date":           r.get("end_date", ""),
-            "Status":             (r.get("status") or "").title(),
+            "Admission No": st.get("admission_no", ""),
+            "Full Name":    st.get("full_name", ""),
+            "Phone":        st.get("mobile_number", ""),
+            "Company":      co.get("name", ""),
+            "City":         co.get("city", "") or co.get("address", ""),
+            "Mentor":       co.get("contact_person", ""),
+            "Start Date":   r.get("start_date", ""),
+            "End Date":     r.get("end_date", "") or "Ongoing",
+            "Days Spent":   str(days_spent),
+            "Status":       (r.get("status") or "").title(),
         })
 
-    label = _period_label(period)
-    # Get department name
-    dept_info = db.table("departments").select("name").eq("id", dept_id).execute().data or []
-    dept_name = dept_info[0]["name"] if dept_info else "Department"
-    title = f"Industrial Attachments — {dept_name}"
+    HEADERS    = ["Admission No", "Full Name", "Phone", "Company", "City",
+                  "Mentor", "Start Date", "End Date", "Days Spent", "Status"]
+    label      = _period_label(period)
+    dept_info  = db.table("departments").select("name").eq("id", dept_id).execute().data or []
+    dept_name  = dept_info[0]["name"] if dept_info else "Department"
+    report_title = f"Industrial Attachment Report — {dept_name}"
+    period_str   = f"{label} {year}"
+    logo_path    = os.path.join(current_app.static_folder, "assets", "THIKATTILOGO.jpg")
 
+    # ── PDF ───────────────────────────────────────────────────────────────────
     if fmt == "pdf":
         from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib import colors
         from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                        Paragraph, Spacer, Image, HRFlowable)
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from flask import Response
 
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
-                                leftMargin=15*mm, rightMargin=15*mm,
-                                topMargin=15*mm, bottomMargin=15*mm)
+                                leftMargin=14*mm, rightMargin=14*mm,
+                                topMargin=12*mm, bottomMargin=16*mm)
         styles = getSampleStyleSheet()
-        navy = colors.HexColor("#1565C0")
-        title_style = ParagraphStyle("t", parent=styles["Heading1"], textColor=navy, fontSize=14, spaceAfter=4)
-        sub_style   = ParagraphStyle("s", parent=styles["Normal"], textColor=colors.grey, fontSize=9, spaceAfter=10)
+        navy   = colors.HexColor("#0F2C54")
+        blue   = colors.HexColor("#1565C0")
+        gray   = colors.HexColor("#6B7280")
+        lgray  = colors.HexColor("#94A3B8")
 
-        col_headers = ["Adm No", "Full Name", "Phone", "Company", "Address", "Supervisor", "Sup. Phone", "Start", "End", "Status"]
-        keys = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
-                "Location / Address", "Supervisor Name", "Supervisor Phone", "Start Date", "End Date", "Status"]
-        data = [col_headers] + [[r.get(k, "") for k in keys] for r in rows]
-        col_widths_pt = [w * mm for w in [22, 48, 26, 48, 52, 40, 26, 20, 20, 18]]
-        tbl = Table(data, colWidths=col_widths_pt, repeatRows=1)
-        tbl.setStyle(TableStyle([
-            ("BACKGROUND",   (0, 0), (-1, 0), navy),
-            ("TEXTCOLOR",    (0, 0), (-1, 0), colors.white),
-            ("FONTNAME",     (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE",     (0, 0), (-1, 0), 8),
-            ("FONTSIZE",     (0, 1), (-1, -1), 7.5),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
-            ("GRID",         (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
-            ("ALIGN",        (0, 0), (-1, -1), "LEFT"),
-            ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
-            ("TOPPADDING",   (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
-            ("LEFTPADDING",  (0, 0), (-1, -1), 4),
+        def ps(name, **kw):
+            return ParagraphStyle(name, parent=styles["Normal"], **kw)
+
+        inst_s  = ps("inst",  fontName="Helvetica-Bold", fontSize=15, textColor=navy, alignment=1, spaceAfter=2)
+        dept_s  = ps("dept",  fontName="Helvetica-Bold", fontSize=11, textColor=blue, alignment=1, spaceAfter=2)
+        addr_s  = ps("addr",  fontSize=8,  textColor=gray, alignment=1, spaceAfter=0)
+        title_s = ps("title", fontName="Helvetica-Bold", fontSize=12, textColor=navy, alignment=1, spaceBefore=6, spaceAfter=2)
+        sub_s   = ps("sub",   fontSize=9,  textColor=gray, alignment=1, spaceAfter=0)
+        sign_s  = ps("sign",  fontSize=9,  textColor=colors.black, spaceAfter=1)
+        sigh_s  = ps("sigh",  fontName="Helvetica-Bold", fontSize=9, textColor=navy, spaceAfter=2)
+        sec_s   = ps("sec",   fontName="Helvetica-Bold", fontSize=10, textColor=navy, spaceBefore=8, spaceAfter=4)
+
+        story = []
+
+        # ── Institute header ──────────────────────────────────────────────────
+        logo_cell = Image(logo_path, width=22*mm, height=22*mm) if os.path.exists(logo_path) else Spacer(22*mm, 22*mm)
+        hdr_tbl = Table([[
+            logo_cell,
+            [
+                Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", inst_s),
+                Paragraph("Industrial Training Department", dept_s),
+                Paragraph("P.O. Box 1120-01000, Thika | Tel: +254 67 22284 | www.thika-tti.ac.ke", addr_s),
+            ]
+        ]], colWidths=[28*mm, None])
+        hdr_tbl.setStyle(TableStyle([
+            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING",   (0, 0), (0, 0), 4),
+            ("RIGHTPADDING",  (0, 0), (0, 0), 10),
+            ("TOPPADDING",    (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("BOX",           (0, 0), (-1, -1), 1.5, navy),
+            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#EFF6FF")),
         ]))
-        story = [Paragraph(title, title_style),
-                 Paragraph(f"Period: {label} {year}  |  Total: {len(rows)}", sub_style),
-                 Spacer(1, 4), tbl]
+        story.append(hdr_tbl)
+        story.append(HRFlowable(width="100%", thickness=2, color=navy, spaceAfter=4, spaceBefore=4))
+        story.append(Paragraph(report_title, title_s))
+        story.append(Paragraph(f"Period: {period_str}  &nbsp;·&nbsp;  Total Records: {len(rows)}", sub_s))
+        story.append(Spacer(1, 5*mm))
+
+        # ── Data table ────────────────────────────────────────────────────────
+        col_hdrs = ["Adm No", "Full Name", "Phone", "Company", "City", "Mentor", "Start", "End", "Days", "Status"]
+        data     = [col_hdrs] + [[r.get(k, "") for k in HEADERS] for r in rows]
+        col_w    = [w*mm for w in [20, 44, 24, 44, 30, 36, 19, 19, 14, 18]]
+        data_tbl = Table(data, colWidths=col_w, repeatRows=1)
+        data_tbl.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, 0), navy),
+            ("TEXTCOLOR",     (0, 0), (-1, 0), colors.white),
+            ("FONTNAME",      (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE",      (0, 0), (-1, 0), 8),
+            ("FONTSIZE",      (0, 1), (-1, -1), 7.5),
+            ("ROWBACKGROUNDS",(0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
+            ("GRID",          (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
+            ("ALIGN",         (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING",    (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 4),
+        ]))
+        story.append(data_tbl)
+        story.append(Spacer(1, 8*mm))
+
+        # ── Signing area ──────────────────────────────────────────────────────
+        story.append(Paragraph("OFFICIAL AUTHORISATION", sec_s))
+        sign_tbl = Table([
+            [Paragraph("Industrial Liaison Officer", sigh_s), Spacer(1, 1), Paragraph("Chief Principal", sigh_s)],
+            [Paragraph("Signature: ____________________________", sign_s), Spacer(1,1), Paragraph("Signature: ____________________________", sign_s)],
+            [Paragraph("Name:  ________________________________", sign_s), Spacer(1,1), Paragraph("Name:  ________________________________", sign_s)],
+            [Paragraph("Date:   ________________________________", sign_s), Spacer(1,1), Paragraph("Date:   ________________________________", sign_s)],
+            [Paragraph("Official Stamp:", sign_s), Spacer(1,1), Paragraph("Official Stamp:", sign_s)],
+            [Spacer(1, 16*mm), Spacer(1,1), Spacer(1, 16*mm)],
+        ], colWidths=["47%", "6%", "47%"])
+        sign_tbl.setStyle(TableStyle([
+            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING",    (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ("BOX",           (0, 0), (0, -1), 0.5, lgray),
+            ("BOX",           (2, 0), (2, -1), 0.5, lgray),
+            ("BACKGROUND",    (0, 0), (0, -1), colors.HexColor("#FAFAFA")),
+            ("BACKGROUND",    (2, 0), (2, -1), colors.HexColor("#FAFAFA")),
+            ("LEFTPADDING",   (0, 0), (0, -1), 8),
+            ("LEFTPADDING",   (2, 0), (2, -1), 8),
+        ]))
+        story.append(sign_tbl)
+
         doc.build(story)
         buf.seek(0)
-        fname = f"attachments_{label.replace('–','-')}_{year}.pdf"
+        fname = f"attachment_report_{label.replace('–', '-')}_{year}.pdf"
         return Response(buf.read(), mimetype="application/pdf",
                         headers={"Content-Disposition": f"attachment; filename={fname}"})
 
-    # Excel
+    # ── Excel ─────────────────────────────────────────────────────────────────
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from flask import Response
+    from openpyxl.utils import get_column_letter
 
-    wb = Workbook()
-    ws = wb.active
+    wb  = Workbook()
+    ws  = wb.active
     ws.title = "Attachments"
-    hdr_fill = PatternFill("solid", fgColor="1565C0")
-    hdr_font = Font(color="FFFFFF", bold=True, size=11)
-    thin = Side(style="thin", color="CCCCCC")
+
+    NAVY   = "0F2C54"
+    BLUE   = "1565C0"
+    LGRAY  = "94A3B8"
+    STRIPE = "EFF6FF"
+    thin   = Side(style="thin", color="D1D5DB")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    ws.merge_cells("A1:J1")
-    ws["A1"] = f"{title} — {label} {year}"
-    ws["A1"].font = Font(bold=True, size=13, color="0D2167")
-    ws["A1"].alignment = Alignment(horizontal="center")
+    NUM_COLS = len(HEADERS)
 
-    headers = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
-               "Location / Address", "Supervisor Name", "Supervisor Phone",
-               "Start Date", "End Date", "Status"]
-    ws.append([])
-    ws.append(headers)
-    hdr_row = ws.max_row
-    for col_idx in range(1, len(headers) + 1):
-        cell = ws.cell(row=hdr_row, column=col_idx)
-        cell.fill = hdr_fill
-        cell.font = hdr_font
-        cell.alignment = Alignment(horizontal="center")
-        cell.border = border
+    def last_col():
+        return get_column_letter(NUM_COLS)
 
-    for row in rows:
-        ws.append([row.get(h, "") for h in headers])
-        for col_idx in range(1, len(headers) + 1):
-            ws.cell(row=ws.max_row, column=col_idx).border = border
+    # ── Logo (rows 1-3, col A) ────────────────────────────────────────────────
+    ws.row_dimensions[1].height = 22
+    ws.row_dimensions[2].height = 22
+    ws.row_dimensions[3].height = 22
+    if os.path.exists(logo_path):
+        try:
+            from openpyxl.drawing.image import Image as XLImg
+            xl_logo = XLImg(logo_path)
+            xl_logo.width  = 66
+            xl_logo.height = 66
+            xl_logo.anchor = "A1"
+            ws.add_image(xl_logo)
+        except Exception:
+            pass
 
-    for i, w in enumerate([16, 28, 18, 28, 32, 24, 18, 14, 14, 12], 1):
-        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+    # Institute header text (cols B onwards, rows 1-3)
+    def hcell(ref, val, bold=False, size=11, color=NAVY, center=True):
+        c = ws[ref]
+        c.value     = val
+        c.font      = Font(bold=bold, size=size, color=color)
+        c.alignment = Alignment(horizontal="center" if center else "left",
+                                vertical="center", wrap_text=False)
+
+    ws.merge_cells(f"B1:{last_col()}1")
+    hcell("B1", "THIKA TECHNICAL TRAINING INSTITUTE", bold=True, size=14, color=NAVY)
+    ws.merge_cells(f"B2:{last_col()}2")
+    hcell("B2", "Industrial Training Department", bold=True, size=11, color=BLUE)
+    ws.merge_cells(f"B3:{last_col()}3")
+    hcell("B3", "P.O. Box 1120-01000, Thika  |  Tel: +254 67 22284  |  www.thika-tti.ac.ke",
+          size=9, color="6B7280")
+
+    # ── Report title ──────────────────────────────────────────────────────────
+    ws.row_dimensions[4].height = 22
+    ws.merge_cells(f"A4:{last_col()}4")
+    hcell("A4", report_title, bold=True, size=13, color=NAVY)
+
+    ws.row_dimensions[5].height = 16
+    ws.merge_cells(f"A5:{last_col()}5")
+    hcell("A5", f"Period: {period_str}     |     Total Records: {len(rows)}", size=10, color="6B7280")
+    ws["A5"].font = Font(italic=True, size=10, color="6B7280")
+
+    # Separator row
+    ws.row_dimensions[6].height = 6
+
+    # ── Column headers ────────────────────────────────────────────────────────
+    ws.append([None])   # row 6 spacer
+    ws.append(HEADERS)  # row 7
+    hdr_row  = ws.max_row
+    hdr_fill = PatternFill("solid", fgColor=NAVY)
+    hdr_font = Font(color="FFFFFF", bold=True, size=10)
+    ws.row_dimensions[hdr_row].height = 18
+    for ci in range(1, NUM_COLS + 1):
+        c = ws.cell(row=hdr_row, column=ci)
+        c.fill      = hdr_fill
+        c.font      = hdr_font
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        c.border    = border
+
+    # ── Data rows ─────────────────────────────────────────────────────────────
+    alt_fill = PatternFill("solid", fgColor=STRIPE)
+    for i, row in enumerate(rows):
+        ws.append([row.get(h, "") for h in HEADERS])
+        dr = ws.max_row
+        ws.row_dimensions[dr].height = 15
+        for ci in range(1, NUM_COLS + 1):
+            c = ws.cell(row=dr, column=ci)
+            c.border    = border
+            c.alignment = Alignment(vertical="center", wrap_text=False)
+            if i % 2 == 1:
+                c.fill = alt_fill
+
+    # ── Column widths ─────────────────────────────────────────────────────────
+    for i, w in enumerate([14, 26, 16, 28, 18, 24, 13, 13, 11, 12], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # ── Signing area ──────────────────────────────────────────────────────────
+    ws.append([None])
+    ws.append([None])
+    sign_hdr_row = ws.max_row + 1
+    ws.append(["OFFICIAL AUTHORISATION"])
+    c = ws.cell(row=ws.max_row, column=1)
+    c.font      = Font(bold=True, size=11, color=NAVY)
+    c.alignment = Alignment(vertical="center")
+    ws.row_dimensions[ws.max_row].height = 18
+
+    ws.append([None])
+    for label_l, label_r in [
+        ("Industrial Liaison Officer", "Chief Principal"),
+        ("Signature:  _______________________________", "Signature:  _______________________________"),
+        ("Name:  ____________________________________", "Name:  ____________________________________"),
+        ("Date:    ____________________________________", "Date:    ____________________________________"),
+        ("Official Stamp:", "Official Stamp:"),
+        ("", ""),
+        ("", ""),
+    ]:
+        ws.append([label_l, None, None, None, None, label_r])
+        r = ws.max_row
+        ws.row_dimensions[r].height = 18
+        for ci in (1, 6):
+            c = ws.cell(row=r, column=ci)
+            c.alignment = Alignment(vertical="center")
+            if label_l in ("Industrial Liaison Officer", "Chief Principal") or \
+               label_r in ("Industrial Liaison Officer", "Chief Principal"):
+                c.font = Font(bold=True, size=10, color=NAVY)
 
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
-    fname = f"attachments_{label.replace('–','-')}_{year}.xlsx"
+    fname = f"attachment_report_{label.replace('–', '-')}_{year}.xlsx"
     return Response(buf.read(),
                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f"attachment; filename={fname}"})
