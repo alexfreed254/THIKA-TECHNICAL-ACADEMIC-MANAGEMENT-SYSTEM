@@ -370,7 +370,7 @@
         <div class="sub-info">
           <div class="sub-title">{{ sec.label }}</div>
           {% if sec.category == 'trainer' %}
-          <div class="sub-count">{{ sec.approved }} of {{ sec.total }} approved (min {{ [5, sec.total] | min }} required)</div>
+          <div class="sub-count">{{ sec.approved }} of {{ sec.total }} approved (min {{ 5 if sec.total >= 5 else sec.total }} required)</div>
           {% elif sec.category in ('tech_1','tech_2') %}
           <div class="sub-count">Technician sign-off</div>
           {% elif sec.category == 'hod_other' %}
