@@ -4,7 +4,7 @@
 
 {% block extra_style %}
 <style>
-  .cl-wrap { padding: 24px; max-width: 920px; }
+  .cl-wrap { padding: 24px; max-width: 960px; }
 
   /* ── Initiate card ── */
   .initiate-card {
@@ -33,6 +33,7 @@
   .sb-in_progress { background: #dbeafe; border-left: 4px solid #1565c0; }
   .sb-completed   { background: #dcfce7; border-left: 4px solid #15803d; }
   .sb-rejected    { background: #fee2e2; border-left: 4px solid #b91c1c; }
+  .sb-returned    { background: #fef3c7; border-left: 4px solid #b45309; }
   .sb-pending     { background: #fef3c7; border-left: 4px solid #b45309; }
   .sb-icon { font-size: 24px; }
   .sb-info { flex: 1; }
@@ -44,14 +45,24 @@
     font-family: monospace; color: #1e3a5f; white-space: nowrap;
   }
 
+  /* ── Return reason box ── */
+  .return-box {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 18px; font-size: 13px; color: #78350f;
+  }
+  .return-box strong { display: block; margin-bottom: 4px; color: #92400e; }
+
   /* ── Download block ── */
   .download-block {
     background: linear-gradient(135deg, #15803d, #16a34a);
-    color: #fff; border-radius: 14px; padding: 24px; text-align: center;
-    margin-bottom: 24px;
+    color: #fff; border-radius: 14px; padding: 24px; text-align: center; margin-bottom: 24px;
   }
   .download-block h3  { font-size: 20px; font-weight: 800; margin: 0 0 6px; }
   .download-block p   { font-size: 13px; opacity: .88; margin: 0 0 16px; }
+  .serial-display {
+    font-family: monospace; font-size: 18px; font-weight: 800;
+    letter-spacing: .1em; color: #bbf7d0; margin: 8px 0 18px;
+  }
   .btn-download {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 12px 28px; background: #fff; color: #15803d;
@@ -59,36 +70,22 @@
     text-decoration: none; cursor: pointer; transition: opacity .15s;
   }
   .btn-download:hover { opacity: .9; }
-  .serial-display {
-    font-family: monospace; font-size: 18px; font-weight: 800;
-    letter-spacing: .1em; color: #bbf7d0; margin: 8px 0 18px;
-  }
 
   /* ── Locked download ── */
   .locked-download {
     background: #f3f4f6; border: 2px dashed #d1d5db;
-    border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af;
-    margin-bottom: 24px;
+    border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; margin-bottom: 24px;
   }
   .locked-download i { font-size: 28px; display: block; margin-bottom: 8px; }
 
-  /* ════════════════════════════════════════════════
-     CLEARANCE PROGRESS — REDESIGNED
-  ════════════════════════════════════════════════ */
-
+  /* ── Progress card ── */
   .prog-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 18px;
-    padding: 0;
-    margin-bottom: 24px;
-    overflow: hidden;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 18px;
+    margin-bottom: 24px; overflow: hidden;
     box-shadow: 0 4px 24px rgba(0,0,0,.06);
   }
-
-  /* Header bar */
   .prog-header {
-    background: linear-gradient(135deg, #0f2744 0%, #1565c0 60%, #1d83de 100%);
+    background: linear-gradient(135deg, #0f2744, #1565c0 60%, #1d83de);
     padding: 20px 28px;
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
   }
@@ -100,11 +97,7 @@
   }
   .prog-header-title { color: #fff; font-size: 16px; font-weight: 800; line-height: 1.2; }
   .prog-header-sub   { color: rgba(255,255,255,.72); font-size: 12px; margin-top: 2px; }
-
-  /* Compact progress bar */
-  .prog-bar-wrap {
-    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-  }
+  .prog-bar-wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .prog-bar-track {
     width: 120px; height: 8px; background: rgba(255,255,255,.25);
     border-radius: 99px; overflow: hidden;
@@ -115,136 +108,94 @@
   }
   .prog-bar-label { color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
-  /* Stage list body */
-  .stage-list { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; }
+  /* ── Stage sections ── */
+  .stage-section { padding: 20px 24px; }
+  .section-heading {
+    font-size: 13px; font-weight: 700; color: #374151; text-transform: uppercase;
+    letter-spacing: .06em; margin: 0 0 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-divider { border: none; border-top: 1px solid #f3f4f6; margin: 16px 0; }
 
-  /* Individual stage item */
-  .stage-item {
-    display: flex; gap: 0; position: relative;
+  /* Stage 1 badge */
+  .s1-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+    background: #dbeafe; color: #1e40af; border-radius: 99px; font-size: 11px; font-weight: 700;
+  }
+  .s2-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+    background: #f0fdf4; color: #15803d; border-radius: 99px; font-size: 11px; font-weight: 700;
+  }
+  .s2-locked-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+    background: #f3f4f6; color: #9ca3af; border-radius: 99px; font-size: 11px; font-weight: 700;
   }
 
-  /* Left spine + icon column */
-  .stage-spine {
-    display: flex; flex-direction: column; align-items: center;
-    width: 52px; flex-shrink: 0;
-  }
-  .stage-dot {
-    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px; font-weight: 800; z-index: 1;
-    position: relative; transition: box-shadow .3s;
-  }
-  .stage-line {
-    width: 3px; flex: 1; min-height: 18px; margin: 2px 0;
-    border-radius: 99px;
-  }
-
-  /* Status colours */
-  .dot-approved    { background: linear-gradient(135deg,#22c55e,#16a34a); color:#fff; box-shadow: 0 0 0 4px #dcfce7, 0 4px 10px rgba(34,197,94,.35); }
-  .dot-in_progress { background: linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); animation: pulse-ring 2s infinite; }
-  .dot-locked      { background: #f3f4f6; color:#9ca3af; box-shadow: 0 0 0 3px #e5e7eb; }
-  .dot-rejected    { background: linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; box-shadow: 0 0 0 4px #fee2e2, 0 4px 10px rgba(239,68,68,.35); }
-  .dot-final-done  { background: linear-gradient(135deg,#15803d,#166534); color:#fff; box-shadow: 0 0 0 4px #bbf7d0, 0 6px 18px rgba(21,128,61,.4); }
-  .dot-final-wait  { background: linear-gradient(135deg,#94a3b8,#64748b); color:#fff; box-shadow: 0 0 0 3px #e2e8f0; }
-
-  .line-approved    { background: linear-gradient(to bottom, #22c55e, #22c55e); }
-  .line-in_progress { background: linear-gradient(to bottom, #3b82f6, #e5e7eb); }
-  .line-locked      { background: #e5e7eb; }
-  .line-rejected    { background: linear-gradient(to bottom, #ef4444, #e5e7eb); }
-  .line-last        { display: none; }
-
-  @keyframes pulse-ring {
-    0%   { box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); }
-    50%  { box-shadow: 0 0 0 8px rgba(59,130,246,.15), 0 4px 14px rgba(59,130,246,.5); }
-    100% { box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); }
-  }
-
-  /* Right content card */
-  .stage-content {
-    flex: 1; margin-bottom: 14px;
-    border-radius: 12px; overflow: hidden;
-    border: 1.5px solid #e5e7eb;
-    transition: border-color .2s, box-shadow .2s;
-  }
-  .stage-content:hover { border-color: #93c5fd; box-shadow: 0 4px 16px rgba(59,130,246,.1); }
-  .stage-content.st-approved    { border-color: #bbf7d0; }
-  .stage-content.st-in_progress { border-color: #93c5fd; box-shadow: 0 4px 16px rgba(59,130,246,.12); }
-  .stage-content.st-rejected    { border-color: #fca5a5; }
-  .stage-content.st-locked      { background: #fafafa; }
-  .stage-content.st-final-done  { border-color: #86efac; background: linear-gradient(135deg,#f0fdf4,#dcfce7); }
-  .stage-content.st-final-wait  { background: #f8fafc; border-style: dashed; }
-
-  .stage-top {
+  /* Sub-section row */
+  .sub-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 13px 16px 10px; gap: 10px; flex-wrap: wrap;
+    padding: 11px 14px; background: #f9fafb; border: 1px solid #e5e7eb;
+    border-radius: 10px; margin-bottom: 8px; gap: 10px; flex-wrap: wrap;
   }
-  .stage-title-wrap { flex: 1; min-width: 0; }
-  .stage-num  { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .07em; }
-  .stage-name { font-size: 14px; font-weight: 800; color: #111827; margin-top: 1px; line-height: 1.3; }
-  .stage-desc { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.5; }
-
-  /* Right side badges */
-  .stage-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-  .st-pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 4px 11px; border-radius: 99px; font-size: 11px; font-weight: 700;
-    white-space: nowrap;
+  .sub-row:last-child { margin-bottom: 0; }
+  .sub-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .sub-dot {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
   }
-  .pill-approved    { background: #dcfce7; color: #15803d; }
-  .pill-in_progress { background: #dbeafe; color: #1d4ed8; }
-  .pill-locked      { background: #f3f4f6; color: #9ca3af; }
-  .pill-rejected    { background: #fee2e2; color: #b91c1c; }
-  .pill-final-done  { background: #dcfce7; color: #15803d; }
-  .pill-final-wait  { background: #f1f5f9; color: #64748b; }
+  .dot-approved    { background: #dcfce7; color: #15803d; }
+  .dot-pending     { background: #fef3c7; color: #b45309; }
+  .dot-rejected    { background: #fee2e2; color: #b91c1c; }
+  .dot-locked      { background: #f3f4f6; color: #9ca3af; }
+  .sub-info { min-width: 0; }
+  .sub-title { font-size: 13px; font-weight: 700; color: #111827; }
+  .sub-count { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .sub-pill {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+    border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  }
+  .pill-approved { background: #dcfce7; color: #15803d; }
+  .pill-pending  { background: #fef3c7; color: #b45309; }
+  .pill-rejected { background: #fee2e2; color: #b91c1c; }
+  .pill-locked   { background: #f3f4f6; color: #9ca3af; }
 
-  /* Expand button */
+  /* Expand toggle */
   .expand-btn {
     background: none; border: 1.5px solid #e5e7eb; color: #1565c0;
     font-size: 11px; font-weight: 700; cursor: pointer; padding: 4px 10px;
     border-radius: 7px; display: inline-flex; align-items: center; gap: 5px;
-    transition: background .15s, border-color .15s;
+    transition: background .15s; flex-shrink: 0;
   }
   .expand-btn:hover { background: #eff6ff; border-color: #93c5fd; }
 
-  /* Approval details panel */
+  /* Approval detail panel */
   .approval-panel {
     max-height: 0; overflow: hidden;
-    transition: max-height .35s cubic-bezier(.4,0,.2,1), padding .25s;
-    background: #f8fafc; border-top: 1px solid #e5e7eb;
+    transition: max-height .35s cubic-bezier(.4,0,.2,1);
+    background: #fff; border-left: 3px solid #e5e7eb;
+    margin: -4px 0 8px 44px; border-radius: 0 0 8px 8px;
   }
-  .approval-panel.open {
-    max-height: 600px;
-    padding: 12px 16px 14px;
-  }
-  .ap-row {
+  .approval-panel.open { max-height: 400px; }
+  .ap-detail {
+    padding: 8px 14px; font-size: 12px; color: #374151; border-bottom: 1px solid #f3f4f6;
     display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 9px 12px; background: #fff; border-radius: 9px;
-    margin-bottom: 6px; font-size: 12px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
   }
-  .ap-row:last-child { margin-bottom: 0; }
-  .ap-name    { color: #374151; font-weight: 700; }
-  .ap-comment { color: #6b7280; font-style: italic; margin-top: 3px; }
-  .ap-date    {
-    color: #9ca3af; white-space: nowrap; margin-left: 12px;
-    font-size: 11px; padding-top: 2px;
-  }
+  .ap-detail:last-child { border-bottom: none; }
+  .ap-detail-left { flex: 1; }
+  .ap-detail-status { font-size: 11px; color: #9ca3af; }
 
-  /* Final "Clearance Issued" row special treatment */
-  .stage-final-banner {
-    padding: 14px 16px;
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  /* Stage 2 section */
+  .stage2-card {
+    background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px;
+    padding: 20px 22px; margin-top: 8px;
   }
-  .final-banner-icon { font-size: 22px; }
-  .final-banner-text { flex: 1; }
-  .final-banner-title { font-size: 14px; font-weight: 800; color: #15803d; }
-  .final-banner-sub   { font-size: 12px; color: #16a34a; margin-top: 2px; }
-  .final-locked-title { font-size: 14px; font-weight: 700; color: #64748b; }
-  .final-locked-sub   { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+  .stage2-locked {
+    background: #f8fafc; border: 1.5px dashed #d1d5db; border-radius: 14px;
+    padding: 20px 22px; margin-top: 8px; text-align: center; color: #9ca3af;
+  }
+  .stage2-locked i { font-size: 28px; display: block; margin-bottom: 8px; }
 
-  /* Explainer grid (pre-initiation) */
+  /* Flow explainer (pre-initiation) */
   .flow-card {
     background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
     padding: 24px; margin-bottom: 24px;
@@ -253,260 +204,309 @@
     font-size: 15px; font-weight: 700; color: #111827;
     margin: 0 0 20px; display: flex; align-items: center; gap: 8px;
   }
+
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); }
+    50%  { box-shadow: 0 0 0 8px rgba(59,130,246,.15), 0 4px 14px rgba(59,130,246,.5); }
+    100% { box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="cl-wrap">
 
-  {% if not has_request %}
-  <!-- ── INITIATE ── -->
-  <div class="initiate-card">
-    <h2><i class="fas fa-graduation-cap"></i> Start Your Course Clearance</h2>
-    <p>
-      Initiate clearance when you have completed your course requirements.
-      The clearance follows a sequential 5-stage process — each stage must be
-      approved before the next unlocks.
-    </p>
-    <form method="post" action="/clearance/initiate">
-      <select name="course_id" class="select-course" required>
-        <option value="">— Select your course —</option>
-        {% for enrollment in enrollments %}
-          {% set cls = enrollment.get('classes') or {} %}
-          {% set crs = cls.get('courses') or {} %}
-          {% if cls.get('course_id') and crs.get('name') %}
-          <option value="{{ cls.course_id }}">{{ crs.name }} ({{ crs.get('code','') }})</option>
-          {% endif %}
-        {% endfor %}
-      </select>
-      <button type="submit" class="btn-initiate">
-        <i class="fas fa-play-circle"></i> Start Clearance Process
-      </button>
-    </form>
+{% if not has_request %}
+<!-- ── INITIATE ── -->
+<div class="initiate-card">
+  <h2><i class="fas fa-graduation-cap"></i> Start Your Course Clearance</h2>
+  <p>
+    Initiate clearance when you have completed your course requirements.
+    All Stage 1 approvals run in parallel — trainers, technicians, service departments
+    and other HODs are notified simultaneously.
+    When Stage 1 is fully complete, your Home HOD reviews and issues the final clearance.
+  </p>
+  <form method="post" action="/clearance/initiate">
+    <select name="course_id" class="select-course" required>
+      <option value="">— Select your course —</option>
+      {% for enrollment in enrollments %}
+        {% set cls = enrollment.get('classes') or {} %}
+        {% set crs = cls.get('courses') or {} %}
+        {% if cls.get('course_id') and crs.get('name') %}
+        <option value="{{ cls.course_id }}">{{ crs.name }} ({{ crs.get('code','') }})</option>
+        {% endif %}
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn-initiate">
+      <i class="fas fa-play-circle"></i> Start Clearance Process
+    </button>
+  </form>
+</div>
+
+<!-- Explainer -->
+<div class="flow-card">
+  <p class="flow-title"><i class="fas fa-route" style="color:#1565c0"></i> How the New Clearance Flow Works</p>
+  <div style="display:grid;gap:12px;font-size:13px;color:#374151">
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <span style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+      <div><strong>Stage 1 — All Parallel:</strong> Trainers, Technicians, Service Depts, Other HODs — all run simultaneously from day one.</div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <span style="width:28px;height:28px;border-radius:50%;background:#dcfce7;color:#15803d;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+      <div><strong>Stage 2 — Home HOD Final Review:</strong> Once Stage 1 is complete, your department HOD is notified and does the final sign-off.</div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <span style="width:28px;height:28px;border-radius:50%;background:#f0fdf4;color:#15803d;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">&#10003;</span>
+      <div><strong>Certificate Issued:</strong> Download your official clearance certificate with a unique serial number and QR code.</div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+
+<!-- ── STATUS BANNER ── -->
+{% set cr_status = clearance_request.get('status','in_progress') %}
+<div class="status-banner sb-{{ cr_status }}">
+  <span class="sb-icon">
+    {% if cr_status == 'completed' %}&#127891;
+    {% elif cr_status == 'rejected' %}&#10060;
+    {% elif cr_status == 'returned' %}&#128256;
+    {% else %}&#9203;{% endif %}
+  </span>
+  <div class="sb-info">
+    <div class="sb-title">
+      {% if cr_status == 'completed' %}Clearance Complete — Certificate Ready
+      {% elif cr_status == 'rejected' %}Clearance Rejected
+      {% elif cr_status == 'returned' %}Returned for Correction
+      {% else %}Clearance In Progress{% endif %}
+    </div>
+    <div class="sb-sub">
+      Course: {{ (clearance_request.get('courses') or {}).get('name','—') }}
+      &nbsp;&middot;&nbsp; Initiated: {{ clearance_request.get('initiated_at','')[:10] or clearance_request.get('created_at','')[:10] }}
+    </div>
+  </div>
+  <span class="sb-serial">{{ serial }}</span>
+</div>
+
+<!-- ── RETURNED REASON ── -->
+{% if cr_status == 'returned' and clearance_request.get('return_reason') %}
+<div class="return-box">
+  <strong><i class="fas fa-exclamation-triangle"></i> Returned for Correction</strong>
+  {{ clearance_request.return_reason }}
+</div>
+{% endif %}
+
+<!-- ── DOWNLOAD BLOCK ── -->
+{% if cr_status == 'completed' %}
+<div class="download-block">
+  <h3><i class="fas fa-certificate"></i> Your Clearance is Approved!</h3>
+  <div class="serial-display">{{ serial }}</div>
+  <p>All stages approved. Download your official clearance certificate below.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+    <a href="/clearance/certificate/{{ clearance_request.id }}/pdf" class="btn-download"
+       style="background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 4px 14px rgba(22,163,74,.35)">
+      <i class="fas fa-file-pdf"></i> Download PDF
+    </a>
+    <a href="/clearance/certificate/{{ clearance_request.id }}" target="_blank" class="btn-download"
+       style="background:linear-gradient(135deg,#1e5a9f,#154070);box-shadow:0 4px 14px rgba(30,90,159,.3)">
+      <i class="fas fa-eye"></i> View Certificate
+    </a>
+    <a href="/clearance/verify/{{ serial }}" target="_blank" class="btn-download"
+       style="background:linear-gradient(135deg,#0f766e,#0d9488);box-shadow:0 4px 14px rgba(15,118,110,.3)">
+      <i class="fas fa-qrcode"></i> Verify Serial
+    </a>
+  </div>
+</div>
+{% else %}
+<div class="locked-download">
+  <i class="fas fa-lock"></i>
+  <p style="font-size:13px;font-weight:600;margin:0 0 4px">Download Not Yet Available</p>
+  <p style="font-size:12px;margin:0">Complete all clearance stages to unlock your certificate.</p>
+</div>
+{% endif %}
+
+<!-- ════════════════════════════════════════════
+     CLEARANCE PROGRESS CARD
+════════════════════════════════════════════ -->
+{% set s1_total = stage1_sections | length %}
+{% set s1_done  = stage1_sections | selectattr('status','eq','approved') | list | length %}
+{% set pct = ((s1_done / s1_total * 100) | int) if s1_total > 0 else 0 %}
+
+<div class="prog-card">
+
+  <!-- Header bar -->
+  <div class="prog-header">
+    <div class="prog-header-left">
+      <div class="prog-header-icon"><i class="fas fa-route"></i></div>
+      <div>
+        <div class="prog-header-title">Clearance Progress</div>
+        <div class="prog-header-sub">Stage 1: {{ s1_done }} / {{ s1_total }} sections approved</div>
+      </div>
+    </div>
+    <div class="prog-bar-wrap">
+      <div class="prog-bar-track">
+        <div class="prog-bar-fill" style="width:{{ pct }}%"></div>
+      </div>
+      <div class="prog-bar-label">{{ pct }}%</div>
+    </div>
   </div>
 
-  <!-- 5-step explainer -->
-  <div class="flow-card">
-    <p class="flow-title"><i class="fas fa-route" style="color:#1565c0"></i> How Clearance Works</p>
-    <div style="display:grid;gap:10px;font-size:13px;color:#374151">
-      {% for num, label in [('1','Trainer Clearance'),('2','Technician Clearance'),
-          ('3','HOD Approval (Gates All Other Stages)'),('4','Institutional Sections'),
-          ('5','Community Library Clearance'),('✓','Clearance Issued')] %}
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ num }}</span>
-        <span>{{ label }}</span>
+  <!-- ── STAGE 1 ── -->
+  <div class="stage-section">
+    <div class="section-heading">
+      <span class="s1-badge"><i class="fas fa-layer-group"></i> Stage 1</span>
+      Preliminary Clearance — All Running in Parallel
+    </div>
+
+    {% for sec in stage1_sections %}
+    {% set uid_sec = loop.index %}
+    <div class="sub-row">
+      <div class="sub-left">
+        <div class="sub-dot dot-{{ sec.status }}">
+          {% if sec.status == 'approved' %}<i class="fas fa-check"></i>
+          {% elif sec.status == 'rejected' %}<i class="fas fa-times"></i>
+          {% else %}<i class="fas fa-clock"></i>{% endif %}
+        </div>
+        <div class="sub-info">
+          <div class="sub-title">{{ sec.label }}</div>
+          {% if sec.category == 'trainer' %}
+          <div class="sub-count">{{ sec.approved }} of {{ sec.total }} approved (min {{ [5, sec.total] | min }} required)</div>
+          {% elif sec.category in ('tech_1','tech_2') %}
+          <div class="sub-count">Technician sign-off</div>
+          {% elif sec.category == 'hod_other' %}
+          <div class="sub-count">{{ sec.approved }} of {{ sec.total }} HODs approved</div>
+          {% else %}
+          <div class="sub-count">Service clearance</div>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span class="sub-pill pill-{{ sec.status }}">
+          {% if sec.status == 'approved' %}&#10003; Approved
+          {% elif sec.status == 'rejected' %}&#10007; Rejected
+          {% else %}&#9203; Pending{% endif %}
+        </span>
+        {% if sec.items | length > 1 %}
+        <button class="expand-btn" onclick="toggleSec('sec-{{ uid_sec }}', this)">
+          <i class="fas fa-chevron-down" style="font-size:10px"></i>
+          Show ({{ sec.items | length }})
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% if sec.items | length > 1 %}
+    <div class="approval-panel" id="sec-{{ uid_sec }}">
+      {% for a in sec.items %}
+      <div class="ap-detail">
+        <div class="ap-detail-left">
+          <div style="font-weight:600;color:#111827">
+            {% if a.get('is_waived') %}&#128683; Waived
+            {% elif a.get('status') == 'approved' %}&#10003; Approved
+            {% elif a.get('status') == 'rejected' %}&#10007; Rejected
+            {% else %}&#9203; Pending{% endif %}
+            {% if a.get('comments') and not (a.get('comments','') or '').startswith('ASSIGNED_TO:') %}
+            — <em style="color:#6b7280;font-size:11px">{{ a.comments }}</em>
+            {% endif %}
+          </div>
+        </div>
+        <div class="ap-detail-status">{{ (a.get('approved_at') or '')[:10] or 'Pending' }}</div>
       </div>
       {% endfor %}
     </div>
-  </div>
+    {% endif %}
+    {% endfor %}
 
-  {% else %}
-
-  <!-- ── STATUS BANNER ── -->
-  {% set cr_status = clearance_request.get('status','in_progress') %}
-  <div class="status-banner sb-{{ cr_status }}">
-    <span class="sb-icon">
-      {% if cr_status == 'completed' %}🎓{% elif cr_status == 'rejected' %}❌{% else %}⏳{% endif %}
-    </span>
-    <div class="sb-info">
-      <div class="sb-title">
-        {% if cr_status == 'completed' %}Clearance Complete — Certificate Ready
-        {% elif cr_status == 'rejected' %}Clearance Rejected
-        {% else %}Clearance In Progress{% endif %}
-      </div>
-      <div class="sb-sub">
-        Course: {{ (clearance_request.get('courses') or {}).get('name','—') }}
-        &nbsp;·&nbsp; Initiated: {{ clearance_request.get('initiated_at','')[:10] }}
-      </div>
+    {% if not stage1_sections %}
+    <div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px">
+      <i class="fas fa-spinner fa-spin"></i> Loading clearance data...
     </div>
-    <span class="sb-serial">{{ serial }}</span>
+    {% endif %}
+
+  </div><!-- /stage-section -->
+
+  <hr class="section-divider">
+
+  <!-- ── STAGE 2 ── -->
+  <div class="stage-section" style="padding-top:12px">
+    <div class="section-heading">
+      {% if stage1_done %}
+      <span class="s2-badge"><i class="fas fa-unlock"></i> Stage 2</span>
+      {% else %}
+      <span class="s2-locked-badge"><i class="fas fa-lock"></i> Stage 2</span>
+      {% endif %}
+      Home Department HOD — Final Review
+    </div>
+
+    {% if stage1_done %}
+    <div class="stage2-card">
+      {% if stage2_approval %}
+      {% set s2_status = stage2_approval.get('status','pending') %}
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="sub-dot dot-{{ s2_status }}" style="width:40px;height:40px;font-size:16px">
+          {% if s2_status == 'approved' %}<i class="fas fa-check"></i>
+          {% elif s2_status == 'rejected' %}<i class="fas fa-times"></i>
+          {% else %}<i class="fas fa-clock"></i>{% endif %}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:#111827">Home HOD Final Review</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:3px">
+            {% if s2_status == 'approved' %}
+              Approved on {{ (stage2_approval.get('approved_at') or '')[:10] }}
+            {% elif s2_status == 'rejected' %}
+              Rejected — {{ stage2_approval.get('comments','') }}
+            {% else %}
+              Your department HOD has been notified and is reviewing.
+            {% endif %}
+          </div>
+        </div>
+        <span class="sub-pill pill-{{ s2_status }}">
+          {% if s2_status == 'approved' %}&#10003; Approved
+          {% elif s2_status == 'rejected' %}&#10007; Rejected
+          {% else %}&#9203; Pending{% endif %}
+        </span>
+      </div>
+      {% else %}
+      <div style="color:#15803d;font-size:13px">
+        <i class="fas fa-check-circle"></i> Stage 1 complete — HOD will be notified shortly.
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="stage2-locked">
+      <i class="fas fa-lock"></i>
+      <p style="font-size:13px;font-weight:600;margin:0 0 4px">Stage 2 Locked</p>
+      <p style="font-size:12px;margin:0">Complete all Stage 1 sections to unlock the HOD final review.</p>
+    </div>
+    {% endif %}
   </div>
 
-  <!-- ── DOWNLOAD BLOCK ── -->
+  <!-- Final issued row -->
   {% if cr_status == 'completed' %}
-  <div class="download-block">
-    <h3><i class="fas fa-certificate"></i> Your Clearance is Approved!</h3>
-    <div class="serial-display">{{ serial }}</div>
-    <p>All stages have been approved. Download your official clearance certificate below.</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
-      <a href="/clearance/certificate/{{ clearance_request.id }}/pdf"
-         class="btn-download"
-         style="background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 4px 14px rgba(22,163,74,.35)">
-        <i class="fas fa-file-pdf"></i> Download Clearance Form (PDF)
-      </a>
-      <a href="/clearance/certificate/{{ clearance_request.id }}" target="_blank"
-         class="btn-download"
-         style="background:linear-gradient(135deg,#1e5a9f,#154070);box-shadow:0 4px 14px rgba(30,90,159,.3)">
-        <i class="fas fa-eye"></i> View Online Certificate
-      </a>
+  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-top:1px solid #bbf7d0;padding:16px 24px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:22px">&#127891;</span>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:800;color:#15803d">Clearance Issued!</div>
+      <div style="font-size:12px;color:#16a34a;margin-top:2px">Certificate ready with serial number and QR code.</div>
     </div>
-  </div>
-  {% else %}
-  <div class="locked-download">
-    <i class="fas fa-lock"></i>
-    <p style="font-size:13px;font-weight:600;margin:0 0 4px">Download Not Yet Available</p>
-    <p style="font-size:12px;margin:0">Complete all clearance stages to unlock your certificate.</p>
+    <span class="sub-pill pill-approved">&#10003; Issued</span>
   </div>
   {% endif %}
 
-  <!-- ════════════════════════════════════════════
-       CLEARANCE PROGRESS — REDESIGNED
-  ════════════════════════════════════════════ -->
-  {% set approved_count = steps[:5] | selectattr('status','eq','approved') | list | length %}
-  {% set total_stages = 5 %}
-  {% set pct = ((approved_count / total_stages) * 100) | int %}
+</div><!-- /prog-card -->
 
-  <div class="prog-card">
-
-    <!-- Header -->
-    <div class="prog-header">
-      <div class="prog-header-left">
-        <div class="prog-header-icon"><i class="fas fa-route"></i></div>
-        <div>
-          <div class="prog-header-title">Clearance Progress</div>
-          <div class="prog-header-sub">{{ approved_count }} of {{ total_stages }} stages approved</div>
-        </div>
-      </div>
-      <div class="prog-bar-wrap">
-        <div class="prog-bar-track">
-          <div class="prog-bar-fill" style="width:{{ pct }}%"></div>
-        </div>
-        <div class="prog-bar-label">{{ pct }}%</div>
-      </div>
-    </div>
-
-    <!-- Stage rows -->
-    <div class="stage-list">
-
-      {% set step_descs = {
-        1: 'All trainers who taught you must approve.',
-        2: 'All workshop technicians in your department.',
-        3: 'Head of Department — gates all remaining stages.',
-        4: 'Sports, Environment, Dean\'s Office and other sections.',
-        5: 'Community Library — no outstanding books or dues.',
-      } %}
-
-      {% for step in steps %}{% set i = loop.index %}{% if i <= 5 %}
-      {% set st = step.status %}
-      {% set is_last_step = (i == 5) %}
-
-      <div class="stage-item">
-        <!-- Spine -->
-        <div class="stage-spine">
-          <div class="stage-dot dot-{{ st if st != 'n_a' else 'locked' }}">
-            {% if st == 'approved' %}<i class="fas fa-check"></i>
-            {% elif st == 'in_progress' %}<i class="fas fa-clock"></i>
-            {% elif st == 'rejected' %}<i class="fas fa-times"></i>
-            {% else %}<i class="fas fa-lock"></i>{% endif %}
-          </div>
-          {% if not is_last_step %}
-          <div class="stage-line line-{{ st if st != 'n_a' else 'locked' }}"></div>
-          {% else %}
-          <div class="stage-line line-{{ st if st != 'n_a' else 'locked' }}" style="min-height:12px"></div>
-          {% endif %}
-        </div>
-
-        <!-- Content card -->
-        <div class="stage-content st-{{ st if st != 'n_a' else 'locked' }}">
-          <div class="stage-top">
-            <div class="stage-title-wrap">
-              <div class="stage-num">Stage {{ i }}</div>
-              <div class="stage-name">{{ step.label }}</div>
-              <div class="stage-desc">{{ step_descs.get(i,'') }}</div>
-            </div>
-            <div class="stage-right">
-              <span class="st-pill pill-{{ st if st != 'n_a' else 'locked' }}">
-                {% if st == 'approved' %}✅ Approved
-                {% elif st == 'in_progress' %}🔄 In Progress
-                {% elif st == 'rejected' %}❌ Rejected
-                {% elif st == 'n_a' %}— N/A
-                {% else %}🔒 Locked{% endif %}
-              </span>
-              {% if step.approvals %}
-              <button class="expand-btn" onclick="toggleStage({{ i }})" id="ebtn-{{ i }}">
-                <i class="fas fa-chevron-down" id="eico-{{ i }}" style="font-size:10px;transition:transform .25s"></i>
-                Show ({{ step.approvals|length }})
-              </button>
-              {% endif %}
-            </div>
-          </div>
-
-          {% if step.approvals %}
-          <div class="approval-panel" id="apd-{{ i }}">
-            {% for a in step.approvals %}
-            <div class="ap-row">
-              <div style="flex:1;min-width:0">
-                <div class="ap-name">
-                  {% if a.status == 'approved' %}✅{% elif a.status == 'rejected' %}❌{% else %}⏳{% endif %}
-                  {{ (a.get('clearance_stages') or {}).get('stage_name','Stage') }}
-                </div>
-                {% if a.get('comments') and not a.comments.startswith('ASSIGNED_TO:') %}
-                <div class="ap-comment">"{{ a.comments }}"</div>
-                {% endif %}
-              </div>
-              <div class="ap-date">{{ (a.get('approved_at') or '')[:10] or 'Pending' }}</div>
-            </div>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
-      </div>
-      {% endif %}{% endfor %}
-
-      <!-- Final step: Clearance Issued -->
-      <div class="stage-item">
-        <div class="stage-spine">
-          <div class="stage-dot {% if cr_status == 'completed' %}dot-final-done{% else %}dot-final-wait{% endif %}">
-            {% if cr_status == 'completed' %}<i class="fas fa-certificate"></i>
-            {% else %}<i class="fas fa-graduation-cap"></i>{% endif %}
-          </div>
-          <!-- no line after last -->
-        </div>
-        <div class="stage-content {% if cr_status == 'completed' %}st-final-done{% else %}st-final-wait{% endif %}" style="margin-bottom:0">
-          {% if cr_status == 'completed' %}
-          <div class="stage-final-banner">
-            <div class="final-banner-icon">🎓</div>
-            <div class="final-banner-text">
-              <div class="final-banner-title">Clearance Issued</div>
-              <div class="final-banner-sub">All stages approved — certificate ready with QR code and serial number.</div>
-            </div>
-            <span class="st-pill pill-approved">✅ Issued</span>
-          </div>
-          {% else %}
-          <div class="stage-final-banner">
-            <div class="final-banner-icon" style="opacity:.45">🎓</div>
-            <div class="final-banner-text">
-              <div class="final-locked-title">Clearance Issued</div>
-              <div class="final-locked-sub">Certificate downloadable once all stages are approved.</div>
-            </div>
-            <span class="st-pill pill-final-wait">🔒 Awaiting All Stages</span>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-    </div><!-- /stage-list -->
-  </div><!-- /prog-card -->
-
-  {% endif %}
+{% endif %}
 </div><!-- /cl-wrap -->
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-function toggleStage(idx) {
-  var panel = document.getElementById('apd-' + idx);
-  var icon  = document.getElementById('eico-' + idx);
-  var btn   = document.getElementById('ebtn-' + idx);
+function toggleSec(id, btn) {
+  var panel = document.getElementById(id);
   if (!panel) return;
   var opening = !panel.classList.contains('open');
   panel.classList.toggle('open', opening);
-  if (icon) icon.style.transform = opening ? 'rotate(180deg)' : 'rotate(0deg)';
-  if (btn) {
-    var n = panel.querySelectorAll('.ap-row').length;
-    btn.innerHTML = '<i class="fas fa-chevron-down" id="eico-' + idx + '" style="font-size:10px;transition:transform .25s;transform:' + (opening ? 'rotate(180deg)' : 'rotate(0deg)') + '"></i> ' + (opening ? 'Hide' : 'Show') + ' (' + n + ')';
-  }
+  var n = panel.querySelectorAll('.ap-detail').length;
+  btn.innerHTML = '<i class="fas fa-chevron-' + (opening ? 'up' : 'down') + '" style="font-size:10px"></i> ' + (opening ? 'Hide' : 'Show') + ' (' + n + ')';
 }
 </script>
 {% endblock %}

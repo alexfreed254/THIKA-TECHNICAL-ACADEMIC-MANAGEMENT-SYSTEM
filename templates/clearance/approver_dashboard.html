@@ -4,101 +4,375 @@
 
 {% block extra_style %}
 <style>
-  .ap-wrap { padding: 20px; }
+  .ap-wrap { padding: 20px; max-width: 1000px; }
+
+  /* Role banner */
   .role-banner {
-    background: linear-gradient(135deg,#1e3a5f,#1565c0); color:#fff;
-    border-radius:12px; padding:14px 18px; margin-bottom:18px;
-    display:flex; align-items:center; gap:12px;
+    background: linear-gradient(135deg,#0f2744,#1565c0); color:#fff;
+    border-radius:14px; padding:16px 20px; margin-bottom:20px;
+    display:flex; align-items:center; gap:14px;
   }
-  .role-banner h2 { font-size:15px; font-weight:700; margin:0 0 2px; }
-  .role-banner p  { font-size:12px; opacity:.82; margin:0; }
-  .ap-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; margin-bottom:14px; overflow:hidden; }
-  .ap-card.gated { opacity:.65; border-style:dashed; }
+  .role-banner-icon { font-size:26px; }
+  .role-banner h2 { font-size:16px; font-weight:800; margin:0 0 3px; }
+  .role-banner p  { font-size:12px; opacity:.82; margin:0; line-height:1.5; }
+
+  /* Section heading */
+  .sec-heading {
+    font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em;
+    color:#6b7280; margin:20px 0 10px; display:flex; align-items:center; gap:8px;
+  }
+  .s1-chip { background:#dbeafe; color:#1d4ed8; border-radius:99px; padding:2px 10px; font-size:11px; font-weight:700; }
+  .s2-chip { background:#f0fdf4; color:#15803d; border-radius:99px; padding:2px 10px; font-size:11px; font-weight:700; }
+
+  /* Approval card */
+  .ap-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+    margin-bottom:14px; overflow:hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+  .ap-card.stage2 { border-color:#86efac; border-width:1.5px; }
+
   .ap-hdr {
-    padding:12px 16px; border-bottom:1px solid #f3f4f6;
-    display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; justify-content:space-between;
+    padding:13px 16px; border-bottom:1px solid #f3f4f6;
+    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start; justify-content:space-between;
   }
-  .sname { font-size:15px; font-weight:700; color:#111827; }
+  .sname { font-size:15px; font-weight:800; color:#111827; }
   .sadm  { font-size:11px; color:#9ca3af; margin-top:2px; }
-  .stage-tag { background:#dbeafe; color:#1d4ed8; padding:2px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
-  .locked-tag{ background:#fef3c7; color:#b45309; padding:2px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
+  .cat-tag  { background:#dbeafe; color:#1d4ed8; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
+  .cat-tag-s2 { background:#f0fdf4; color:#15803d; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
+
   .ap-body { padding:12px 16px; font-size:13px; color:#374151; }
   .ap-body div { margin-bottom:6px; }
-  .ap-body span.lbl { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; display:inline-block; width:110px; }
-  .ap-actions { padding:10px 16px; border-top:1px solid #f3f4f6; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .btn-ok  { padding:7px 16px; background:#16a34a; color:#fff; border:none; border-radius:7px; font-size:13px; font-weight:700; cursor:pointer; }
+  .ap-body span.lbl { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; display:inline-block; width:120px; }
+
+  /* Action area */
+  .ap-actions {
+    padding:11px 16px; border-top:1px solid #f3f4f6;
+    display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap;
+  }
+  .btn-ok   { padding:8px 18px; background:#16a34a; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
   .btn-ok:hover { opacity:.88; }
+  .btn-ret  { padding:8px 18px; background:#b45309; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .btn-ret:hover { opacity:.88; }
   .reject-row { display:flex; gap:6px; flex:1; min-width:220px; }
-  .rej-inp { flex:1; padding:7px 11px; border:1px solid #fca5a5; border-radius:7px; font-size:13px; outline:none; }
-  .btn-no  { padding:7px 14px; background:#dc2626; color:#fff; border:none; border-radius:7px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .rej-inp { flex:1; padding:8px 11px; border:1px solid #fca5a5; border-radius:8px; font-size:13px; outline:none; }
+  .btn-no   { padding:8px 14px; background:#dc2626; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
   .btn-no:hover { opacity:.88; }
-  .locked-row { padding:8px 16px; background:#fef3c7; color:#92400e; font-size:12px; font-weight:600; border-top:1px solid #fde68a; }
-  .empty-state { padding:44px 24px; text-align:center; color:#9ca3af; }
-  .empty-state i { font-size:34px; display:block; margin-bottom:10px; }
+
+  /* Return-for-correction sub-form */
+  .return-form-toggle { display:none; }
+  .return-form {
+    display:none; padding:12px 16px; border-top:1px solid #fde68a; background:#fffbeb;
+  }
+  .return-form.open { display:block; }
+  .ret-inp {
+    width:100%; padding:9px 12px; border:1.5px solid #fcd34d; border-radius:8px;
+    font-size:13px; outline:none; margin-bottom:8px; resize:vertical; min-height:60px;
+  }
+  .ret-inp:focus { border-color:#b45309; }
+  .ret-submit { padding:8px 18px; background:#92400e; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
+
+  /* Waiver panel */
+  .waiver-toggle-btn {
+    padding:7px 14px; background:#f3f4f6; color:#374151; border:1.5px solid #e5e7eb;
+    border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .waiver-toggle-btn:hover { background:#e5e7eb; }
+  .waiver-panel { display:none; padding:12px 16px; border-top:1px solid #e5e7eb; background:#f9fafb; }
+  .waiver-panel.open { display:block; }
+  .waiver-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 12px; background:#fff; border:1px solid #e5e7eb;
+    border-radius:8px; margin-bottom:6px; gap:10px; flex-wrap:wrap;
+  }
+  .waiver-row:last-child { margin-bottom:0; }
+  .waiver-name { font-size:13px; font-weight:600; color:#111827; flex:1; }
+  .waiver-status { font-size:11px; font-weight:700; }
+  .wst-approved { color:#15803d; }
+  .wst-pending  { color:#b45309; }
+  .wst-waived   { color:#9ca3af; }
+  .btn-waive {
+    padding:5px 12px; background:#f3f4f6; color:#374151; border:1.5px solid #d1d5db;
+    border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .btn-waive:hover { background:#e5e7eb; }
+
+  /* Empty state */
+  .empty-state { padding:48px 24px; text-align:center; color:#9ca3af; }
+  .empty-state i { font-size:36px; display:block; margin-bottom:12px; }
+
+  /* Completed strip */
+  .completed-strip {
+    background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px;
+    padding:12px 16px; margin-bottom:10px; display:flex; align-items:center; gap:10px;
+    font-size:13px; color:#15803d;
+  }
+  .completed-strip .sn-mono { font-family:monospace; font-weight:700; font-size:12px; color:#374151; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="ap-wrap">
+
+  <!-- Role banner -->
   <div class="role-banner">
-    <i class="fas fa-clipboard-check" style="font-size:20px"></i>
+    <div class="role-banner-icon"><i class="fas fa-clipboard-check"></i></div>
     <div>
       <h2>Clearance Approvals — {{ user_role|replace('_',' ')|title }}</h2>
-      <p>Sequential flow: each group must be fully approved before the next stage unlocks.</p>
+      <p>
+        <strong>Stage 1</strong> approvals (Trainers, Technicians, Service Depts, Other HODs) run
+        <strong>in parallel</strong> — all active from day one.<br>
+        <strong>Stage 2</strong> (Home HOD final review) unlocks automatically once Stage 1 is complete.
+      </p>
     </div>
   </div>
 
-  {% if my_approvals %}
-  {% for a in my_approvals %}
-  {% set up    = a.get('user_profiles') or {} %}
-  {% set stage = a.get('clearance_stages') or {} %}
-  {% set cd    = stage.get('clearance_departments') or {} %}
-  {% set active = a.get('_is_active', False) %}
-  {% set req   = a.get('clearance_requests') or {} %}
+  <!-- ══════════════════════════════════════════════
+       STAGE 1 PENDING — for trainers, techs, service depts, other HODs
+  ══════════════════════════════════════════════ -->
+  {% if stage1_pending %}
+  <div class="sec-heading">
+    <span class="s1-chip"><i class="fas fa-layer-group"></i> Stage 1</span>
+    Preliminary Clearance — Parallel
+  </div>
 
-  <div class="ap-card{% if not active %} gated{% endif %}">
+  {% for a in stage1_pending %}
+  {% set up  = a.get('user_profiles') or {} %}
+  {% set req = a.get('clearance_requests') or {} %}
+  {% set cat = a.get('_category','') %}
+  {% set claimable = a.get('_claimable', False) %}
+
+  <div class="ap-card">
     <div class="ap-hdr">
       <div>
         <div class="sname">{{ up.get('full_name','—') }}</div>
         <div class="sadm">Adm: {{ up.get('admission_no','—') }}</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <span class="stage-tag">{{ stage.get('stage_name','—') }}</span>
-        <span style="font-size:11px;color:#9ca3af">{{ cd.get('name','') }}</span>
-        {% if not active %}<span class="locked-tag">🔒 Locked</span>{% endif %}
+        <span class="cat-tag">{{ a.get('_cat_label', cat) }}</span>
+        {% if claimable %}
+        <span style="background:#fef3c7;color:#b45309;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700">
+          <i class="fas fa-hand-pointer"></i> Claim &amp; Approve
+        </span>
+        {% endif %}
       </div>
     </div>
+
     <div class="ap-body">
-      <div><span class="lbl">Group</span> {{ a.get('_group','?') }} of 6 &mdash; {{ cd.get('clearance_type','')|title }}</div>
-      <div><span class="lbl">Stage</span> {{ stage.get('stage_name','—') }}</div>
-      <div><span class="lbl">Request</span> <span style="font-family:monospace;font-size:11px">{{ req.get('id','—')[:12] }}…</span></div>
+      <div><span class="lbl">Approval Type</span> {{ a.get('_cat_label', cat) }}</div>
+      <div><span class="lbl">Stage</span> <span class="s1-chip">Stage 1 — Parallel</span></div>
+      {% if user_role == 'trainer' and a.get('taught_units') %}
+      <div>
+        <span class="lbl">Taught Units</span>
+        {% for u in a.taught_units %}
+          <span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:5px;font-size:11px;margin-right:4px">{{ u.code }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div><span class="lbl">Request ID</span> <span style="font-family:monospace;font-size:11px;color:#6b7280">{{ (req.get('id','') or '')[:12] }}…</span></div>
     </div>
-    {% if active %}
+
     <div class="ap-actions">
-      <form action="{{ url_for('clearance.approve_clearance', approval_id=a.id) }}" method="post" style="margin:0">
+      <!-- Approve -->
+      <form action="{{ url_for('clearance.approve_clearance', approval_id=a['id']) }}" method="post" style="margin:0">
         <button type="submit" class="btn-ok"
-                onclick="return confirm('Approve clearance for {{ up.get('full_name','') }}?')">
+                onclick="return confirm('Approve clearance for {{ up.get('full_name','') | replace(\"'\",\"'\") }}?')">
           <i class="fas fa-check"></i> Approve
         </button>
       </form>
-      <form action="{{ url_for('clearance.reject_clearance', approval_id=a.id) }}" method="post"
+      <!-- Reject with reason -->
+      <form action="{{ url_for('clearance.reject_clearance', approval_id=a['id']) }}" method="post"
             class="reject-row" style="margin:0">
         <input type="text" name="comments" class="rej-inp" required placeholder="Reason for rejection (required)…">
         <button type="submit" class="btn-no"><i class="fas fa-times"></i> Reject</button>
       </form>
     </div>
-    {% else %}
-    <div class="locked-row">
-      <i class="fas fa-lock"></i> Locked — previous clearance stages must be completed first.
-    </div>
-    {% endif %}
   </div>
   {% endfor %}
-  {% else %}
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════
+       STAGE 2 PENDING — Home HOD final review
+  ══════════════════════════════════════════════ -->
+  {% if stage2_pending %}
+  <div class="sec-heading">
+    <span class="s2-chip"><i class="fas fa-unlock"></i> Stage 2</span>
+    Final Clearance — Home Department HOD
+  </div>
+
+  {% for a in stage2_pending %}
+  {% set up  = a.get('user_profiles') or {} %}
+  {% set req = a.get('clearance_requests') or {} %}
+  {% set req_id = req.get('id','') %}
+
+  <div class="ap-card stage2">
+    <div class="ap-hdr">
+      <div>
+        <div class="sname">{{ up.get('full_name','—') }}</div>
+        <div class="sadm">Adm: {{ up.get('admission_no','—') }}</div>
+      </div>
+      <span class="cat-tag-s2"><i class="fas fa-shield-alt"></i> Final Review</span>
+    </div>
+
+    <div class="ap-body">
+      <div><span class="lbl">Approval Type</span> Home Department HOD — Final Clearance</div>
+      <div><span class="lbl">Stage</span> <span class="s2-chip">Stage 2 — Unlocked</span></div>
+      <div><span class="lbl">Stage 1</span>
+        <span style="color:#15803d;font-weight:700"><i class="fas fa-check-circle"></i> All Stage 1 requirements met</span>
+      </div>
+      {% if req.get('return_reason') %}
+      <div><span class="lbl">Prev. Return</span>
+        <span style="color:#b45309"><i class="fas fa-undo"></i> {{ req.return_reason }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="ap-actions">
+      <!-- Approve -->
+      <form action="{{ url_for('clearance.approve_clearance', approval_id=a['id']) }}" method="post" style="margin:0">
+        <button type="submit" class="btn-ok"
+                onclick="return confirm('Issue final clearance for {{ up.get('full_name','') | replace(\"'\",\"'\") }}? This will generate their clearance certificate.')">
+          <i class="fas fa-certificate"></i> Approve &amp; Issue Certificate
+        </button>
+      </form>
+
+      <!-- Return for correction -->
+      <button type="button" class="btn-ret" onclick="toggleReturnForm('ret-{{ loop.index }}')">
+        <i class="fas fa-undo"></i> Return for Correction
+      </button>
+
+      <!-- Waive trainers button -->
+      {% if a.get('trainer_approvals') %}
+      <button type="button" class="waiver-toggle-btn" onclick="toggleWaiver('waiv-{{ loop.index }}')">
+        <i class="fas fa-user-slash"></i> Manage Trainer Waivers ({{ a.trainer_approvals | length }})
+      </button>
+      {% endif %}
+
+      <!-- Reject -->
+      <form action="{{ url_for('clearance.reject_clearance', approval_id=a['id']) }}" method="post"
+            class="reject-row" style="margin:0">
+        <input type="text" name="comments" class="rej-inp" required
+               placeholder="Reason for rejection (required)…">
+        <button type="submit" class="btn-no"><i class="fas fa-times"></i> Reject</button>
+      </form>
+    </div>
+
+    <!-- Return-for-correction form -->
+    {% if req_id %}
+    <div class="return-form" id="ret-{{ loop.index }}">
+      <form action="{{ url_for('clearance.return_for_correction', request_id=req_id) }}" method="post">
+        <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">
+          <i class="fas fa-undo"></i> Return for Correction — Provide Reason
+        </div>
+        <textarea name="reason" class="ret-inp" required
+                  placeholder="Describe what the trainee needs to correct or resubmit…"></textarea>
+        <button type="submit" class="ret-submit">
+          <i class="fas fa-paper-plane"></i> Send Return Notice
+        </button>
+        <button type="button" class="btn-waive" style="margin-left:8px"
+                onclick="toggleReturnForm('ret-{{ loop.index }}')">Cancel</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- Trainer waiver panel -->
+    {% if a.get('trainer_approvals') %}
+    <div class="waiver-panel" id="waiv-{{ loop.index }}">
+      <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">
+        <i class="fas fa-user-slash"></i> Trainer Clearance Waivers
+        <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:4px">
+          Waive inactive trainers so Stage 1 can proceed with fewer than {{ a.trainer_approvals | length }} trainers.
+        </span>
+      </div>
+      {% for ta in a.trainer_approvals %}
+      <div class="waiver-row">
+        <div class="waiver-name">
+          {{ ta.get('trainer_name') or 'Trainer' }}
+        </div>
+        <div class="waiver-status
+          {% if ta.get('is_waived') %} wst-waived
+          {% elif ta.get('status') == 'approved' %} wst-approved
+          {% else %} wst-pending{% endif %}">
+          {% if ta.get('is_waived') %}<i class="fas fa-ban"></i> Waived
+          {% elif ta.get('status') == 'approved' %}<i class="fas fa-check"></i> Approved
+          {% else %}<i class="fas fa-clock"></i> Pending{% endif %}
+        </div>
+        {% if ta.get('status') == 'pending' and not ta.get('is_waived') %}
+        <form action="{{ url_for('clearance.waive_trainer', approval_id=ta['id']) }}" method="post" style="margin:0">
+          <button type="submit" class="btn-waive"
+                  onclick="return confirm('Waive this trainer? (Marks them as inactive for this clearance)')">
+            <i class="fas fa-user-slash"></i> Waive
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div><!-- /ap-card stage2 -->
+  {% endfor %}
+  {% endif %}
+
+  <!-- Empty state when no pending approvals -->
+  {% if not stage1_pending and not stage2_pending %}
   <div class="empty-state">
     <i class="fas fa-check-double"></i>
-    <p>No pending clearance approvals for your role at this time.</p>
+    <p style="font-size:14px;font-weight:700;margin-bottom:6px">No pending clearance approvals</p>
+    <p style="font-size:13px">You have no clearance approvals requiring action at this time.</p>
   </div>
   {% endif %}
-</div>
+
+  <!-- ══════════════════════════════════════════════
+       COMPLETED APPROVALS (collapsed / reference)
+  ══════════════════════════════════════════════ -->
+  {% if completed_approvals %}
+  <div class="sec-heading" style="margin-top:28px">
+    <i class="fas fa-check-circle" style="color:#15803d"></i>
+    Completed Approvals ({{ completed_approvals | length }})
+    <button type="button" onclick="toggleCompleted()"
+            style="background:none;border:1.5px solid #e5e7eb;color:#6b7280;border-radius:6px;padding:2px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px">
+      Show / Hide
+    </button>
+  </div>
+  <div id="completed-list" style="display:none">
+    {% for a in completed_approvals %}
+    {% set up = a.get('user_profiles') or {} %}
+    <div class="completed-strip">
+      <i class="fas fa-check-circle" style="font-size:16px;flex-shrink:0"></i>
+      <div style="flex:1">
+        <strong>{{ up.get('full_name','—') }}</strong>
+        <span style="color:#6b7280;font-size:12px"> &mdash; {{ up.get('admission_no','') }}</span>
+        &nbsp;|&nbsp; {{ a.get('_cat_label', a.get('_category','')) }}
+      </div>
+      <div style="font-size:11px;color:#6b7280;text-align:right">
+        {{ (a.get('approved_at') or '')[:10] or '—' }}<br>
+        <span style="color:{% if a.status == 'approved' %}#15803d{% else %}#b91c1c{% endif %};font-weight:700">
+          {{ a.status | title }}
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div><!-- /ap-wrap -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleReturnForm(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+function toggleWaiver(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+function toggleCompleted() {
+  var el = document.getElementById('completed-list');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
 {% endblock %}

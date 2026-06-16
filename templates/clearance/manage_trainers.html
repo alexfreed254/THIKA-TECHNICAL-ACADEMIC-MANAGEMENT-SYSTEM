@@ -1,0 +1,174 @@
+{% extends "clearance_approver/base.html" %}
+{% block title %}Manage Trainer Waivers{% endblock %}
+{% block page_title %}Trainer Clearance Waivers{% endblock %}
+
+{% block extra_style %}
+<style>
+  .mt-wrap { padding: 20px; max-width: 760px; }
+  .back-link {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 13px;
+    font-weight: 700; color: #1565c0; text-decoration: none; margin-bottom: 18px;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  .info-card {
+    background: linear-gradient(135deg,#f0fdf4,#dcfce7); border: 1.5px solid #86efac;
+    border-radius: 14px; padding: 16px 20px; margin-bottom: 20px;
+  }
+  .info-card h2 { font-size: 15px; font-weight: 800; color: #15803d; margin: 0 0 4px; }
+  .info-card p  { font-size: 13px; color: #166534; margin: 0; line-height: 1.6; }
+
+  .progress-bar-wrap {
+    background: #f3f4f6; border-radius: 99px; height: 10px; overflow: hidden; margin: 10px 0 4px;
+  }
+  .progress-bar-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    transition: width .5s ease;
+  }
+  .progress-label { font-size: 12px; color: #6b7280; }
+
+  .trainer-row {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .trainer-row.approved { border-color: #86efac; background: #f0fdf4; }
+  .trainer-row.waived   { border-color: #d1d5db; background: #f9fafb; opacity: .75; }
+
+  .tr-dot {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .dot-approved { background: #dcfce7; color: #15803d; }
+  .dot-pending  { background: #fef3c7; color: #b45309; }
+  .dot-waived   { background: #f3f4f6; color: #9ca3af; }
+
+  .tr-info { flex: 1; min-width: 0; }
+  .tr-name { font-size: 14px; font-weight: 700; color: #111827; }
+  .tr-meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .tr-status { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .st-ok  { color: #15803d; }
+  .st-pend { color: #b45309; }
+  .st-wvd  { color: #9ca3af; }
+
+  .btn-waive-now {
+    padding: 7px 14px; background: #fff; color: #374151;
+    border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 12px;
+    font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s;
+  }
+  .btn-waive-now:hover { background: #f3f4f6; }
+
+  .stage1-done-banner {
+    background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px;
+    padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+    font-size: 14px; font-weight: 700; color: #15803d; margin-bottom: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mt-wrap">
+
+  <a href="{{ url_for('clearance.approver_dashboard') }}" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to Approvals
+  </a>
+
+  {% set student = (cr.get('user_profiles') or {}) %}
+  {% set course  = (cr.get('courses') or {}) %}
+  {% set dept    = (cr.get('departments') or {}) %}
+
+  <!-- Info header -->
+  <div class="info-card">
+    <h2><i class="fas fa-user-graduate"></i> {{ student.get('full_name','—') }}</h2>
+    <p>
+      Adm: <strong>{{ student.get('admission_no','—') }}</strong> &nbsp;&middot;&nbsp;
+      Course: <strong>{{ course.get('name','—') }}</strong> &nbsp;&middot;&nbsp;
+      Dept: <strong>{{ dept.get('name','—') }}</strong>
+    </p>
+  </div>
+
+  {% if stage1_done %}
+  <div class="stage1-done-banner">
+    <i class="fas fa-check-circle" style="font-size:20px"></i>
+    Stage 1 is complete — no further waivers are needed.
+  </div>
+  {% endif %}
+
+  <!-- Progress indicator -->
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:20px">
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:6px">
+      Trainer Approval Progress
+    </div>
+    {% set pct = ((approved_count / [trainer_approvals | length, 1] | max) * 100) | int %}
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" style="width:{{ [pct,100] | min }}%"></div>
+    </div>
+    <div class="progress-label">
+      {{ approved_count }} of {{ trainer_approvals | length }} approved or waived
+      (minimum {{ required_count }} required)
+      {% if approved_count >= required_count %}
+        <strong style="color:#15803d"> &mdash; ✓ Minimum met</strong>
+      {% else %}
+        <strong style="color:#b45309"> &mdash; {{ required_count - approved_count }} more needed</strong>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Trainer list -->
+  {% for ta in trainer_approvals %}
+  {% set tr   = ta.get('_trainer') or {} %}
+  {% set wvd  = ta.get('is_waived') %}
+  {% set stat = ta.get('status','pending') %}
+  <div class="trainer-row
+    {%- if wvd %} waived
+    {%- elif stat == 'approved' %} approved
+    {%- endif %}">
+
+    <div class="tr-dot
+      {%- if wvd %} dot-waived
+      {%- elif stat == 'approved' %} dot-approved
+      {%- else %} dot-pending{%- endif %}">
+      {% if wvd %}<i class="fas fa-ban"></i>
+      {% elif stat == 'approved' %}<i class="fas fa-check"></i>
+      {% else %}<i class="fas fa-clock"></i>{% endif %}
+    </div>
+
+    <div class="tr-info">
+      <div class="tr-name">{{ tr.get('full_name','(Unassigned Trainer)') }}</div>
+      <div class="tr-meta">
+        {% if tr.get('phone') %}Phone: {{ tr.phone }}{% else %}No phone on file{% endif %}
+        {% if wvd and ta.get('waived_at') %} &nbsp;| Waived: {{ ta.waived_at[:10] }}{% endif %}
+        {% if stat == 'approved' and ta.get('approved_at') %} &nbsp;| Approved: {{ ta.approved_at[:10] }}{% endif %}
+      </div>
+    </div>
+
+    <div class="tr-status
+      {%- if wvd %} st-wvd
+      {%- elif stat == 'approved' %} st-ok
+      {%- else %} st-pend{%- endif %}">
+      {% if wvd %}&#8709; Waived
+      {% elif stat == 'approved' %}&#10003; Approved
+      {% else %}&#9203; Pending{% endif %}
+    </div>
+
+    {% if stat == 'pending' and not wvd and not stage1_done %}
+    <form action="{{ url_for('clearance.waive_trainer', approval_id=ta['id']) }}" method="post" style="margin:0">
+      <button type="submit" class="btn-waive-now"
+              onclick="return confirm('Waive this trainer? They will be marked as inactive for this clearance request.')">
+        <i class="fas fa-user-slash"></i> Waive
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% if not trainer_approvals %}
+  <div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px">
+    <i class="fas fa-users" style="font-size:30px;display:block;margin-bottom:10px"></i>
+    No trainer approvals found for this clearance request.
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -2003,3 +2003,156 @@ def import_data():
     return render_template("super_admin/import.html",
                            departments=departments, classes=classes,
                            result=result_summary, error=error)
+
+
+# ── Biometric Scanner Registration ───────────────────────────────────────────
+
+@super_admin_bp.route("/biometric-scanners")
+@super_admin_required
+def biometric_scanners():
+    """List all registered biometric scanners and show registration form."""
+    db   = _svc()
+    user = current_user()
+
+    scanners = []
+    try:
+        scanners = (db.table("biometric_scanners")
+                    .select("*, departments(name)")
+                    .order("registered_at", desc=True)
+                    .execute().data or [])
+    except Exception:
+        pass
+
+    departments = (db.table("departments")
+                   .select("id, name")
+                   .order("name")
+                   .execute().data or [])
+
+    active_count   = sum(1 for s in scanners if s.get("is_active") is not False)
+    rooms_covered  = len({s.get("room") for s in scanners if s.get("room")})
+
+    return render_template(
+        "super_admin/biometric_scanners.html",
+        scanners=scanners,
+        departments=departments,
+        total=len(scanners),
+        active_count=active_count,
+        rooms_covered=rooms_covered,
+    )
+
+
+@super_admin_bp.route("/biometric-scanners/register", methods=["POST"])
+@super_admin_required
+def register_scanner():
+    """Register a new biometric fingerprint scanner."""
+    db   = _svc()
+    user = current_user()
+
+    serial_number = request.form.get("serial_number", "").strip()
+    device_name   = request.form.get("device_name", "").strip()
+    room          = request.form.get("room", "").strip()
+    building      = request.form.get("building", "").strip()
+    department_id = request.form.get("department_id", "").strip() or None
+    notes         = request.form.get("notes", "").strip()
+
+    if not serial_number:
+        flash("Scanner serial number / device ID is required.", "error")
+        return redirect(url_for("super_admin.biometric_scanners"))
+    if not room:
+        flash("Room assignment is required.", "error")
+        return redirect(url_for("super_admin.biometric_scanners"))
+
+    try:
+        # Check for duplicate serial
+        existing = (db.table("biometric_scanners")
+                    .select("id")
+                    .eq("serial_number", serial_number)
+                    .execute().data or [])
+        if existing:
+            flash(f"A scanner with serial '{serial_number}' is already registered.", "warning")
+            return redirect(url_for("super_admin.biometric_scanners"))
+
+        db.table("biometric_scanners").insert({
+            "serial_number": serial_number,
+            "device_name":   device_name or f"Scanner — {room}",
+            "room":          room,
+            "building":      building or None,
+            "department_id": department_id,
+            "notes":         notes or None,
+            "is_active":     True,
+            "registered_by": user["id"],
+        }).execute()
+
+        write_audit_log("register_scanner",
+                        target=f"serial:{serial_number} room:{room}")
+        flash(f"Scanner '{serial_number}' registered and assigned to {room}.", "success")
+
+    except Exception as e:
+        flash(f"Error registering scanner: {e}", "error")
+
+    return redirect(url_for("super_admin.biometric_scanners"))
+
+
+@super_admin_bp.route("/biometric-scanners/update/<scanner_id>", methods=["POST"])
+@super_admin_required
+def update_scanner(scanner_id):
+    """Update scanner details — room, name, building, department, status."""
+    db   = _svc()
+    user = current_user()
+
+    device_name   = request.form.get("device_name", "").strip()
+    room          = request.form.get("room", "").strip()
+    building      = request.form.get("building", "").strip()
+    department_id = request.form.get("department_id", "").strip() or None
+    notes         = request.form.get("notes", "").strip()
+    is_active     = request.form.get("is_active", "1") == "1"
+
+    if not room:
+        flash("Room is required.", "error")
+        return redirect(url_for("super_admin.biometric_scanners"))
+
+    try:
+        db.table("biometric_scanners").update({
+            "device_name":   device_name or None,
+            "room":          room,
+            "building":      building or None,
+            "department_id": department_id,
+            "notes":         notes or None,
+            "is_active":     is_active,
+        }).eq("id", scanner_id).execute()
+
+        write_audit_log("update_scanner", target=f"scanner:{scanner_id}")
+        flash("Scanner details updated successfully.", "success")
+
+    except Exception as e:
+        flash(f"Error updating scanner: {e}", "error")
+
+    return redirect(url_for("super_admin.biometric_scanners"))
+
+
+@super_admin_bp.route("/biometric-scanners/delete/<scanner_id>", methods=["POST"])
+@super_admin_required
+def delete_scanner(scanner_id):
+    """Permanently remove a scanner registration."""
+    db   = _svc()
+    user = current_user()
+
+    try:
+        row = (db.table("biometric_scanners")
+               .select("serial_number, room")
+               .eq("id", scanner_id)
+               .single()
+               .execute().data)
+        if not row:
+            flash("Scanner not found.", "error")
+            return redirect(url_for("super_admin.biometric_scanners"))
+
+        db.table("biometric_scanners").delete().eq("id", scanner_id).execute()
+        write_audit_log("delete_scanner",
+                        target=f"serial:{row.get('serial_number')} room:{row.get('room')}")
+        flash(f"Scanner '{row.get('serial_number')}' removed.", "success")
+
+    except Exception as e:
+        flash(f"Error removing scanner: {e}", "error")
+
+    return redirect(url_for("super_admin.biometric_scanners"))

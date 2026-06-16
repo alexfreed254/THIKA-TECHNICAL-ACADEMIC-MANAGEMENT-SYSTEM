@@ -1,15 +1,31 @@
 """
-Clearance Blueprint — Sequential 8-Stage Institutional Clearance System
+Clearance Blueprint — Parallel Stage 1 + Sequential Stage 2
 
 Flow:
-  1  Trainer Clearance      (ALL trainers who taught student)
-  2  Home Dept Technicians  (ALL technicians in dept)
-  3  Home Dept HOD          (dept_admin of home department)
-  4  Other Academic Depts   (dept_admin of other clearance depts)
-  5  Institutional Sections (Library, Sports, Environment, DoS office)
-  6  Finance Office
-  7  Dean of Students / Deputy Principal (final authority)
-  ✓  Clearance Issued       (download enabled, QR-verified certificate)
+  Stage 1 (ALL in parallel on initiation):
+    - trainer        : all trainers who taught the student
+    - tech_1 / tech_2: first & second workshop technician in home dept
+    - svc_library    : Institute Library
+    - svc_ict        : ICT Department
+    - svc_games      : Games Department
+    - svc_kitchen    : Kitchen / Cafeteria
+    - svc_store      : Store Department
+    - ext_knls       : Kenya National Library Service
+    - ext_community  : Community / County Library
+    - hod_other      : ALL dept_admin users in other departments
+
+  Stage 1 complete when:
+    - >= min(5, total_active_trainers) trainers approved (waived count as approved)
+    - tech_1 approved, tech_2 approved (or waived)
+    - all service dept approvals approved
+    - all external service approvals approved
+    - all hod_other approvals approved
+
+  Stage 2 (unlocked by Stage 1):
+    - hod_home: home dept HOD final review → approve / reject / return for correction
+
+  Stage 3 (completed):
+    - certificate available for download with serial number + QR code
 """
 
 import uuid as _uuid
@@ -22,79 +38,304 @@ from notifications import create_notification
 
 clearance_bp = Blueprint("clearance", __name__)
 
+# ── Constants ─────────────────────────────────────────────────────────────────
 
-def _approver_back(role: str) -> str:
-    """Return the correct post-action redirect URL based on the approver's role."""
-    if role == "workshop_technician":
-        return url_for("workshop_technician.clearances")
-    if role == "trainer":
-        return url_for("clearance.approver_dashboard")
-    return url_for("clearance.approver_dashboard")
+MIN_TRAINERS = 5
 
-
-# ── Global stage-order mapping ────────────────────────────────────────────────
-# Digital groups 1–5; groups 6+ are manual (signed on the physical PDF form).
-
-def _global_group(stage: dict) -> int:
-    """Return sequential group number for a clearance_stage dict."""
-    role  = (stage.get("approver_role") or "").lower()
-    name  = (stage.get("stage_name")    or "").lower()
-    dept  = stage.get("clearance_departments") or {}
-    ctype = (dept.get("clearance_type") or "").lower()
-    dname = (dept.get("name") or "").lower()
-
-    if role == "trainer" and "technician" not in name:
-        return 1  # Trainer Clearance
-    if "technician" in name or role == "workshop_technician":
-        return 2  # Home Dept Technicians
-    if role == "dept_admin" and ctype == "department":
-        return 3  # HOD
-    if "library" in name or "library" in dname or role in ("librarian", "library_officer"):
-        return 5  # Community Library Clearance (digital — checked before 4)
-    if ctype == "institutional":
-        return 4  # Other Institutional Sections (Sports, Environment, DoS)
-    if role in ("finance_officer", "finance"):
-        return 6  # Finance — manual
-    if role in ("dean_students", "dean_of_students", "deputy_principal",
-                "registrar", "academic_registrar"):
-        return 7  # Final authority — manual
-    return 4  # Default to institutional
-
-GROUP_LABELS = {
-    1: "Trainer Clearance",
-    2: "Technician Clearance",
-    3: "HOD Approval",
-    4: "Institutional Sections",
-    5: "Community Library Clearance",
-    6: "Finance",             # manual — not shown digitally
-    7: "Final Authority",     # manual — not shown digitally
+STAGE1_CATEGORIES = {
+    "trainer", "tech_1", "tech_2",
+    "svc_library", "svc_ict", "svc_games", "svc_kitchen", "svc_store",
+    "ext_knls", "ext_community",
+    "hod_other",
 }
 
+STAGE2_CATEGORIES = {"hod_home"}
+
+SERVICE_DEPT_CATEGORIES = {
+    "svc_library", "svc_ict", "svc_games", "svc_kitchen", "svc_store",
+    "ext_knls", "ext_community",
+}
+
+CATEGORY_LABELS = {
+    "trainer":      "Trainer Clearance",
+    "tech_1":       "Workshop Technician 1",
+    "tech_2":       "Workshop Technician 2",
+    "svc_library":  "Institute Library",
+    "svc_ict":      "ICT Department",
+    "svc_games":    "Games Department",
+    "svc_kitchen":  "Kitchen / Cafeteria",
+    "svc_store":    "Store Department",
+    "ext_knls":     "Kenya National Library Service",
+    "ext_community":"Community / County Library",
+    "hod_other":    "Other Department HOD",
+    "hod_home":     "Home Department HOD (Final)",
+}
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
 def _serial(request_id: str) -> str:
+    """Generate unique clearance serial: TTTI/CLR/{year}/{hex8}."""
     year = datetime.now().year
-    return f"CLR/{year}/{str(request_id).replace('-','')[:6].upper()}"
+    hex8 = str(request_id).replace("-", "")[:8].upper()
+    return f"TTTI/CLR/{year}/{hex8}"
+
+
+def _infer_category(approval: dict) -> str:
+    """
+    Infer approver_category from stage name keywords when the column is absent
+    or NULL. Returns empty string if unable to infer.
+    """
+    stage = approval.get("clearance_stages") or {}
+    name  = (stage.get("stage_name") or "").lower()
+    role  = (stage.get("approver_role") or "").lower()
+
+    if role == "trainer" and "technician" not in name:
+        return "trainer"
+    if "technician" in name or role == "workshop_technician":
+        return "tech_1"
+    if "library" in name or "lib" in name:
+        if "kenya" in name or "knls" in name:
+            return "ext_knls"
+        if "community" in name or "county" in name:
+            return "ext_community"
+        return "svc_library"
+    if "ict" in name or "computer" in name:
+        return "svc_ict"
+    if "games" in name or "sports" in name:
+        return "svc_games"
+    if "kitchen" in name or "cafeteria" in name:
+        return "svc_kitchen"
+    if "store" in name or "stores" in name:
+        return "svc_store"
+    if role == "dept_admin":
+        return "hod_other"
+    return ""
+
+
+def _get_category(approval: dict) -> str:
+    """Return the approver_category, falling back to inference."""
+    cat = approval.get("approver_category") or ""
+    if cat:
+        return cat
+    return _infer_category(approval)
+
+
+def _map_stage_name_to_category(name: str, dept_name: str) -> str:
+    """Map a clearance stage name / dept name to a service category."""
+    n = name.lower()
+    d = dept_name.lower()
+    combined = n + " " + d
+    if "kenya" in combined or "knls" in combined:
+        return "ext_knls"
+    if "community" in combined or "county" in combined:
+        return "ext_community"
+    if "library" in combined or "lib" in combined:
+        return "svc_library"
+    if "ict" in combined or "computer" in combined:
+        return "svc_ict"
+    if "games" in combined or "sports" in combined:
+        return "svc_games"
+    if "kitchen" in combined or "cafeteria" in combined:
+        return "svc_kitchen"
+    if "store" in combined or "stores" in combined:
+        return "svc_store"
+    return ""
 
 
 def _fetch_all_approvals(db, request_id: str) -> list:
-    """Return all approval rows for a request with stage info attached."""
+    """Return all approval rows for a request (with stage info)."""
     return (db.table("clearance_approvals")
               .select("*, clearance_stages(stage_name, approver_role, "
-                      "  clearance_departments(name, clearance_type))")
+                      "  clearance_departments(name, clearance_type, code))")
               .eq("clearance_request_id", request_id)
               .execute().data or [])
 
 
-def _groups_complete_before(approvals: list, target_group: int) -> bool:
-    """Return True if every approval with group < target_group is 'approved'."""
-    for a in approvals:
-        stage = a.get("clearance_stages") or {}
-        g = _global_group(stage)
-        if g < target_group and a.get("status") != "approved":
+def _approver_back(role: str) -> str:
+    """Return post-action redirect for the given approver role."""
+    if role == "workshop_technician":
+        return url_for("clearance.approver_dashboard")
+    return url_for("clearance.approver_dashboard")
+
+
+# ── Stage 1 completion logic ──────────────────────────────────────────────────
+
+def _stage1_complete(db, request_id: str, home_dept_id: str) -> bool:
+    """
+    Returns True when ALL Stage 1 requirements are satisfied:
+      - Enough trainers approved / waived
+      - tech_1 and tech_2 approved / waived
+      - All service dept approvals approved / waived
+      - All external service approvals approved / waived
+      - All hod_other approvals approved / waived
+    """
+    approvals = _fetch_all_approvals(db, request_id)
+    s1 = [a for a in approvals if _get_category(a) in STAGE1_CATEGORIES]
+
+    if not s1:
+        return False
+
+    def _ok(a):
+        return a.get("status") == "approved" or a.get("is_waived") is True
+
+    # Trainers
+    trainers = [a for a in s1 if _get_category(a) == "trainer"]
+    if trainers:
+        approved_t = sum(1 for a in trainers if _ok(a))
+        required_t = min(MIN_TRAINERS, len(trainers))
+        if approved_t < required_t:
             return False
+
+    # Tech 1 & 2
+    for cat in ("tech_1", "tech_2"):
+        items = [a for a in s1 if _get_category(a) == cat]
+        if items and not all(_ok(a) for a in items):
+            return False
+
+    # Service depts and external services
+    for cat in SERVICE_DEPT_CATEGORIES:
+        items = [a for a in s1 if _get_category(a) == cat]
+        if items and not all(_ok(a) for a in items):
+            return False
+
+    # Other HODs
+    hod_others = [a for a in s1 if _get_category(a) == "hod_other"]
+    if hod_others and not all(_ok(a) for a in hod_others):
+        return False
+
     return True
 
 
-# ── Student: clearance dashboard ─────────────────────────────────────────────
+def _check_stage1_and_advance(db, request_id: str):
+    """
+    After any Stage 1 approval, check if Stage 1 is complete.
+    If so, create the Stage 2 hod_home approval and notify.
+    """
+    # Get request info
+    cr = (db.table("clearance_requests")
+          .select("id, student_id, department_id, stage, status")
+          .eq("id", request_id)
+          .single()
+          .execute().data)
+    if not cr:
+        return
+    if cr.get("stage", 1) >= 2:
+        return  # already advanced
+    if cr.get("status") in ("completed", "rejected"):
+        return
+
+    home_dept_id = cr.get("department_id")
+
+    if not _stage1_complete(db, request_id, home_dept_id):
+        return
+
+    # Stage 1 complete — advance to Stage 2
+    db.table("clearance_requests").update({"stage": 2}).eq("id", request_id).execute()
+
+    # Find home dept HOD(s)
+    hod_rows = (db.table("user_profiles")
+                .select("id, full_name")
+                .eq("role", "dept_admin")
+                .eq("department_id", home_dept_id)
+                .execute().data or [])
+
+    for hod in hod_rows:
+        # Check if Stage 2 approval already exists for this HOD
+        existing = (db.table("clearance_approvals")
+                    .select("id")
+                    .eq("clearance_request_id", request_id)
+                    .eq("approver_category", "hod_home")
+                    .eq("approver_id", hod["id"])
+                    .execute().data or [])
+        if existing:
+            continue
+
+        db.table("clearance_approvals").insert({
+            "clearance_request_id": request_id,
+            "clearance_stage_id":   None,
+            "approver_id":          hod["id"],
+            "approver_category":    "hod_home",
+            "clearance_stage":      2,
+            "status":               "pending",
+        }).execute()
+
+        try:
+            sp = (db.table("user_profiles")
+                  .select("full_name")
+                  .eq("id", cr["student_id"])
+                  .single()
+                  .execute().data)
+            sname = (sp or {}).get("full_name", "A trainee")
+            create_notification(
+                user_id=hod["id"],
+                title="Stage 1 Complete — Final Clearance Review Needed",
+                message=(
+                    f"{sname} has completed all Stage 1 clearances. "
+                    "Please review and issue the final clearance."
+                ),
+                notification_type="info",
+                action_url="/clearance/approver",
+            )
+        except Exception:
+            pass
+
+
+def _check_clearance_completion(db, request_id: str):
+    """
+    Check if Stage 2 hod_home approval is done.
+    If approved → mark clearance completed and issue certificate.
+    If rejected → mark rejected.
+    """
+    approvals = _fetch_all_approvals(db, request_id)
+    s2 = [a for a in approvals if _get_category(a) == "hod_home"]
+
+    if not s2:
+        return
+
+    any_rejected = any(a.get("status") == "rejected" for a in s2)
+    all_approved = all(a.get("status") == "approved" for a in s2)
+
+    if any_rejected:
+        db.table("clearance_requests").update({"status": "rejected"}).eq("id", request_id).execute()
+    elif all_approved:
+        serial = _serial(request_id)
+        update = {
+            "status":       "completed",
+            "completed_at": datetime.now().isoformat(),
+        }
+        try:
+            db.table("clearance_requests").update({
+                **update, "serial_number": serial
+            }).eq("id", request_id).execute()
+        except Exception:
+            db.table("clearance_requests").update(update).eq("id", request_id).execute()
+
+        # Notify student
+        try:
+            cr = (db.table("clearance_requests")
+                  .select("student_id")
+                  .eq("id", request_id)
+                  .single()
+                  .execute().data)
+            if cr:
+                create_notification(
+                    user_id=cr["student_id"],
+                    title="Clearance Complete!",
+                    message=(
+                        f"All stages approved. Serial: {serial}. "
+                        "Download your clearance certificate now."
+                    ),
+                    notification_type="success",
+                    action_url="/clearance",
+                )
+        except Exception:
+            pass
+
+        write_audit_log("clearance_completed", target=f"request:{request_id}")
+
+
+# ── Student: clearance dashboard ──────────────────────────────────────────────
 
 @clearance_bp.route("/")
 @login_required
@@ -117,57 +358,75 @@ def dashboard():
                    .execute().data or [])
 
     if not req_rows:
-        return render_template("clearance/student_dashboard.html",
-                               clearance_request=None,
-                               has_request=False,
-                               enrollments=enrollments,
-                               steps=[])
+        return render_template(
+            "clearance/student_dashboard.html",
+            clearance_request=None,
+            has_request=False,
+            enrollments=enrollments,
+            stage1_sections=[],
+            stage2_approval=None,
+            serial=None,
+        )
 
     cr = req_rows[0]
     serial = cr.get("serial_number") or _serial(cr["id"])
-
     approvals = _fetch_all_approvals(db, cr["id"])
 
-    # Build per-group summary for the progress steps (digital groups 1–5).
-    # Groups 6 (Finance) and 7 (Dean/Registrar) are signed manually on the PDF.
-    groups = {i: {"label": GROUP_LABELS[i], "approvals": [], "status": "locked"}
-              for i in range(1, 6)}
+    # ── Build stage 1 summary sections ──────────────────────────────────────
+    s1_cats_order = [
+        "trainer", "tech_1", "tech_2",
+        "svc_library", "svc_ict", "svc_games", "svc_kitchen", "svc_store",
+        "ext_knls", "ext_community",
+        "hod_other",
+    ]
 
-    for a in approvals:
-        stage = a.get("clearance_stages") or {}
-        g = _global_group(stage)
-        if g in groups:
-            groups[g]["approvals"].append(a)
+    def _ok(a):
+        return a.get("status") == "approved" or a.get("is_waived") is True
 
-    # Determine each group's display status
-    for g, info in groups.items():
-        app_list = info["approvals"]
-        if not app_list:
-            # No approvals for this group → skip / not applicable
-            info["status"] = "n_a"
+    stage1_sections = []
+    for cat in s1_cats_order:
+        items = [a for a in approvals if _get_category(a) == cat]
+        if not items:
             continue
-        statuses = [a.get("status", "pending") for a in app_list]
-        if all(s == "approved" for s in statuses):
-            info["status"] = "approved"
-        elif any(s == "rejected" for s in statuses):
-            info["status"] = "rejected"
+        approved = sum(1 for a in items if _ok(a))
+        total    = len(items)
+        rejected = any(a.get("status") == "rejected" for a in items)
+        if all(_ok(a) for a in items):
+            status = "approved"
+        elif rejected:
+            status = "rejected"
         else:
-            # Check if previous groups are done (unlocked for action)
-            prev_done = all(
-                groups[pg]["status"] in ("approved", "n_a")
-                for pg in range(1, g)
-            )
-            info["status"] = "in_progress" if prev_done else "locked"
+            status = "pending"
+        stage1_sections.append({
+            "category": cat,
+            "label":    CATEGORY_LABELS.get(cat, cat),
+            "status":   status,
+            "approved": approved,
+            "total":    total,
+            "items":    items,
+        })
 
-    steps = list(groups.values())
+    # ── Stage 2 ──────────────────────────────────────────────────────────────
+    stage2_items = [a for a in approvals if _get_category(a) == "hod_home"]
+    stage2_approval = stage2_items[0] if stage2_items else None
 
-    return render_template("clearance/student_dashboard.html",
-                           clearance_request=cr,
-                           has_request=True,
-                           serial=serial,
-                           steps=steps,
-                           approvals=approvals,
-                           enrollments=enrollments)
+    # Compute stage 1 overall completion
+    stage1_done = (cr.get("stage", 1) >= 2) or (
+        cr.get("status") == "completed"
+    )
+
+    return render_template(
+        "clearance/student_dashboard.html",
+        clearance_request=cr,
+        has_request=True,
+        serial=serial,
+        approvals=approvals,
+        enrollments=enrollments,
+        stage1_sections=stage1_sections,
+        stage2_approval=stage2_approval,
+        stage1_done=stage1_done,
+        CATEGORY_LABELS=CATEGORY_LABELS,
+    )
 
 
 # ── Student: initiate clearance ───────────────────────────────────────────────
@@ -198,7 +457,7 @@ def initiate_clearance():
         if (db.table("clearance_requests")
               .select("id")
               .eq("student_id", student_id)
-              .in_("status", ["pending", "in_progress"])
+              .in_("status", ["pending", "in_progress", "returned"])
               .execute().data):
             flash("You already have an active clearance request.", "warning")
             return redirect(url_for("clearance.dashboard"))
@@ -207,101 +466,137 @@ def initiate_clearance():
 
         # Create clearance request
         result = db.table("clearance_requests").insert({
-            "student_id": student_id,
-            "course_id":  course_id,
+            "student_id":    student_id,
+            "course_id":     course_id,
             "department_id": dept_id,
-            "status":     "in_progress",
-            "created_by": user["id"],
+            "status":        "in_progress",
+            "stage":         1,
+            "created_by":    user["id"],
         }).execute()
         request_id = result.data[0]["id"]
         serial     = _serial(request_id)
 
-        # Save serial_number (may fail if column not added yet — non-fatal)
+        # Save serial_number (non-fatal if column missing)
         try:
-            db.table("clearance_requests").update({"serial_number": serial}).eq("id", request_id).execute()
+            db.table("clearance_requests").update(
+                {"serial_number": serial}
+            ).eq("id", request_id).execute()
         except Exception:
             pass
 
-        # ── Identify approvers for multi-approver stages ──────────────────
-        # Trainers who taught this student
+        # ── Collect all approver data ──────────────────────────────────────
+
+        # 1. Trainers who taught this student
         att = (db.table("attendance")
                .select("trainer_id")
                .eq("student_id", student_id)
                .execute().data or [])
         trainer_ids = list({r["trainer_id"] for r in att if r.get("trainer_id")})
 
-        # Technicians in home department
+        # 2. Workshop technicians in home dept (ordered by created_at)
         tech_rows = (db.table("user_profiles")
                      .select("id")
                      .eq("role", "workshop_technician")
                      .eq("department_id", dept_id)
-                     .eq("is_active", True)
+                     .order("created_at")
                      .execute().data or [])
         tech_ids = [t["id"] for t in tech_rows]
+        tech_1_id = tech_ids[0] if len(tech_ids) >= 1 else None
+        tech_2_id = tech_ids[1] if len(tech_ids) >= 2 else None
 
-        # Home dept HOD(s)
-        hod_rows = (db.table("user_profiles")
-                    .select("id")
-                    .eq("role", "dept_admin")
-                    .eq("department_id", dept_id)
-                    .execute().data or [])
-        hod_ids = [h["id"] for h in hod_rows]
+        # 3. Other dept HODs (all dept_admin users not in home dept)
+        other_hod_rows = (db.table("user_profiles")
+                          .select("id, full_name, department_id")
+                          .eq("role", "dept_admin")
+                          .neq("department_id", dept_id)
+                          .execute().data or [])
 
-        # ── Fetch all clearance stages ────────────────────────────────────
-        stages = (db.table("clearance_stages")
-                  .select("*, clearance_departments(name, clearance_type, code)")
-                  .order("stage_order")
-                  .execute().data or [])
+        # 4. Service depts — look up from clearance_stages
+        try:
+            stage_rows = (db.table("clearance_stages")
+                          .select("*, clearance_departments(name, clearance_type, code)")
+                          .execute().data or [])
+        except Exception:
+            stage_rows = []
 
-        # ── Create approval records (digital groups 1–4 only) ────────────
-        # Groups 5 (Finance) and 6 (Dean/Registrar) are handled manually
-        # on the physical clearance form — no digital approval records created.
-        for stage in stages:
-            s_name = (stage.get("stage_name") or "").lower()
-            s_role = (stage.get("approver_role") or "").lower()
-            cd     = stage.get("clearance_departments") or {}
-            ctype  = (cd.get("clearance_type") or "").lower()
+        # Map each stage to a service category
+        svc_approver_map = {}  # category -> approver_id (or None)
+        for row in stage_rows:
+            cd    = row.get("clearance_departments") or {}
+            ctype = (cd.get("clearance_type") or "").lower()
+            sname = row.get("stage_name") or ""
+            dname = cd.get("name") or ""
+            if ctype not in ("institutional", "external"):
+                continue
+            cat = _map_stage_name_to_category(sname, dname)
+            if not cat:
+                continue
+            approver_id = row.get("approver_id")  # may be NULL
+            if cat not in svc_approver_map:
+                svc_approver_map[cat] = approver_id
 
-            # Build a temporary stage dict to check its group
-            _tmp_stage = {"approver_role": s_role, "stage_name": s_name,
-                          "clearance_departments": cd}
-            if _global_group(_tmp_stage) >= 6:
-                continue   # skip Finance (6) and Final Authority (7) — done manually on printed form
+        # Ensure all required service categories are present
+        required_svc = [
+            "svc_library", "svc_ict", "svc_games", "svc_kitchen", "svc_store",
+            "ext_knls", "ext_community",
+        ]
+        for cat in required_svc:
+            if cat not in svc_approver_map:
+                svc_approver_map[cat] = None  # no assigned approver yet
 
-            def _insert(approver_id=None, extra_comment=""):
+        # ── Insert all Stage 1 approval records ───────────────────────────
+
+        def _insert(approver_id=None, category="", stage_num=1):
+            try:
                 db.table("clearance_approvals").insert({
                     "clearance_request_id": request_id,
-                    "clearance_stage_id":   stage["id"],
+                    "clearance_stage_id":   None,
+                    "approver_id":          approver_id,
+                    "approver_category":    category,
+                    "clearance_stage":      stage_num,
+                    "status":               "pending",
+                }).execute()
+            except Exception:
+                # Fallback: without new columns
+                db.table("clearance_approvals").insert({
+                    "clearance_request_id": request_id,
+                    "clearance_stage_id":   None,
                     "approver_id":          approver_id,
                     "status":               "pending",
-                    "comments":             extra_comment or None,
                 }).execute()
 
-            if s_role == "trainer" and "technician" not in s_name and ctype == "department":
-                if trainer_ids:
-                    for tid in trainer_ids:
-                        _insert(approver_id=tid)
-                else:
-                    _insert()
-            elif "technician" in s_name and ctype == "department":
-                if tech_ids:
-                    for tid in tech_ids:
-                        _insert(approver_id=tid)
-                else:
-                    _insert()
-            elif s_role == "dept_admin" and ctype == "department":
-                if hod_ids:
-                    for hid in hod_ids:
-                        _insert(approver_id=hid)
-                else:
-                    _insert()
-            else:
-                _insert()
+        # Trainers
+        if trainer_ids:
+            for tid in trainer_ids:
+                _insert(approver_id=tid, category="trainer")
+        else:
+            _insert(category="trainer")
 
-        # Notify trainers and workshop technicians
+        # Tech 1 & 2
+        _insert(approver_id=tech_1_id, category="tech_1")
+        if tech_2_id:
+            _insert(approver_id=tech_2_id, category="tech_2")
+        else:
+            _insert(category="tech_2")
+
+        # Service depts
+        for cat, approver_id in svc_approver_map.items():
+            _insert(approver_id=approver_id, category=cat)
+
+        # Other dept HODs
+        for hod in other_hod_rows:
+            _insert(approver_id=hod["id"], category="hod_other")
+
+        # ── Send notifications ────────────────────────────────────────────
+
         try:
-            sp = db.table("user_profiles").select("full_name").eq("id", student_id).single().execute().data
-            sname = sp["full_name"] if sp else "A trainee"
+            sp = (db.table("user_profiles")
+                  .select("full_name")
+                  .eq("id", student_id)
+                  .single()
+                  .execute().data)
+            sname = (sp or {}).get("full_name", "A trainee")
+
             for tid in trainer_ids:
                 create_notification(
                     user_id=tid,
@@ -310,19 +605,32 @@ def initiate_clearance():
                     notification_type="info",
                     action_url="/clearance/approver",
                 )
-            for tid in tech_ids:
+            for tid in ([tech_1_id] if tech_1_id else []) + (
+                        [tech_2_id] if tech_2_id else []):
                 create_notification(
                     user_id=tid,
                     title="Trainee Clearance — Workshop Sign-Off Needed",
                     message=f"{sname} requires your workshop clearance approval.",
                     notification_type="info",
-                    action_url="/workshop-technician/clearances",
+                    action_url="/clearance/approver",
+                )
+            for hod in other_hod_rows:
+                create_notification(
+                    user_id=hod["id"],
+                    title="Clearance Approval Required — Other Dept HOD",
+                    message=f"{sname} requires your department's clearance sign-off.",
+                    notification_type="info",
+                    action_url="/clearance/approver",
                 )
         except Exception:
             pass
 
         write_audit_log("initiate_clearance", target=f"request:{request_id}")
-        flash(f"Clearance initiated successfully. Your serial number is {serial}.", "success")
+        flash(
+            f"Clearance initiated successfully. Your serial number is {serial}.",
+            "success",
+        )
+
     except Exception as e:
         flash(f"Error initiating clearance: {e}", "error")
 
@@ -334,60 +642,87 @@ def initiate_clearance():
 @clearance_bp.route("/approver")
 @login_required
 def approver_dashboard():
-    db = get_service_client()
+    db   = get_service_client()
     user = current_user()
     role = user["role"]
+    uid  = user["id"]
 
-    # Fetch pending approvals accessible to this user
-    if role in ("trainer", "workshop_technician"):
-        # Pre-assigned by approver_id
-        raw = (db.table("clearance_approvals")
-               .select("*, "
-                       "clearance_requests(id, student_id, status, department_id, "
-                       "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
-                       "  (full_name, admission_no)), "
-                       "clearance_stages(stage_name, approver_role, stage_order, "
-                       "  clearance_departments(name, clearance_type))")
-               .eq("approver_id", user["id"])
-               .eq("status", "pending")
-               .execute().data or [])
-    else:
-        # Role-based: fetch all pending and filter
-        raw = (db.table("clearance_approvals")
-               .select("*, "
-                       "clearance_requests(id, student_id, status, department_id, "
-                       "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
-                       "  (full_name, admission_no)), "
-                       "clearance_stages(stage_name, approver_role, stage_order, "
-                       "  clearance_departments(name, clearance_type))")
-               .eq("status", "pending")
-               .execute().data or [])
-        raw = [a for a in raw
-               if (a.get("clearance_stages") or {}).get("approver_role") == role]
+    base_select = (
+        "*, "
+        "clearance_requests(id, student_id, status, department_id, stage, "
+        "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
+        "  (full_name, admission_no, department_id)), "
+        "clearance_stages(stage_name, approver_role, stage_order, "
+        "  clearance_departments(name, clearance_type))"
+    )
 
-    # Flatten and annotate with is_active (sequential gate check)
+    # Fetch approvals assigned to this user directly
+    assigned = (db.table("clearance_approvals")
+                .select(base_select)
+                .eq("approver_id", uid)
+                .in_("status", ["pending", "approved", "rejected"])
+                .execute().data or [])
+
+    # Also fetch unassigned service dept approvals (approver_id is NULL)
+    # that are claimable by certain roles
+    claimable = []
+    if role in ("liaison_officer", "workshop_technician", "trainer", "dept_admin"):
+        try:
+            null_rows = (db.table("clearance_approvals")
+                         .select(base_select)
+                         .is_("approver_id", "null")
+                         .eq("status", "pending")
+                         .execute().data or [])
+            for row in null_rows:
+                cat = row.get("approver_category") or _infer_category(row)
+                if cat in SERVICE_DEPT_CATEGORIES:
+                    row["_claimable"] = True
+                    claimable.append(row)
+        except Exception:
+            pass
+
+    # Combine and annotate
+    seen_ids = set()
     my_approvals = []
-    req_cache: dict = {}  # request_id → all_approvals
 
-    for a in raw:
-        req  = a.get("clearance_requests") or {}
-        req_id = req.get("id", "")
-        if req_id not in req_cache:
-            req_cache[req_id] = _fetch_all_approvals(db, req_id)
-        all_app = req_cache[req_id]
+    for a in assigned + claimable:
+        aid = a.get("id")
+        if aid in seen_ids:
+            continue
+        seen_ids.add(aid)
 
-        stage = a.get("clearance_stages") or {}
-        group = _global_group(stage)
-        a["_group"]     = group
-        a["_is_active"] = _groups_complete_before(all_app, group)
-        a["user_profiles"]    = req.get("user_profiles") or {}
+        req = a.get("clearance_requests") or {}
+        cat = a.get("approver_category") or _infer_category(a)
+        a["_category"]  = cat
+        a["_cat_label"] = CATEGORY_LABELS.get(cat, cat)
+        a["_is_stage1"] = cat in STAGE1_CATEGORIES
+        a["_is_stage2"] = cat in STAGE2_CATEGORIES
+        # Stage 1 approvals are always active (parallel)
+        # Stage 2 approvals are active only when request.stage >= 2
+        req_stage = req.get("stage", 1)
+        if cat in STAGE1_CATEGORIES:
+            a["_is_active"] = (req.get("status") not in ("completed", "rejected"))
+        else:
+            a["_is_active"] = (
+                req_stage >= 2
+                and req.get("status") not in ("completed", "rejected", "returned")
+            )
+        a["user_profiles"] = req.get("user_profiles") or {}
         my_approvals.append(a)
 
-    # Trainer-specific: redirect to trainer template
+    # Filter to only pending items (already approved/rejected shown differently)
+    pending   = [a for a in my_approvals if a.get("status") == "pending"]
+    completed = [a for a in my_approvals if a.get("status") in ("approved", "rejected")]
+
+    # For dept_admin: split into stage1 (hod_other) and stage2 (hod_home)
+    stage1_pending = [a for a in pending if a.get("_is_stage1")]
+    stage2_pending = [a for a in pending if a.get("_is_stage2")]
+
+    # For trainers: attach taught units info
     if role == "trainer":
         att_rows = (db.table("attendance")
                     .select("student_id, unit_id, units(name, code)")
-                    .eq("trainer_id", user["id"])
+                    .eq("trainer_id", uid)
                     .execute().data or [])
         taught = {}
         for r in att_rows:
@@ -397,33 +732,64 @@ def approver_dashboard():
                 taught[sid] = []
             if u.get("code"):
                 taught[sid].append(u)
-        for a in my_approvals:
+        for a in pending:
             sid = (a.get("clearance_requests") or {}).get("student_id", "")
             a["taught_units"] = taught.get(sid, [])
-        return render_template("trainer/clearance_approvals.html",
-                               my_approvals=my_approvals,
-                               stats={"total": len(my_approvals), "taught": len(taught)})
 
-    return render_template("clearance/approver_dashboard.html",
-                           my_approvals=my_approvals,
-                           user_role=role)
+    # For dept_admin Stage 2: attach trainer approvals so HOD can waive them
+    if role == "dept_admin" and stage2_pending:
+        for a in stage2_pending:
+            req_id = (a.get("clearance_requests") or {}).get("id") or ""
+            if not req_id:
+                a["trainer_approvals"] = []
+                continue
+            try:
+                t_rows = (db.table("clearance_approvals")
+                          .select("id, approver_id, approver_category, status, is_waived")
+                          .eq("clearance_request_id", req_id)
+                          .eq("approver_category", "trainer")
+                          .execute().data or [])
+                # Attach trainer name
+                t_ids = [r["approver_id"] for r in t_rows if r.get("approver_id")]
+                t_map = {}
+                if t_ids:
+                    t_profiles = (db.table("user_profiles")
+                                  .select("id, full_name")
+                                  .in_("id", t_ids)
+                                  .execute().data or [])
+                    t_map = {p["id"]: p.get("full_name", "Trainer") for p in t_profiles}
+                for r in t_rows:
+                    r["trainer_name"] = t_map.get(r.get("approver_id"), "Trainer")
+                a["trainer_approvals"] = t_rows
+            except Exception:
+                a["trainer_approvals"] = []
+
+    return render_template(
+        "clearance/approver_dashboard.html",
+        my_approvals=pending,
+        completed_approvals=completed,
+        stage1_pending=stage1_pending,
+        stage2_pending=stage2_pending,
+        user_role=role,
+        CATEGORY_LABELS=CATEGORY_LABELS,
+    )
 
 
-# ── Approve a clearance stage ─────────────────────────────────────────────────
+# ── Approve a clearance approval ──────────────────────────────────────────────
 
 @clearance_bp.route("/approve/<approval_id>", methods=["POST"])
 @login_required
 def approve_clearance(approval_id):
-    db = get_service_client()
+    db   = get_service_client()
     user = current_user()
     role = user["role"]
+    uid  = user["id"]
     comments = request.form.get("comments", "").strip()
 
     try:
         approval = (db.table("clearance_approvals")
-                    .select("*, clearance_stages(stage_name, approver_role, "
-                            "  clearance_departments(clearance_type)), "
-                            "clearance_requests(id, student_id, status)")
+                    .select("*, clearance_stages(stage_name, approver_role), "
+                            "clearance_requests(id, student_id, status, stage, department_id)")
                     .eq("id", approval_id)
                     .single()
                     .execute().data)
@@ -432,62 +798,74 @@ def approve_clearance(approval_id):
             flash("Approval record not found.", "error")
             return redirect(_approver_back(role))
 
-        stage = approval.get("clearance_stages") or {}
-        req   = approval.get("clearance_requests") or {}
+        req = approval.get("clearance_requests") or {}
+        cat = approval.get("approver_category") or _infer_category(approval)
 
-        # Security: verify this user is allowed to approve
-        expected_role = stage.get("approver_role")
-        if expected_role != role:
-            # Also allow if pre-assigned by approver_id
-            if approval.get("approver_id") != user["id"]:
+        # Security: must be assigned to this user OR be a claimable service dept
+        if approval.get("approver_id") != uid:
+            if cat not in SERVICE_DEPT_CATEGORIES:
                 abort(403)
 
-        # Sequential gate: check all previous groups are approved
-        all_app = _fetch_all_approvals(db, req["id"])
-        group   = _global_group(stage)
-        if not _groups_complete_before(all_app, group):
-            flash("Previous clearance stages must be fully approved before you can act on this stage.",
-                  "warning")
-            return redirect(_approver_back(role))
+        # Stage 2 gating: check stage 1 is complete
+        if cat in STAGE2_CATEGORIES:
+            req_stage = req.get("stage", 1)
+            if req_stage < 2:
+                flash("Stage 1 must be fully completed before Stage 2 can be acted on.", "warning")
+                return redirect(_approver_back(role))
 
-        # Mark this approval as approved
+        # Mark approved
         db.table("clearance_approvals").update({
             "status":      "approved",
-            "approver_id": user["id"],
+            "approver_id": uid,
             "comments":    comments or None,
             "approved_at": datetime.now().isoformat(),
         }).eq("id", approval_id).execute()
 
-        # Check overall completion
-        _check_clearance_completion(req["id"])
-
-        # Notify student
         student_id = req.get("student_id")
-        if student_id:
-            create_notification(
-                user_id=student_id,
-                title=f"✅ Stage Approved: {stage.get('stage_name','')}",
-                message="A clearance stage has been approved. Check your clearance status.",
-                notification_type="success",
-                action_url="/clearance",
-            )
+
+        if cat in STAGE1_CATEGORIES:
+            # Check if Stage 1 is now complete → advance to Stage 2
+            _check_stage1_and_advance(db, req["id"])
+
+            if student_id:
+                create_notification(
+                    user_id=student_id,
+                    title=f"Stage Approved: {CATEGORY_LABELS.get(cat, cat)}",
+                    message="A clearance approval has been granted. Check your clearance status.",
+                    notification_type="success",
+                    action_url="/clearance",
+                )
+        elif cat in STAGE2_CATEGORIES:
+            # Check overall completion
+            _check_clearance_completion(db, req["id"])
+
+            if student_id:
+                create_notification(
+                    user_id=student_id,
+                    title="HOD Final Clearance Approved",
+                    message="Your home department HOD has approved your clearance. Certificate ready!",
+                    notification_type="success",
+                    action_url="/clearance",
+                )
 
         write_audit_log("approve_clearance", target=f"approval:{approval_id}")
-        flash("Clearance stage approved successfully.", "success")
+        flash("Clearance approval granted successfully.", "success")
+
     except Exception as e:
         flash(f"Error: {e}", "error")
 
     return redirect(_approver_back(role))
 
 
-# ── Reject a clearance stage ──────────────────────────────────────────────────
+# ── Reject a clearance approval ───────────────────────────────────────────────
 
 @clearance_bp.route("/reject/<approval_id>", methods=["POST"])
 @login_required
 def reject_clearance(approval_id):
-    db = get_service_client()
+    db   = get_service_client()
     user = current_user()
     role = user["role"]
+    uid  = user["id"]
     comments = request.form.get("comments", "").strip()
 
     if not comments:
@@ -497,7 +875,7 @@ def reject_clearance(approval_id):
     try:
         approval = (db.table("clearance_approvals")
                     .select("*, clearance_stages(stage_name, approver_role), "
-                            "clearance_requests(id, student_id)")
+                            "clearance_requests(id, student_id, status)")
                     .eq("id", approval_id)
                     .single()
                     .execute().data)
@@ -506,15 +884,16 @@ def reject_clearance(approval_id):
             flash("Approval record not found.", "error")
             return redirect(_approver_back(role))
 
-        stage = approval.get("clearance_stages") or {}
-        req   = approval.get("clearance_requests") or {}
+        req = approval.get("clearance_requests") or {}
+        cat = approval.get("approver_category") or _infer_category(approval)
 
-        if stage.get("approver_role") != role and approval.get("approver_id") != user["id"]:
-            abort(403)
+        if approval.get("approver_id") != uid:
+            if cat not in SERVICE_DEPT_CATEGORIES:
+                abort(403)
 
         db.table("clearance_approvals").update({
             "status":      "rejected",
-            "approver_id": user["id"],
+            "approver_id": uid,
             "comments":    comments,
             "approved_at": datetime.now().isoformat(),
         }).eq("id", approval_id).execute()
@@ -527,26 +906,161 @@ def reject_clearance(approval_id):
         if student_id:
             create_notification(
                 user_id=student_id,
-                title=f"❌ Clearance Rejected: {stage.get('stage_name','')}",
-                message=f"A clearance stage was rejected. Reason: {comments}",
+                title=f"Clearance Rejected: {CATEGORY_LABELS.get(cat, cat)}",
+                message=f"A clearance approval was rejected. Reason: {comments}",
                 notification_type="warning",
                 action_url="/clearance",
             )
 
         write_audit_log("reject_clearance", target=f"approval:{approval_id}")
         flash("Clearance stage rejected.", "warning")
+
     except Exception as e:
         flash(f"Error: {e}", "error")
 
     return redirect(_approver_back(role))
 
 
-# ── Clearance certificate (download) ─────────────────────────────────────────
+# ── HOD: Return for correction ────────────────────────────────────────────────
+
+@clearance_bp.route("/return-correction/<request_id>", methods=["POST"])
+@login_required
+def return_for_correction(request_id):
+    """
+    Stage 2: Home HOD returns the clearance for correction.
+    Sets request status to 'returned', stores reason, notifies student.
+    """
+    db   = get_service_client()
+    user = current_user()
+    uid  = user["id"]
+    reason = request.form.get("reason", "").strip()
+
+    if not reason:
+        flash("A reason for return is required.", "error")
+        return redirect(_approver_back(user["role"]))
+
+    try:
+        cr = (db.table("clearance_requests")
+              .select("id, student_id, stage, department_id")
+              .eq("id", request_id)
+              .single()
+              .execute().data)
+
+        if not cr:
+            abort(404)
+
+        # Verify this user is the home dept HOD
+        home_dept_id = cr.get("department_id")
+        hod_check = (db.table("user_profiles")
+                     .select("id")
+                     .eq("id", uid)
+                     .eq("role", "dept_admin")
+                     .eq("department_id", home_dept_id)
+                     .execute().data or [])
+        if not hod_check:
+            abort(403)
+
+        if cr.get("stage", 1) < 2:
+            flash("Cannot return a clearance that has not reached Stage 2.", "warning")
+            return redirect(_approver_back(user["role"]))
+
+        db.table("clearance_requests").update({
+            "status":      "returned",
+            "return_reason": reason,
+            "returned_at": datetime.now().isoformat(),
+        }).eq("id", request_id).execute()
+
+        student_id = cr.get("student_id")
+        if student_id:
+            create_notification(
+                user_id=student_id,
+                title="Clearance Returned for Correction",
+                message=f"Your HOD has returned your clearance. Reason: {reason}",
+                notification_type="warning",
+                action_url="/clearance",
+            )
+
+        write_audit_log("return_clearance", target=f"request:{request_id}")
+        flash("Clearance returned for correction.", "warning")
+
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+
+    return redirect(_approver_back(user["role"]))
+
+
+# ── HOD: Waive inactive trainer ───────────────────────────────────────────────
+
+@clearance_bp.route("/waive-trainer/<approval_id>", methods=["POST"])
+@login_required
+def waive_trainer(approval_id):
+    """
+    HOD waives an inactive trainer Stage 1 approval record.
+    Only home dept HOD (dept_admin) can waive trainers for their students.
+    """
+    db   = get_service_client()
+    user = current_user()
+    uid  = user["id"]
+
+    if user["role"] != "dept_admin":
+        abort(403)
+
+    try:
+        approval = (db.table("clearance_approvals")
+                    .select("*, clearance_requests(id, student_id, department_id, stage)")
+                    .eq("id", approval_id)
+                    .single()
+                    .execute().data)
+
+        if not approval:
+            abort(404)
+
+        cat = approval.get("approver_category") or _infer_category(approval)
+        if cat != "trainer":
+            flash("Only trainer approvals can be waived.", "error")
+            return redirect(_approver_back(user["role"]))
+
+        req          = approval.get("clearance_requests") or {}
+        home_dept_id = req.get("department_id")
+
+        # Verify HOD belongs to this department
+        hod_check = (db.table("user_profiles")
+                     .select("id")
+                     .eq("id", uid)
+                     .eq("role", "dept_admin")
+                     .eq("department_id", home_dept_id)
+                     .execute().data or [])
+        if not hod_check:
+            abort(403)
+
+        now_iso = datetime.now().isoformat()
+        db.table("clearance_approvals").update({
+            "is_waived":  True,
+            "waived_by":  uid,
+            "waived_at":  now_iso,
+            "status":     "approved",
+            "comments":   "Waived by HOD — trainer inactive",
+            "approved_at": now_iso,
+        }).eq("id", approval_id).execute()
+
+        # Re-check Stage 1 completion
+        _check_stage1_and_advance(db, req["id"])
+
+        write_audit_log("waive_trainer", target=f"approval:{approval_id}")
+        flash("Trainer approval waived.", "success")
+
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+
+    return redirect(_approver_back(user["role"]))
+
+
+# ── Certificate (HTML view) ───────────────────────────────────────────────────
 
 @clearance_bp.route("/certificate/<request_id>")
 @login_required
 def certificate(request_id):
-    db = get_service_client()
+    db   = get_service_client()
     user = current_user()
 
     cr = (db.table("clearance_requests")
@@ -559,16 +1073,14 @@ def certificate(request_id):
     if not cr:
         abort(404)
 
-    # Security: student can only access own; admin/dean/finance can access any
     if user["role"] == "student" and cr["student_id"] != user["id"]:
         abort(403)
 
-    # Must be completed before download
     if cr.get("status") != "completed":
         flash("Clearance certificate is only available after all stages are approved.", "warning")
         return redirect(url_for("clearance.dashboard"))
 
-    serial   = cr.get("serial_number") or _serial(cr["id"])
+    serial    = cr.get("serial_number") or _serial(cr["id"])
     approvals = _fetch_all_approvals(db, request_id)
 
     # Attach approver names
@@ -582,40 +1094,33 @@ def certificate(request_id):
         approver_map = {p["id"]: p for p in profiles}
 
     for a in approvals:
-        a["_approver"] = approver_map.get(a.get("approver_id"), {})
+        a["_approver"]  = approver_map.get(a.get("approver_id"), {})
+        a["_category"]  = _get_category(a)
+        a["_cat_label"] = CATEGORY_LABELS.get(_get_category(a), "")
 
     student = cr.get("user_profiles") or {}
 
     import os
-    base_url = os.environ.get("APP_BASE_URL", request.host_url.rstrip("/"))
+    base_url   = os.environ.get("APP_BASE_URL", request.host_url.rstrip("/"))
     verify_url = f"{base_url}/clearance/verify/{serial}"
 
-    return render_template("clearance/clearance_certificate.html",
-                           cr=cr,
-                           student=student,
-                           serial=serial,
-                           verify_url=verify_url,
-                           approvals=approvals,
-                           GROUP_LABELS=GROUP_LABELS,
-                           _global_group=_global_group)
+    return render_template(
+        "clearance/clearance_certificate.html",
+        cr=cr,
+        student=student,
+        serial=serial,
+        verify_url=verify_url,
+        approvals=approvals,
+        CATEGORY_LABELS=CATEGORY_LABELS,
+    )
 
 
-# ── Clearance certificate PDF download ───────────────────────────────────────
+# ── Certificate PDF download ──────────────────────────────────────────────────
 
 @clearance_bp.route("/certificate/<request_id>/pdf")
 @login_required
 def certificate_pdf(request_id):
-    """
-    Generate and stream the TTTI Clearance Certificate as a PDF.
-
-    Page layout:
-      1. Centred header (logo + institute + Clearance Certificate title)
-      2. Left-aligned student & course details
-      3. Digital approvals grid  — one row per approver with name + date
-      4. Remaining manual signature blocks:
-         Finance Dept · Dean of Students · Registrar · Chief Principal
-      5. Diagonal watermark (serial number)
-    """
+    """Generate and stream the TTTI Clearance Certificate as a PDF."""
     db   = get_service_client()
     user = current_user()
 
@@ -637,7 +1142,6 @@ def certificate_pdf(request_id):
     serial    = cr.get("serial_number") or _serial(cr["id"])
     approvals = _fetch_all_approvals(db, request_id)
 
-    # Attach approver profiles
     approver_ids = [a["approver_id"] for a in approvals if a.get("approver_id")]
     approver_map = {}
     if approver_ids:
@@ -646,14 +1150,17 @@ def certificate_pdf(request_id):
                     .in_("id", approver_ids)
                     .execute().data or [])
         approver_map = {p["id"]: p for p in profiles}
+
     for a in approvals:
-        a["_approver"] = approver_map.get(a.get("approver_id") or "", {})
+        a["_approver"]  = approver_map.get(a.get("approver_id") or "", {})
+        a["_category"]  = _get_category(a)
+        a["_cat_label"] = CATEGORY_LABELS.get(_get_category(a), "")
 
     student = cr.get("user_profiles") or {}
 
-    # ── Build PDF ─────────────────────────────────────────────────────────────
     try:
-        import io as _io, os as _os
+        import io as _io
+        import os as _os
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
         from reportlab.lib.units import mm
@@ -669,38 +1176,37 @@ def certificate_pdf(request_id):
                                 topMargin=14*mm,  bottomMargin=14*mm)
         W = A4[0] - 36*mm
 
-        base    = getSampleStyleSheet()
-        DARK    = colors.HexColor('#0f2c54')
-        MID     = colors.HexColor('#1e40af')
-        BORDER  = colors.HexColor('#e2e8f0')
-        LGREY   = colors.HexColor('#f8fafc')
-        GREEN   = colors.HexColor('#dcfce7')
-        GTEXT   = colors.HexColor('#15803d')
+        base   = getSampleStyleSheet()
+        DARK   = colors.HexColor("#0f2c54")
+        MID    = colors.HexColor("#1e40af")
+        BORDER = colors.HexColor("#e2e8f0")
+        LGREY  = colors.HexColor("#f8fafc")
+        GTEXT  = colors.HexColor("#15803d")
 
-        ctr14b  = ParagraphStyle('c14', parent=base['Normal'], fontSize=14,
-                                 fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=2)
-        ctr11b  = ParagraphStyle('c11', parent=base['Normal'], fontSize=11,
-                                 fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=2)
-        ctr9    = ParagraphStyle('c9',  parent=base['Normal'], fontSize=9,
-                                 fontName='Helvetica', alignment=TA_CENTER, spaceAfter=1)
-        lft10b  = ParagraphStyle('l10', parent=base['Normal'], fontSize=10,
-                                 fontName='Helvetica-Bold')
-        lft9b   = ParagraphStyle('l9b', parent=base['Normal'], fontSize=9,
-                                 fontName='Helvetica-Bold')
-        lft9    = ParagraphStyle('l9',  parent=base['Normal'], fontSize=9,
-                                 fontName='Helvetica')
-        tbl_h   = ParagraphStyle('th',  parent=base['Normal'], fontSize=8,
-                                 fontName='Helvetica-Bold', alignment=TA_CENTER)
-        tbl_c   = ParagraphStyle('tc',  parent=base['Normal'], fontSize=8,
-                                 fontName='Helvetica', alignment=TA_CENTER)
-        tbl_l   = ParagraphStyle('tl',  parent=base['Normal'], fontSize=8,
-                                 fontName='Helvetica', alignment=TA_LEFT)
+        ctr14b = ParagraphStyle("c14", parent=base["Normal"], fontSize=14,
+                                fontName="Helvetica-Bold", alignment=TA_CENTER, spaceAfter=2)
+        ctr11b = ParagraphStyle("c11", parent=base["Normal"], fontSize=11,
+                                fontName="Helvetica-Bold", alignment=TA_CENTER, spaceAfter=2)
+        ctr9   = ParagraphStyle("c9",  parent=base["Normal"], fontSize=9,
+                                fontName="Helvetica", alignment=TA_CENTER, spaceAfter=1)
+        lft10b = ParagraphStyle("l10", parent=base["Normal"], fontSize=10,
+                                fontName="Helvetica-Bold")
+        lft9b  = ParagraphStyle("l9b", parent=base["Normal"], fontSize=9,
+                                fontName="Helvetica-Bold")
+        lft9   = ParagraphStyle("l9",  parent=base["Normal"], fontSize=9,
+                                fontName="Helvetica")
+        tbl_h  = ParagraphStyle("th",  parent=base["Normal"], fontSize=8,
+                                fontName="Helvetica-Bold", alignment=TA_CENTER)
+        tbl_c  = ParagraphStyle("tc",  parent=base["Normal"], fontSize=8,
+                                fontName="Helvetica", alignment=TA_CENTER)
+        tbl_l  = ParagraphStyle("tl",  parent=base["Normal"], fontSize=8,
+                                fontName="Helvetica", alignment=TA_LEFT)
 
         story = []
 
-        # ── 1.  CENTRED HEADER ────────────────────────────────────────────────
+        # Header
         logo_path = _os.path.join(_os.path.dirname(__file__),
-                                  '..', 'static', 'assets', 'THIKATTILOGO.jpg')
+                                  "..", "static", "assets", "THIKATTILOGO.jpg")
         logo_cell = Paragraph("", lft9)
         if _os.path.exists(logo_path):
             try:
@@ -718,106 +1224,102 @@ def certificate_pdf(request_id):
             logo_cell,
         ]], colWidths=[24*mm, W - 48*mm, 24*mm])
         hdr.setStyle(TableStyle([
-            ('VALIGN',        (0,0),(-1,-1),'MIDDLE'),
-            ('ALIGN',         (1,0),(1,0), 'CENTER'),
-            ('TOPPADDING',    (0,0),(-1,-1), 0),
-            ('BOTTOMPADDING', (0,0),(-1,-1), 0),
+            ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+            ("ALIGN",         (1,0), (1,0),   "CENTER"),
+            ("TOPPADDING",    (0,0), (-1,-1),  0),
+            ("BOTTOMPADDING", (0,0), (-1,-1),  0),
         ]))
         story.append(hdr)
         story.append(HRFlowable(width="100%", thickness=2, color=DARK, spaceAfter=6))
 
-        # ── 2.  STUDENT & COURSE DETAILS ─────────────────────────────────────
-        course = cr.get("courses") or {}
+        # Student details
+        course = cr.get("courses")    or {}
         dept   = cr.get("departments") or {}
 
         def _info_row(l1, v1, l2, v2):
-            t = Table([[Paragraph(l1, lft9b), Paragraph(str(v1), lft9),
-                        Paragraph(l2, lft9b), Paragraph(str(v2), lft9)]],
-                      colWidths=[28*mm, W/2-28*mm, 28*mm, W/2-28*mm])
+            t = Table(
+                [[Paragraph(l1, lft9b), Paragraph(str(v1), lft9),
+                  Paragraph(l2, lft9b), Paragraph(str(v2), lft9)]],
+                colWidths=[28*mm, W/2-28*mm, 28*mm, W/2-28*mm])
             t.setStyle(TableStyle([
-                ('TOPPADDING',    (0,0),(-1,-1), 3),
-                ('BOTTOMPADDING', (0,0),(-1,-1), 3),
-                ('LINEBELOW',     (1,0),(1,0),   0.5, colors.grey),
-                ('LINEBELOW',     (3,0),(3,0),   0.5, colors.grey),
-                ('VALIGN',        (0,0),(-1,-1), 'BOTTOM'),
+                ("TOPPADDING",    (0,0), (-1,-1), 3),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 3),
+                ("LINEBELOW",     (1,0), (1,0),   0.5, colors.grey),
+                ("LINEBELOW",     (3,0), (3,0),   0.5, colors.grey),
+                ("VALIGN",        (0,0), (-1,-1), "BOTTOM"),
             ]))
             return t
 
-        story.append(_info_row("Student Name:", student.get("full_name","—"),
-                               "Admission No:", student.get("admission_no","—")))
-        story.append(_info_row("Course:",       course.get("name","—"),
-                               "Course Code:",  course.get("code","—")))
-        story.append(_info_row("Department:",   dept.get("name","—"),
+        story.append(_info_row("Student Name:", student.get("full_name", "—"),
+                               "Admission No:", student.get("admission_no", "—")))
+        story.append(_info_row("Course:",       course.get("name", "—"),
+                               "Course Code:",  course.get("code", "—")))
+        story.append(_info_row("Department:",   dept.get("name", "—"),
                                "Completed:",    (cr.get("completed_at") or "")[:10] or "—"))
         story.append(Spacer(1, 8))
         story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=5))
 
-        # ── 3.  DIGITAL APPROVALS GRID ────────────────────────────────────────
+        # Approvals table
         story.append(Paragraph("DIGITAL CLEARANCE APPROVALS", lft10b))
         story.append(Spacer(1, 5))
 
-        # Group approvals by stage group for display
-        grouped = {}
-        for a in approvals:
-            stage = a.get("clearance_stages") or {}
-            g     = _global_group(stage)
-            sname = stage.get("stage_name") or GROUP_LABELS.get(g, f"Stage {g}")
-            grouped.setdefault(g, {"label": sname, "items": []})["items"].append(a)
-
-        appr_hdr = [Paragraph("#",        tbl_h),
-                    Paragraph("Section",  tbl_h),
-                    Paragraph("Stage",    tbl_h),
-                    Paragraph("Approved by", tbl_l),
-                    Paragraph("Date",     tbl_c),
-                    Paragraph("Status",   tbl_c)]
+        appr_hdr = [
+            Paragraph("#",           tbl_h),
+            Paragraph("Category",    tbl_h),
+            Paragraph("Approved By", tbl_l),
+            Paragraph("Date",        tbl_c),
+            Paragraph("Status",      tbl_c),
+        ]
         appr_data  = [appr_hdr]
         appr_style = [
-            ('BACKGROUND',    (0,0),(-1,0), MID),
-            ('TEXTCOLOR',     (0,0),(-1,0), colors.white),
-            ('FONTNAME',      (0,0),(-1,-1),'Helvetica'),
-            ('FONTSIZE',      (0,0),(-1,-1), 8),
-            ('GRID',          (0,0),(-1,-1), 0.4, BORDER),
-            ('TOPPADDING',    (0,0),(-1,-1), 3),
-            ('BOTTOMPADDING', (0,0),(-1,-1), 3),
-            ('LEFTPADDING',   (0,0),(-1,-1), 4),
-            ('RIGHTPADDING',  (0,0),(-1,-1), 4),
-            ('ALIGN',         (0,0),(-1,-1), 'CENTER'),
-            ('ALIGN',         (1,0),(3,-1),  'LEFT'),
-            ('VALIGN',        (0,0),(-1,-1), 'MIDDLE'),
-            ('ROWBACKGROUNDS',(0,1),(-1,-1), [colors.white, LGREY]),
+            ("BACKGROUND",    (0,0), (-1,0), MID),
+            ("TEXTCOLOR",     (0,0), (-1,0), colors.white),
+            ("FONTSIZE",      (0,0), (-1,-1), 8),
+            ("GRID",          (0,0), (-1,-1), 0.4, BORDER),
+            ("TOPPADDING",    (0,0), (-1,-1), 3),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 3),
+            ("LEFTPADDING",   (0,0), (-1,-1), 4),
+            ("RIGHTPADDING",  (0,0), (-1,-1), 4),
+            ("ALIGN",         (0,0), (-1,-1), "CENTER"),
+            ("ALIGN",         (1,0), (2,-1),  "LEFT"),
+            ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, LGREY]),
         ]
-        row_n = 0
-        for g in sorted(grouped.keys()):
-            group_info = grouped[g]
-            for a in group_info["items"]:
-                row_n += 1
-                stage    = a.get("clearance_stages") or {}
-                approver = a.get("_approver") or {}
-                status   = a.get("status","pending")
-                appr_nm  = approver.get("full_name","—") if status == "approved" else "—"
-                appr_date= (a.get("approved_at") or "")[:10] if status == "approved" else "—"
-                status_txt = "✓ Approved" if status=="approved" else "Pending"
-                ri = len(appr_data)
-                appr_data.append([
-                    Paragraph(str(row_n),                             tbl_c),
-                    Paragraph(GROUP_LABELS.get(g, f"Stage {g}"),      tbl_l),
-                    Paragraph(stage.get("stage_name","—"),             tbl_l),
-                    Paragraph(appr_nm,                                 tbl_l),
-                    Paragraph(appr_date,                               tbl_c),
-                    Paragraph(status_txt,                              tbl_c),
-                ])
-                if status == "approved":
-                    appr_style.append(('TEXTCOLOR', (5,ri),(5,ri), GTEXT))
-                    appr_style.append(('FONTNAME',  (5,ri),(5,ri), 'Helvetica-Bold'))
 
-        appr_tbl = Table(appr_data,
-                         colWidths=[8*mm, 36*mm, 40*mm, W-8*mm-36*mm-40*mm-26*mm-20*mm,
-                                    26*mm, 20*mm],
-                         repeatRows=1)
+        for i, a in enumerate(approvals, 1):
+            approver = a.get("_approver") or {}
+            status   = a.get("status", "pending")
+            cat_lbl  = a.get("_cat_label") or CATEGORY_LABELS.get(_get_category(a), "—")
+            appr_nm  = approver.get("full_name", "—") if status == "approved" else "—"
+            appr_dt  = (a.get("approved_at") or "")[:10] if status == "approved" else "—"
+            waived   = a.get("is_waived")
+            if waived:
+                status_txt = "Waived"
+            elif status == "approved":
+                status_txt = "Approved"
+            else:
+                status_txt = "Pending"
+            ri = len(appr_data)
+            appr_data.append([
+                Paragraph(str(i),       tbl_c),
+                Paragraph(cat_lbl,      tbl_l),
+                Paragraph(appr_nm,      tbl_l),
+                Paragraph(appr_dt,      tbl_c),
+                Paragraph(status_txt,   tbl_c),
+            ])
+            if status == "approved":
+                appr_style.append(("TEXTCOLOR", (4,ri), (4,ri), GTEXT))
+                appr_style.append(("FONTNAME",  (4,ri), (4,ri), "Helvetica-Bold"))
+
+        appr_tbl = Table(
+            appr_data,
+            colWidths=[8*mm, 52*mm, W-8*mm-52*mm-28*mm-22*mm, 28*mm, 22*mm],
+            repeatRows=1,
+        )
         appr_tbl.setStyle(TableStyle(appr_style))
         story += [appr_tbl, Spacer(1, 12)]
 
-        # ── 4.  MANUAL SIGNATURE BLOCKS ───────────────────────────────────────
+        # Manual signature blocks
         story.append(HRFlowable(width="100%", thickness=1, color=DARK, spaceAfter=8))
         story.append(Paragraph("OFFICIAL SIGN-OFF", lft10b))
         story.append(Paragraph(
@@ -825,7 +1327,6 @@ def certificate_pdf(request_id):
             lft9))
         story.append(Spacer(1, 8))
 
-        # 4 officials  — 2 per row
         officials = [
             "FINANCE DEPARTMENT",
             "DEAN OF STUDENTS",
@@ -834,11 +1335,10 @@ def certificate_pdf(request_id):
         ]
         line = "_" * 34
 
-        def _sig_block_clr(title):
+        def _sig_block(title):
+            half = W / 2 - 5*mm
             rows = [
-                [Paragraph(f"<b>{title}</b>",
-                           ParagraphStyle('sh2', parent=lft9b, fontSize=9,
-                                          textColor=DARK))],
+                [Paragraph(f"<b>{title}</b>", lft9b)],
                 [Spacer(1,4)],
                 [Paragraph(f"Name:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
                 [Spacer(1,3)],
@@ -848,38 +1348,39 @@ def certificate_pdf(request_id):
                 [Spacer(1,3)],
                 [Paragraph(f"Stamp:&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
             ]
-            half = W / 2 - 5*mm
             t = Table(rows, colWidths=[half])
             t.setStyle(TableStyle([
-                ('TOPPADDING',    (0,0),(-1,-1), 2),
-                ('BOTTOMPADDING', (0,0),(-1,-1), 2),
-                ('LEFTPADDING',   (0,0),(-1,-1), 0),
-                ('BOX',           (0,0),(-1,-1), 0.5, BORDER),
-                ('BACKGROUND',    (0,0),(0,0),   LGREY),
+                ("TOPPADDING",    (0,0), (-1,-1), 2),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+                ("BOX",           (0,0), (-1,-1), 0.5, BORDER),
+                ("BACKGROUND",    (0,0), (0,0),   LGREY),
             ]))
             return t
 
         half = W / 2 - 5*mm
         for i in range(0, len(officials), 2):
-            left  = _sig_block_clr(officials[i])
-            right = _sig_block_clr(officials[i+1]) if i+1 < len(officials) else Paragraph("", lft9)
+            left  = _sig_block(officials[i])
+            right = _sig_block(officials[i+1]) if i+1 < len(officials) else Paragraph("", lft9)
             row_tbl = Table([[left, Spacer(10*mm, 1), right]],
                             colWidths=[half, 10*mm, half])
             row_tbl.setStyle(TableStyle([
-                ('VALIGN',        (0,0),(-1,-1), 'TOP'),
-                ('TOPPADDING',    (0,0),(-1,-1), 0),
-                ('BOTTOMPADDING', (0,0),(-1,-1), 8),
+                ("VALIGN",        (0,0), (-1,-1), "TOP"),
+                ("TOPPADDING",    (0,0), (-1,-1), 0),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 8),
             ]))
             story.append(row_tbl)
 
-        # ── 5.  FOOTER ────────────────────────────────────────────────────────
+        # Footer
+        import os as _os2
+        base_url   = _os2.environ.get("APP_BASE_URL", "")
+        verify_url = f"{base_url}/clearance/verify/{serial}" if base_url else f"/clearance/verify/{serial}"
         story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=3))
         story.append(Paragraph(
-            f"Generated: {datetime.now().strftime('%d %B %Y %H:%M')}  ·  "
-            f"Serial: {serial}  ·  Verify at: /clearance/verify/{serial}",
+            f"Generated: {datetime.now().strftime('%d %B %Y %H:%M')}  "
+            f"Serial: {serial}  Verify at: {verify_url}",
             ctr9))
 
-        # ── WATERMARK ─────────────────────────────────────────────────────────
+        # Watermark
         _serial_wm = serial
 
         def _wm(canvas_obj, doc_obj):
@@ -899,8 +1400,9 @@ def certificate_pdf(request_id):
         resp = make_response(pdf_bytes)
         resp.headers["Content-Type"] = "application/pdf"
         safe = serial.replace("/", "-")
-        resp.headers["Content-Disposition"] = \
+        resp.headers["Content-Disposition"] = (
             f'attachment; filename="Clearance_{safe}_{student.get("admission_no","")}.pdf"'
+        )
         return resp
 
     except ImportError:
@@ -911,12 +1413,12 @@ def certificate_pdf(request_id):
         return redirect(url_for("clearance.certificate", request_id=request_id))
 
 
-# ── Public verification ───────────────────────────────────────────────────────
+# ── Public serial verification ────────────────────────────────────────────────
 
 @clearance_bp.route("/verify", methods=["GET", "POST"])
-@clearance_bp.route("/verify/<serial_number>")
+@clearance_bp.route("/verify/<path:serial_number>")
 def verify(serial_number=None):
-    db = get_service_client()
+    db     = get_service_client()
     result = None
     error  = None
 
@@ -924,8 +1426,10 @@ def verify(serial_number=None):
         serial_number = request.form.get("serial_number", "").strip().upper()
 
     if serial_number:
-        # Try to find by serial_number column first
+        serial_number = serial_number.upper().strip()
         rows = []
+
+        # Primary: search by serial_number column
         try:
             rows = (db.table("clearance_requests")
                     .select("*, courses(name, code), departments(name), "
@@ -936,10 +1440,8 @@ def verify(serial_number=None):
         except Exception:
             pass
 
-        # Fallback: derive serial from id prefix and search
+        # Fallback: scan completed requests and derive serial
         if not rows:
-            # serial format: CLR/YYYY/XXXXXXXX  → last 6 chars of UUID (no dashes) uppercased
-            # Search completed requests and match
             try:
                 completed = (db.table("clearance_requests")
                              .select("id, status, completed_at, serial_number, "
@@ -952,8 +1454,8 @@ def verify(serial_number=None):
                     if _serial(row["id"]) == serial_number:
                         rows = [row]
                         break
-            except Exception as e:
-                error = str(e)
+            except Exception as exc:
+                error = str(exc)
 
         if rows:
             cr = rows[0]
@@ -965,61 +1467,12 @@ def verify(serial_number=None):
         else:
             error = f"No completed clearance found with serial number '{serial_number}'."
 
-    return render_template("clearance/verify.html",
-                           serial_number=serial_number,
-                           result=result,
-                           error=error)
-
-
-# ── Internal: completion check ────────────────────────────────────────────────
-
-def _check_clearance_completion(request_id: str):
-    db = get_service_client()
-    approvals = (db.table("clearance_approvals")
-                 .select("status, clearance_stages(stage_name, approver_role, "
-                         "  clearance_departments(clearance_type))")
-                 .eq("clearance_request_id", request_id)
-                 .execute().data or [])
-
-    if not approvals:
-        return
-
-    # Digital groups 1-5 count for completion.
-    # Groups 6 (Finance) and 7 (Dean/Registrar) are signed manually on the PDF.
-    digital = [a for a in approvals
-               if _global_group(a.get("clearance_stages") or {}) <= 5]
-
-    any_rejected = any(a["status"] == "rejected" for a in digital)
-    all_approved = bool(digital) and all(a["status"] == "approved" for a in digital)
-
-    if any_rejected:
-        db.table("clearance_requests").update({"status": "rejected"}).eq("id", request_id).execute()
-    elif all_approved:
-        serial = _serial(request_id)
-        update = {"status": "completed", "completed_at": datetime.now().isoformat()}
-        try:
-            db.table("clearance_requests").update({**update, "serial_number": serial}).eq("id", request_id).execute()
-        except Exception:
-            db.table("clearance_requests").update(update).eq("id", request_id).execute()
-
-        try:
-            req = (db.table("clearance_requests")
-                   .select("student_id")
-                   .eq("id", request_id)
-                   .single()
-                   .execute().data)
-            if req:
-                create_notification(
-                    user_id=req["student_id"],
-                    title="🎓 Clearance Complete!",
-                    message=f"All stages approved. Serial: {serial}. Download your clearance certificate.",
-                    notification_type="success",
-                    action_url="/clearance",
-                )
-        except Exception:
-            pass
-
-        write_audit_log("clearance_completed", target=f"request:{request_id}")
+    return render_template(
+        "clearance/verify.html",
+        serial_number=serial_number,
+        result=result,
+        error=error,
+    )
 
 
 # ── Legacy route aliases ──────────────────────────────────────────────────────
@@ -1035,3 +1488,75 @@ def clearance_form(request_id):
 def issue_certificate(request_id):
     """Legacy: mark certificate as issued (now handled automatically)."""
     return redirect(url_for("clearance.certificate", request_id=request_id))
+
+
+# ── HOD: Manage trainer waivers page ─────────────────────────────────────────
+
+@clearance_bp.route("/manage-trainers/<request_id>")
+@login_required
+def manage_trainers(request_id):
+    """
+    Dedicated page for the home dept HOD to view and waive
+    trainer Stage 1 approvals for a specific clearance request.
+    """
+    db   = get_service_client()
+    user = current_user()
+    uid  = user["id"]
+
+    if user["role"] != "dept_admin":
+        abort(403)
+
+    cr = (db.table("clearance_requests")
+          .select("id, student_id, status, stage, department_id, "
+                  "courses(name, code), departments(name), "
+                  "user_profiles:user_profiles!clearance_requests_student_id_fkey"
+                  "(full_name, admission_no)")
+          .eq("id", request_id)
+          .single()
+          .execute().data)
+
+    if not cr:
+        abort(404)
+
+    home_dept_id = cr.get("department_id")
+    hod_check = (db.table("user_profiles")
+                 .select("id")
+                 .eq("id", uid)
+                 .eq("role", "dept_admin")
+                 .eq("department_id", home_dept_id)
+                 .execute().data or [])
+    if not hod_check:
+        abort(403)
+
+    # Fetch all trainer approvals for this request
+    t_rows = (db.table("clearance_approvals")
+              .select("id, approver_id, approver_category, status, is_waived, "
+                      "waived_at, approved_at, comments")
+              .eq("clearance_request_id", request_id)
+              .eq("approver_category", "trainer")
+              .execute().data or [])
+
+    t_ids = [r["approver_id"] for r in t_rows if r.get("approver_id")]
+    t_map = {}
+    if t_ids:
+        t_profiles = (db.table("user_profiles")
+                      .select("id, full_name, phone")
+                      .in_("id", t_ids)
+                      .execute().data or [])
+        t_map = {p["id"]: p for p in t_profiles}
+
+    for r in t_rows:
+        r["_trainer"] = t_map.get(r.get("approver_id") or "", {})
+
+    approved_count = sum(1 for r in t_rows
+                         if r.get("status") == "approved" or r.get("is_waived"))
+    required_count = min(5, len(t_rows))
+
+    return render_template(
+        "clearance/manage_trainers.html",
+        cr=cr,
+        trainer_approvals=t_rows,
+        approved_count=approved_count,
+        required_count=required_count,
+        stage1_done=(cr.get("stage", 1) >= 2),
+    )

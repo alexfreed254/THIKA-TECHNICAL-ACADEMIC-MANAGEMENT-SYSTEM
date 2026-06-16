@@ -102,6 +102,9 @@
       <div class="menu-section">Communication</div>
       <a href="/super-admin/notices"><i class="fas fa-bullhorn fa-fw"></i> Send Notice / Memo</a>
 
+      <div class="menu-section">Biometric System</div>
+      <a href="/super-admin/biometric-scanners"><i class="fas fa-fingerprint fa-fw"></i> Scanner Registration</a>
+
       <div class="menu-section">System</div>
       <a href="/super-admin/logs"><i class="fas fa-history fa-fw"></i> Audit Logs</a>
       <a href="/super-admin/import"><i class="fas fa-file-excel fa-fw"></i> Import Data</a>
@@ -111,6 +114,20 @@
     </div>
 
     <div class="sidebar-footer">
+      <div style="padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+          <i class="fas fa-shield-halved"></i> Verify Clearance
+        </div>
+        <form action="/clearance/verify" method="post" style="display:flex;gap:5px">
+          <input type="text" name="serial_number"
+                 style="flex:1;padding:6px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:11px;font-family:monospace;outline:none"
+                 placeholder="Serial no…" autocomplete="off" autocapitalize="characters">
+          <button type="submit"
+                  style="padding:6px 10px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:7px;color:#fff;cursor:pointer;font-size:12px">
+            <i class="fas fa-search"></i>
+          </button>
+        </form>
+      </div>
       <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
     </div>
   </aside>

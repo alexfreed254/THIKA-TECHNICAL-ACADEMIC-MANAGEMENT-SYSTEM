@@ -1,0 +1,445 @@
+{% extends "super_admin/base.html" %}
+{% block title %}Biometric Scanner Registration{% endblock %}
+{% block page_title %}Biometric Scanner Registration{% endblock %}
+
+{% block extra_style %}
+<style>
+  .bs-wrap { padding: 24px; max-width: 1100px; }
+
+  /* ── Hero ── */
+  .bs-hero {
+    background: linear-gradient(135deg, #0f2744 0%, #1565c0 55%, #1e40af 100%);
+    border-radius: 18px; padding: 28px 32px; margin-bottom: 24px; color: #fff;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .bs-hero-icon {
+    width: 64px; height: 64px; border-radius: 16px;
+    background: rgba(255,255,255,.15); display: flex; align-items: center;
+    justify-content: center; font-size: 28px; flex-shrink: 0;
+  }
+  .bs-hero-text h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+  .bs-hero-text p  { font-size: 13px; opacity: .82; margin: 0; line-height: 1.6; max-width: 560px; }
+
+  /* ── Stats strip ── */
+  .stats-strip {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    padding: 16px 18px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .stat-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+  }
+  .si-blue   { background: #dbeafe; color: #1d4ed8; }
+  .si-green  { background: #dcfce7; color: #15803d; }
+  .si-amber  { background: #fef3c7; color: #b45309; }
+  .si-purple { background: #ede9fe; color: #7c3aed; }
+  .stat-val  { font-size: 22px; font-weight: 800; color: #111827; line-height: 1; }
+  .stat-lbl  { font-size: 11px; color: #6b7280; margin-top: 2px; font-weight: 600; }
+
+  /* ── Two-column layout ── */
+  .main-grid {
+    display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start;
+  }
+  @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── Registration form card ── */
+  .reg-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 18px;
+    overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.06);
+    position: sticky; top: 20px;
+  }
+  .reg-card-hdr {
+    background: linear-gradient(135deg, #0f2744, #1565c0);
+    padding: 16px 20px; color: #fff;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .reg-card-hdr h2 { font-size: 14px; font-weight: 800; margin: 0; }
+  .reg-card-body { padding: 20px; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 12px; font-weight: 700; color: #374151;
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px;
+  }
+  .form-group label span.req { color: #dc2626; margin-left: 2px; }
+  .form-input {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #d1d5db; border-radius: 9px;
+    font-size: 13px; outline: none; transition: border-color .2s; color: #111827;
+    font-family: inherit; background: #fff;
+  }
+  .form-input:focus { border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,.1); }
+  .form-input.mono { font-family: monospace; font-size: 14px; letter-spacing: .04em; }
+  .form-hint { font-size: 11px; color: #9ca3af; margin-top: 4px; line-height: 1.4; }
+  .btn-register {
+    width: 100%; padding: 11px; background: linear-gradient(135deg,#1565c0,#1d4ed8);
+    color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 8px; transition: opacity .15s; margin-top: 6px;
+  }
+  .btn-register:hover { opacity: .88; }
+
+  /* ── Scanner table card ── */
+  .table-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 18px;
+    overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.06);
+  }
+  .table-card-hdr {
+    padding: 16px 20px; border-bottom: 1px solid #f3f4f6;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .table-card-hdr h2 { font-size: 15px; font-weight: 800; color: #111827; margin: 0; }
+  .search-inp {
+    padding: 7px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+    font-size: 13px; outline: none; width: 200px;
+  }
+  .search-inp:focus { border-color: #1565c0; }
+
+  table.scanners-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .scanners-tbl thead th {
+    background: #f8fafc; padding: 10px 14px; text-align: left;
+    font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase;
+    letter-spacing: .05em; border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+  }
+  .scanners-tbl tbody td {
+    padding: 12px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+    color: #374151;
+  }
+  .scanners-tbl tbody tr:last-child td { border-bottom: none; }
+  .scanners-tbl tbody tr:hover td { background: #f9fafb; }
+
+  .serial-badge {
+    font-family: monospace; font-size: 13px; font-weight: 700;
+    background: #dbeafe; color: #1e40af; padding: 3px 9px; border-radius: 6px;
+    letter-spacing: .04em;
+  }
+  .status-active   { background: #dcfce7; color: #15803d; }
+  .status-inactive { background: #fee2e2; color: #b91c1c; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+    border-radius: 99px; font-size: 11px; font-weight: 700;
+  }
+
+  /* Edit inline row */
+  .edit-row { display: none; background: #f0f9ff; }
+  .edit-row.open { display: table-row; }
+  .edit-row td { padding: 14px 16px; border-bottom: 1px solid #e5e7eb; }
+  .edit-form-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px; margin-bottom: 10px;
+  }
+  .edit-form-grid input, .edit-form-grid select, .edit-form-grid textarea {
+    padding: 7px 10px; border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: 12px; outline: none; font-family: inherit; background: #fff; width: 100%;
+  }
+  .edit-form-grid input:focus,
+  .edit-form-grid select:focus { border-color: #1565c0; }
+  .edit-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn-save {
+    padding: 7px 16px; background: #16a34a; color: #fff; border: none;
+    border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .btn-cancel {
+    padding: 7px 14px; background: #f3f4f6; color: #374151; border: 1.5px solid #e5e7eb;
+    border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .btn-edit {
+    padding: 5px 12px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe;
+    border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .btn-edit:hover { background: #dbeafe; }
+  .btn-decom {
+    padding: 5px 12px; background: #fff; color: #dc2626; border: 1.5px solid #fca5a5;
+    border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .btn-decom:hover { background: #fef2f2; }
+
+  /* Empty state */
+  .empty-state {
+    padding: 60px 24px; text-align: center; color: #9ca3af;
+  }
+  .empty-state i { font-size: 42px; display: block; margin-bottom: 14px; color: #d1d5db; }
+  .empty-state p { font-size: 14px; margin: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bs-wrap">
+
+  <!-- Hero -->
+  <div class="bs-hero">
+    <div class="bs-hero-icon"><i class="fas fa-fingerprint"></i></div>
+    <div class="bs-hero-text">
+      <h1>Biometric Fingerprint Scanner Registration</h1>
+      <p>
+        Register BioEntry W scanners by their device serial number, assign each scanner to a
+        specific room or location in the institute, and manage active/inactive status.
+        Registered scanners are used by the biometric attendance system to link sessions to rooms.
+      </p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-card">
+      <div class="stat-icon si-blue"><i class="fas fa-fingerprint"></i></div>
+      <div>
+        <div class="stat-val">{{ total }}</div>
+        <div class="stat-lbl">Total Scanners</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-green"><i class="fas fa-check-circle"></i></div>
+      <div>
+        <div class="stat-val">{{ active_count }}</div>
+        <div class="stat-lbl">Active Scanners</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-amber"><i class="fas fa-door-open"></i></div>
+      <div>
+        <div class="stat-val">{{ rooms_covered }}</div>
+        <div class="stat-lbl">Rooms Covered</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-purple"><i class="fas fa-building"></i></div>
+      <div>
+        <div class="stat-val">{{ total - active_count }}</div>
+        <div class="stat-lbl">Inactive / Decommissioned</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- ── Registration form ── -->
+    <div class="reg-card">
+      <div class="reg-card-hdr">
+        <i class="fas fa-plus-circle" style="font-size:18px"></i>
+        <h2>Register New Scanner</h2>
+      </div>
+      <div class="reg-card-body">
+        <form method="post" action="{{ url_for('super_admin.register_scanner') }}">
+
+          <div class="form-group">
+            <label>Device Serial / ID <span class="req">*</span></label>
+            <input type="text" name="serial_number" class="form-input mono"
+                   placeholder="e.g. BWXK-20240801-001" required autocomplete="off"
+                   autocapitalize="characters">
+            <div class="form-hint">
+              Found on the BioEntry W device label or admin panel.
+              This ID is used to link fingerprint enrolments to the device.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Device Name / Label</label>
+            <input type="text" name="device_name" class="form-input"
+                   placeholder="e.g. Workshop A Scanner">
+            <div class="form-hint">Friendly name shown in attendance reports.</div>
+          </div>
+
+          <div class="form-group">
+            <label>Room / Location <span class="req">*</span></label>
+            <input type="text" name="room" class="form-input"
+                   placeholder="e.g. Lab 3 / Workshop A / Library" required>
+          </div>
+
+          <div class="form-group">
+            <label>Building</label>
+            <input type="text" name="building" class="form-input"
+                   placeholder="e.g. Block B / Main Building">
+          </div>
+
+          <div class="form-group">
+            <label>Department (optional)</label>
+            <select name="department_id" class="form-input">
+              <option value="">— Not dept-specific —</option>
+              {% for d in departments %}
+              <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" class="form-input" rows="2"
+                      placeholder="Any installation notes, maintenance info…" style="resize:vertical"></textarea>
+          </div>
+
+          <button type="submit" class="btn-register">
+            <i class="fas fa-save"></i> Register Scanner
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Scanners table ── -->
+    <div class="table-card">
+      <div class="table-card-hdr">
+        <h2><i class="fas fa-list" style="color:#1565c0;margin-right:8px"></i>
+          Registered Scanners
+        </h2>
+        <input type="text" id="scannerSearch" class="search-inp"
+               placeholder="&#xf002;  Search…" oninput="filterScanners(this.value)">
+      </div>
+
+      {% if scanners %}
+      <div style="overflow-x:auto">
+        <table class="scanners-tbl" id="scannerTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Serial / Device ID</th>
+              <th>Device Name</th>
+              <th>Room / Location</th>
+              <th>Building</th>
+              <th>Department</th>
+              <th>Status</th>
+              <th>Registered</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in scanners %}
+            {% set active = s.get('is_active', True) %}
+            {% set dept   = s.get('departments') or {} %}
+            <tr class="scanner-row" data-search="{{ (s.serial_number or '') ~ ' ' ~ (s.device_name or '') ~ ' ' ~ (s.room or '') ~ ' ' ~ (s.building or '') | lower }}">
+              <td style="color:#9ca3af;font-size:12px">{{ loop.index }}</td>
+              <td><span class="serial-badge">{{ s.serial_number }}</span></td>
+              <td style="font-weight:600;color:#111827">{{ s.device_name or '—' }}</td>
+              <td>
+                <div style="font-weight:700;color:#111827">{{ s.room or '—' }}</div>
+                {% if s.building %}<div style="font-size:11px;color:#9ca3af">{{ s.building }}</div>{% endif %}
+              </td>
+              <td style="color:#6b7280">{{ s.building or '—' }}</td>
+              <td style="font-size:12px;color:#6b7280">{{ dept.get('name') or '—' }}</td>
+              <td>
+                <span class="status-pill {% if active %}status-active{% else %}status-inactive{% endif %}">
+                  {% if active %}<i class="fas fa-circle" style="font-size:7px"></i> Active
+                  {% else %}<i class="fas fa-ban" style="font-size:8px"></i> Inactive{% endif %}
+                </span>
+              </td>
+              <td style="font-size:11px;color:#9ca3af;white-space:nowrap">
+                {{ (s.registered_at or s.created_at or '')[:10] or '—' }}
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button class="btn-edit" onclick="toggleEdit('edit-{{ s.id }}')">
+                    <i class="fas fa-pen"></i> Edit
+                  </button>
+                  <form method="post"
+                        action="{{ url_for('super_admin.delete_scanner', scanner_id=s.id) }}"
+                        style="margin:0" onsubmit="return confirm('Remove this scanner registration? This cannot be undone.')">
+                    <button type="submit" class="btn-decom">
+                      <i class="fas fa-trash"></i> Remove
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <!-- Edit row -->
+            <tr class="edit-row" id="edit-{{ s.id }}">
+              <td colspan="9">
+                <form method="post"
+                      action="{{ url_for('super_admin.update_scanner', scanner_id=s.id) }}">
+                  <div class="edit-form-grid">
+                    <div>
+                      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Device Name</label>
+                      <input type="text" name="device_name" value="{{ s.device_name or '' }}" placeholder="Device name">
+                    </div>
+                    <div>
+                      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Room / Location *</label>
+                      <input type="text" name="room" value="{{ s.room or '' }}" required placeholder="Room name">
+                    </div>
+                    <div>
+                      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Building</label>
+                      <input type="text" name="building" value="{{ s.building or '' }}" placeholder="Building">
+                    </div>
+                    <div>
+                      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Department</label>
+                      <select name="department_id">
+                        <option value="">— Not dept-specific —</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}" {% if s.get('department_id') == d.id %}selected{% endif %}>{{ d.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div>
+                      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Status</label>
+                      <select name="is_active">
+                        <option value="1" {% if active %}selected{% endif %}>Active</option>
+                        <option value="0" {% if not active %}selected{% endif %}>Inactive / Decommissioned</option>
+                      </select>
+                    </div>
+                    <div style="grid-column:1/-1">
+                      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Notes</label>
+                      <textarea name="notes" rows="2" placeholder="Notes…" style="resize:vertical;width:100%">{{ s.notes or '' }}</textarea>
+                    </div>
+                  </div>
+                  <div class="edit-actions">
+                    <button type="submit" class="btn-save"><i class="fas fa-save"></i> Save Changes</button>
+                    <button type="button" class="btn-cancel" onclick="toggleEdit('edit-{{ s.id }}')">Cancel</button>
+                    <span style="font-size:11px;color:#9ca3af;margin-left:4px">Serial: <strong>{{ s.serial_number }}</strong> (cannot be changed)</span>
+                  </div>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-fingerprint"></i>
+        <p style="font-weight:700;font-size:15px;margin-bottom:6px">No Scanners Registered Yet</p>
+        <p style="font-size:13px;color:#6b7280">
+          Use the form on the left to register your first BioEntry W biometric scanner.
+        </p>
+      </div>
+      {% endif %}
+    </div><!-- /table-card -->
+
+  </div><!-- /main-grid -->
+
+  <!-- SQL info box -->
+  <div style="background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:14px 18px;margin-top:20px;font-size:12px;color:#78350f;line-height:1.7">
+    <strong><i class="fas fa-database"></i> Database Note:</strong>
+    This feature requires a <code>biometric_scanners</code> table in Supabase.
+    Run <code>biometric_scanners_migration.sql</code> if not yet executed.
+    The <code>serial_number</code> column is used by the attendance system to match
+    inbound fingerprint events from the device.
+  </div>
+
+</div><!-- /bs-wrap -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEdit(id) {
+  var row = document.getElementById(id);
+  if (row) row.classList.toggle('open');
+}
+function filterScanners(q) {
+  var rows = document.querySelectorAll('.scanner-row');
+  q = q.toLowerCase();
+  rows.forEach(function(row) {
+    var match = !q || (row.dataset.search || '').includes(q);
+    row.style.display = match ? '' : 'none';
+    // Also hide/show corresponding edit row
+    var editId = 'edit-' + row.querySelector('[id^="edit-"]');
+    var next = row.nextElementSibling;
+    if (next && next.classList.contains('edit-row')) {
+      next.style.display = 'none'; // always hide edit rows when filtering
+    }
+  });
+}
+</script>
+{% endblock %}

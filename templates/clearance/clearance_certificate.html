@@ -181,8 +181,7 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>Stage</th>
-          <th>Section / Department</th>
+          <th>Category</th>
           <th>Approved By</th>
           <th>Date</th>
           <th>Status</th>
@@ -190,20 +189,28 @@
       </thead>
       <tbody>
         {% for a in approvals %}
-        {% set stage = a.get('clearance_stages') or {} %}
-        {% set cd    = stage.get('clearance_departments') or {} %}
-        {% set grp   = _global_group(stage) %}
-        {% set appr  = a.get('_approver') or {} %}
+        {% set appr    = a.get('_approver') or {} %}
+        {% set cat_lbl = a.get('_cat_label') or CATEGORY_LABELS.get(a.get('_category',''), a.get('approver_category','—')) %}
+        {% set waived  = a.get('is_waived') %}
+        {% set status  = a.get('status','pending') %}
         <tr>
           <td>{{ loop.index }}</td>
           <td>
-            {{ stage.get('stage_name','—') }}
-            <br><span class="stage-grp">Group {{ grp }}</span>
+            {{ cat_lbl }}
+            {% set stg = a.get('clearance_stage', 1) %}
+            <br><span class="stage-grp">Stage {{ stg }}</span>
           </td>
-          <td>{{ cd.get('name','—') }}</td>
-          <td>{{ appr.get('full_name','—') }}</td>
+          <td>{{ appr.get('full_name','—') if status == 'approved' else '—' }}</td>
           <td style="white-space:nowrap">{{ (a.get('approved_at') or '')[:10] or '—' }}</td>
-          <td class="status-ok">✅ Approved</td>
+          <td>
+            {% if waived %}
+              <span style="color:#9ca3af;font-weight:700">⊘ Waived</span>
+            {% elif status == 'approved' %}
+              <span class="status-ok">✅ Approved</span>
+            {% else %}
+              <span style="color:#b45309;font-weight:600">⏳ Pending</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
