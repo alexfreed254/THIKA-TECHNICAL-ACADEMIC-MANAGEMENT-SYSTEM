@@ -329,55 +329,159 @@
 </div>
 
 <!-- ── TTTI Guardian AI Assistant ─────────────────────────────── -->
-<button id="ai-fab" onclick="toggleAI()"
-     style="position:fixed;bottom:24px;right:24px;z-index:1000;width:54px;height:54px;border-radius:50%;
-            background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;cursor:pointer;
-            display:flex;align-items:center;justify-content:center;font-size:22px;
-            box-shadow:0 8px 28px rgba(37,99,235,.45);transition:transform .2s;" title="TTTI Guardian — AI Assistant">
+<button id="ai-fab" onclick="toggleAI()" title="TTTI Guardian — AI Assistant" aria-label="Open AI Assistant">
+  <span id="ai-fab-pulse"></span>
   <i class="fas fa-robot"></i>
 </button>
 
-<div id="ai-panel"
-     style="display:none;position:fixed;bottom:90px;right:24px;z-index:999;
-            width:320px;background:#fff;border-radius:20px;
-            box-shadow:0 20px 60px rgba(0,0,0,.18);border:1px solid #e2e8f0;">
-  <div style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;padding:16px 20px;border-radius:20px 20px 0 0;display:flex;align-items:center;gap:10px">
-    <i class="fas fa-robot" style="font-size:20px"></i>
-    <div>
-      <div style="font-weight:700;font-size:14px">TTTI Guardian</div>
-      <div style="font-size:11px;opacity:.8">AI Academic Assistant</div>
+<div id="ai-panel" role="dialog" aria-label="TTTI Guardian AI Assistant">
+  <div class="ai-hdr">
+    <div class="ai-hdr-avatar">
+      <i class="fas fa-robot"></i>
+      <span class="ai-online-dot"></span>
     </div>
-    <button onclick="toggleAI()" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:20px;line-height:1">&times;</button>
+    <div class="ai-hdr-info">
+      <div class="ai-hdr-name">TTTI Guardian</div>
+      <div class="ai-hdr-sub">AI Academic Assistant &bull; Online</div>
+    </div>
+    <button onclick="toggleAI()" class="ai-close-btn" aria-label="Close">&times;</button>
   </div>
-  <div style="padding:16px 20px">
-    <div id="ai-messages" style="height:200px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;font-size:13px">
-      <div style="background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#0e7490;max-width:90%;border:1px solid #bae6fd">
-        Hello! 👋 I'm TTTI Guardian. Ask me about POE uploads, attendance, exam booking, clearance, or industrial attachment.
-      </div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <input id="ai-input" type="text" placeholder="Ask me anything…"
-             style="flex:1;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:13px;outline:none;font-family:inherit"
-             onkeydown="if(event.key==='Enter')sendAI()">
-      <button onclick="sendAI()"
-              style="padding:9px 14px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:13px">
-        <i class="fas fa-paper-plane"></i>
-      </button>
-    </div>
-    <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
-      <button onclick="quickAI('What is my attendance status?')" class="ai-chip">My Attendance</button>
-      <button onclick="quickAI('Show my POE upload status')" class="ai-chip">My POE</button>
-      <button onclick="quickAI('Can I book an exam?')" class="ai-chip">Exam Booking</button>
-      <button onclick="quickAI('What is my clearance status?')" class="ai-chip">Clearance</button>
-      <button onclick="quickAI('Show my marks and grades')" class="ai-chip">My Marks</button>
-      <button onclick="quickAI('What documents have I uploaded?')" class="ai-chip">My Documents</button>
-    </div>
+  <div id="ai-messages" class="ai-msgs"></div>
+  <div class="ai-input-row">
+    <input id="ai-input" type="text" class="ai-input" placeholder="Ask me anything…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')sendAI()">
+    <button onclick="sendAI()" class="ai-send-btn" title="Send">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+  <div class="ai-chips">
+    <button onclick="quickAI('Show my enrolled units')" class="ai-chip"><i class="fas fa-book-open"></i> My Units</button>
+    <button onclick="quickAI('What is my attendance?')" class="ai-chip"><i class="fas fa-clipboard-list"></i> Attendance</button>
+    <button onclick="quickAI('Show my marks and grades')" class="ai-chip"><i class="fas fa-chart-line"></i> Marks</button>
+    <button onclick="quickAI('Show my POE status')" class="ai-chip"><i class="fas fa-folder-open"></i> My POE</button>
+    <button onclick="quickAI('Show my assessments status')" class="ai-chip"><i class="fas fa-file-alt"></i> Assessments</button>
+    <button onclick="quickAI('What documents have I uploaded?')" class="ai-chip"><i class="fas fa-archive"></i> Documents</button>
+    <button onclick="quickAI('Can I book an exam?')" class="ai-chip"><i class="fas fa-file-signature"></i> Exam Booking</button>
+    <button onclick="quickAI('What is my industrial attachment status?')" class="ai-chip"><i class="fas fa-industry"></i> Attachment</button>
+    <button onclick="quickAI('Show my digital logbook entries')" class="ai-chip"><i class="fas fa-book"></i> Logbook</button>
+    <button onclick="quickAI('What is my clearance status?')" class="ai-chip"><i class="fas fa-clipboard-check"></i> Clearance</button>
+    <button onclick="quickAI('What is my employment status after training?')" class="ai-chip"><i class="fas fa-user-tie"></i> Employment</button>
   </div>
 </div>
 
 <style>
-  .ai-chip { background:#f0f9ff;color:#0e7490;border:1px solid #bae6fd;border-radius:9999px;padding:4px 10px;font-size:11.5px;cursor:pointer;font-weight:600;transition:all .2s; }
-  .ai-chip:hover { background:#0891b2;color:#fff;border-color:#0891b2; }
+  /* ── Guardian AI widget ─────────────────────────────────────── */
+  #ai-fab {
+    position: fixed; bottom: 28px; right: 28px; z-index: 1000;
+    width: 58px; height: 58px; border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: #fff; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 23px;
+    box-shadow: 0 8px 32px rgba(37,99,235,.45); transition: transform .2s, box-shadow .2s;
+  }
+  #ai-fab:hover { transform: scale(1.1); box-shadow: 0 12px 40px rgba(37,99,235,.55); }
+  #ai-fab-pulse {
+    position: absolute; top: 3px; right: 3px;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: #22c55e; border: 2px solid #fff;
+    animation: ai-pulse 2.5s infinite;
+  }
+  @keyframes ai-pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.3);opacity:.7} }
+  #ai-panel {
+    display: none; position: fixed; bottom: 102px; right: 28px; z-index: 999;
+    width: 360px; background: #fff; border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0,0,0,.2); border: 1px solid #e2e8f0; overflow: hidden;
+  }
+  #ai-panel.ai-open { animation: ai-slide-up .25s ease both; }
+  @keyframes ai-slide-up { from{opacity:0;transform:translateY(18px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .ai-hdr {
+    background: linear-gradient(135deg, #1e40af, #6d28d9);
+    padding: 13px 16px; display: flex; align-items: center; gap: 11px;
+  }
+  .ai-hdr-avatar {
+    position: relative; width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.18);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff; flex-shrink: 0;
+  }
+  .ai-online-dot {
+    position: absolute; bottom: 1px; right: 1px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #22c55e; border: 2px solid #1e40af;
+  }
+  .ai-hdr-info { flex: 1; }
+  .ai-hdr-name { color: #fff; font-weight: 700; font-size: 14px; }
+  .ai-hdr-sub  { color: rgba(255,255,255,.72); font-size: 11px; margin-top: 1px; }
+  .ai-close-btn {
+    background: rgba(255,255,255,.15); border: none; color: #fff;
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 19px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background .15s; line-height: 1; padding: 0;
+  }
+  .ai-close-btn:hover { background: rgba(255,255,255,.28); }
+  .ai-msgs {
+    height: 280px; overflow-y: auto; padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 10px; background: #f8fafc;
+    scroll-behavior: smooth;
+  }
+  .ai-msgs::-webkit-scrollbar { width: 4px; }
+  .ai-msgs::-webkit-scrollbar-track { background: transparent; }
+  .ai-msgs::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .ai-msg { max-width: 88%; font-size: 13px; line-height: 1.52; word-break: break-word; white-space: pre-line; }
+  .ai-msg.bot {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 16px 16px 16px 4px; padding: 10px 14px;
+    color: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,.06); align-self: flex-start;
+  }
+  .ai-msg.user {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    border-radius: 16px 16px 4px 16px; padding: 10px 14px;
+    color: #fff; align-self: flex-end;
+  }
+  .ai-msg.typing {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 16px 16px 16px 4px; padding: 12px 16px;
+    align-self: flex-start; display: flex; gap: 5px; align-items: center;
+  }
+  .ai-msg.typing span {
+    width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; display: block;
+    animation: ai-bounce .8s infinite;
+  }
+  .ai-msg.typing span:nth-child(2) { animation-delay: .15s; }
+  .ai-msg.typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes ai-bounce { 0%,100%{transform:translateY(0);opacity:.6} 50%{transform:translateY(-5px);opacity:1} }
+  .ai-input-row {
+    display: flex; gap: 8px; padding: 11px 14px 10px;
+    border-top: 1px solid #f1f5f9; background: #fff;
+  }
+  .ai-input {
+    flex: 1; padding: 9px 14px; border: 1.5px solid #e2e8f0;
+    border-radius: 13px; font-size: 13px; outline: none;
+    font-family: inherit; transition: border-color .15s; color: #1e293b; background: #fff;
+  }
+  .ai-input:focus { border-color: #6366f1; }
+  .ai-send-btn {
+    padding: 9px 14px; background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: #fff; border: none; border-radius: 13px;
+    cursor: pointer; font-size: 14px; transition: opacity .15s; flex-shrink: 0;
+  }
+  .ai-send-btn:hover { opacity: .88; }
+  .ai-chips {
+    padding: 8px 12px 12px; display: flex; flex-wrap: wrap; gap: 5px;
+    background: #fff; border-top: 1px solid #f1f5f9; max-height: 110px; overflow-y: auto;
+  }
+  .ai-chip {
+    background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd;
+    border-radius: 9999px; padding: 5px 10px; font-size: 11.5px;
+    cursor: pointer; font-weight: 600; transition: all .18s;
+    display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .ai-chip i { font-size: 9.5px; }
+  .ai-chip:hover { background: #0891b2; color: #fff; border-color: #0891b2; }
+  @media (max-width: 480px) {
+    #ai-panel { width: calc(100vw - 32px); right: 16px; }
+    #ai-fab   { bottom: 20px; right: 20px; }
+  }
 </style>
 
 {% block scripts %}{% endblock %}
@@ -449,11 +553,26 @@
   /* ── AI Guardian ─────────────────────────────────────────── */
   const aiPanel = document.getElementById('ai-panel');
   let aiTyping = false;
+  let aiGreeted = false;
+
+  function ensureGreeting() {
+    if (aiGreeted) return;
+    aiGreeted = true;
+    addMsg("Hello! 👋 I'm TTTI Guardian — your AI guide for the Trainee Portal.\n\nI can help with: My Units, Lesson Attendance, Marks & Transcripts, Portfolio of Evidence, Assessments, Documents, Exam Booking, Industrial Attachment, Digital Logbook, Course Clearance, and Employment Status.\n\nWhat would you like to know?", 'bot');
+  }
 
   function toggleAI() {
     const open = aiPanel.style.display !== 'none';
-    aiPanel.style.display = open ? 'none' : 'block';
-    if (!open) document.getElementById('ai-input').focus();
+    if (open) {
+      aiPanel.style.display = 'none';
+    } else {
+      aiPanel.style.display = 'block';
+      aiPanel.classList.remove('ai-open');
+      void aiPanel.offsetWidth;
+      aiPanel.classList.add('ai-open');
+      ensureGreeting();
+      document.getElementById('ai-input').focus();
+    }
   }
 
   function sendAI() {
@@ -462,7 +581,7 @@
     if (!text || aiTyping) return;
     addMsg(text, 'user');
     input.value = '';
-    const loader = addMsg('…', 'bot-typing');
+    const loader = addTyping();
     aiTyping = true;
     fetch('/api/ai-ask', {
       method: 'POST',
@@ -481,21 +600,27 @@
     .finally(() => { aiTyping = false; });
   }
 
-  function quickAI(q) { document.getElementById('ai-input').value = q; sendAI(); }
+  function quickAI(q) {
+    if (aiPanel.style.display === 'none') toggleAI();
+    document.getElementById('ai-input').value = q;
+    sendAI();
+  }
 
   function addMsg(text, role) {
     const box = document.getElementById('ai-messages');
     const div = document.createElement('div');
-    if (role === 'user') {
-      div.style.cssText = 'background:#eff6ff;border-radius:12px 12px 4px 12px;padding:9px 13px;color:#1d4ed8;align-self:flex-end;max-width:88%;font-size:13px;border:1px solid #dbeafe;word-break:break-word';
-      div.textContent = text;
-    } else if (role === 'bot-typing') {
-      div.style.cssText = 'background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#94a3b8;max-width:90%;font-size:13px;border:1px solid #bae6fd;font-style:italic';
-      div.textContent = 'Thinking…';
-    } else {
-      div.style.cssText = 'background:#f0f9ff;border-radius:12px 12px 12px 4px;padding:10px 13px;color:#0e7490;max-width:90%;font-size:13px;border:1px solid #bae6fd;white-space:pre-line;word-break:break-word';
-      div.textContent = text;
-    }
+    div.className = 'ai-msg ' + role;
+    div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+  }
+
+  function addTyping() {
+    const box = document.getElementById('ai-messages');
+    const div = document.createElement('div');
+    div.className = 'ai-msg typing';
+    div.innerHTML = '<span></span><span></span><span></span>';
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
     return div;

@@ -81,6 +81,14 @@ def _student(db, uid, kw):
     def logbook_count():
         return len(db.table("digital_logbook").select("id").eq("student_id", uid).execute().data or [])
 
+    def my_units():
+        rows = db.table("enrollments").select("id, units(name, code)").eq("student_id", uid).execute().data or []
+        return rows
+
+    def employment():
+        rows = db.table("employment_tracking").select("employment_status, company_name, job_title").eq("student_id", uid).execute().data or []
+        return rows[0] if rows else None
+
     # Attendance
     if any(x in kw for x in ("attend", "present", "absent", "lesson", "75")):
         total, present, pct = att()
@@ -123,7 +131,7 @@ def _student(db, uid, kw):
     if any(x in kw for x in ("clear", "clearance", "library", "finance", "games", "store")):
         cl = clearance()
         if not cl:
-            return "You haven't applied for clearance yet. Go to Course Clearance in the sidebar. 7 stages: Trainer → HOD → Library → Store → Games → Finance → Deputy Principal."
+            return "You haven't applied for clearance yet. Go to Course Clearance in the sidebar. Clearance runs in 3 stages: Stage 1 (Trainers, Technicians, Service Depts & other HODs — all simultaneously), Stage 2 (Home HOD final review), Stage 3 (Certificate with serial number & QR code)."
         return f"Clearance stage: {cl.get('stage','—')}, status: {cl.get('status','—')}. Check the Clearance page for approver updates."
 
     # Documents
@@ -169,19 +177,55 @@ def _student(db, uid, kw):
             lines.append(f"{name}: {score}" + (f" ({grade})" if grade else ""))
         return "Your recent marks:\n" + "\n".join("• " + l for l in lines)
 
+    # My Units
+    if any(x in kw for x in ("unit", "units", "subject", "enrol", "my unit", "course subject")):
+        try:
+            units = my_units()
+            if not units:
+                return "You are not enrolled in any units yet. Contact your department admin to get enrolled."
+            names = [(u.get("units") or {}).get("name") or (u.get("units") or {}).get("code") or "Unit" for u in units]
+            return f"You are enrolled in {len(units)} unit{'s' if len(units)!=1 else ''}:\n" + "\n".join("• " + n for n in names[:12])
+        except Exception:
+            return "Your enrolled units are listed under My Units in the sidebar."
+
+    # Employment Status
+    if any(x in kw for x in ("employment", "employed", "job", "career", "work status", "after training", "after course")):
+        try:
+            emp = employment()
+            if not emp:
+                return "No employment record found. After completing your course, update your post-training status via Employment Status in the sidebar."
+            st = emp.get("employment_status", "")
+            if st == "employed":
+                co = emp.get("company_name") or "a company"
+                jt = emp.get("job_title") or "a position"
+                return f"You are recorded as employed at {co} as {jt}. Update via Employment Status in the sidebar if this changes."
+            elif st == "self_employed":
+                return "Your status shows as self-employed. Update details via Employment Status in the sidebar."
+            elif st == "unemployed":
+                return "Your status shows as seeking employment. Update it via Employment Status in the sidebar when your situation changes."
+            return f"Employment status: {st}. Update it via Employment Status in the sidebar."
+        except Exception:
+            return "Check and update your post-training employment status via Employment Status in the sidebar."
+
     # Password / profile
     if any(x in kw for x in ("password", "profile", "phone", "email")):
-        return "To update your profile or change your password, click your name/avatar in the top bar and select Profile."
+        return "To update your profile or change your password, go to My Profile in the sidebar or click your name in the top bar."
 
     # Default
     try:
         total, present, pct = att()
         total_p, approved_p, _, _ = poe()
+        units = my_units()
         att_info = f"Attendance: {pct}%" if total > 0 else "No attendance yet"
         poe_info = f"POE: {total_p} uploads ({approved_p} approved)" if total_p > 0 else "No POE uploaded yet"
-        return f"I can help with attendance, POE uploads, exam booking, clearance, documents, marks, and industrial attachment.\nYour snapshot — {att_info} | {poe_info}.\nWhat would you like to know?"
+        unit_info = f"{len(units)} unit{'s' if len(units)!=1 else ''} enrolled" if units else "No units yet"
+        return (f"I can help with: My Units, Lesson Attendance, Marks & Transcripts, Portfolio of Evidence, "
+                f"Assessments, Documents, Exam Booking, Industrial Attachment, Digital Logbook, Course Clearance, and Employment Status.\n"
+                f"Your snapshot — {att_info} | {poe_info} | {unit_info}.\n"
+                f"What would you like to know?")
     except Exception:
-        return "I can help with attendance, POE uploads, exam booking, clearance, documents, marks, and industrial attachment. What would you like to know?"
+        return ("I can help with: My Units, Attendance, Marks, POE uploads, Exam Booking, Course Clearance, "
+                "Industrial Attachment, Digital Logbook, and Employment Status. What would you like to know?")
 
 
 # ── Dept Admin ────────────────────────────────────────────────────────────────
