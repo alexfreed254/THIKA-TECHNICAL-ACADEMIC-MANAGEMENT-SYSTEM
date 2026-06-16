@@ -176,7 +176,7 @@
       <!-- Approve -->
       <form action="{{ url_for('clearance.approve_clearance', approval_id=a['id']) }}" method="post" style="margin:0">
         <button type="submit" class="btn-ok"
-                onclick="return confirm('Approve clearance for {{ up.get('full_name','') | replace(\"'\",\"'\") }}?')">
+                onclick="return confirm('Approve this clearance for {{ up.get("full_name","") }}?')">
           <i class="fas fa-check"></i> Approve
         </button>
       </form>
@@ -232,7 +232,7 @@
       <!-- Approve -->
       <form action="{{ url_for('clearance.approve_clearance', approval_id=a['id']) }}" method="post" style="margin:0">
         <button type="submit" class="btn-ok"
-                onclick="return confirm('Issue final clearance for {{ up.get('full_name','') | replace(\"'\",\"'\") }}? This will generate their clearance certificate.')">
+                onclick="return confirm('Issue final clearance for {{ up.get("full_name","") }}? This will generate their clearance certificate.')">
           <i class="fas fa-certificate"></i> Approve &amp; Issue Certificate
         </button>
       </form>
