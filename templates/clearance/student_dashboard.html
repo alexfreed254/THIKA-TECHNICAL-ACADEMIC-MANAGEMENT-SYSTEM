@@ -386,17 +386,17 @@
           {% elif sec.status == 'rejected' %}&#10007; Rejected
           {% else %}&#9203; Pending{% endif %}
         </span>
-        {% if sec.items | length > 1 %}
+        {% if sec.approvals | length > 1 %}
         <button class="expand-btn" onclick="toggleSec('sec-{{ uid_sec }}', this)">
           <i class="fas fa-chevron-down" style="font-size:10px"></i>
-          Show ({{ sec.items | length }})
+          Show ({{ sec.approvals | length }})
         </button>
         {% endif %}
       </div>
     </div>
-    {% if sec.items | length > 1 %}
+    {% if sec.approvals | length > 1 %}
     <div class="approval-panel" id="sec-{{ uid_sec }}">
-      {% for a in sec.items %}
+      {% for a in sec.approvals %}
       <div class="ap-detail">
         <div class="ap-detail-left">
           <div style="font-weight:600;color:#111827">

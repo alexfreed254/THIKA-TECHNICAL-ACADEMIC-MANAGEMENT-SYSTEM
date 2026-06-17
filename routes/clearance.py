@@ -403,7 +403,7 @@ def dashboard():
             "status":   status,
             "approved": approved,
             "total":    total,
-            "items":    items,
+            "approvals": items,
         })
 
     # ── Stage 2 ──────────────────────────────────────────────────────────────
