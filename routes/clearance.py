@@ -1227,7 +1227,7 @@ def certificate_pdf(request_id):
             govt_logo_cell,
             [Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", ctr14b),
              Paragraph("CLEARANCE CERTIFICATE", ctr11b),
-             Paragraph("Ministry of Education, Science &amp; Technology | Government of Kenya", ctr9),
+             Paragraph("Academic Management System", ctr9),
              Paragraph(f"Serial No: {serial}", ctr9)],
             ttti_logo_cell,
         ]], colWidths=[24*mm, W - 48*mm, 24*mm])
