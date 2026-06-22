@@ -137,7 +137,8 @@ def inject_globals():
         return str(url).split('/')[-1].split('?')[0]
 
     return {
-        "LOGO_URL": "/static/assets/THIKATTILOGO.jpg",
+        "LOGO_URL":      "/static/assets/THIKATTILOGO.jpg",
+        "GOVT_LOGO_URL": "/static/assets/KENYACOATOFARMS.png",
         "current_user": user,
         "department_name": dept_name,
         "unread_notification_count": unread_count,

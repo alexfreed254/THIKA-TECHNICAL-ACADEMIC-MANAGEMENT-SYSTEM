@@ -46,7 +46,8 @@
   </style>
 </head>
 <body>
-<button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+{% include 'partials/official_header.html' %}
+<button class="hamburger" id="hamburger" aria-label="Menu" style="position:fixed;top:calc(var(--official-header-h) + 10px);left:10px;z-index:300;display:none;background:var(--primary,#1d4ed8);color:#fff;border:none;border-radius:6px;width:38px;height:38px;font-size:18px;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2);">&#9776;</button>
 <div class="sidebar-overlay" id="overlay"></div>
 
 <div class="admin-layout">

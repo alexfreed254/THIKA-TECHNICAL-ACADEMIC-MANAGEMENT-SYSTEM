@@ -1205,23 +1205,31 @@ def certificate_pdf(request_id):
         story = []
 
         # Header
-        logo_path = _os.path.join(_os.path.dirname(__file__),
-                                  "..", "static", "assets", "THIKATTILOGO.jpg")
-        logo_cell = Paragraph("", lft9)
-        if _os.path.exists(logo_path):
+        ttti_logo_path = _os.path.join(_os.path.dirname(__file__),
+                                       "..", "static", "assets", "THIKATTILOGO.jpg")
+        ttti_logo_cell = Paragraph("", lft9)
+        if _os.path.exists(ttti_logo_path):
             try:
-                logo_cell = RLImage(logo_path, width=22*mm, height=22*mm)
+                ttti_logo_cell = RLImage(ttti_logo_path, width=22*mm, height=22*mm)
+            except Exception:
+                pass
+
+        govt_logo_path = _os.path.join(_os.path.dirname(__file__),
+                                       "..", "static", "assets", "KENYACOATOFARMS.png")
+        govt_logo_cell = Paragraph("", lft9)
+        if _os.path.exists(govt_logo_path):
+            try:
+                govt_logo_cell = RLImage(govt_logo_path, width=22*mm, height=22*mm)
             except Exception:
                 pass
 
         hdr = Table([[
-            logo_cell,
+            govt_logo_cell,
             [Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", ctr14b),
              Paragraph("CLEARANCE CERTIFICATE", ctr11b),
-             Paragraph("This certifies that the above-named student has been cleared "
-                       "by all relevant departments.", ctr9),
+             Paragraph("Ministry of Education, Science &amp; Technology | Government of Kenya", ctr9),
              Paragraph(f"Serial No: {serial}", ctr9)],
-            logo_cell,
+            ttti_logo_cell,
         ]], colWidths=[24*mm, W - 48*mm, 24*mm])
         hdr.setStyle(TableStyle([
             ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),

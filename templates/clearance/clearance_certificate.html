@@ -27,14 +27,16 @@
 
     /* Header */
     .cert-header {
-      display: flex; align-items: center; gap: 20px;
-      border-bottom: 3px solid #1e3a5f; padding-bottom: 18px; margin-bottom: 22px;
+      display: flex; align-items: center; gap: 16px;
+      border-bottom: 3px solid #006600; padding-bottom: 18px; margin-bottom: 22px;
     }
-    .cert-logo { width: 80px; height: 80px; object-fit: contain; flex-shrink: 0; }
-    .cert-school h1 { font-size: 18px; font-weight: 800; color: #1e3a5f; text-transform: uppercase; line-height: 1.2; }
-    .cert-school p  { font-size: 12px; color: #6b7280; margin-top: 4px; }
-    .cert-title-block { text-align: right; margin-left: auto; }
-    .cert-title-block h2 { font-size: 20px; font-weight: 800; color: #1e3a5f; text-transform: uppercase; }
+    .cert-logo { width: 76px; height: 76px; object-fit: contain; flex-shrink: 0; }
+    .cert-school { flex: 1; text-align: center; }
+    .cert-school h1 { font-size: 17px; font-weight: 800; color: #006600; text-transform: uppercase; line-height: 1.2; }
+    .cert-school .cert-ministry { font-size: 10px; color: #555; margin-top: 3px; }
+    .cert-school p  { font-size: 11px; color: #6b7280; margin-top: 3px; }
+    .cert-title-block { text-align: center; margin-top: 6px; }
+    .cert-title-block h2 { font-size: 14px; font-weight: 800; color: #1e3a5f; text-transform: uppercase; }
     .cert-title-block .form-ref { font-size: 11px; color: #9ca3af; margin-top: 3px; }
 
     /* Serial + QR row */
@@ -125,18 +127,17 @@
 
     <!-- Header -->
     <div class="cert-header">
-      <img src="{{ LOGO_URL }}" alt="TTTI Logo" class="cert-logo">
+      <img src="{{ GOVT_LOGO_URL }}" alt="Government of Kenya" class="cert-logo" onerror="this.style.visibility='hidden'">
       <div class="cert-school">
         <h1>Thika Technical Training Institute</h1>
+        <div class="cert-ministry">Ministry of Education, Science &amp; Technology | Government of Kenya</div>
         <p>P.O. Box 2952–01000, Thika, Kenya | info@thikattt.ac.ke</p>
-      </div>
-      <div class="cert-title-block">
-        <h2>Clearance Certificate</h2>
-        <div class="form-ref">Form Ref: TTTI/ADM/CLEAR/F1</div>
-        <div class="form-ref" style="margin-top:4px">
-          Issued: {{ cr.get('completed_at','')[:10] or 'N/A' }}
+        <div class="cert-title-block">
+          <h2>Clearance Certificate</h2>
+          <div class="form-ref">Form Ref: TTTI/ADM/CLEAR/F1 &nbsp;|&nbsp; Issued: {{ cr.get('completed_at','')[:10] or 'N/A' }}</div>
         </div>
       </div>
+      <img src="{{ LOGO_URL }}" alt="TTTI Logo" class="cert-logo">
     </div>
 
     <!-- Serial + QR -->
