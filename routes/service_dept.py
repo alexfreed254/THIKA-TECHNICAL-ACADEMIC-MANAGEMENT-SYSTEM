@@ -1,0 +1,126 @@
+"""
+routes/service_dept.py — Independent Service Department Clearance Portals.
+
+Serves three standalone portals:
+  - library_hod              → Institute Library
+  - sports_hod               → Games Department
+  - service_clearance_officer → General Service Clearance (all svc depts)
+
+Super Admin creates the login credentials; users land here after login.
+"""
+
+from flask import Blueprint, render_template, redirect, url_for, flash
+from auth_utils import login_required, current_user
+from db import get_service_client
+
+service_dept_bp = Blueprint("service_dept", __name__)
+
+DEPT_CONFIG = {
+    "library_hod": {
+        "label":    "Institute Library",
+        "role_lbl": "Library Officer",
+        "icon":     "fa-book",
+        "gradient": "linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 100%)",
+        "accent":   "#1d4ed8",
+        "light":    "#dbeafe",
+        "cats":     ["svc_library"],
+    },
+    "sports_hod": {
+        "label":    "Games Department",
+        "role_lbl": "Games Officer",
+        "icon":     "fa-futbol",
+        "gradient": "linear-gradient(160deg, #14532d 0%, #16a34a 100%)",
+        "accent":   "#16a34a",
+        "light":    "#dcfce7",
+        "cats":     ["svc_games"],
+    },
+    "service_clearance_officer": {
+        "label":    "Service Clearance",
+        "role_lbl": "Service Clearance Officer",
+        "icon":     "fa-clipboard-check",
+        "gradient": "linear-gradient(160deg, #78350f 0%, #d97706 100%)",
+        "accent":   "#d97706",
+        "light":    "#fef3c7",
+        "cats":     ["svc_library", "svc_ict", "svc_games", "svc_kitchen", "svc_store"],
+    },
+}
+
+CATEGORY_LABELS = {
+    "svc_library":  "Institute Library",
+    "svc_ict":      "ICT Department",
+    "svc_games":    "Games Department",
+    "svc_kitchen":  "Kitchen / Cafeteria",
+    "svc_store":    "Store Department",
+}
+
+
+def _require_service_role(user):
+    return user["role"] in DEPT_CONFIG
+
+
+@service_dept_bp.route("/")
+@login_required
+def dashboard():
+    user = current_user()
+    role = user["role"]
+
+    if not _require_service_role(user):
+        flash("Access denied.", "error")
+        return redirect(url_for("auth.login"))
+
+    config = DEPT_CONFIG[role]
+    cats   = config["cats"]
+    uid    = user["id"]
+    db     = get_service_client()
+
+    base_sel = (
+        "id, approver_category, status, comments, approved_at, created_at, approver_id, is_waived, "
+        "clearance_requests(id, student_id, status, stage, created_at, "
+        "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
+        "  (full_name, admission_no, phone), "
+        "  courses(name, code), departments(name))"
+    )
+
+    assigned = (db.table("clearance_approvals")
+                  .select(base_sel)
+                  .eq("approver_id", uid)
+                  .in_("approver_category", cats)
+                  .order("created_at", desc=True)
+                  .execute().data or [])
+
+    unassigned = (db.table("clearance_approvals")
+                    .select(base_sel)
+                    .is_("approver_id", "null")
+                    .in_("approver_category", cats)
+                    .eq("status", "pending")
+                    .order("created_at", desc=True)
+                    .execute().data or [])
+
+    seen = set()
+    rows = []
+    for row in assigned + unassigned:
+        rid = row.get("id")
+        if rid in seen:
+            continue
+        seen.add(rid)
+        req = row.get("clearance_requests") or {}
+        row["_student"]    = req.get("user_profiles") or {}
+        row["_course"]     = req.get("courses") or {}
+        row["_dept"]       = req.get("departments") or {}
+        row["_req_status"] = req.get("status", "")
+        row["_cat_label"]  = CATEGORY_LABELS.get(row.get("approver_category", ""), "")
+        rows.append(row)
+
+    pending  = [r for r in rows if r.get("status") == "pending"
+                and r.get("_req_status") not in ("completed", "rejected")]
+    cleared  = [r for r in rows if r.get("status") == "approved"]
+    rejected = [r for r in rows if r.get("status") == "rejected"]
+
+    return render_template(
+        "service_dept/dashboard.html",
+        config=config,
+        pending=pending,
+        cleared=cleared,
+        rejected=rejected,
+        user=user,
+    )

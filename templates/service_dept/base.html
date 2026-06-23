@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ config.label }}{% endblock %} | TTTI Clearance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  {% block extra_head %}{% endblock %}
+  <style>
+    /* ── Department-branded sidebar ── */
+    .sidebar { background: {{ config.gradient }}; border-right: 1px solid rgba(255,255,255,.08); }
+    .sidebar-menu a:hover,
+    .sidebar-menu a.active {
+      background: rgba(255,255,255,.14);
+      border-left-color: rgba(255,255,255,.9);
+      color: #fff;
+    }
+    .topbar { border-bottom: 3px solid {{ config.accent }}; }
+    .topbar-title { color: #111827; }
+    .role-badge { background: rgba(255,255,255,.18); color: #fff; border-color: rgba(255,255,255,.25); }
+
+    .flash-success,.flash-error,.flash-warning,.flash-info{display:flex;align-items:center;gap:12px;padding:13px 22px;font-size:13.5px;font-weight:500;border-left:4px solid;}
+    .flash-success{background:#f0fdf4;color:#15803d;border-left-color:#16a34a;}
+    .flash-error  {background:#fef2f2;color:#991b1b;border-left-color:#dc2626;}
+    .flash-warning{background:#fffbeb;color:#92400e;border-left-color:#d97706;}
+    .flash-info   {background:#f0f9ff;color:#0e7490;border-left-color:#0891b2;}
+
+    /* Notification dropdown */
+    .notif-wrapper{position:relative}.notif-panel{position:absolute;right:0;top:calc(100% + 10px);width:340px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:9999;overflow:hidden}.notif-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid #f3f4f6}.notif-panel-ttl{font-weight:700;color:#111827;font-size:14px}.notif-mark-all-btn{font-size:12px;background:none;border:none;cursor:pointer;font-weight:600;padding:0;color:{{ config.accent }}}.notif-list{max-height:360px;overflow-y:auto}.notif-item{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid #f9fafb;cursor:pointer;transition:background .15s;text-decoration:none;color:inherit}.notif-item:hover{background:#f9fafb}.notif-item.unread{background:#f0f9ff;border-left:3px solid {{ config.accent }}}.notif-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}.notif-icon.info{background:#dbeafe;color:#1d4ed8}.notif-icon.success{background:#dcfce7;color:#15803d}.notif-icon.warning{background:#fef3c7;color:#b45309}.notif-icon.error{background:#fee2e2;color:#b91c1c}.notif-body{flex:1;min-width:0}.notif-title{font-size:13px;font-weight:600;color:#111827;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notif-msg{font-size:12px;color:#6b7280;line-height:1.4}.notif-time{font-size:11px;color:#9ca3af;margin-top:3px}.notif-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;background:{{ config.accent }}}.notif-view-all-link{display:block;text-align:center;padding:11px;font-size:13px;font-weight:600;border-top:1px solid #f3f4f6;text-decoration:none;color:{{ config.accent }}}.notif-empty{padding:28px 16px;text-align:center;color:#9ca3af;font-size:13px}.notif-loading{padding:20px;text-align:center;color:#9ca3af;font-size:13px}
+
+    {% block extra_style %}{% endblock %}
+  </style>
+</head>
+<body>
+{% include 'partials/official_header.html' %}
+
+<div id="toast-container"></div>
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="dashboard-container">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+      <h2>THIKA TECHNICAL<br>TRAINING INSTITUTE</h2>
+      <div class="role-badge">
+        <i class="fas {{ config.icon }}"></i>&nbsp; {{ config.role_lbl }}
+      </div>
+    </div>
+
+    <div class="sidebar-menu">
+      <div class="menu-section">{{ config.label }}</div>
+      <a href="/service-dept/"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
+      <a href="/service-dept/"><i class="fas fa-hourglass-half fa-fw"></i> Pending Clearances</a>
+
+      <div class="menu-section">Account</div>
+      <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div style="padding:10px 14px 10px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:6px">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+          <i class="fas fa-user-circle"></i> Signed in as
+        </div>
+        <div style="font-size:13px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          {{ user.full_name if user else '' }}
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">
+          {{ user.email if user else '' }}
+        </div>
+      </div>
+      <a href="/auth/logout" style="color:#fca5a5">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <span class="topbar-title">
+        <i class="fas {{ config.icon }}" style="color:{{ config.accent }};margin-right:7px;"></i>
+        {% block page_title %}{{ config.label }}{% endblock %}
+      </span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <!-- Notification bell -->
+        <div class="notif-wrapper" id="notifWrapper">
+          <button class="notification-bell" id="notifBell" title="Notifications"
+                  style="color:{{ config.accent }};background:{{ config.light }};"
+                  aria-expanded="false" aria-haspopup="true">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge" id="notifBadge"
+                  {% if unread_notification_count == 0 %}style="display:none"{% endif %}>
+              {{ unread_notification_count }}
+            </span>
+          </button>
+          <div class="notif-panel" id="notifPanel" hidden>
+            <div class="notif-panel-hdr">
+              <span class="notif-panel-ttl"><i class="fas fa-bell" style="margin-right:6px;font-size:13px;color:{{ config.accent }};"></i>Notifications</span>
+              <button class="notif-mark-all-btn" id="notifMarkAll">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notifList">
+              <div class="notif-loading">Loading…</div>
+            </div>
+            <a href="/notifications" class="notif-view-all-link">View All Notifications</a>
+          </div>
+        </div>
+        <span style="font-size:13px;font-weight:700;color:#374151">
+          <i class="fas fa-user" style="color:{{ config.accent }};margin-right:5px;"></i>
+          {{ user.full_name if user else '' }}
+        </span>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+      <div class="flash-{{ category }}">
+        <i class="fas fa-{% if category=='success' %}check-circle{% elif category=='error' %}exclamation-circle{% elif category=='warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+    {% endwith %}
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+{% block scripts %}{% endblock %}
+
+<script>
+  const toggle  = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  toggle.addEventListener('click', () => {
+    const open = sidebar.classList.toggle('open');
+    overlay.classList.toggle('open', open);
+    toggle.innerHTML = open ? '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    toggle.innerHTML = '<i class="fas fa-bars"></i>';
+  });
+  document.querySelectorAll('.sidebar-menu a').forEach(a => {
+    if (window.location.pathname === a.getAttribute('href')) a.classList.add('active');
+  });
+
+  // ── Notifications ──────────────────────────────────────────────────
+  const bell    = document.getElementById('notifBell');
+  const panel   = document.getElementById('notifPanel');
+  const badge   = document.getElementById('notifBadge');
+  const list    = document.getElementById('notifList');
+  const markAll = document.getElementById('notifMarkAll');
+  let loaded = false;
+
+  bell.addEventListener('click', () => {
+    const open = panel.hidden;
+    panel.hidden = !open;
+    bell.setAttribute('aria-expanded', open);
+    if (open && !loaded) { loaded = true; loadNotifs(); }
+  });
+  document.addEventListener('click', e => {
+    if (!document.getElementById('notifWrapper').contains(e.target)) panel.hidden = true;
+  });
+
+  function loadNotifs() {
+    fetch('/notifications/api/recent').then(r => r.json()).then(data => {
+      const items = data.notifications || [];
+      if (!items.length) { list.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:24px;display:block;margin-bottom:8px"></i>No notifications</div>'; return; }
+      list.innerHTML = items.map(n => `
+        <a class="notif-item ${n.is_read ? '' : 'unread'}" href="${n.action_url || '/notifications'}"
+           onclick="markRead(${n.id})">
+          <div class="notif-icon ${n.notification_type||'info'}">
+            <i class="fas fa-${n.notification_type==='success'?'check':n.notification_type==='warning'?'exclamation':'info'}"></i>
+          </div>
+          <div class="notif-body">
+            <div class="notif-title">${n.title||''}</div>
+            <div class="notif-msg">${n.message||''}</div>
+            <div class="notif-time">${n.created_at ? n.created_at.slice(0,10) : ''}</div>
+          </div>
+          ${n.is_read ? '' : '<div class="notif-dot"></div>'}
+        </a>`).join('');
+    }).catch(() => { list.innerHTML = '<div class="notif-empty">Could not load notifications.</div>'; });
+  }
+
+  function markRead(id) {
+    fetch('/notifications/api/mark-read/' + id, {method:'POST'}).catch(() => {});
+  }
+
+  if (markAll) {
+    markAll.addEventListener('click', () => {
+      fetch('/notifications/api/mark-all-read', {method:'POST'})
+        .then(() => { if(badge) badge.style.display='none'; loadNotifs(); }).catch(() => {});
+    });
+  }
+
+  if (localStorage.getItem('ttti_theme') === 'dark') document.body.classList.add('dark-mode');
+</script>
+</body>
+</html>

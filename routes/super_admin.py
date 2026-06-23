@@ -1007,6 +1007,14 @@ def service_clearance():
         for row in cat_rows:
             row["_approver_name"] = approver_map.get(row.get("approver_id"), "—")
 
+    # Fetch existing service dept portal users
+    svc_roles = ["library_hod", "sports_hod", "service_clearance_officer"]
+    svc_users = (db.table("user_profiles")
+                   .select("id, full_name, email, role, department_id, departments(name)")
+                   .in_("role", svc_roles)
+                   .order("role")
+                   .execute().data or [])
+
     return render_template(
         "super_admin/service_clearance.html",
         by_cat=by_cat,
@@ -1014,6 +1022,7 @@ def service_clearance():
         pending_counts=pending_counts,
         total_pending=sum(pending_counts.values()),
         active_cat=cat_filter or "svc_library",
+        svc_users=svc_users,
     )
 
 

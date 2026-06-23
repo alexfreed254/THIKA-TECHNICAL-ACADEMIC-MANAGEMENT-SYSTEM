@@ -160,8 +160,8 @@ ROLE_TO_SVC_CAT = {
 
 def _approver_back(role: str) -> str:
     """Return post-action redirect for the given approver role."""
-    if role in ROLE_TO_SVC_CAT:
-        return url_for("clearance.service_dept_dashboard")
+    if role in ("library_hod", "sports_hod", "service_clearance_officer"):
+        return url_for("service_dept.dashboard")
     return url_for("clearance.approver_dashboard")
 
 

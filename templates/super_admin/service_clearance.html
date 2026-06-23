@@ -104,6 +104,83 @@
 {% block content %}
 <div class="sc-wrap">
 
+  <!-- ── Manage Portal Users ── -->
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px 24px;margin-bottom:24px;box-shadow:0 1px 4px rgba(0,0,0,.05)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827"><i class="fas fa-users-cog" style="color:#fbbf24;margin-right:8px"></i>Service Department Portal Users</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:3px">Users who log in to the independent clearance portals. Create new accounts below.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/super-admin/users?role=library_hod"
+           style="padding:8px 14px;background:#dbeafe;color:#1d4ed8;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+          <i class="fas fa-book"></i> Library Users
+        </a>
+        <a href="/super-admin/users?role=sports_hod"
+           style="padding:8px 14px;background:#dcfce7;color:#15803d;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+          <i class="fas fa-futbol"></i> Games Users
+        </a>
+        <a href="/super-admin/users?role=service_clearance_officer"
+           style="padding:8px 14px;background:#fef3c7;color:#b45309;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+          <i class="fas fa-clipboard-check"></i> Service Users
+        </a>
+        <a href="/super-admin/users"
+           style="padding:8px 14px;background:linear-gradient(135deg,#0a0f1e,#0f1f40);color:#fbbf24;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+          <i class="fas fa-user-plus"></i> Create New User
+        </a>
+      </div>
+    </div>
+
+    {% if svc_users %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f9fafb">
+            <th style="padding:9px 12px;text-align:left;font-weight:700;color:#6b7280;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Name</th>
+            <th style="padding:9px 12px;text-align:left;font-weight:700;color:#6b7280;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Email</th>
+            <th style="padding:9px 12px;text-align:left;font-weight:700;color:#6b7280;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Portal</th>
+            <th style="padding:9px 12px;text-align:left;font-weight:700;color:#6b7280;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Department</th>
+            <th style="padding:9px 12px;border-bottom:1px solid #e5e7eb"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in svc_users %}
+          {% set role_map = {
+              'library_hod': ('Institute Library', '#dbeafe', '#1d4ed8', 'fa-book'),
+              'sports_hod':  ('Games Department',  '#dcfce7', '#15803d', 'fa-futbol'),
+              'service_clearance_officer': ('Service Clearance', '#fef3c7', '#b45309', 'fa-clipboard-check')
+          } %}
+          {% set rm = role_map.get(u.role, (u.role, '#f3f4f6', '#374151', 'fa-user')) %}
+          <tr style="border-bottom:1px solid #f3f4f6">
+            <td style="padding:10px 12px;font-weight:600;color:#111827">{{ u.full_name }}</td>
+            <td style="padding:10px 12px;color:#6b7280">{{ u.email }}</td>
+            <td style="padding:10px 12px">
+              <span style="background:{{ rm[1] }};color:{{ rm[2] }};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px">
+                <i class="fas {{ rm[3] }}"></i> {{ rm[0] }}
+              </span>
+            </td>
+            <td style="padding:10px 12px;color:#6b7280">{{ (u.departments.name if u.departments else '—') }}</td>
+            <td style="padding:10px 12px;text-align:right">
+              <a href="/super-admin/users/{{ u.id }}/edit"
+                 style="font-size:12px;color:#fbbf24;font-weight:600;text-decoration:none">
+                <i class="fas fa-edit"></i> Edit
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:28px;color:#9ca3af">
+      <i class="fas fa-user-slash" style="font-size:32px;display:block;margin-bottom:10px;color:#d1d5db"></i>
+      <div style="font-weight:600;color:#6b7280;margin-bottom:6px">No service dept portal users yet</div>
+      <div style="font-size:12px">Click <strong>Create New User</strong> above and assign role
+        <code>library_hod</code>, <code>sports_hod</code>, or <code>service_clearance_officer</code>.</div>
+    </div>
+    {% endif %}
+  </div>
+
   <!-- Banner -->
   <div class="sc-banner">
     <div>

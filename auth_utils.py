@@ -32,6 +32,7 @@ STAFF_ROLES = frozenset({
     'quality_assurance_officer',
     # New roles
     'workshop_technician', 'liaison_officer', 'cdacc_verifier',
+    'service_clearance_officer',
 })
 ALL_ROLES = frozenset({
     'super_admin', 'dept_admin', 'trainer', 'student', 'employer',
@@ -41,6 +42,7 @@ ALL_ROLES = frozenset({
     'quality_assurance_officer',
     # New roles
     'workshop_technician', 'liaison_officer', 'cdacc_verifier',
+    'service_clearance_officer',
 })
 
 

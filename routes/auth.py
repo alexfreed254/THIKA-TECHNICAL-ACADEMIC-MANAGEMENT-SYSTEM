@@ -87,8 +87,8 @@ def login():
             return redirect(url_for("admin_oversight.deputy_principal_dashboard"))
         elif role == "quality_assurance_officer":
             return redirect(url_for("admin_oversight.quality_assurance_dashboard"))
-        elif role in ("library_hod", "sports_hod"):
-            return redirect(url_for("clearance.service_dept_dashboard"))
+        elif role in ("library_hod", "sports_hod", "service_clearance_officer"):
+            return redirect(url_for("service_dept.dashboard"))
         elif role in ("environment_hod", "dean_students", "finance_officer"):
             return redirect(url_for("clearance.approver_dashboard"))
         elif role == "liaison_officer":
@@ -144,8 +144,8 @@ def login():
                         return redirect(url_for("admin_oversight.deputy_principal_dashboard"))
                     elif role == "quality_assurance_officer":
                         return redirect(url_for("admin_oversight.quality_assurance_dashboard"))
-                    elif role in ("library_hod", "sports_hod"):
-                        return redirect(url_for("clearance.service_dept_dashboard"))
+                    elif role in ("library_hod", "sports_hod", "service_clearance_officer"):
+                        return redirect(url_for("service_dept.dashboard"))
                     elif role in ("environment_hod", "dean_students", "finance_officer"):
                         return redirect(url_for("clearance.approver_dashboard"))
                     elif role == "liaison_officer":
@@ -385,7 +385,9 @@ def _get_base_template(role: str) -> str:
         "deputy_principal": "admin_oversight/base.html",
         "quality_assurance_officer": "admin_oversight/base.html"
     }
-    if role in ("sports_hod", "environment_hod", "dean_students", "library_hod", "finance_officer"):
+    if role in ("library_hod", "sports_hod", "service_clearance_officer"):
+        return "service_dept/base.html"
+    if role in ("environment_hod", "dean_students", "finance_officer"):
         return "clearance_approver/base.html"
     return mapping.get(role, "dept_admin/base.html")
 

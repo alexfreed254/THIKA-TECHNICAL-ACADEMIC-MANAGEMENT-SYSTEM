@@ -1,0 +1,331 @@
+{% extends "service_dept/base.html" %}
+{% block title %}{{ config.label }} — Dashboard{% endblock %}
+{% block page_title %}{{ config.label }} Clearance Dashboard{% endblock %}
+
+{% block extra_style %}
+<style>
+  .sd-wrap { padding: 24px; max-width: 1000px; }
+
+  /* Hero banner */
+  .sd-hero {
+    border-radius: 16px; padding: 24px 28px; margin-bottom: 24px;
+    color: #fff; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+    background: {{ config.gradient }};
+    box-shadow: 0 6px 24px rgba(0,0,0,.15);
+  }
+  .sd-hero-left { display: flex; align-items: center; gap: 18px; }
+  .sd-hero-icon {
+    width: 64px; height: 64px; border-radius: 16px;
+    background: rgba(255,255,255,.18); display: flex; align-items: center;
+    justify-content: center; font-size: 28px; flex-shrink: 0;
+  }
+  .sd-hero h1  { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+  .sd-hero p   { font-size: 13px; opacity: .8; margin: 0; }
+  .sd-hero-stat { text-align: right; }
+  .sd-hero-stat .big { font-size: 40px; font-weight: 800; line-height: 1; }
+  .sd-hero-stat .lbl { font-size: 12px; opacity: .75; margin-top: 3px; }
+
+  /* Chips row */
+  .sd-chips { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+  .sd-chip {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; border-radius: 12px; background: #fff;
+    border: 1px solid #e5e7eb; flex: 1; min-width: 130px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .sd-chip-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .sd-chip-num  { font-size: 24px; font-weight: 800; color: #111827; line-height: 1; }
+  .sd-chip-lbl  { font-size: 12px; color: #6b7280; margin-top: 3px; font-weight: 500; }
+
+  /* Section heading */
+  .sec-hdg {
+    font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+    margin: 24px 0 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .sec-pill { padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+
+  /* Trainee card */
+  .tr-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    margin-bottom: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    transition: box-shadow .15s;
+  }
+  .tr-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.09); }
+  .tr-card.pending  { border-left: 4px solid #f59e0b; }
+  .tr-card.cleared  { border-left: 4px solid #16a34a; }
+  .tr-card.rejected { border-left: 4px solid #dc2626; }
+
+  .tr-hdr {
+    padding: 14px 18px; border-bottom: 1px solid #f3f4f6;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+  }
+  .tr-name { font-size: 16px; font-weight: 800; color: #111827; }
+  .tr-adm  { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+  .tr-badge {
+    padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge-pending  { background: #fef3c7; color: #b45309; }
+  .badge-cleared  { background: #dcfce7; color: #15803d; }
+  .badge-rejected { background: #fee2e2; color: #b91c1c; }
+
+  /* Cat tag for service clearance officer (multiple depts) */
+  .cat-tag { background: #e0e7ff; color: #3730a3; padding: 2px 9px; border-radius: 9999px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+
+  .tr-body {
+    padding: 12px 18px; display: flex; flex-wrap: wrap; gap: 8px 28px;
+    font-size: 14px; color: #374151;
+  }
+  .tr-body .lbl { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .tr-body .val { font-size: 14px; color: #111827; font-weight: 600; }
+
+  /* Actions */
+  .tr-actions {
+    padding: 12px 18px; border-top: 1px solid #f3f4f6;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .btn-clear {
+    padding: 9px 24px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; color: #fff;
+    background: {{ config.accent }};
+    transition: opacity .15s;
+  }
+  .btn-clear:hover { opacity: .88; }
+  .btn-reject {
+    padding: 9px 18px; background: #fff; border: 1.5px solid #fca5a5;
+    border-radius: 9px; font-size: 13px; font-weight: 700; color: #dc2626; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-reject:hover { background: #fee2e2; }
+
+  .rej-form { display: none; padding: 12px 18px; border-top: 1px solid #fee2e2; background: #fff5f5; }
+  .rej-form.open { display: block; }
+  .rej-input {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #fca5a5; border-radius: 8px;
+    font-size: 13px; outline: none; margin-bottom: 8px;
+  }
+  .rej-input:focus { border-color: #b91c1c; }
+  .btn-rej-confirm {
+    padding: 8px 18px; background: #dc2626; color: #fff; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+
+  /* History note */
+  .tr-note { padding: 10px 18px; font-size: 12px; color: #6b7280; border-top: 1px solid #f3f4f6; }
+
+  /* Empty state */
+  .sd-empty { text-align: center; padding: 56px 24px; color: #9ca3af; }
+  .sd-empty .icon { font-size: 52px; display: block; margin-bottom: 14px; }
+  .sd-empty h3 { font-size: 17px; color: #6b7280; font-weight: 700; margin-bottom: 6px; }
+  .sd-empty p  { font-size: 13px; max-width: 320px; margin: 0 auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sd-wrap">
+
+  <!-- Hero banner -->
+  <div class="sd-hero">
+    <div class="sd-hero-left">
+      <div class="sd-hero-icon">
+        <i class="fas {{ config.icon }}"></i>
+      </div>
+      <div>
+        <h1>{{ config.label }}</h1>
+        <p>Review and clear trainees assigned to your department.<br>
+           Approved clearances automatically update trainee progress.</p>
+      </div>
+    </div>
+    <div class="sd-hero-stat">
+      <div class="big">{{ pending | length }}</div>
+      <div class="lbl">Awaiting Clearance</div>
+    </div>
+  </div>
+
+  <!-- Stats chips -->
+  <div class="sd-chips">
+    <div class="sd-chip">
+      <div class="sd-chip-icon" style="background:#fef3c7;color:#b45309">
+        <i class="fas fa-hourglass-half"></i>
+      </div>
+      <div>
+        <div class="sd-chip-num">{{ pending | length }}</div>
+        <div class="sd-chip-lbl">Pending</div>
+      </div>
+    </div>
+    <div class="sd-chip">
+      <div class="sd-chip-icon" style="background:#dcfce7;color:#15803d">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div>
+        <div class="sd-chip-num">{{ cleared | length }}</div>
+        <div class="sd-chip-lbl">Cleared</div>
+      </div>
+    </div>
+    <div class="sd-chip">
+      <div class="sd-chip-icon" style="background:#fee2e2;color:#b91c1c">
+        <i class="fas fa-times-circle"></i>
+      </div>
+      <div>
+        <div class="sd-chip-num">{{ rejected | length }}</div>
+        <div class="sd-chip-lbl">Rejected</div>
+      </div>
+    </div>
+    <div class="sd-chip">
+      <div class="sd-chip-icon" style="background:#e0e7ff;color:#4f46e5">
+        <i class="fas fa-users"></i>
+      </div>
+      <div>
+        <div class="sd-chip-num">{{ (pending|length) + (cleared|length) + (rejected|length) }}</div>
+        <div class="sd-chip-lbl">Total Trainees</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PENDING ═══ -->
+  <div class="sec-hdg" style="color:#b45309">
+    <i class="fas fa-hourglass-half"></i>
+    Awaiting Clearance
+    <span class="sec-pill" style="background:#fef3c7;color:#b45309">
+      {{ pending | length }}
+    </span>
+  </div>
+
+  {% if pending %}
+    {% for row in pending %}
+    <div class="tr-card pending">
+      <div class="tr-hdr">
+        <div>
+          <div class="tr-name">
+            {{ row._student.get('full_name', '—') }}
+            {% if row._cat_label %}
+            <span class="cat-tag">{{ row._cat_label }}</span>
+            {% endif %}
+          </div>
+          <div class="tr-adm">
+            Adm No: <strong>{{ row._student.get('admission_no', '—') }}</strong>
+            {% if row._student.get('phone') %}&nbsp;&bull;&nbsp;{{ row._student.phone }}{% endif %}
+          </div>
+        </div>
+        <span class="tr-badge badge-pending">
+          <i class="fas fa-clock"></i> Awaiting Clearance
+        </span>
+      </div>
+
+      <div class="tr-body">
+        <div>
+          <span class="lbl">Course</span>
+          <span class="val">
+            {{ row._course.get('name', '—') }}
+            {% if row._course.get('code') %}
+            <small style="color:#9ca3af;font-weight:400"> ({{ row._course.code }})</small>
+            {% endif %}
+          </span>
+        </div>
+        <div>
+          <span class="lbl">Department</span>
+          <span class="val">{{ row._dept.get('name', '—') }}</span>
+        </div>
+        <div>
+          <span class="lbl">Applied On</span>
+          <span class="val">{{ (row.get('created_at','') or '')[:10] or '—' }}</span>
+        </div>
+      </div>
+
+      <div class="tr-actions">
+        <form method="POST" action="/clearance/approve/{{ row.id }}" style="display:inline">
+          <input type="hidden" name="comments" value="">
+          <button type="submit" class="btn-clear"
+                  onclick="return confirm('Clear {{ row._student.get(\'full_name\', \'this trainee\') }}?\n\nThis will mark them as cleared for {{ config.label }}.')">
+            <i class="fas fa-check"></i> Clear Trainee
+          </button>
+        </form>
+        <button type="button" class="btn-reject" onclick="toggleRej('rej-{{ row.id }}')">
+          <i class="fas fa-times"></i> Reject
+        </button>
+      </div>
+
+      <div class="rej-form" id="rej-{{ row.id }}">
+        <form method="POST" action="/clearance/reject/{{ row.id }}">
+          <input type="text" name="comments" class="rej-input"
+                 placeholder="Reason for rejection (required — trainee will see this)…" required>
+          <button type="submit" class="btn-rej-confirm">
+            <i class="fas fa-times-circle"></i> Confirm Rejection
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+
+  {% else %}
+  <div class="sd-empty">
+    <span class="icon" style="color:#16a34a"><i class="fas fa-check-circle"></i></span>
+    <h3>All Clear!</h3>
+    <p>No trainees are waiting for clearance from {{ config.label }}.</p>
+  </div>
+  {% endif %}
+
+
+  <!-- ═══ CLEARED HISTORY ═══ -->
+  {% if cleared %}
+  <div class="sec-hdg" style="color:#15803d;margin-top:32px">
+    <i class="fas fa-check-circle"></i>
+    Cleared
+    <span class="sec-pill" style="background:#dcfce7;color:#15803d">{{ cleared | length }}</span>
+  </div>
+
+  {% for row in cleared %}
+  <div class="tr-card cleared">
+    <div class="tr-hdr">
+      <div>
+        <div class="tr-name">{{ row._student.get('full_name', '—') }}</div>
+        <div class="tr-adm">Adm: {{ row._student.get('admission_no', '—') }}</div>
+      </div>
+      <span class="tr-badge badge-cleared"><i class="fas fa-check-circle"></i> Cleared</span>
+    </div>
+    <div class="tr-note">
+      <i class="fas fa-calendar-check" style="color:#15803d;margin-right:5px;"></i>
+      Cleared on <strong>{{ (row.get('approved_at','') or '')[:10] or '—' }}</strong>
+      {% if row.get('comments') %}&nbsp;&mdash;&nbsp;{{ row.comments }}{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+
+  <!-- ═══ REJECTED HISTORY ═══ -->
+  {% if rejected %}
+  <div class="sec-hdg" style="color:#b91c1c;margin-top:32px">
+    <i class="fas fa-times-circle"></i>
+    Rejected
+    <span class="sec-pill" style="background:#fee2e2;color:#b91c1c">{{ rejected | length }}</span>
+  </div>
+
+  {% for row in rejected %}
+  <div class="tr-card rejected">
+    <div class="tr-hdr">
+      <div>
+        <div class="tr-name">{{ row._student.get('full_name', '—') }}</div>
+        <div class="tr-adm">Adm: {{ row._student.get('admission_no', '—') }}</div>
+      </div>
+      <span class="tr-badge badge-rejected"><i class="fas fa-times-circle"></i> Rejected</span>
+    </div>
+    <div class="tr-note">
+      <i class="fas fa-calendar-times" style="color:#b91c1c;margin-right:5px;"></i>
+      Rejected on <strong>{{ (row.get('approved_at','') or '')[:10] or '—' }}</strong>
+      {% if row.get('comments') %}&nbsp;&mdash;&nbsp;<em>{{ row.comments }}</em>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+</div>
+
+<script>
+function toggleRej(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+</script>
+{% endblock %}
