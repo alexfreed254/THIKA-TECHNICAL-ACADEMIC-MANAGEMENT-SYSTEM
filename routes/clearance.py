@@ -764,11 +764,22 @@ def approver_dashboard():
                          .is_("approver_id", "null")
                          .eq("status", "pending")
                          .execute().data or [])
+            hod_dept_id = user.get("department_id")
             for row in null_rows:
                 cat = row.get("approver_category") or _infer_category(row)
                 if cat in SERVICE_DEPT_CATEGORIES:
                     row["_claimable"] = True
                     claimable.append(row)
+                elif cat == "hod_other" and role == "dept_admin":
+                    # Show to any dept_admin whose own dept ≠ student's home dept
+                    req_inner = row.get("clearance_requests") or {}
+                    student_dept = (
+                        (req_inner.get("user_profiles") or {}).get("department_id")
+                        or req_inner.get("department_id")
+                    )
+                    if student_dept and student_dept != hod_dept_id:
+                        row["_claimable"] = True
+                        claimable.append(row)
         except Exception:
             pass
 
@@ -892,9 +903,16 @@ def approve_clearance(approval_id):
         req = approval.get("clearance_requests") or {}
         cat = approval.get("approver_category") or _infer_category(approval)
 
-        # Security: must be assigned to this user OR be a claimable service dept
+        # Security: must be assigned to this user OR be a claimable record
         if approval.get("approver_id") != uid:
-            if cat not in SERVICE_DEPT_CATEGORIES:
+            if cat in SERVICE_DEPT_CATEGORIES:
+                pass  # claimable by service dept users
+            elif (cat == "hod_other" and role == "dept_admin"
+                  and approval.get("approver_id") is None):
+                # HOD can claim this only if the student is NOT from their own dept
+                if req.get("department_id") == user.get("department_id"):
+                    abort(403)
+            else:
                 abort(403)
 
         # Stage 2 gating: check stage 1 is complete
@@ -966,7 +984,7 @@ def reject_clearance(approval_id):
     try:
         approval = (db.table("clearance_approvals")
                     .select("*, clearance_stages(stage_name, approver_role), "
-                            "clearance_requests(id, student_id, status)")
+                            "clearance_requests(id, student_id, status, department_id)")
                     .eq("id", approval_id)
                     .single()
                     .execute().data)
@@ -979,7 +997,13 @@ def reject_clearance(approval_id):
         cat = approval.get("approver_category") or _infer_category(approval)
 
         if approval.get("approver_id") != uid:
-            if cat not in SERVICE_DEPT_CATEGORIES:
+            if cat in SERVICE_DEPT_CATEGORIES:
+                pass  # claimable by service dept users
+            elif (cat == "hod_other" and role == "dept_admin"
+                  and approval.get("approver_id") is None):
+                if req.get("department_id") == user.get("department_id"):
+                    abort(403)
+            else:
                 abort(403)
 
         db.table("clearance_approvals").update({
