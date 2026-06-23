@@ -74,11 +74,10 @@ def dashboard():
     db     = get_service_client()
 
     base_sel = (
-        "id, approver_category, status, comments, approved_at, created_at, approver_id, is_waived, "
-        "clearance_requests(id, student_id, status, stage, created_at, "
+        "*, "
+        "clearance_requests(id, student_id, status, stage, created_at, department_id, "
         "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
-        "  (full_name, admission_no, mobile_number), "
-        "  courses(name, code), departments(name))"
+        "  (full_name, admission_no, mobile_number, department_id))"
     )
 
     assigned = (db.table("clearance_approvals")
@@ -96,6 +95,23 @@ def dashboard():
                     .order("created_at", desc=True)
                     .execute().data or [])
 
+    # Collect all department IDs to batch-fetch names
+    dept_ids = set()
+    for row in assigned + unassigned:
+        req = row.get("clearance_requests") or {}
+        sp  = req.get("user_profiles") or {}
+        did = sp.get("department_id") or req.get("department_id")
+        if did:
+            dept_ids.add(did)
+
+    dept_map = {}
+    if dept_ids:
+        dept_rows = (db.table("departments")
+                       .select("id, name")
+                       .in_("id", list(dept_ids))
+                       .execute().data or [])
+        dept_map = {d["id"]: d["name"] for d in dept_rows}
+
     seen = set()
     rows = []
     for row in assigned + unassigned:
@@ -104,9 +120,11 @@ def dashboard():
             continue
         seen.add(rid)
         req = row.get("clearance_requests") or {}
-        row["_student"]    = req.get("user_profiles") or {}
-        row["_course"]     = req.get("courses") or {}
-        row["_dept"]       = req.get("departments") or {}
+        sp  = req.get("user_profiles") or {}
+        did = sp.get("department_id") or req.get("department_id")
+        row["_student"]    = sp
+        row["_dept"]       = {"name": dept_map.get(did, "—")} if did else {}
+        row["_course"]     = {}
         row["_req_status"] = req.get("status", "")
         row["_cat_label"]  = CATEGORY_LABELS.get(row.get("approver_category", ""), "")
         rows.append(row)
