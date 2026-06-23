@@ -77,7 +77,7 @@ def dashboard():
         "id, approver_category, status, comments, approved_at, created_at, approver_id, is_waived, "
         "clearance_requests(id, student_id, status, stage, created_at, "
         "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
-        "  (full_name, admission_no, phone), "
+        "  (full_name, admission_no, mobile_number), "
         "  courses(name, code), departments(name))"
     )
 
