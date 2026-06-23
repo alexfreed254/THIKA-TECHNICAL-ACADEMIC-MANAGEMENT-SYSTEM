@@ -167,6 +167,7 @@ def dashboard():
 
         row["_student"]    = sp
         row["_dept"]       = {"name": dept_map.get(did, "—")} if did else {}
+        row["_course"]     = {}
         row["_req_status"] = req.get("status", "")
         row["_stage_name"] = stg.get("stage_name", "")
         row["_cat_label"]  = CATEGORY_LABELS.get(row.get("approver_category") or "", "")
