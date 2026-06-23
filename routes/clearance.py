@@ -1189,6 +1189,22 @@ def certificate(request_id):
         a["_category"]  = _get_category(a)
         a["_cat_label"] = CATEGORY_LABELS.get(_get_category(a), "")
 
+    # Fetch lost items recorded by service dept staff
+    approval_ids = [a["id"] for a in approvals]
+    lost_items = []
+    if approval_ids:
+        try:
+            lost_items = (db.table("clearance_lost_items")
+                            .select("item_name, quantity, notes, "
+                                    "clearance_approval_id, added_by, "
+                                    "user_profiles:user_profiles!clearance_lost_items_added_by_fkey"
+                                    "(full_name)")
+                            .in_("clearance_approval_id", approval_ids)
+                            .order("created_at")
+                            .execute().data or [])
+        except Exception:
+            lost_items = []
+
     student = cr.get("user_profiles") or {}
 
     import os
@@ -1202,6 +1218,7 @@ def certificate(request_id):
         serial=serial,
         verify_url=verify_url,
         approvals=approvals,
+        lost_items=lost_items,
         CATEGORY_LABELS=CATEGORY_LABELS,
     )
 
@@ -1417,6 +1434,68 @@ def certificate_pdf(request_id):
         )
         appr_tbl.setStyle(TableStyle(appr_style))
         story += [appr_tbl, Spacer(1, 12)]
+
+        # Lost / Missing Items section
+        lost_items = locals().get("lost_items") or []
+        # Re-fetch if not already in scope (called from certificate_pdf route)
+        if not lost_items:
+            try:
+                _aid_list = [a["id"] for a in approvals]
+                if _aid_list:
+                    lost_items = (db.table("clearance_lost_items")
+                                    .select("item_name, quantity, notes")
+                                    .in_("clearance_approval_id", _aid_list)
+                                    .order("created_at")
+                                    .execute().data or [])
+            except Exception:
+                lost_items = []
+
+        if lost_items:
+            AMBER = colors.HexColor("#b45309")
+            AMBER_BG = colors.HexColor("#fef3c7")
+            story.append(HRFlowable(width="100%", thickness=1, color=AMBER, spaceAfter=5))
+            story.append(Paragraph("LOST / MISSING ITEMS", ParagraphStyle(
+                "amber_hdr", parent=base["Normal"], fontSize=10,
+                fontName="Helvetica-Bold", textColor=AMBER)))
+            story.append(Spacer(1, 4))
+
+            li_hdr = [
+                Paragraph("#",       tbl_h),
+                Paragraph("Item",    tbl_h),
+                Paragraph("Qty",     tbl_h),
+                Paragraph("Notes",   tbl_h),
+            ]
+            li_data = [li_hdr]
+            li_style = [
+                ("BACKGROUND",    (0,0), (-1,0), AMBER_BG),
+                ("TEXTCOLOR",     (0,0), (-1,0), AMBER),
+                ("FONTSIZE",      (0,0), (-1,-1), 8),
+                ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#fde68a")),
+                ("TOPPADDING",    (0,0), (-1,-1), 3),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 3),
+                ("LEFTPADDING",   (0,0), (-1,-1), 4),
+                ("RIGHTPADDING",  (0,0), (-1,-1), 4),
+                ("ALIGN",         (0,0), (-1,-1), "CENTER"),
+                ("ALIGN",         (1,0), (3,-1),  "LEFT"),
+                ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+                ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#fffbeb")]),
+            ]
+            for i, li in enumerate(lost_items, 1):
+                li_data.append([
+                    Paragraph(str(i),                     tbl_c),
+                    Paragraph(li.get("item_name", "—"),   tbl_l),
+                    Paragraph(str(li.get("quantity", 1)), tbl_c),
+                    Paragraph(li.get("notes") or "—",     tbl_l),
+                ])
+            li_tbl = Table(li_data, colWidths=[8*mm, 80*mm, 20*mm, W-108*mm], repeatRows=1)
+            li_tbl.setStyle(TableStyle(li_style))
+            story += [li_tbl, Spacer(1, 4)]
+            story.append(Paragraph(
+                "The above items were reported lost/missing by the department during clearance. "
+                "The trainee is responsible for settlement before issuance of academic documents.",
+                ParagraphStyle("li_note", parent=base["Normal"], fontSize=7,
+                               textColor=colors.grey, italics=1)))
+            story.append(Spacer(1, 10))
 
         # Manual signature blocks
         story.append(HRFlowable(width="100%", thickness=1, color=DARK, spaceAfter=8))

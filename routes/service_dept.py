@@ -12,7 +12,7 @@ Query strategy:
   Results are merged and deduplicated.
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from auth_utils import login_required, current_user
 from db import get_service_client
 
@@ -157,6 +157,21 @@ def dashboard():
                     .execute().data or [])
         dept_map = {d["id"]: d["name"] for d in d_rows}
 
+    # ── Batch-fetch lost items for all approvals ──────────────────────────────
+    approval_ids = [r["id"] for r in all_approvals]
+    lost_map = {}   # approval_id -> [item, ...]
+    if approval_ids:
+        try:
+            li_rows = (db.table("clearance_lost_items")
+                         .select("id, clearance_approval_id, item_name, quantity, notes, created_at")
+                         .in_("clearance_approval_id", approval_ids)
+                         .order("created_at")
+                         .execute().data or [])
+            for li in li_rows:
+                lost_map.setdefault(li["clearance_approval_id"], []).append(li)
+        except Exception:
+            pass  # table not yet created — silently skip
+
     # ── Annotate rows ─────────────────────────────────────────────────────────
     rows = []
     for row in all_approvals:
@@ -171,6 +186,7 @@ def dashboard():
         row["_req_status"] = req.get("status", "")
         row["_stage_name"] = stg.get("stage_name", "")
         row["_cat_label"]  = CATEGORY_LABELS.get(row.get("approver_category") or "", "")
+        row["_lost_items"] = lost_map.get(row["id"], [])
         rows.append(row)
 
     # ── Split by status ───────────────────────────────────────────────────────
@@ -187,3 +203,86 @@ def dashboard():
         rejected=rejected,
         user=user,
     )
+
+
+# ── Add a lost item to a clearance approval ───────────────────────────────────
+
+@service_dept_bp.route("/lost-items/add", methods=["POST"])
+@login_required
+def add_lost_item():
+    user = current_user()
+    if not _require_service_role(user):
+        flash("Access denied.", "error")
+        return redirect(url_for("auth.login"))
+
+    approval_id = request.form.get("approval_id", "").strip()
+    item_name   = request.form.get("item_name", "").strip()
+    notes       = request.form.get("notes", "").strip()
+    try:
+        quantity = max(1, int(request.form.get("quantity", 1)))
+    except (ValueError, TypeError):
+        quantity = 1
+
+    if not approval_id or not item_name:
+        flash("Item name is required.", "error")
+        return redirect(url_for("service_dept.dashboard"))
+
+    db = get_service_client()
+
+    # Verify this approval belongs to a stage this user manages
+    approval = (db.table("clearance_approvals")
+                  .select("id, approver_category, clearance_stage_id")
+                  .eq("id", approval_id)
+                  .single()
+                  .execute().data)
+    if not approval:
+        flash("Clearance record not found.", "error")
+        return redirect(url_for("service_dept.dashboard"))
+
+    config = DEPT_CONFIG[user["role"]]
+    cats   = config["cats"]
+    approver_roles = config["approver_roles"]
+
+    # Check via approver_category or via stage
+    allowed = False
+    if approval.get("approver_category") in cats:
+        allowed = True
+    else:
+        stage_rows = (db.table("clearance_stages")
+                        .select("id")
+                        .in_("approver_role", approver_roles)
+                        .execute().data or [])
+        stage_ids = [s["id"] for s in stage_rows]
+        if approval.get("clearance_stage_id") in stage_ids:
+            allowed = True
+
+    if not allowed:
+        flash("You do not manage this clearance record.", "error")
+        return redirect(url_for("service_dept.dashboard"))
+
+    db.table("clearance_lost_items").insert({
+        "clearance_approval_id": approval_id,
+        "item_name":  item_name,
+        "quantity":   quantity,
+        "notes":      notes or None,
+        "added_by":   user["id"],
+    }).execute()
+
+    flash(f"Lost item recorded: {item_name} (qty {quantity}).", "success")
+    return redirect(url_for("service_dept.dashboard"))
+
+
+# ── Remove a lost item ────────────────────────────────────────────────────────
+
+@service_dept_bp.route("/lost-items/remove/<item_id>", methods=["POST"])
+@login_required
+def remove_lost_item(item_id):
+    user = current_user()
+    if not _require_service_role(user):
+        flash("Access denied.", "error")
+        return redirect(url_for("auth.login"))
+
+    db = get_service_client()
+    db.table("clearance_lost_items").delete().eq("id", item_id).execute()
+    flash("Lost item removed.", "success")
+    return redirect(url_for("service_dept.dashboard"))

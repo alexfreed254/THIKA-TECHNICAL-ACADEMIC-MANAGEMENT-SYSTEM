@@ -111,6 +111,33 @@
     border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
   }
 
+  /* Lost items panel */
+  .lost-panel { border-top: 1px solid #fde68a; background: #fffbeb; padding: 13px 18px; }
+  .lost-panel-hdr { font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+  .lost-item-row { display: flex; align-items: center; gap: 8px; font-size: 13px;
+    padding: 5px 0; border-bottom: 1px solid #fef3c7; }
+  .lost-item-row:last-child { border-bottom: none; }
+  .lost-item-name { font-weight: 600; color: #111827; flex: 1; }
+  .lost-item-qty  { background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .lost-item-note { font-size: 12px; color: #78716c; flex: 1; }
+  .btn-rm-item { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 2px 4px; }
+  .btn-rm-item:hover { color: #b91c1c; }
+  .add-item-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fde68a; }
+  .add-item-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .add-item-inp { padding: 8px 10px; border: 1.5px solid #fde68a; border-radius: 8px;
+    font-size: 13px; outline: none; background: #fff; }
+  .add-item-inp:focus { border-color: #f59e0b; }
+  .add-item-inp.name { flex: 2; min-width: 140px; }
+  .add-item-inp.qty  { width: 70px; }
+  .add-item-inp.note { flex: 2; min-width: 140px; }
+  .btn-add-item { padding: 8px 16px; background: #f59e0b; color: #fff; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .btn-add-item:hover { background: #d97706; }
+  .toggle-add-link { font-size: 12px; color: #b45309; font-weight: 700; cursor: pointer;
+    background: none; border: none; padding: 0; text-decoration: underline; }
+
   /* History note */
   .tr-note { padding: 10px 18px; font-size: 12px; color: #6b7280; border-top: 1px solid #f3f4f6; }
 
@@ -257,6 +284,65 @@
           </button>
         </form>
       </div>
+
+      {# ── Lost / Missing Items panel ── #}
+      <div class="lost-panel">
+        <div class="lost-panel-hdr">
+          <i class="fas fa-exclamation-triangle"></i>
+          Lost / Missing Items
+          {% if row._lost_items %}
+          <span style="background:#fef3c7;color:#b45309;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:700">
+            {{ row._lost_items|length }}
+          </span>
+          {% endif %}
+          &nbsp;
+          <button type="button" class="toggle-add-link" onclick="toggleAddItem('add-item-{{ row.id }}')">
+            + Add Item
+          </button>
+        </div>
+
+        {% if row._lost_items %}
+        <div style="margin-bottom:10px">
+          {% for li in row._lost_items %}
+          <div class="lost-item-row">
+            <span class="lost-item-name">{{ li.item_name }}</span>
+            <span class="lost-item-qty">Qty: {{ li.quantity }}</span>
+            {% if li.notes %}
+            <span class="lost-item-note">{{ li.notes }}</span>
+            {% endif %}
+            <form method="POST" action="/service-dept/lost-items/remove/{{ li.id }}" style="display:inline">
+              <button type="button" class="btn-rm-item"
+                      onclick="if(confirm('Remove this item?')) this.closest('form').submit()"
+                      title="Remove">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="font-size:12px;color:#9ca3af;margin-bottom:8px">
+          No items recorded yet.
+        </div>
+        {% endif %}
+
+        <div class="add-item-form" id="add-item-{{ row.id }}" style="display:none">
+          <form method="POST" action="/service-dept/lost-items/add">
+            <input type="hidden" name="approval_id" value="{{ row.id }}">
+            <div class="add-item-row">
+              <input type="text" name="item_name" class="add-item-inp name"
+                     placeholder="Item name (e.g. Library book, Lab coat)…" required>
+              <input type="number" name="quantity" class="add-item-inp qty"
+                     value="1" min="1" placeholder="Qty">
+              <input type="text" name="notes" class="add-item-inp note"
+                     placeholder="Notes / description (optional)…">
+              <button type="submit" class="btn-add-item">
+                <i class="fas fa-plus"></i> Record Item
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
     {% endfor %}
 
@@ -291,6 +377,16 @@
       Cleared on <strong>{{ (row.get('approved_at','') or '')[:10] or '—' }}</strong>
       {% if row.get('comments') %}&nbsp;&mdash;&nbsp;{{ row.comments }}{% endif %}
     </div>
+    {% if row._lost_items %}
+    <div style="padding:10px 18px;border-top:1px solid #fde68a;background:#fffbeb;font-size:12px">
+      <strong style="color:#b45309"><i class="fas fa-exclamation-triangle"></i> Recorded Lost Items:</strong>
+      {% for li in row._lost_items %}
+      <span style="margin-left:8px;background:#fef3c7;color:#78350f;padding:2px 8px;border-radius:6px">
+        {{ li.item_name }} ({{ li.quantity }}){% if li.notes %} — {{ li.notes }}{% endif %}
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
   {% endif %}
@@ -328,6 +424,10 @@
 function toggleRej(id) {
   const el = document.getElementById(id);
   el.classList.toggle('open');
+}
+function toggleAddItem(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 </script>
 {% endblock %}
