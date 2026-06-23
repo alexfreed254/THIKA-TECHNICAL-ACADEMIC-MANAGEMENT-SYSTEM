@@ -276,7 +276,10 @@
       <div class="cl-actions">
         <form method="POST" action="/clearance/approve/{{ row.id }}" style="display:inline">
           <input type="hidden" name="comments" value="Approved by Super Admin">
-          <button type="submit" class="btn-approve" onclick="return confirm('Approve {{ row._student.get(\'full_name\',\'this trainee\') }} for {{ meta.label }}?')">
+          <button type="submit" class="btn-approve"
+                  data-name="{{ row._student.get('full_name', 'this trainee') }}"
+                  data-dept="{{ meta.label }}"
+                  onclick="return confirm('Approve ' + this.dataset.name + ' for ' + this.dataset.dept + '?')">
             <i class="fas fa-check"></i> Approve
           </button>
         </form>
