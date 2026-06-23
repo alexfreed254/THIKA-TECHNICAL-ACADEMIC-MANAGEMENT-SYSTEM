@@ -59,6 +59,22 @@ CATEGORY_LABELS = {
     "svc_store":    "Store Department",
 }
 
+ROLE_POSITION = {
+    "library_hod":               "Library HOD",
+    "sports_hod":                "Games & Sports HOD",
+    "service_clearance_officer": "Service Clearance Officer",
+    "finance_officer":           "Finance Officer",
+    "registrar":                 "Academic Registrar",
+    "deputy_principal":          "Deputy Principal (Academics)",
+    "dean_students":             "Dean of Students",
+    "environment_hod":           "Environment HOD",
+    "dept_admin":                "Head of Department",
+    "trainer":                   "Lecturer / Trainer",
+    "workshop_technician":       "Workshop Technician",
+    "quality_assurance_officer": "Quality Assurance Officer",
+    "super_admin":               "System Administrator",
+}
+
 _APPROVAL_SEL = ("id, clearance_stage_id, clearance_request_id, "
                  "approver_id, approver_category, status, "
                  "comments, approved_at, created_at, is_waived")
@@ -157,9 +173,19 @@ def dashboard():
                     .execute().data or [])
         dept_map = {d["id"]: d["name"] for d in d_rows}
 
+    # ── Batch-fetch approver profiles ────────────────────────────────────────
+    approver_ids = list({r["approver_id"] for r in all_approvals if r.get("approver_id")})
+    approver_map = {}
+    if approver_ids:
+        ap_rows = (db.table("user_profiles")
+                     .select("id, full_name, role")
+                     .in_("id", approver_ids)
+                     .execute().data or [])
+        approver_map = {a["id"]: a for a in ap_rows}
+
     # ── Batch-fetch lost items for all approvals ──────────────────────────────
     approval_ids = [r["id"] for r in all_approvals]
-    lost_map = {}   # approval_id -> [item, ...]
+    lost_map = {}
     if approval_ids:
         try:
             li_rows = (db.table("clearance_lost_items")
@@ -170,7 +196,7 @@ def dashboard():
             for li in li_rows:
                 lost_map.setdefault(li["clearance_approval_id"], []).append(li)
         except Exception:
-            pass  # table not yet created — silently skip
+            pass
 
     # ── Annotate rows ─────────────────────────────────────────────────────────
     rows = []
@@ -179,6 +205,7 @@ def dashboard():
         sp  = student_map.get(req.get("student_id") or "") or {}
         did = sp.get("department_id") or req.get("department_id")
         stg = stage_meta.get(row.get("clearance_stage_id") or "") or {}
+        apr = approver_map.get(row.get("approver_id") or "") or {}
 
         row["_student"]    = sp
         row["_dept"]       = {"name": dept_map.get(did, "—")} if did else {}
@@ -187,6 +214,7 @@ def dashboard():
         row["_stage_name"] = stg.get("stage_name", "")
         row["_cat_label"]  = CATEGORY_LABELS.get(row.get("approver_category") or "", "")
         row["_lost_items"] = lost_map.get(row["id"], [])
+        row["_approver"]   = apr   # {full_name, role} of whoever approved/rejected
         rows.append(row)
 
     # ── Split by status ───────────────────────────────────────────────────────
@@ -202,6 +230,7 @@ def dashboard():
         cleared=cleared,
         rejected=rejected,
         user=user,
+        ROLE_POSITION=ROLE_POSITION,
     )
 
 
