@@ -942,6 +942,81 @@ def clearances():
                            dept_filter=dept_filter)
 
 
+# ── Service Clearance Departments Hub ─────────────────────────────────────────
+
+SERVICE_CLR_CATS = {
+    "svc_library": {"label": "Institute Library",  "icon": "fa-book",         "color": "#1d4ed8"},
+    "svc_games":   {"label": "Games Department",   "icon": "fa-futbol",       "color": "#16a34a"},
+    "svc_ict":     {"label": "ICT Department",     "icon": "fa-laptop",       "color": "#7c3aed"},
+    "svc_kitchen": {"label": "Kitchen / Cafeteria","icon": "fa-utensils",     "color": "#b45309"},
+    "svc_store":   {"label": "Store Department",   "icon": "fa-warehouse",    "color": "#0e7490"},
+}
+
+
+@super_admin_bp.route("/service-clearance")
+@super_admin_required
+def service_clearance():
+    db = _svc()
+    cat_filter = request.args.get("cat", "")
+
+    rows = (db.table("clearance_approvals")
+              .select(
+                  "id, approver_category, status, comments, approved_at, created_at, approver_id, "
+                  "clearance_requests!inner(id, student_id, status, stage, created_at, "
+                  "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
+                  "  (full_name, admission_no), "
+                  "  courses(name, code), departments(name))"
+              )
+              .in_("approver_category", list(SERVICE_CLR_CATS.keys()))
+              .order("created_at", desc=True)
+              .limit(600)
+              .execute().data or [])
+
+    if cat_filter and cat_filter in SERVICE_CLR_CATS:
+        rows = [r for r in rows if r.get("approver_category") == cat_filter]
+
+    # Group by category
+    by_cat = {cat: [] for cat in SERVICE_CLR_CATS}
+    for row in rows:
+        cat = row.get("approver_category", "")
+        if cat in by_cat:
+            req = row.get("clearance_requests") or {}
+            row["_student"]   = req.get("user_profiles") or {}
+            row["_course"]    = req.get("courses") or {}
+            row["_dept"]      = req.get("departments") or {}
+            row["_req_id"]    = req.get("id", "")
+            row["_req_status"]= req.get("status", "")
+            by_cat[cat].append(row)
+
+    pending_counts = {
+        cat: sum(1 for r in lst if r.get("status") == "pending" and r.get("_req_status") not in ("completed", "rejected"))
+        for cat, lst in by_cat.items()
+    }
+
+    # Fetch approver names for display
+    approver_ids = list({r["approver_id"] for r in rows if r.get("approver_id")})
+    approver_map = {}
+    if approver_ids:
+        profiles = (db.table("user_profiles")
+                      .select("id, full_name")
+                      .in_("id", approver_ids)
+                      .execute().data or [])
+        approver_map = {p["id"]: p.get("full_name", "") for p in profiles}
+
+    for cat_rows in by_cat.values():
+        for row in cat_rows:
+            row["_approver_name"] = approver_map.get(row.get("approver_id"), "—")
+
+    return render_template(
+        "super_admin/service_clearance.html",
+        by_cat=by_cat,
+        cat_meta=SERVICE_CLR_CATS,
+        pending_counts=pending_counts,
+        total_pending=sum(pending_counts.values()),
+        active_cat=cat_filter or "svc_library",
+    )
+
+
 # ── Industry Partners (Companies) ─────────────────────────────────────────────
 
 @super_admin_bp.route("/companies")

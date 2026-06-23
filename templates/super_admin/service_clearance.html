@@ -1,0 +1,278 @@
+{% extends "super_admin/base.html" %}
+{% block title %}Service Clearance{% endblock %}
+{% block page_title %}Service Clearance Departments{% endblock %}
+
+{% block extra_style %}
+<style>
+  .sc-wrap { padding: 24px; }
+
+  /* Banner */
+  .sc-banner {
+    background: linear-gradient(135deg, #0a0f1e, #0f1f40);
+    border-radius: 14px; padding: 22px 28px; margin-bottom: 24px;
+    color: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+  }
+  .sc-banner h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+  .sc-banner p  { font-size: 13px; color: rgba(255,255,255,.6); margin: 0; }
+
+  /* Summary chips */
+  .sc-chips { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+  .sc-chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-radius: 12px; background: #fff;
+    border: 1px solid #e5e7eb; flex: 1; min-width: 140px; cursor: pointer;
+    text-decoration: none; transition: box-shadow .15s, border-color .15s;
+  }
+  .sc-chip:hover { box-shadow: 0 4px 16px rgba(0,0,0,.09); border-color: #d1d5db; }
+  .sc-chip.active { border-width: 2px; }
+  .sc-chip-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .sc-chip-body { min-width: 0; }
+  .sc-chip-num  { font-size: 22px; font-weight: 800; color: #111827; line-height: 1; }
+  .sc-chip-lbl  { font-size: 11px; color: #6b7280; font-weight: 500; margin-top: 3px; white-space: nowrap; }
+  .sc-chip-badge { background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; white-space: nowrap; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex; gap: 4px; background: #f3f4f6; border-radius: 12px;
+    padding: 4px; margin-bottom: 24px; overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 9px 18px; border-radius: 9px; border: none; background: transparent;
+    font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer;
+    display: flex; align-items: center; gap: 7px; white-space: nowrap;
+    transition: background .15s, color .15s;
+  }
+  .tab-btn:hover { background: #fff; color: #111827; }
+  .tab-btn.active { background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  .tab-badge { background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; }
+  .tab-badge.ok { background: #dcfce7; color: #15803d; }
+
+  /* Panel */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Clearance cards */
+  .cl-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    margin-bottom: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .cl-card.pending-card { border-left: 4px solid #f59e0b; }
+  .cl-card.approved-card { border-left: 4px solid #16a34a; }
+  .cl-card.rejected-card { border-left: 4px solid #dc2626; }
+
+  .cl-hdr {
+    padding: 13px 16px; border-bottom: 1px solid #f3f4f6;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+  }
+  .cl-name { font-size: 15px; font-weight: 800; color: #111827; }
+  .cl-adm  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .cl-status-tag {
+    padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  }
+  .st-pending  { background: #fef3c7; color: #b45309; }
+  .st-approved { background: #dcfce7; color: #15803d; }
+  .st-rejected { background: #fee2e2; color: #b91c1c; }
+
+  .cl-body { padding: 12px 16px; font-size: 13px; color: #374151; display: flex; flex-wrap: wrap; gap: 8px 24px; }
+  .cl-body .lbl { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .cl-body .val { font-size: 13px; color: #111827; font-weight: 600; }
+
+  .cl-actions {
+    padding: 11px 16px; border-top: 1px solid #f3f4f6;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .btn-approve { padding: 8px 20px; background: #16a34a; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-approve:hover { opacity: .88; }
+  .btn-reject  { padding: 8px 14px; background: #fff; color: #dc2626; border: 1.5px solid #fca5a5; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-reject:hover { background: #fee2e2; }
+  .rej-row { display: flex; gap: 6px; flex: 1; min-width: 240px; }
+  .rej-input { flex: 1; padding: 8px 11px; border: 1.5px solid #fca5a5; border-radius: 8px; font-size: 13px; outline: none; }
+  .btn-confirm-rej { padding: 8px 14px; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .reject-form { display: none; padding: 10px 16px; border-top: 1px solid #fee2e2; background: #fff5f5; }
+  .reject-form.open { display: block; }
+
+  /* Approved/rejected note */
+  .cl-note { padding: 10px 16px; font-size: 12px; color: #6b7280; }
+
+  /* Empty state */
+  .sc-empty { text-align: center; padding: 48px 24px; color: #9ca3af; }
+  .sc-empty i { font-size: 48px; color: #d1d5db; display: block; margin-bottom: 14px; }
+  .sc-empty h3 { font-size: 16px; color: #6b7280; margin-bottom: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sc-wrap">
+
+  <!-- Banner -->
+  <div class="sc-banner">
+    <div>
+      <h1><i class="fas fa-building"></i> Service Clearance Departments</h1>
+      <p>Approve or reject trainee clearance requests for each service department</p>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:28px;font-weight:800;color:#fbbf24;">{{ total_pending }}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);">Pending Requests</div>
+    </div>
+  </div>
+
+  <!-- Summary chips (click to switch tab) -->
+  <div class="sc-chips">
+    {% for cat, meta in cat_meta.items() %}
+    <a href="/super-admin/service-clearance?cat={{ cat }}"
+       class="sc-chip {% if active_cat == cat %}active{% endif %}"
+       style="border-color: {{ 'transparent' if active_cat != cat else meta.color }}">
+      <div class="sc-chip-icon" style="background:{{ meta.color }}20; color:{{ meta.color }}">
+        <i class="fas {{ meta.icon }}"></i>
+      </div>
+      <div class="sc-chip-body">
+        <div class="sc-chip-num" style="color:{{ meta.color }}">{{ pending_counts[cat] }}</div>
+        <div class="sc-chip-lbl">{{ meta.label }}</div>
+        {% if pending_counts[cat] > 0 %}
+        <span class="sc-chip-badge">{{ pending_counts[cat] }} pending</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    {% for cat, meta in cat_meta.items() %}
+    <button class="tab-btn {% if active_cat == cat %}active{% endif %}"
+            onclick="switchTab('{{ cat }}')" id="tab-btn-{{ cat }}">
+      <i class="fas {{ meta.icon }}"></i>
+      {{ meta.label }}
+      {% if pending_counts[cat] > 0 %}
+      <span class="tab-badge">{{ pending_counts[cat] }}</span>
+      {% else %}
+      <span class="tab-badge ok">✓</span>
+      {% endif %}
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- Tab panels -->
+  {% for cat, meta in cat_meta.items() %}
+  <div class="tab-panel {% if active_cat == cat %}active{% endif %}" id="panel-{{ cat }}">
+
+    {% set cat_rows = by_cat[cat] %}
+    {% set pending_rows  = cat_rows | selectattr('status', 'equalto', 'pending') | list %}
+    {% set approved_rows = cat_rows | selectattr('status', 'equalto', 'approved') | list %}
+    {% set rejected_rows = cat_rows | selectattr('status', 'equalto', 'rejected') | list %}
+
+    <!-- Section: Pending -->
+    {% if pending_rows %}
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b45309;margin:0 0 12px;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-clock"></i> Pending — {{ pending_rows | length }} request(s) awaiting clearance
+    </div>
+    {% for row in pending_rows %}
+    {% if row._req_status not in ('completed', 'rejected') %}
+    <div class="cl-card pending-card">
+      <div class="cl-hdr">
+        <div>
+          <div class="cl-name">{{ row._student.get('full_name', '—') }}</div>
+          <div class="cl-adm">Adm: {{ row._student.get('admission_no', '—') }}</div>
+        </div>
+        <span class="cl-status-tag st-pending"><i class="fas fa-clock"></i> Pending</span>
+      </div>
+      <div class="cl-body">
+        <div>
+          <span class="lbl">Course</span>
+          <span class="val">{{ row._course.get('name', '—') }}</span>
+        </div>
+        <div>
+          <span class="lbl">Department</span>
+          <span class="val">{{ row._dept.get('name', '—') }}</span>
+        </div>
+        <div>
+          <span class="lbl">Applied</span>
+          <span class="val">{{ (row.get('created_at','') or '')[:10] or '—' }}</span>
+        </div>
+        {% if row.get('_approver_name') and row._approver_name != '—' %}
+        <div>
+          <span class="lbl">Assigned To</span>
+          <span class="val">{{ row._approver_name }}</span>
+        </div>
+        {% endif %}
+      </div>
+      <div class="cl-actions">
+        <form method="POST" action="/clearance/approve/{{ row.id }}" style="display:inline">
+          <input type="hidden" name="comments" value="Approved by Super Admin">
+          <button type="submit" class="btn-approve" onclick="return confirm('Approve {{ row._student.get(\'full_name\',\'this trainee\') }} for {{ meta.label }}?')">
+            <i class="fas fa-check"></i> Approve
+          </button>
+        </form>
+        <button type="button" class="btn-reject" onclick="toggleReject('rej-{{ row.id }}')">
+          <i class="fas fa-times"></i> Reject
+        </button>
+      </div>
+      <div class="reject-form" id="rej-{{ row.id }}">
+        <form method="POST" action="/clearance/reject/{{ row.id }}" style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" name="comments" class="rej-input" placeholder="Reason for rejection (required)..." required>
+          <button type="submit" class="btn-confirm-rej"><i class="fas fa-times-circle"></i> Confirm Reject</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% else %}
+    <div class="sc-empty">
+      <i class="fas fa-check-circle" style="color:#16a34a;"></i>
+      <h3>No Pending Clearances</h3>
+      <p>All trainees have been cleared for {{ meta.label }}.</p>
+    </div>
+    {% endif %}
+
+    <!-- Section: Cleared -->
+    {% if approved_rows %}
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#15803d;margin:24px 0 12px;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-check-circle"></i> Cleared — {{ approved_rows | length }}
+    </div>
+    {% for row in approved_rows[:10] %}
+    <div class="cl-card approved-card">
+      <div class="cl-hdr">
+        <div>
+          <div class="cl-name">{{ row._student.get('full_name', '—') }}</div>
+          <div class="cl-adm">Adm: {{ row._student.get('admission_no', '—') }}</div>
+        </div>
+        <span class="cl-status-tag st-approved"><i class="fas fa-check-circle"></i> Cleared</span>
+      </div>
+      <div class="cl-note">
+        Cleared on {{ (row.get('approved_at','') or '')[:10] or '—' }}
+        {% if row.get('_approver_name') and row._approver_name != '—' %}
+        &nbsp;by {{ row._approver_name }}
+        {% endif %}
+        {% if row.get('comments') %} — {{ row.comments }}{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% if approved_rows | length > 10 %}
+    <p style="text-align:center;font-size:12px;color:#9ca3af;">Showing 10 of {{ approved_rows | length }} cleared records.</p>
+    {% endif %}
+    {% endif %}
+
+  </div>
+  {% endfor %}
+
+</div>
+
+<script>
+function switchTab(cat) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + cat).classList.add('active');
+  document.getElementById('tab-btn-' + cat).classList.add('active');
+}
+function toggleReject(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+// Activate tab from URL param on load
+(function() {
+  const p = new URLSearchParams(window.location.search).get('cat');
+  if (p && document.getElementById('panel-' + p)) switchTab(p);
+})();
+</script>
+{% endblock %}

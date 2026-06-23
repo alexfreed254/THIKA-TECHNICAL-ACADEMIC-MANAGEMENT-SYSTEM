@@ -87,7 +87,9 @@ def login():
             return redirect(url_for("admin_oversight.deputy_principal_dashboard"))
         elif role == "quality_assurance_officer":
             return redirect(url_for("admin_oversight.quality_assurance_dashboard"))
-        elif role in ("sports_hod", "environment_hod", "dean_students", "library_hod", "finance_officer"):
+        elif role in ("library_hod", "sports_hod"):
+            return redirect(url_for("clearance.service_dept_dashboard"))
+        elif role in ("environment_hod", "dean_students", "finance_officer"):
             return redirect(url_for("clearance.approver_dashboard"))
         elif role == "liaison_officer":
             return redirect(url_for("liaison_officer.dashboard"))
@@ -142,7 +144,9 @@ def login():
                         return redirect(url_for("admin_oversight.deputy_principal_dashboard"))
                     elif role == "quality_assurance_officer":
                         return redirect(url_for("admin_oversight.quality_assurance_dashboard"))
-                    elif role in ("sports_hod", "environment_hod", "dean_students", "library_hod", "finance_officer"):
+                    elif role in ("library_hod", "sports_hod"):
+                        return redirect(url_for("clearance.service_dept_dashboard"))
+                    elif role in ("environment_hod", "dean_students", "finance_officer"):
                         return redirect(url_for("clearance.approver_dashboard"))
                     elif role == "liaison_officer":
                         return redirect(url_for("liaison_officer.dashboard"))

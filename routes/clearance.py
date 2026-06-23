@@ -152,10 +152,16 @@ def _fetch_all_approvals(db, request_id: str) -> list:
               .execute().data or [])
 
 
+ROLE_TO_SVC_CAT = {
+    "library_hod": "svc_library",
+    "sports_hod":  "svc_games",
+}
+
+
 def _approver_back(role: str) -> str:
     """Return post-action redirect for the given approver role."""
-    if role == "workshop_technician":
-        return url_for("clearance.approver_dashboard")
+    if role in ROLE_TO_SVC_CAT:
+        return url_for("clearance.service_dept_dashboard")
     return url_for("clearance.approver_dashboard")
 
 
@@ -635,6 +641,91 @@ def initiate_clearance():
         flash(f"Error initiating clearance: {e}", "error")
 
     return redirect(url_for("clearance.dashboard"))
+
+
+# ── Service Department Clearance Dashboard (Library HOD / Sports HOD) ────────
+
+SVC_DEPT_META = {
+    "svc_library": {"label": "Institute Library",  "icon": "fa-book",   "color": "#1d4ed8", "bg": "#dbeafe"},
+    "svc_games":   {"label": "Games Department",   "icon": "fa-futbol", "color": "#16a34a", "bg": "#dcfce7"},
+    "svc_ict":     {"label": "ICT Department",     "icon": "fa-laptop", "color": "#7c3aed", "bg": "#ede9fe"},
+    "svc_kitchen": {"label": "Kitchen / Cafeteria","icon": "fa-utensils","color":"#b45309", "bg": "#fef3c7"},
+    "svc_store":   {"label": "Store Department",   "icon": "fa-warehouse","color":"#0e7490","bg": "#cffafe"},
+}
+
+
+@clearance_bp.route("/service-dept")
+@login_required
+def service_dept_dashboard():
+    db   = get_service_client()
+    user = current_user()
+    role = user["role"]
+    uid  = user["id"]
+
+    # Determine which category this role manages
+    cat = ROLE_TO_SVC_CAT.get(role)
+    if not cat:
+        # Fallback for unknown roles
+        return redirect(url_for("clearance.approver_dashboard"))
+
+    meta = SVC_DEPT_META.get(cat, {"label": cat, "icon": "fa-cog", "color": "#374151", "bg": "#f3f4f6"})
+
+    base_sel = (
+        "id, approver_category, status, comments, approved_at, created_at, approver_id, is_waived, "
+        "clearance_requests(id, student_id, status, stage, created_at, "
+        "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
+        "  (full_name, admission_no, phone), "
+        "  courses(name, code), departments(name))"
+    )
+
+    # Records assigned to this user
+    assigned = (db.table("clearance_approvals")
+                  .select(base_sel)
+                  .eq("approver_id", uid)
+                  .eq("approver_category", cat)
+                  .order("created_at", desc=True)
+                  .execute().data or [])
+
+    # Unassigned (null approver_id) pending records for this category
+    unassigned = (db.table("clearance_approvals")
+                    .select(base_sel)
+                    .is_("approver_id", "null")
+                    .eq("approver_category", cat)
+                    .eq("status", "pending")
+                    .order("created_at", desc=True)
+                    .execute().data or [])
+
+    seen = set()
+    all_rows = []
+    for row in assigned + unassigned:
+        rid = row.get("id")
+        if rid in seen:
+            continue
+        seen.add(rid)
+        req = row.get("clearance_requests") or {}
+        row["_student"]    = req.get("user_profiles") or {}
+        row["_course"]     = req.get("courses") or {}
+        row["_dept"]       = req.get("departments") or {}
+        row["_req_id"]     = req.get("id", "")
+        row["_req_status"] = req.get("status", "")
+        row["_claimable"]  = row.get("approver_id") is None
+        all_rows.append(row)
+
+    pending   = [r for r in all_rows if r.get("status") == "pending"
+                 and r.get("_req_status") not in ("completed", "rejected")]
+    cleared   = [r for r in all_rows if r.get("status") == "approved"]
+    rejected  = [r for r in all_rows if r.get("status") == "rejected"]
+
+    return render_template(
+        "clearance/service_dept_dashboard.html",
+        pending=pending,
+        cleared=cleared,
+        rejected=rejected,
+        cat=cat,
+        meta=meta,
+        user_role=role,
+        CATEGORY_LABELS=CATEGORY_LABELS,
+    )
 
 
 # ── Approver dashboard ────────────────────────────────────────────────────────
