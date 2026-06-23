@@ -60,19 +60,19 @@
       <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
     </div>
 
-    <div class="sidebar-footer">
-      <div style="padding:10px 14px 10px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:6px">
+    <div class="sidebar-footer" style="flex-direction:column;gap:0;padding:0">
+      <div style="padding:10px 14px 12px;border-bottom:1px solid rgba(255,255,255,.1)">
         <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
           <i class="fas fa-user-circle"></i> Signed in as
         </div>
         <div style="font-size:13px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           {{ user.full_name if user else '' }}
         </div>
-        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           {{ user.email if user else '' }}
         </div>
       </div>
-      <a href="/auth/logout" style="color:#fca5a5">
+      <a href="/auth/logout" style="margin:10px 14px;border-radius:8px">
         <i class="fas fa-sign-out-alt"></i> Sign Out
       </a>
     </div>
