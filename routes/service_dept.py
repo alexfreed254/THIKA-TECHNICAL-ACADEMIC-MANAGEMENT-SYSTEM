@@ -61,6 +61,7 @@ def _require_service_role(user):
 @service_dept_bp.route("/")
 @login_required
 def dashboard():
+    import traceback as _tb
     user = current_user()
     role = user["role"]
 
@@ -73,44 +74,66 @@ def dashboard():
     uid    = user["id"]
     db     = get_service_client()
 
-    base_sel = (
-        "*, "
-        "clearance_requests(id, student_id, status, stage, created_at, department_id, "
-        "  user_profiles:user_profiles!clearance_requests_student_id_fkey"
-        "  (full_name, admission_no, mobile_number, department_id))"
-    )
+    # Two-step query: approvals first, then enrich
+    try:
+        assigned = (db.table("clearance_approvals")
+                      .select("id, approver_category, status, comments, approved_at, "
+                              "created_at, approver_id, is_waived, clearance_request_id")
+                      .eq("approver_id", uid)
+                      .in_("approver_category", cats)
+                      .order("created_at", desc=True)
+                      .execute().data or [])
+    except Exception:
+        print("[service_dept] assigned query error:\n" + _tb.format_exc())
+        assigned = []
 
-    assigned = (db.table("clearance_approvals")
-                  .select(base_sel)
-                  .eq("approver_id", uid)
-                  .in_("approver_category", cats)
-                  .order("created_at", desc=True)
-                  .execute().data or [])
+    try:
+        unassigned = (db.table("clearance_approvals")
+                        .select("id, approver_category, status, comments, approved_at, "
+                                "created_at, approver_id, is_waived, clearance_request_id")
+                        .is_("approver_id", "null")
+                        .in_("approver_category", cats)
+                        .eq("status", "pending")
+                        .order("created_at", desc=True)
+                        .execute().data or [])
+    except Exception:
+        print("[service_dept] unassigned query error:\n" + _tb.format_exc())
+        unassigned = []
 
-    unassigned = (db.table("clearance_approvals")
-                    .select(base_sel)
-                    .is_("approver_id", "null")
-                    .in_("approver_category", cats)
-                    .eq("status", "pending")
-                    .order("created_at", desc=True)
-                    .execute().data or [])
-
-    # Collect all department IDs to batch-fetch names
-    dept_ids = set()
-    for row in assigned + unassigned:
-        req = row.get("clearance_requests") or {}
-        sp  = req.get("user_profiles") or {}
-        did = sp.get("department_id") or req.get("department_id")
-        if did:
-            dept_ids.add(did)
-
+    # Collect request IDs to batch-fetch clearance_requests
+    req_ids = list({r["clearance_request_id"] for r in assigned + unassigned
+                    if r.get("clearance_request_id")})
+    req_map = {}
+    student_map = {}
     dept_map = {}
-    if dept_ids:
-        dept_rows = (db.table("departments")
-                       .select("id, name")
-                       .in_("id", list(dept_ids))
-                       .execute().data or [])
-        dept_map = {d["id"]: d["name"] for d in dept_rows}
+
+    if req_ids:
+        try:
+            req_rows = (db.table("clearance_requests")
+                          .select("id, student_id, status, stage, created_at, department_id")
+                          .in_("id", req_ids)
+                          .execute().data or [])
+            req_map = {r["id"]: r for r in req_rows}
+
+            student_ids = list({r["student_id"] for r in req_rows if r.get("student_id")})
+            dept_ids_set = {r["department_id"] for r in req_rows if r.get("department_id")}
+
+            if student_ids:
+                sp_rows = (db.table("user_profiles")
+                             .select("id, full_name, admission_no, mobile_number, department_id")
+                             .in_("id", student_ids)
+                             .execute().data or [])
+                student_map = {s["id"]: s for s in sp_rows}
+                dept_ids_set.update(s["department_id"] for s in sp_rows if s.get("department_id"))
+
+            if dept_ids_set:
+                d_rows = (db.table("departments")
+                            .select("id, name")
+                            .in_("id", list(dept_ids_set))
+                            .execute().data or [])
+                dept_map = {d["id"]: d["name"] for d in d_rows}
+        except Exception:
+            print("[service_dept] enrichment query error:\n" + _tb.format_exc())
 
     seen = set()
     rows = []
@@ -119,8 +142,8 @@ def dashboard():
         if rid in seen:
             continue
         seen.add(rid)
-        req = row.get("clearance_requests") or {}
-        sp  = req.get("user_profiles") or {}
+        req = req_map.get(row.get("clearance_request_id") or "") or {}
+        sp  = student_map.get(req.get("student_id") or "") or {}
         did = sp.get("department_id") or req.get("department_id")
         row["_student"]    = sp
         row["_dept"]       = {"name": dept_map.get(did, "—")} if did else {}
