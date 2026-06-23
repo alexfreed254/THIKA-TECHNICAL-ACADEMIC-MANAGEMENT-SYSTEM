@@ -237,7 +237,9 @@
         <form method="POST" action="/clearance/approve/{{ row.id }}" style="display:inline">
           <input type="hidden" name="comments" value="">
           <button type="submit" class="btn-clear"
-                  onclick="return confirm('Clear {{ row._student.get(\'full_name\', \'this trainee\') }}?\n\nThis will mark them as cleared for {{ config.label }}.')">
+                  data-name="{{ row._student.get('full_name', 'this trainee') }}"
+                  data-dept="{{ config.label }}"
+                  onclick="return confirm('Clear ' + this.dataset.name + '?\n\nThis will mark them as cleared for ' + this.dataset.dept + '.')">
             <i class="fas fa-check"></i> Clear Trainee
           </button>
         </form>
