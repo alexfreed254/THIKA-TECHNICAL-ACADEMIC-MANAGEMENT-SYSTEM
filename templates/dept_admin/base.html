@@ -204,13 +204,21 @@
   overlay.addEventListener('click', closeSidebar);
 
   const path = window.location.pathname;
+  let activeLink = null;
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
     a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
     const href = a.getAttribute('href');
-    if (href && href !== '#' && path.startsWith(href) && href.length > 1) {
+    if (!href || href === '#') return;
+    const linkUrl = new URL(href, window.location.origin);
+    const samePath = path === linkUrl.pathname;
+    const pathStarts = linkUrl.pathname.length > 1 && path.startsWith(linkUrl.pathname);
+    const queryMatches = !linkUrl.search || window.location.search === linkUrl.search;
+    if ((samePath || pathStarts) && queryMatches) {
       a.classList.add('active');
+      activeLink = activeLink || a;
     }
   });
+  if (activeLink) activeLink.scrollIntoView({ block: 'nearest' });
 
   function toggleTheme() {
     const isDark = document.body.classList.toggle('dark-mode');

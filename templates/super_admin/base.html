@@ -187,11 +187,21 @@
   function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); toggle.innerHTML = '<i class="fas fa-bars"></i>'; }
   toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
   overlay.addEventListener('click', closeSidebar);
+  let activeLink = null;
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
     a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
     const href = a.getAttribute('href');
-    if (href && href !== '#' && window.location.pathname === href) a.classList.add('active');
+    if (!href || href === '#') return;
+    const linkUrl = new URL(href, window.location.origin);
+    const samePath = window.location.pathname === linkUrl.pathname;
+    const pathStarts = linkUrl.pathname.length > 1 && window.location.pathname.startsWith(linkUrl.pathname);
+    const queryMatches = !linkUrl.search || window.location.search === linkUrl.search;
+    if ((samePath || pathStarts) && queryMatches) {
+      a.classList.add('active');
+      activeLink = activeLink || a;
+    }
   });
+  if (activeLink) activeLink.scrollIntoView({ block: 'nearest' });
 
   window.showToast = function(msg, type = 'info', duration = 4000) {
     const icons = { success:'check-circle', error:'exclamation-circle', warning:'exclamation-triangle', info:'info-circle' };

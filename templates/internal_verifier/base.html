@@ -119,10 +119,18 @@
   toggle.addEventListener('click',()=>sidebar.classList.contains('open')?closeSidebar():openSidebar());
   overlay.addEventListener('click',closeSidebar);
   const path=window.location.pathname;
+  let activeLink=null;
   document.querySelectorAll('.sidebar-menu a').forEach(a=>{
     a.addEventListener('click',()=>{if(window.innerWidth<=768)closeSidebar();});
-    if(a.getAttribute('href')===path)a.classList.add('active');
+    const href=a.getAttribute('href');
+    if(!href||href==='#')return;
+    const linkUrl=new URL(href,window.location.origin);
+    const samePath=path===linkUrl.pathname;
+    const pathStarts=linkUrl.pathname.length>1&&path.startsWith(linkUrl.pathname);
+    const queryMatches=!linkUrl.search||window.location.search===linkUrl.search;
+    if((samePath||pathStarts)&&queryMatches){a.classList.add('active');activeLink=activeLink||a;}
   });
+  if(activeLink)activeLink.scrollIntoView({block:'nearest'});
 </script>
 <script>
 if(!window.showToast){window.showToast=function(msg,type,duration){var tc=document.getElementById('toast-container');if(!tc)return;var icons={success:'check-circle',error:'exclamation-circle',warning:'exclamation-triangle',info:'info-circle'};var t=document.createElement('div');t.className='toast toast-'+(type||'info');t.innerHTML='<i class="fas fa-'+(icons[type]||icons.info)+'"></i><span class="toast-msg">'+msg+'</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';tc.appendChild(t);setTimeout(function(){t.classList.add('toast-out');setTimeout(function(){t.remove();},300);},(duration||4000));};}

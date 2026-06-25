@@ -58,19 +58,26 @@
       <h3>TRAINING INSTITUTE</h3>
     </div>
     <div class="sidebar-menu">
+      <div class="menu-section">Overview</div>
       <a href="/admin/welcome"><i class="fas fa-home fa-fw"></i> Dashboard</a>
+
+      <div class="menu-section">Academic Setup</div>
       <a href="/admin/departments"><i class="fas fa-building fa-fw"></i> Departments</a>
       <a href="/admin/trainers"><i class="fas fa-chalkboard-teacher fa-fw"></i> Trainers</a>
       <a href="/admin/classes"><i class="fas fa-school fa-fw"></i> Classes</a>
       <a href="/admin/students"><i class="fas fa-user-graduate fa-fw"></i> Students</a>
       <a href="/admin/units"><i class="fas fa-book fa-fw"></i> Units</a>
       <a href="/admin/assign_units"><i class="fas fa-link fa-fw"></i> Assign Units</a>
+
+      <div class="menu-section">Operations</div>
       <a href="/admin/view_attendance"><i class="fas fa-clipboard-list fa-fw"></i> View Attendance</a>
-      <a href="/admin/import_data"><i class="fas fa-file-import fa-fw"></i> Import Data</a>
-      <a href="/admin/credentials"><i class="fas fa-key fa-fw"></i> Credentials</a>
       <a href="/admin/class_list"><i class="fas fa-list-ol fa-fw"></i> Class List</a>
       <a href="/admin/trainee_search"><i class="fas fa-search fa-fw"></i> Search Trainee</a>
       <a href="/admin/assessment_sheet"><i class="fas fa-clipboard-check fa-fw"></i> Assessment Sheet</a>
+
+      <div class="menu-section">System Tools</div>
+      <a href="/admin/import_data"><i class="fas fa-file-import fa-fw"></i> Import Data</a>
+      <a href="/admin/credentials"><i class="fas fa-key fa-fw"></i> Credentials</a>
     </div>
     <div class="sidebar-footer">
       <div style="padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px">
@@ -132,11 +139,18 @@
     overlay.classList.remove('open');
   });
   // Highlight active link
+  let activeLink = null;
   document.querySelectorAll('.sidebar-menu a').forEach(a => {
-    if (a.href === location.href || location.pathname.startsWith(new URL(a.href).pathname)) {
+    const linkUrl = new URL(a.href);
+    const samePath = location.pathname === linkUrl.pathname;
+    const pathStarts = linkUrl.pathname.length > 1 && location.pathname.startsWith(linkUrl.pathname);
+    const queryMatches = !linkUrl.search || location.search === linkUrl.search;
+    if ((samePath || pathStarts) && queryMatches) {
       a.classList.add('active');
+      activeLink = activeLink || a;
     }
   });
+  if (activeLink) activeLink.scrollIntoView({ block: 'nearest' });
   // Auto-dismiss toast
   const toast = document.getElementById('toast');
   if (toast) {
