@@ -22,6 +22,7 @@ student_bp = Blueprint("student", __name__)
 
 EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 ALLOWED_PASSPORT_IMAGES = {'jpg', 'jpeg', 'png', 'webp'}
+ALLOWED_ATTACHMENT_LETTER_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 
 
 def _file_slug(text: str) -> str:
@@ -30,6 +31,36 @@ def _file_slug(text: str) -> str:
     text = re.sub(r'[^\w\s-]', '', text)
     text = re.sub(r'[\s]+', '_', text)
     return text.strip('_-') or 'unknown'
+
+
+def _upload_attachment_letter(file, student_id: str, company_name: str) -> tuple[str, str]:
+    """Upload an official attachment acceptance letter and return its public URL + storage path."""
+    if not file or not getattr(file, "filename", ""):
+        raise ValueError("Please upload the official company acceptance letter.")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_ATTACHMENT_LETTER_EXTENSIONS:
+        raise ValueError("Acceptance letter must be a PDF, JPG, JPEG, or PNG file.")
+
+    storage_path = (
+        f"industrial_attachment_letters/{student_id}/"
+        f"{uuid.uuid4()}_{_file_slug(company_name)}.{ext}"
+    )
+    raw = file.read()
+    if not raw:
+        raise ValueError("The acceptance letter file appears to be empty.")
+
+    bucket = "assessment-scripts"
+    get_service_client().storage.from_(bucket).upload(
+        path=storage_path,
+        file=raw,
+        file_options={
+            "content-type": file.content_type or "application/octet-stream",
+            "content-disposition": "inline",
+        },
+    )
+    base_url = os.environ.get("SUPABASE_URL", "").strip()
+    return f"{base_url}/storage/v1/object/public/{bucket}/{storage_path}", storage_path
 
 # Template helper functions
 def get_file_icon_class(url):
@@ -2985,10 +3016,10 @@ def industrial_attachment():
                        .order("created_at", desc=True)
                        .execute().data or [])
 
-    # Current attachment = most recent active/pending/approved
+    # Current attachment = most recent attachment still in the approval / activity lifecycle
     current_attachment = None
     for att in all_attachments:
-        if att.get("status") in ("active", "pending", "approved"):
+        if att.get("status") in ("active", "pending", "approved", "rejected"):
             current_attachment = att
             break
     # Fall back to most recent of any status
@@ -3035,6 +3066,8 @@ def request_attachment():
     unit_id = raw_unit_id if raw_unit_id and raw_unit_id.lower() not in ("none", "null", "undefined", "") else None
     start_date         = (request.form.get("start_date") or "").strip()
     end_date           = (request.form.get("end_date") or "").strip()
+    mobile_number      = (request.form.get("mobile_number") or "").strip()
+    acceptance_letter  = request.files.get("acceptance_letter")
 
     lat_raw = request.form.get("latitude", "").strip()
     lng_raw = request.form.get("longitude", "").strip()
@@ -3049,7 +3082,15 @@ def request_attachment():
         flash("All required fields must be filled in.", "error")
         return redirect(url_for("student.industrial_attachment"))
 
+    if not acceptance_letter or not acceptance_letter.filename:
+        flash("Upload the official company acceptance letter before submitting this attachment.", "error")
+        return redirect(url_for("student.industrial_attachment"))
+
     try:
+        acceptance_letter_url, acceptance_letter_path = _upload_attachment_letter(
+            acceptance_letter, student_id, company_name
+        )
+
         # 1. Create company record from trainee-supplied info
         company_payload = {
             "name":                    company_name,
@@ -3067,6 +3108,12 @@ def request_attachment():
         company_res = db.table("companies").insert(company_payload).execute()
         company_id  = company_res.data[0]["id"]
 
+        if mobile_number:
+            try:
+                db.table("user_profiles").update({"mobile_number": mobile_number}).eq("id", student_id).execute()
+            except Exception:
+                pass
+
         # 2. Create attachment record
         att_payload = {
             "student_id":  student_id,
@@ -3076,6 +3123,10 @@ def request_attachment():
             "end_date":    end_date,
             "status":      "pending",
             "created_by":  student_id,
+            "acceptance_letter_url": acceptance_letter_url,
+            "acceptance_letter_name": acceptance_letter.filename,
+            "acceptance_letter_path": acceptance_letter_path,
+            "acceptance_letter_status": "pending",
         }
         # New extended fields — columns added via migration
         try:
@@ -3089,10 +3140,28 @@ def request_attachment():
 
         db.table("industrial_attachments").insert(att_payload).execute()
 
+        try:
+            from notifications import create_notification
+            dept_admins = (db.table("user_profiles")
+                             .select("id")
+                             .eq("role", "dept_admin")
+                             .eq("department_id", user.get("department_id"))
+                             .execute().data or [])
+            for admin in dept_admins:
+                create_notification(
+                    user_id=admin["id"],
+                    title="Attachment Letter Awaiting Review",
+                    message=f"{user.get('full_name', 'A trainee')} submitted an industrial attachment acceptance letter for {company_name}.",
+                    notification_type="info",
+                    action_url="/dept-admin/attachments?status=pending",
+                )
+        except Exception:
+            pass
+
         write_audit_log("request_attachment", target=f"company:{company_id}",
                         detail={"company": company_name, "supervisor": supervisor_name,
                                 "term": attachment_term, "role": trainee_role})
-        flash("Attachment request submitted successfully. Awaiting department approval.", "success")
+        flash("Attachment request submitted successfully. Your official acceptance letter is now awaiting HOD / department approval.", "success")
     except Exception as e:
         flash(f"Error submitting attachment request: {e}", "error")
 
@@ -3109,7 +3178,7 @@ def delete_attachment(att_id):
     student_id = user["id"]
 
     row = (db.table("industrial_attachments")
-             .select("id, status, company_id, created_by")
+             .select("id, status, company_id, created_by, acceptance_letter_path")
              .eq("id", att_id)
              .eq("student_id", student_id)
              .limit(1)
@@ -3126,7 +3195,13 @@ def delete_attachment(att_id):
 
     try:
         company_id = att.get("company_id")
+        letter_path = att.get("acceptance_letter_path")
         db.table("industrial_attachments").delete().eq("id", att_id).execute()
+        if letter_path:
+            try:
+                db.storage.from_("assessment-scripts").remove([letter_path])
+            except Exception:
+                pass
         # Clean up the company record if it was created by this student
         if company_id:
             try:

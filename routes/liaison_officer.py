@@ -85,10 +85,28 @@ def approve_attachment(att_id):
     db = get_service_client()
     user = current_user()
     new_status = request.form.get("status", "approved")
-    if new_status not in ("approved", "active", "rejected", "completed"):
+    if new_status not in ("active", "rejected", "completed"):
         flash("Invalid status.", "warning")
         return redirect(url_for("liaison_officer.attachments"))
     try:
+        current = (db.table("industrial_attachments")
+                     .select("id, status, acceptance_letter_status")
+                     .eq("id", att_id)
+                     .limit(1)
+                     .execute().data or [])
+        if not current:
+            flash("Attachment record was not found.", "warning")
+            return redirect(url_for("liaison_officer.attachments"))
+
+        record = current[0]
+        if new_status == "active":
+            if record.get("status") != "approved":
+                flash("Only department-approved attachments can be activated.", "warning")
+                return redirect(url_for("liaison_officer.attachments"))
+            if (record.get("acceptance_letter_status") or "pending") != "approved":
+                flash("The acceptance letter must be approved by the department before activation.", "warning")
+                return redirect(url_for("liaison_officer.attachments"))
+
         db.table("industrial_attachments").update({"status": new_status}).eq("id", att_id).execute()
         write_audit_log(user["id"], "update_attachment_status",
                         f"Attachment {att_id} set to {new_status}")

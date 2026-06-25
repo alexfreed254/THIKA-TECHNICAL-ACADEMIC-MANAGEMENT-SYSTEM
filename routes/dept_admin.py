@@ -8,7 +8,7 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import (dept_admin_required, write_audit_log,
                         current_user, dept_isolation_check)
 from db import get_service_client
-from notifications import get_user_notifications, notify_dept_notice
+from notifications import get_user_notifications, notify_dept_notice, create_notification
 from datetime import datetime
 import secrets, string
 
@@ -21,6 +21,14 @@ def _dept_id():
     if not dept:
         abort(403)
     return dept
+
+
+def _dept_student_ids(db, dept_id):
+    enrolled = (db.table("enrollments")
+                  .select("student_id, classes!inner(department_id)")
+                  .eq("classes.department_id", dept_id)
+                  .execute().data or [])
+    return list({row["student_id"] for row in enrolled if row.get("student_id")})
 
 
 def _gen_password(length=10):
@@ -2219,6 +2227,127 @@ def review_logbook(log_id):
 
 # ── GIS Placement Tracking & Digital Logbook ─────────────────────────────────
 
+@dept_admin_bp.route("/attachments")
+@dept_admin_required
+def attachments():
+    db = get_service_client()
+    dept_id = _dept_id()
+    status_filter = (request.args.get("status") or "pending").strip()
+
+    student_ids = _dept_student_ids(db, dept_id)
+    attachments = []
+    stats = {"total": 0, "pending": 0, "approved": 0, "rejected": 0, "active": 0}
+
+    if student_ids:
+        attachments = (db.table("industrial_attachments")
+            .select("*, "
+                    "companies(name, address, contact_person, contact_phone), "
+                    "units(name, code), "
+                    "student:user_profiles!industrial_attachments_student_id_fkey"
+                    "(full_name, admission_no, mobile_number)")
+            .in_("student_id", student_ids)
+            .order("created_at", desc=True)
+            .limit(300)
+            .execute().data or [])
+
+        for item in attachments:
+            letter_status = item.get("acceptance_letter_status") or "pending"
+            item["_letter_status"] = letter_status
+            stats["total"] += 1
+            if letter_status in stats:
+                stats[letter_status] += 1
+            if (item.get("status") or "").lower() == "active":
+                stats["active"] += 1
+
+        if status_filter and status_filter != "all":
+            attachments = [
+                item for item in attachments
+                if item.get("_letter_status") == status_filter
+            ]
+
+    return render_template(
+        "dept_admin/attachments.html",
+        attachments=attachments,
+        status_filter=status_filter,
+        stats=stats,
+    )
+
+
+@dept_admin_bp.route("/attachments/<att_id>/review", methods=["POST"])
+@dept_admin_required
+def review_attachment(att_id):
+    db = get_service_client()
+    dept_id = _dept_id()
+    user = current_user()
+    decision = (request.form.get("decision") or "").strip().lower()
+    comment = (request.form.get("comment") or "").strip()
+
+    if decision not in {"approve", "reject"}:
+        flash("Invalid attachment review decision.", "error")
+        return redirect(url_for("dept_admin.attachments"))
+
+    student_ids = _dept_student_ids(db, dept_id)
+    if not student_ids:
+        flash("No trainees are linked to your department.", "warning")
+        return redirect(url_for("dept_admin.attachments"))
+
+    rows = (db.table("industrial_attachments")
+              .select("id, student_id, status, acceptance_letter_url, companies(name)")
+              .eq("id", att_id)
+              .in_("student_id", student_ids)
+              .limit(1)
+              .execute().data or [])
+    if not rows:
+        flash("Attachment record not found in your department.", "error")
+        return redirect(url_for("dept_admin.attachments"))
+
+    attachment = rows[0]
+    if not attachment.get("acceptance_letter_url"):
+        flash("The trainee has not uploaded an official acceptance letter yet.", "warning")
+        return redirect(url_for("dept_admin.attachments"))
+
+    approved = decision == "approve"
+    payload = {
+        "acceptance_letter_status": "approved" if approved else "rejected",
+        "dept_review_comments": comment or None,
+        "dept_reviewed_by": user["id"],
+        "dept_reviewed_at": datetime.utcnow().isoformat(),
+        "status": "approved" if approved else "rejected",
+        "approved_by": user["id"] if approved else None,
+        "approved_at": datetime.utcnow().isoformat() if approved else None,
+    }
+
+    try:
+        db.table("industrial_attachments").update(payload).eq("id", att_id).execute()
+        create_notification(
+            user_id=attachment["student_id"],
+            title="Attachment Letter Approved" if approved else "Attachment Letter Needs Attention",
+            message=(
+                f"Your industrial attachment acceptance letter for {(attachment.get('companies') or {}).get('name', 'the selected company')} "
+                f"has been approved by your department."
+                if approved else
+                f"Your industrial attachment acceptance letter for {(attachment.get('companies') or {}).get('name', 'the selected company')} was not approved. Please review the department comments and resubmit if needed."
+            ),
+            notification_type="success" if approved else "warning",
+            action_url="/student/industrial-attachment",
+        )
+        write_audit_log(
+            "review_attachment_acceptance_letter",
+            target=f"attachment:{att_id}",
+            detail={"decision": decision, "comment": comment},
+        )
+        flash(
+            "Acceptance letter approved and the attachment has moved to department-approved status."
+            if approved else
+            "Acceptance letter review recorded. The trainee has been notified.",
+            "success" if approved else "warning",
+        )
+    except Exception as exc:
+        flash(f"Could not save attachment review: {exc}", "error")
+
+    return redirect(url_for("dept_admin.attachments", status=request.form.get("status_filter", "pending")))
+
+
 @dept_admin_bp.route("/gis-tracking")
 @dept_admin_required
 def gis_tracking():
@@ -2238,11 +2367,7 @@ def gis_tracking():
     PERIOD_LABELS = {"1": "January – April", "2": "May – August", "3": "September – December"}
 
     # ── Dept students ──────────────────────────────────────────────────────────
-    enr = (db.table("enrollments")
-           .select("student_id, classes!inner(department_id)")
-           .eq("classes.department_id", dept_id)
-           .execute().data or [])
-    student_ids = list({e["student_id"] for e in enr})
+    student_ids = _dept_student_ids(db, dept_id)
 
     # ── All placements (no status filter — show everything submitted) ──────────
     placements = []

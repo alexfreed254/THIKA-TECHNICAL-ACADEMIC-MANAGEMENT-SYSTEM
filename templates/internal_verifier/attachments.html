@@ -1,7 +1,7 @@
 {% extends "internal_verifier/base.html" %}
 
-{% block title %}Attachment Review{% endblock %}
-{% block page_title %}Industrial Attachment Review{% endblock %}
+{% block title %}Attachment Records{% endblock %}
+{% block page_title %}Industrial Attachment Records{% endblock %}
 
 {% block extra_style %}
 <style>
@@ -28,9 +28,11 @@
 {% block content %}
 <div class="filters">
   <select name="status" onchange="location.href='/internal-verifier/attachments?status='+this.value">
-    <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending Dept Review</option>
     <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
     <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+    <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
   </select>
   <select name="department_id" onchange="location.href='/internal-verifier/attachments?status={{ status }}&department_id='+this.value">
     <option value="">All Departments</option>
@@ -47,6 +49,7 @@
       <div>
         <div class="item-trainee">{{ attachment.user_profiles.full_name }} ({{ attachment.user_profiles.admission_no }})</div>
         <div class="item-company">{{ attachment.companies.name }} - {{ attachment.units.name }}</div>
+        <div class="item-company">Acceptance letter: {{ attachment.get('acceptance_letter_status', 'pending')|title }}</div>
       </div>
       <span class="item-status status-{{ attachment.status }}">
         {{ attachment.status|capitalize }}

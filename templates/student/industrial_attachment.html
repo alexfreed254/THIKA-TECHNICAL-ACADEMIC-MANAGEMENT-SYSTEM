@@ -195,6 +195,39 @@
 .pill-active    { background:#dbeafe; color:#1e40af; }
 .pill-pending   { background:#fef3c7; color:#92400e; }
 .pill-completed { background:#f1f5f9; color:#475569; }
+.pill-approved  { background:#dcfce7; color:#166534; }
+.pill-rejected  { background:#fee2e2; color:#b91c1c; }
+
+.letter-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 9999px;
+  font-size: 12px; font-weight: 700;
+}
+.letter-pill.pending { background:#fff7ed; color:#c2410c; }
+.letter-pill.approved { background:#ecfdf5; color:#15803d; }
+.letter-pill.rejected { background:#fef2f2; color:#b91c1c; }
+
+.flow-note {
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border: 1px solid #bfdbfe; border-radius: 16px; padding: 18px 20px;
+  margin-bottom: 24px;
+}
+.flow-steps {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px; margin-top: 14px;
+}
+.flow-step {
+  background:#fff; border:1px solid #dbeafe; border-radius:12px; padding:14px;
+}
+.flow-step-num {
+  width:28px; height:28px; border-radius:50%; background:#0f2c54; color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; margin-bottom:10px;
+}
+.doc-link {
+  display:inline-flex; align-items:center; gap:8px; padding:10px 14px;
+  background:#eff6ff; color:#1d4ed8; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px;
+}
+.doc-link:hover { background:#dbeafe; }
 
 /* Delete button */
 .btn-del {
@@ -224,6 +257,66 @@
 {% if current_attachment %}
 {% set co = current_attachment.get('companies') or {} %}
 {% set st = current_attachment.get('status','pending') %}
+{% set letter_status = current_attachment.get('acceptance_letter_status','pending') %}
+
+<div class="ia-card">
+  <div class="ia-card-head"><i class="fas fa-route"></i> Attachment Approval Tracker</div>
+  <div style="padding:24px">
+    <div class="flow-note">
+      <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:6px">{{ co.get('name','Current attachment') }}</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.6;max-width:760px">
+            Your official company acceptance letter must be reviewed by your home department HOD / admin before the attachment is fully approved and activated.
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span class="pill pill-{{ st if st in ('active','pending','completed','approved','rejected') else 'pending' }}">
+            {{ st|replace('_',' ')|title }}
+          </span>
+          <span class="letter-pill {{ letter_status }}">
+            <i class="fas fa-file-signature"></i> Letter {{ letter_status|title }}
+          </span>
+        </div>
+      </div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-num">1</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Get Company Letter</div>
+          <div style="font-size:12.5px;color:#64748b">Receive the official acceptance / placement letter from the host company.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">2</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Upload to Portal</div>
+          <div style="font-size:12.5px;color:#64748b">Submit your placement details and attach the signed company letter.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">3</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Department Review</div>
+          <div style="font-size:12.5px;color:#64748b">The HOD / department admin checks the document and records approval comments.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">4</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Activation</div>
+          <div style="font-size:12.5px;color:#64748b">Once department-approved, the placement can proceed to the active attachment stage.</div>
+        </div>
+      </div>
+    </div>
+
+    {% if current_attachment.get('acceptance_letter_url') %}
+    <a class="doc-link" href="{{ current_attachment.get('acceptance_letter_url') }}" target="_blank">
+      <i class="fas fa-file-pdf"></i> View Uploaded Acceptance Letter
+    </a>
+    {% endif %}
+
+    {% if current_attachment.get('dept_review_comments') %}
+    <div style="margin-top:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Department Review Comments</div>
+      <div style="font-size:13.5px;color:#334155;line-height:1.6">{{ current_attachment.get('dept_review_comments') }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
 
 {% if st == 'active' %}
 <div class="ia-card">
@@ -338,6 +431,7 @@
           <th>Start Date</th>
           <th>End Date</th>
           <th>Status</th>
+          <th>Acceptance Letter</th>
           <th>Grade</th>
           <th></th>
         </tr>
@@ -362,9 +456,20 @@
           <td style="font-size:13px">{{ att.get('start_date','—') }}</td>
           <td style="font-size:13px">{{ att.get('end_date','—') }}</td>
           {% set _st = att.get('status','pending') %}
-          <td><span class="pill pill-{{ _st if _st in ('active','pending','completed') else 'pending' }}">
-            {% if _st == 'pending' %}Submitted{% else %}{{ _st|title }}{% endif %}
+          <td><span class="pill pill-{{ _st if _st in ('active','pending','completed','approved','rejected') else 'pending' }}">
+            {% if _st == 'pending' %}Submitted{% else %}{{ _st|replace('_',' ')|title }}{% endif %}
           </span></td>
+          {% set _ls = att.get('acceptance_letter_status','pending') %}
+          <td>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+              <span class="letter-pill {{ _ls }}"><i class="fas fa-file-signature"></i> {{ _ls|title }}</span>
+              {% if att.get('acceptance_letter_url') %}
+              <a href="{{ att.get('acceptance_letter_url') }}" target="_blank" style="font-size:12px;font-weight:700;color:#1d4ed8;text-decoration:none">
+                <i class="fas fa-up-right-from-square"></i> Open letter
+              </a>
+              {% endif %}
+            </div>
+          </td>
           <td style="font-weight:700;color:#1e5a9f">{{ att.get('final_grade','—') }}</td>
           <td>
             {% if att.get('status') == 'pending' %}
@@ -411,7 +516,7 @@
       <span>You can register a new attachment at any time — including future terms. Each submission is tracked separately in the history above and reviewed by your department.</span>
     </div>
 
-    <form method="POST" action="/student/industrial-attachment/request" id="attachForm">
+    <form method="POST" action="/student/industrial-attachment/request" id="attachForm" enctype="multipart/form-data">
 
       {# ── SCOPE / PERIOD ── #}
       <div class="form-section-hdr">
@@ -475,6 +580,15 @@
           <label class="f-label">Location / Address <span class="req">*</span></label>
           <input class="f-input" type="text" name="company_address" required
                  placeholder="e.g. Industrial Area, Nairobi / Thika Town">
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px">
+        <div style="font-size:12px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+          <i class="fas fa-file-signature"></i> Official Acceptance Letter Required
+        </div>
+        <div style="font-size:13px;color:#334155;line-height:1.6">
+          Upload the official acceptance letter issued by the company. Your HOD / department admin will review this letter before the attachment is approved.
         </div>
       </div>
 
@@ -546,6 +660,17 @@
         </div>
       </div>
 
+      <div class="form-section-hdr">
+        <i class="fas fa-file-upload"></i> Acceptance Letter Upload
+      </div>
+      <div style="margin-bottom:28px">
+        <div class="f-field">
+          <label class="f-label">Official Company Acceptance Letter <span class="req">*</span></label>
+          <input class="f-input" type="file" name="acceptance_letter" accept=".pdf,.jpg,.jpeg,.png" required>
+          <span class="f-hint">Accepted formats: PDF, JPG, JPEG, PNG. Upload the signed and stamped company acceptance letter.</span>
+        </div>
+      </div>
+
       {# ── TIMELINE ── #}
       <div class="form-section-hdr">
         <i class="fas fa-calendar-check"></i> Attachment Timeline
@@ -613,7 +738,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }).addTo(regMap);
 
     var regMarker = null;
-
+    function setMapPoint(lat, lng) {
+      document.getElementById('regLat').value = Number(lat).toFixed(6);
+      document.getElementById('regLng').value = Number(lng).toFixed(6);
+      if (regMarker) {
+        regMarker.setLatLng([lat, lng]);
+      } else {
+        regMarker = L.marker([lat, lng]).addTo(regMap);
+      }
+      regMap.setView([lat, lng], 15);
     }
 
     regMap.on('click', function (e) { setMapPoint(e.latlng.lat, e.latlng.lng); });

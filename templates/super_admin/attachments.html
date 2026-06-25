@@ -34,7 +34,7 @@ td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px}
   <div class="card">
     <div class="card-header"><i class="fas fa-handshake"></i> Industrial Attachments ({{ attachments|length }})</div>
     <table>
-      <thead><tr><th>Student</th><th>Company</th><th>Unit</th><th>Start</th><th>End</th><th>Status</th><th>Grade</th></tr></thead>
+      <thead><tr><th>Student</th><th>Company</th><th>Unit</th><th>Start</th><th>End</th><th>Status</th><th>Letter Review</th><th>Grade</th></tr></thead>
       <tbody>
         {% for a in attachments %}
         <tr>
@@ -44,10 +44,11 @@ td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px}
           <td>{{ a.get('start_date','—') or '—' }}</td>
           <td>{{ a.get('end_date','—') or '—' }}</td>
           <td><span class="badge badge-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
+          <td>{{ a.get('acceptance_letter_status','pending')|title }}</td>
           <td>{{ a.get('final_grade','—') or '—' }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="7" style="text-align:center;color:#aaa;padding:32px">No attachments found.</td></tr>
+        <tr><td colspan="8" style="text-align:center;color:#aaa;padding:32px">No attachments found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

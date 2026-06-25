@@ -1,0 +1,197 @@
+{% extends "dept_admin/base.html" %}
+{% block title %}Attachment Approval Queue{% endblock %}
+{% block page_title %}Industrial Attachment Approval Queue{% endblock %}
+
+{% block extra_style %}
+<style>
+  .page-wrap { padding: 24px; max-width: 1400px; }
+  .hero {
+    background: linear-gradient(135deg, #0f2c54 0%, #1565c0 60%, #1d83de 100%);
+    color: #fff; border-radius: 20px; padding: 26px 28px; margin-bottom: 24px;
+  }
+  .hero-grid, .stat-grid, .card-grid {
+    display: grid; gap: 16px;
+  }
+  .hero-grid { grid-template-columns: 2fr 1fr; align-items: center; }
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-top: 20px; }
+  .card-grid { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+  .stat-card, .attachment-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  }
+  .stat-card { padding: 18px; }
+  .stat-num { font-size: 28px; font-weight: 900; color: #0f172a; line-height: 1; }
+  .stat-lbl { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; }
+  .filter-bar {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+    border-radius: 9999px; border: 1px solid #cbd5e1; background: #fff; color: #475569;
+    text-decoration: none; font-size: 12px; font-weight: 800;
+  }
+  .filter-chip.active { background: #0f2c54; border-color: #0f2c54; color: #fff; }
+  .attachment-card { overflow: hidden; }
+  .card-head {
+    padding: 18px 20px; border-bottom: 1px solid #eef2f7;
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .card-body { padding: 20px; }
+  .name { font-size: 17px; font-weight: 800; color: #0f172a; }
+  .muted { font-size: 12px; color: #64748b; }
+  .company { font-size: 14px; font-weight: 700; color: #1d4ed8; margin-top: 4px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
+    border-radius: 9999px; font-size: 12px; font-weight: 800;
+  }
+  .status-pill.pending { background: #fff7ed; color: #c2410c; }
+  .status-pill.approved { background: #ecfdf5; color: #15803d; }
+  .status-pill.rejected { background: #fef2f2; color: #b91c1c; }
+  .status-pill.active { background: #eff6ff; color: #1d4ed8; }
+  .details {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px;
+  }
+  .detail {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;
+  }
+  .detail-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .detail-value { font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.5; }
+  .letter-box {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 16px; margin-bottom: 18px;
+  }
+  .letter-link {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+    text-decoration: none; font-size: 13px; font-weight: 800; color: #1d4ed8;
+  }
+  .comment {
+    width: 100%; min-height: 96px; padding: 12px 14px; border-radius: 12px;
+    border: 1.5px solid #dbe2ea; resize: vertical; font: inherit;
+  }
+  .comment:focus { outline: none; border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,.1); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px;
+    border: none; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 800;
+  }
+  .btn-approve { background: #15803d; color: #fff; }
+  .btn-reject { background: #b91c1c; color: #fff; }
+  .empty {
+    padding: 56px 24px; text-align: center; color: #94a3b8; background: #fff;
+    border: 1px dashed #cbd5e1; border-radius: 16px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="hero">
+    <div class="hero-grid">
+      <div>
+        <div style="font-size:24px;font-weight:900;margin-bottom:8px">Department Acceptance Letter Review</div>
+        <div style="font-size:14px;line-height:1.7;max-width:760px;color:rgba(255,255,255,.88)">
+          Review official company acceptance letters submitted by trainees, capture department comments, and approve only verified industrial attachment placements.
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:16px 18px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.72)">Workflow</div>
+        <div style="font-size:13px;line-height:1.8;margin-top:8px">
+          1. Trainee uploads official letter<br>
+          2. HOD / Dept Admin reviews<br>
+          3. Attachment is approved<br>
+          4. Liaison activates placement
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-num">{{ stats.total }}</div><div class="stat-lbl">Total Submissions</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.pending }}</div><div class="stat-lbl">Pending Letter Review</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.approved }}</div><div class="stat-lbl">Dept Approved</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.rejected }}</div><div class="stat-lbl">Needs Correction</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.active }}</div><div class="stat-lbl">Already Active</div></div>
+  </div>
+
+  <div class="filter-bar" style="margin-top:24px">
+    {% for key, label in [('pending','Pending Review'),('approved','Approved'),('rejected','Rejected'),('all','All Records')] %}
+    <a href="/dept-admin/attachments?status={{ key }}" class="filter-chip {% if status_filter == key %}active{% endif %}">
+      <i class="fas fa-filter"></i> {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if attachments %}
+  <div class="card-grid">
+    {% for att in attachments %}
+    {% set student = att.get('student') or {} %}
+    {% set company = att.get('companies') or {} %}
+    {% set letter_status = att.get('_letter_status', att.get('acceptance_letter_status', 'pending')) %}
+    <div class="attachment-card">
+      <div class="card-head">
+        <div>
+          <div class="name">{{ student.get('full_name','Unknown trainee') }}</div>
+          <div class="muted">{{ student.get('admission_no','—') }}{% if student.get('mobile_number') %} · {{ student.get('mobile_number') }}{% endif %}</div>
+          <div class="company">{{ company.get('name','—') }}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end">
+          <span class="status-pill {{ letter_status }}"><i class="fas fa-file-signature"></i> Letter {{ letter_status|title }}</span>
+          <span class="status-pill {{ att.get('status','pending') if att.get('status','pending') in ('pending','approved','rejected','active') else 'pending' }}">
+            <i class="fas fa-briefcase"></i> {{ att.get('status','pending')|replace('_',' ')|title }}
+          </span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="details">
+          <div class="detail"><div class="detail-label">Period</div><div class="detail-value">{{ att.get('attachment_term','—') }} {{ att.get('attachment_year','') }}</div></div>
+          <div class="detail"><div class="detail-label">Dates</div><div class="detail-value">{{ att.get('start_date','—') }} to {{ att.get('end_date','—') }}</div></div>
+          <div class="detail"><div class="detail-label">Supervisor</div><div class="detail-value">{{ company.get('contact_person','—') }}{% if company.get('contact_phone') %}<br>{{ company.get('contact_phone') }}{% endif %}</div></div>
+          <div class="detail"><div class="detail-label">Address</div><div class="detail-value">{{ company.get('address','—') }}</div></div>
+        </div>
+
+        <div class="letter-box">
+          <div style="font-size:11px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em">Official Acceptance Letter</div>
+          <div style="font-size:13px;color:#334155;line-height:1.6;margin-top:6px">
+            Review the uploaded letter before approving this placement for departmental clearance.
+          </div>
+          {% if att.get('acceptance_letter_url') %}
+          <a href="{{ att.get('acceptance_letter_url') }}" target="_blank" class="letter-link">
+            <i class="fas fa-up-right-from-square"></i> Open acceptance letter
+          </a>
+          {% else %}
+          <div style="margin-top:8px;font-size:13px;color:#b91c1c;font-weight:700">No acceptance letter uploaded.</div>
+          {% endif %}
+        </div>
+
+        {% if att.get('dept_review_comments') %}
+        <div style="margin-bottom:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px">
+          <div class="detail-label">Latest Department Comment</div>
+          <div style="font-size:13px;color:#334155;line-height:1.6">{{ att.get('dept_review_comments') }}</div>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/dept-admin/attachments/{{ att.get('id') }}/review">
+          <input type="hidden" name="status_filter" value="{{ status_filter }}">
+          <label class="detail-label" style="display:block;margin-bottom:8px">Department Comments</label>
+          <textarea class="comment" name="comment" placeholder="Add review guidance, missing details, or approval remarks...">{{ att.get('dept_review_comments','') }}</textarea>
+          <div class="actions">
+            <button type="submit" name="decision" value="approve" class="btn btn-approve">
+              <i class="fas fa-check-circle"></i> Approve Letter
+            </button>
+            <button type="submit" name="decision" value="reject" class="btn btn-reject">
+              <i class="fas fa-times-circle"></i> Reject / Return
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <i class="fas fa-inbox" style="font-size:40px;display:block;margin-bottom:12px"></i>
+    <div style="font-size:16px;font-weight:800;color:#64748b;margin-bottom:6px">No attachment letters in this queue</div>
+    <div style="font-size:13px">Try another filter or wait for trainees to submit new official company acceptance letters.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

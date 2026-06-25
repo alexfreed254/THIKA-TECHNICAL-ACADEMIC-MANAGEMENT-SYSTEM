@@ -140,7 +140,7 @@ def attachments():
     db = get_service_client()
     
     # Get filter parameters
-    status = request.args.get("status", "completed")
+    status = request.args.get("status", "approved")
     department_id = request.args.get("department_id", "").strip()
     
     # Build query
