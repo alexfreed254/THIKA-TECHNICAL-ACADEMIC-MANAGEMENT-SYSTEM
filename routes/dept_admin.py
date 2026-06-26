@@ -721,7 +721,7 @@ def attendance_matrix_pdf():
             [Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", INST),
              Paragraph("P.O. Box 93 – 01000, Thika | Tel: 0726 154 461", SUB),
              Spacer(1, 2*mm),
-             Paragraph("UNIT ATTENDANCE MATRIX", TITLE),
+             Paragraph("UNIT ATTENDANCE REGISTER", TITLE),
              Paragraph(
                  f"{unit_obj.get('code','')} – {unit_obj.get('name','')} &nbsp;|&nbsp; "
                  f"Class: {cls_obj.get('name','')} &nbsp;|&nbsp; "
@@ -847,17 +847,65 @@ def attendance_matrix_pdf():
 
         term_lbl = f"Term{term_int}_" if term_int else ""
         year_lbl = f"{year_int}_" if year_int else ""
-        fname    = (f"Attendance_Matrix_{unit_obj.get('code','')}_"
+        fname    = (f"Unit_Attendance_Register_{unit_obj.get('code','')}_"
                     f"{cls_obj.get('name','').replace(' ','_')}_"
                     f"{term_lbl}{year_lbl}{datetime.now().strftime('%Y%m%d')}.pdf")
+
+        # ── Signing block ──────────────────────────────────────────────────
+        LINE   = colors.HexColor("#374151")
+        sign_data = [
+            [
+                Paragraph("<b>DEPT MONITORING OFFICER</b>", BOLD_C),
+                Paragraph("", CENTER),
+                Paragraph("<b>HEAD OF DEPARTMENT</b>", BOLD_C),
+            ],
+            [
+                Paragraph("Name: _______________________________", CENTER),
+                Paragraph("", CENTER),
+                Paragraph("Name: _______________________________", CENTER),
+            ],
+            [
+                Paragraph("Sign: _______________________________", CENTER),
+                Paragraph("", CENTER),
+                Paragraph("Sign: _______________________________", CENTER),
+            ],
+            [
+                Paragraph("Date: _______________________________", CENTER),
+                Paragraph("", CENTER),
+                Paragraph("Date: _______________________________", CENTER),
+            ],
+            [
+                Paragraph("Stamp:", CENTER),
+                Paragraph("", CENTER),
+                Paragraph("Stamp:", CENTER),
+            ],
+        ]
+        sign_col = (doc.width - 20*mm) / 3
+        sign_tbl = Table(sign_data,
+                         colWidths=[sign_col, 20*mm, sign_col])
+        sign_tbl.setStyle(TableStyle([
+            ("ALIGN",        (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN",       (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING",   (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+            ("FONTSIZE",     (0, 0), (-1, -1), 9),
+            ("BOX",          (0, 0), (0, -1),  0.5, LINE),
+            ("BOX",          (2, 0), (2, -1),  0.5, LINE),
+            ("ROWBACKGROUNDS",(0, 0),(0, -1),  [colors.HexColor("#F0F9FF")]),
+            ("ROWBACKGROUNDS",(2, 0),(2, -1),  [colors.HexColor("#F0FDF4")]),
+            ("MINROWHEIGHT", (0, 4), (-1, 4),  22*mm),  # stamp space
+        ]))
 
         elements = [
             header_tbl,
             HRFlowable(width="100%", thickness=1.5, color=NAVY, spaceAfter=4*mm),
             tbl,
-            Spacer(1, 4*mm),
-            Paragraph(f"Generated: {datetime.now().strftime('%d %B %Y at %H:%M')} | "
-                      f"Total trainees: {len(matrix)}", SUB),
+            Spacer(1, 6*mm),
+            Paragraph(f"Generated: {datetime.now().strftime('%d %B %Y at %H:%M')} &nbsp;|&nbsp; "
+                      f"Total trainees: {len(matrix)} &nbsp;|&nbsp; "
+                      f"Unit: {unit_obj.get('code','')} – {unit_obj.get('name','')}", SUB),
+            Spacer(1, 8*mm),
+            sign_tbl,
         ]
         doc.build(elements)
 
