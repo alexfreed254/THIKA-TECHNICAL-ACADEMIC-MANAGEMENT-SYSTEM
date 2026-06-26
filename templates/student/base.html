@@ -10,46 +10,71 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   {% block extra_head %}{% endblock %}
   <style>
-    /* ── Student portal ──────────────────────────────────────── */
+    /* ── Student portal sidebar ──────────────────────────────── */
     .sidebar {
       background: linear-gradient(180deg, #060d1f 0%, #0b1735 45%, #0d1b33 100%);
       border-right: 1px solid rgba(255,255,255,.04);
     }
 
-    .menu-label { color: rgba(255,255,255,.34); }
-    .menu-label::after { background: linear-gradient(90deg, rgba(251,191,36,.2), rgba(255,255,255,.04)); }
-    .sidebar-menu a { color: rgba(255,255,255,.76); }
+    /* Section labels — amber, uppercase, with trailing rule */
+    .menu-label {
+      padding: 18px 10px 7px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: #fbbf24;
+      opacity: .85;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .menu-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(251,191,36,.35), rgba(255,255,255,.04));
+    }
+
+    /* Menu items */
+    .sidebar-menu {
+      padding: 10px 10px 28px;
+      gap: 2px;
+    }
+    .sidebar-menu a {
+      padding: 11px 14px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: rgba(255,255,255,.85);
+      border-radius: 10px;
+      letter-spacing: .01em;
+    }
+
+    /* Icon badge */
+    .sidebar-menu a i {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      font-size: 13px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    /* Hover / active */
     .sidebar-menu a:hover,
     .sidebar-menu a.active {
-      color: #fff;
+      background: rgba(251,191,36,.13);
       border-left-color: #fbbf24;
+      color: #fff;
     }
-    .sidebar-menu a.active {
-      background: linear-gradient(90deg, rgba(251,191,36,.2) 0%, rgba(255,255,255,.08) 100%);
-      color: #fef3c7;
+    .sidebar-menu a:hover i,
+    .sidebar-menu a.active i {
+      background: rgba(251,191,36,.25);
+      border-color: rgba(251,191,36,.4);
+      color: #fbbf24;
     }
-
-    /* Colour themes per group */
-    .icon-amber  { background: rgba(251,191,36,.18);  color: #fbbf24; }
-    .icon-blue   { background: rgba(59,130,246,.18);  color: #60a5fa; }
-    .icon-purple { background: rgba(139,92,246,.18);  color: #a78bfa; }
-    .icon-cyan   { background: rgba(6,182,212,.18);   color: #22d3ee; }
-    .icon-orange { background: rgba(249,115,22,.18);  color: #fb923c; }
-    .icon-indigo { background: rgba(99,102,241,.18);  color: #818cf8; }
-    .icon-green  { background: rgba(34,197,94,.18);   color: #4ade80; }
-    .icon-rose   { background: rgba(244,63,94,.18);   color: #fb7185; }
-    .icon-slate  { background: rgba(148,163,184,.14); color: #94a3b8; }
-
-    /* Active icon brightens */
-    .sidebar-menu a.active .icon-amber  { background: rgba(251,191,36,.28); color: #fcd34d; }
-    .sidebar-menu a.active .icon-blue   { background: rgba(59,130,246,.28); color: #93c5fd; }
-    .sidebar-menu a.active .icon-purple { background: rgba(139,92,246,.28); color: #c4b5fd; }
-    .sidebar-menu a.active .icon-cyan   { background: rgba(6,182,212,.28);  color: #67e8f9; }
-    .sidebar-menu a.active .icon-orange { background: rgba(249,115,22,.28); color: #fdba74; }
-    .sidebar-menu a.active .icon-indigo { background: rgba(99,102,241,.28); color: #a5b4fc; }
-    .sidebar-menu a.active .icon-green  { background: rgba(34,197,94,.28);  color: #86efac; }
-    .sidebar-menu a.active .icon-rose   { background: rgba(244,63,94,.28);  color: #fda4af; }
-    .sidebar-menu a.active .icon-slate  { background: rgba(148,163,184,.22);color: #cbd5e1; }
 
     /* ── Link label text ── */
     .nav-label { flex: 1; line-height: 1.2; }
@@ -67,8 +92,8 @@
       text-align: center;
     }
 
-    /* Divider (thin spacer, no visible line — label takes care of separation) */
-    .menu-divider { height: 4px; }
+    /* Hide old spacer dividers — labels provide visual separation */
+    .menu-divider { display: none; }
 
     /* Flash message styling */
     .flash-success, .flash-error, .flash-warning, .flash-info {
@@ -162,57 +187,40 @@
 
     <div class="sidebar-menu">
 
-      <!-- Overview -->
       <div class="menu-label">Overview</div>
-      <a href="/student/dashboard"><i class="fas fa-house"></i><span class="nav-label">Dashboard</span></a>
-
-      <div class="menu-divider"></div>
+      <a href="/student/dashboard"><i class="fas fa-house fa-fw"></i><span class="nav-label">Dashboard</span></a>
 
       <div class="menu-label">Learning</div>
-      <a href="/student/units"><i class="fas fa-book-open"></i><span class="nav-label">My Units</span></a>
-      <a href="/student/attendance"><i class="fas fa-clipboard-list"></i><span class="nav-label">Lesson Attendance</span></a>
-      <a href="/student/marks"><i class="fas fa-chart-line"></i><span class="nav-label">Marks &amp; Transcripts</span></a>
-
-      <a href="/student/portfolio"><i class="fas fa-folder-open"></i><span class="nav-label">Portfolio of Evidence</span></a>
-      <a href="/student/assessments"><i class="fas fa-file-alt"></i><span class="nav-label">My Assessments</span></a>
-
-      <div class="menu-divider"></div>
+      <a href="/student/units"><i class="fas fa-book-open fa-fw"></i><span class="nav-label">My Units</span></a>
+      <a href="/student/attendance"><i class="fas fa-clipboard-list fa-fw"></i><span class="nav-label">Lesson Attendance</span></a>
+      <a href="/student/marks"><i class="fas fa-chart-line fa-fw"></i><span class="nav-label">Marks &amp; Transcripts</span></a>
+      <a href="/student/portfolio"><i class="fas fa-folder-open fa-fw"></i><span class="nav-label">Portfolio of Evidence</span></a>
+      <a href="/student/assessments"><i class="fas fa-file-alt fa-fw"></i><span class="nav-label">My Assessments</span></a>
 
       <div class="menu-label">Records</div>
-      <a href="/student/documents"><i class="fas fa-archive"></i><span class="nav-label">My Documents</span></a>
-
-      <div class="menu-divider"></div>
+      <a href="/student/documents"><i class="fas fa-archive fa-fw"></i><span class="nav-label">My Documents</span></a>
 
       <div class="menu-label">Exams</div>
-      <a href="/student/exam-booking-form"><i class="fas fa-file-signature"></i><span class="nav-label">Exam Booking Form</span></a>
+      <a href="/student/exam-booking-form"><i class="fas fa-file-signature fa-fw"></i><span class="nav-label">Exam Booking Form</span></a>
 
-      <div class="menu-divider"></div>
-
-      <div class="menu-label">Attachment</div>
-      <a href="/student/industrial-attachment"><i class="fas fa-industry"></i><span class="nav-label">Attachment Placement &amp; Letter Review</span></a>
-      <a href="/student/logbook"><i class="fas fa-book"></i><span class="nav-label">Digital Logbook</span></a>
-
-      <div class="menu-divider"></div>
+      <div class="menu-label">Industrial Attachment</div>
+      <a href="/student/industrial-attachment"><i class="fas fa-industry fa-fw"></i><span class="nav-label">Attachment Placement &amp; Letter Review</span></a>
+      <a href="/student/logbook"><i class="fas fa-book fa-fw"></i><span class="nav-label">Digital Logbook</span></a>
 
       <div class="menu-label">Services</div>
-      <a href="/clearance/"><i class="fas fa-clipboard-check"></i><span class="nav-label">Course Clearance</span></a>
-
-      <div class="menu-divider"></div>
-
-      <a href="/student/employment-status"><i class="fas fa-user-tie"></i><span class="nav-label">Employment Status</span></a>
-
-      <div class="menu-divider"></div>
+      <a href="/clearance/"><i class="fas fa-clipboard-check fa-fw"></i><span class="nav-label">Course Clearance</span></a>
+      <a href="/student/employment-status"><i class="fas fa-user-tie fa-fw"></i><span class="nav-label">Employment Status</span></a>
 
       <div class="menu-label">Account</div>
-      <a href="/auth/profile"><i class="fas fa-user-circle"></i><span class="nav-label">My Profile</span></a>
+      <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i><span class="nav-label">My Profile</span></a>
       <a href="/notifications">
-        <i class="fas fa-bell"></i><span class="nav-label">Notifications</span>
+        <i class="fas fa-bell fa-fw"></i><span class="nav-label">Notifications</span>
         {% if unread_notification_count > 0 %}
         <span class="nav-badge">{{ unread_notification_count }}</span>
         {% endif %}
       </a>
-      <a href="#" onclick="toggleTheme(); return false"><i class="fas fa-moon"></i><span class="nav-label" id="themeLabel">Dark Mode</span></a>
-      <a href="#" onclick="toggleZoom(); return false"><i class="fas fa-magnifying-glass-plus"></i><span class="nav-label">Zoom: <span id="zoomLabel">100%</span></span></a>
+      <a href="#" onclick="toggleTheme(); return false"><i class="fas fa-moon fa-fw"></i><span class="nav-label" id="themeLabel">Dark Mode</span></a>
+      <a href="#" onclick="toggleZoom(); return false"><i class="fas fa-magnifying-glass-plus fa-fw"></i><span class="nav-label">Zoom: <span id="zoomLabel">100%</span></span></a>
 
     </div>
 
