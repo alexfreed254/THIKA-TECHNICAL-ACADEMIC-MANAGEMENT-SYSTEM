@@ -242,10 +242,10 @@
         <i class="fas fa-undo"></i> Return for Correction
       </button>
 
-      <!-- Waive trainers button -->
+      <!-- Waive trainers button (HOD right: clear on behalf of inactive/retired trainers) -->
       {% if a.get('trainer_approvals') %}
       <button type="button" class="waiver-toggle-btn" onclick="toggleWaiver('waiv-{{ loop.index }}')">
-        <i class="fas fa-user-slash"></i> Manage Trainer Waivers ({{ a.trainer_approvals | length }})
+        <i class="fas fa-user-shield"></i> Waive / Clear Trainers on HOD Authority ({{ a.trainer_approvals | length }})
       </button>
       {% endif %}
 
@@ -280,9 +280,10 @@
     {% if a.get('trainer_approvals') %}
     <div class="waiver-panel" id="waiv-{{ loop.index }}">
       <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">
-        <i class="fas fa-user-slash"></i> Trainer Clearance Waivers
+        <i class="fas fa-user-shield"></i> Trainer Clearance Waivers — HOD Authority
         <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:4px">
-          Waive inactive trainers so Stage 1 can proceed with fewer than {{ a.trainer_approvals | length }} trainers.
+          As HOD, you may clear a trainer on their behalf if they are inactive, retired, or unavailable.
+          Waiving counts as an approved clearance and allows Stage 1 to proceed.
         </span>
       </div>
       {% for ta in a.trainer_approvals %}

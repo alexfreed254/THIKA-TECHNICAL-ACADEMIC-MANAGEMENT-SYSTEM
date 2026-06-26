@@ -15,8 +15,8 @@ Flow:
     - hod_other      : ALL dept_admin users in other departments
 
   Stage 1 complete when:
-    - >= min(5, total_active_trainers) trainers approved (waived count as approved)
-    - tech_1 approved, tech_2 approved (or waived)
+    - >= min(7, total_active_trainers) trainers approved (waived count as approved)
+    - all workshop technicians in home dept approved or waived by HOD
     - all service dept approvals approved
     - all external service approvals approved
     - all hod_other approvals approved
@@ -40,7 +40,7 @@ clearance_bp = Blueprint("clearance", __name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-MIN_TRAINERS = 5
+MIN_TRAINERS = 7
 
 STAGE1_CATEGORIES = {
     "trainer", "tech_1", "tech_2",
@@ -193,7 +193,7 @@ def _stage1_complete(db, request_id: str, home_dept_id: str) -> bool:
         if approved_t < required_t:
             return False
 
-    # Tech 1 & 2
+    # All workshop technicians (tech_1 rows — one per technician; tech_2 for legacy rows)
     for cat in ("tech_1", "tech_2"):
         items = [a for a in s1 if _get_category(a) == cat]
         if items and not all(_ok(a) for a in items):
@@ -378,6 +378,18 @@ def dashboard():
     serial = cr.get("serial_number") or _serial(cr["id"])
     approvals = _fetch_all_approvals(db, cr["id"])
 
+    # ── Attach approver names to all approval records ────────────────────────
+    approver_ids = [a["approver_id"] for a in approvals if a.get("approver_id")]
+    _approver_map = {}
+    if approver_ids:
+        _ap_rows = (db.table("user_profiles")
+                    .select("id, full_name, role")
+                    .in_("id", approver_ids)
+                    .execute().data or [])
+        _approver_map = {p["id"]: p for p in _ap_rows}
+    for a in approvals:
+        a["_approver"] = _approver_map.get(a.get("approver_id") or "", {})
+
     # ── Build stage 1 summary sections ──────────────────────────────────────
     s1_cats_order = [
         "trainer", "tech_1", "tech_2",
@@ -388,6 +400,10 @@ def dashboard():
 
     def _ok(a):
         return a.get("status") == "approved" or a.get("is_waived") is True
+
+    # Flag if fewer than MIN_TRAINERS trainers were identified
+    all_trainer_approvals = [a for a in approvals if _get_category(a) == "trainer"]
+    low_trainers = len(all_trainer_approvals) < MIN_TRAINERS
 
     stage1_sections = []
     for cat in s1_cats_order:
@@ -431,6 +447,8 @@ def dashboard():
         stage1_sections=stage1_sections,
         stage2_approval=stage2_approval,
         stage1_done=stage1_done,
+        low_trainers=low_trainers,
+        MIN_TRAINERS=MIN_TRAINERS,
         CATEGORY_LABELS=CATEGORY_LABELS,
     )
 
@@ -499,7 +517,7 @@ def initiate_clearance():
                .execute().data or [])
         trainer_ids = list({r["trainer_id"] for r in att if r.get("trainer_id")})
 
-        # 2. Workshop technicians in home dept (ordered by created_at)
+        # 2. ALL workshop technicians in home dept (one row each, all as tech_1)
         tech_rows = (db.table("user_profiles")
                      .select("id")
                      .eq("role", "workshop_technician")
@@ -507,8 +525,6 @@ def initiate_clearance():
                      .order("created_at")
                      .execute().data or [])
         tech_ids = [t["id"] for t in tech_rows]
-        tech_1_id = tech_ids[0] if len(tech_ids) >= 1 else None
-        tech_2_id = tech_ids[1] if len(tech_ids) >= 2 else None
 
         # 3. Other dept HODs (all dept_admin users not in home dept)
         other_hod_rows = (db.table("user_profiles")
@@ -571,19 +587,26 @@ def initiate_clearance():
                     "status":               "pending",
                 }).execute()
 
-        # Trainers
+        # Trainers — flag if fewer than 7 identified
         if trainer_ids:
             for tid in trainer_ids:
                 _insert(approver_id=tid, category="trainer")
+            if len(trainer_ids) < MIN_TRAINERS:
+                flash(
+                    f"⚠ Only {len(trainer_ids)} trainer(s) identified from attendance records "
+                    f"(minimum {MIN_TRAINERS} required). The Home Department HOD may waive "
+                    f"remaining trainer approvals on your behalf.",
+                    "warning",
+                )
         else:
             _insert(category="trainer")
 
-        # Tech 1 & 2
-        _insert(approver_id=tech_1_id, category="tech_1")
-        if tech_2_id:
-            _insert(approver_id=tech_2_id, category="tech_2")
+        # ALL workshop technicians in home dept (one tech_1 row per technician)
+        if tech_ids:
+            for tid in tech_ids:
+                _insert(approver_id=tid, category="tech_1")
         else:
-            _insert(category="tech_2")
+            _insert(category="tech_1")  # placeholder if no technicians assigned
 
         # Service depts
         for cat, approver_id in svc_approver_map.items():

@@ -358,6 +358,13 @@
       Preliminary Clearance — All Running in Parallel
     </div>
 
+    {% if low_trainers %}
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#92400e;display:flex;align-items:flex-start;gap:8px">
+      <i class="fas fa-exclamation-triangle" style="margin-top:2px;flex-shrink:0"></i>
+      <span>Only <strong>{{ stage1_sections | selectattr('category','eq','trainer') | list | map(attribute='total') | first | default(0) }}</strong> trainer(s) identified from attendance records (minimum <strong>{{ MIN_TRAINERS }}</strong> required). Your Home Department HOD can waive remaining trainer approvals on your behalf if a trainer is inactive, retired, or unavailable.</span>
+    </div>
+    {% endif %}
+
     {% for sec in stage1_sections %}
     {% set uid_sec = loop.index %}
     <div class="sub-row">
@@ -370,9 +377,9 @@
         <div class="sub-info">
           <div class="sub-title">{{ sec.label }}</div>
           {% if sec.category == 'trainer' %}
-          <div class="sub-count">{{ sec.approved }} of {{ sec.total }} approved (min {{ 5 if sec.total >= 5 else sec.total }} required)</div>
+          <div class="sub-count">{{ sec.approved }} of {{ sec.total }} approved (min {{ MIN_TRAINERS if sec.total >= MIN_TRAINERS else sec.total }} required)</div>
           {% elif sec.category in ('tech_1','tech_2') %}
-          <div class="sub-count">Technician sign-off</div>
+          <div class="sub-count">{{ sec.approved }} of {{ sec.total }} technician(s) signed off</div>
           {% elif sec.category == 'hod_other' %}
           <div class="sub-count">{{ sec.approved }} of {{ sec.total }} HODs approved</div>
           {% else %}
@@ -386,34 +393,51 @@
           {% elif sec.status == 'rejected' %}&#10007; Rejected
           {% else %}&#9203; Pending{% endif %}
         </span>
-        {% if sec.approvals | length > 1 %}
+        {% if sec.approvals | length >= 1 %}
         <button class="expand-btn" onclick="toggleSec('sec-{{ uid_sec }}', this)">
           <i class="fas fa-chevron-down" style="font-size:10px"></i>
-          Show ({{ sec.approvals | length }})
+          Details ({{ sec.approvals | length }})
         </button>
         {% endif %}
       </div>
     </div>
-    {% if sec.approvals | length > 1 %}
     <div class="approval-panel" id="sec-{{ uid_sec }}">
       {% for a in sec.approvals %}
+      {% set approver = a.get('_approver') or {} %}
       <div class="ap-detail">
         <div class="ap-detail-left">
-          <div style="font-weight:600;color:#111827">
-            {% if a.get('is_waived') %}&#128683; Waived
-            {% elif a.get('status') == 'approved' %}&#10003; Approved
-            {% elif a.get('status') == 'rejected' %}&#10007; Rejected
-            {% else %}&#9203; Pending{% endif %}
+          <div style="font-weight:600;color:#111827;font-size:12.5px">
+            {% if approver.get('full_name') %}
+              <i class="fas fa-user-circle" style="color:#6b7280;margin-right:4px"></i>{{ approver.full_name }}
+            {% elif sec.category == 'trainer' %}
+              <i class="fas fa-user-circle" style="color:#6b7280;margin-right:4px"></i>Trainer (unassigned)
+            {% elif sec.category in ('tech_1','tech_2') %}
+              <i class="fas fa-tools" style="color:#6b7280;margin-right:4px"></i>Workshop Technician
+            {% else %}
+              <i class="fas fa-building" style="color:#6b7280;margin-right:4px"></i>{{ sec.label }}
+            {% endif %}
+          </div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">
+            {% if a.get('is_waived') %}
+              <span style="color:#d97706"><i class="fas fa-shield-alt"></i> Waived by HOD</span>
+            {% elif a.get('status') == 'approved' %}
+              <span style="color:#16a34a"><i class="fas fa-check-circle"></i> Cleared</span>
+            {% elif a.get('status') == 'rejected' %}
+              <span style="color:#dc2626"><i class="fas fa-times-circle"></i> Not cleared</span>
+            {% else %}
+              <span style="color:#9ca3af"><i class="fas fa-clock"></i> Awaiting response</span>
+            {% endif %}
             {% if a.get('comments') and not (a.get('comments','') or '').startswith('ASSIGNED_TO:') %}
-            — <em style="color:#6b7280;font-size:11px">{{ a.comments }}</em>
+            &mdash; <em>{{ a.comments }}</em>
             {% endif %}
           </div>
         </div>
-        <div class="ap-detail-status">{{ (a.get('approved_at') or '')[:10] or 'Pending' }}</div>
+        <div class="ap-detail-status" style="font-size:11px;white-space:nowrap">
+          {% if a.get('approved_at') %}{{ a.approved_at[:10] }}{% else %}Pending{% endif %}
+        </div>
       </div>
       {% endfor %}
     </div>
-    {% endif %}
     {% endfor %}
 
     {% if not stage1_sections %}
