@@ -483,9 +483,14 @@ def attendance():
                .eq("department_id", dept_id).order("name").execute().data or [])
 
     LESSONS = ["L1", "L2", "L3", "L4"]
-    WEEKS   = list(range(1, 13))          # weeks 1-12
+    WEEKS   = list(range(1, 11))          # weeks 1-10
     matrix  = []                          # list of student rows
     unit_obj = cls_obj = None
+
+    def _norm_lesson(l):
+        """Normalize numeric lesson strings ('1'-'4') to 'L1'-'L4' format."""
+        s = str(l).strip()
+        return f"L{s}" if s in ("1", "2", "3", "4") else s
     term_int = int(term_filter) if term_filter else None
     year_int = int(year_filter) if year_filter else None
 
@@ -536,9 +541,11 @@ def attendance():
             att_rows = []
 
         # Pivot: {student_id: {(week, lesson): status}}
+        # Normalize lesson values: '1'->'L1' etc. (trainer form stores plain digits)
         pivot = {}
         for r in att_rows:
-            pivot.setdefault(r["student_id"], {})[(r["week"], r["lesson"])] = r["status"]
+            key = (r["week"], _norm_lesson(r["lesson"]))
+            pivot.setdefault(r["student_id"], {})[key] = r["status"]
 
         # Build matrix rows
         for s in students_ordered:

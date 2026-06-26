@@ -587,11 +587,15 @@ def attendance():
     units = uq.order("name").execute().data or []
 
     LESSONS = ["L1", "L2", "L3", "L4"]
-    WEEKS   = list(range(1, 13))
+    WEEKS   = list(range(1, 11))          # weeks 1-10
     matrix  = []
     unit_obj = cls_obj = None
     term_int = int(term_filter) if term_filter else None
     year_int = int(year_filter) if year_filter else None
+
+    def _norm_lesson(l):
+        s = str(l).strip()
+        return f"L{s}" if s in ("1", "2", "3", "4") else s
 
     if class_filter and unit_filter:
         unit_obj = next((u for u in units if u["id"] == unit_filter), None)
@@ -631,7 +635,8 @@ def attendance():
 
         pivot = {}
         for r in att_rows:
-            pivot.setdefault(r["student_id"], {})[(r["week"], r["lesson"])] = r["status"]
+            key = (r["week"], _norm_lesson(r["lesson"]))
+            pivot.setdefault(r["student_id"], {})[key] = r["status"]
 
         for s in students_ordered:
             cells   = {}

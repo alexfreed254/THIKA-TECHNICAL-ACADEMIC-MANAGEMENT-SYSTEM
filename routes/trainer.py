@@ -885,8 +885,12 @@ def attendance_weekly_export():
                       .order("week").order("lesson")
                       .execute().data or [])
 
-    # All distinct sessions ordered (week, lesson)
-    sessions = sorted({(r["week"], r["lesson"]) for r in att_rows}, key=lambda x: (x[0], x[1]))
+    def _nl(l):
+        s = str(l).strip()
+        return f"L{s}" if s in ("1", "2", "3", "4") else s
+
+    # All distinct sessions ordered (week, lesson) — normalize lesson to L1/L2/L3/L4
+    sessions = sorted({(r["week"], _nl(r["lesson"])) for r in att_rows}, key=lambda x: (x[0], x[1]))
     if not sessions:
         sessions = [(w, "L1") for w in range(week_start, min(week_end, week_start + 9) + 1)]
 
@@ -902,7 +906,7 @@ def attendance_weekly_export():
                 ts_str = dt.astimezone(EAT).strftime("%H:%M")
             except Exception:
                 ts_str = str(r["attendance_date"])[11:16]
-        att.setdefault(r["student_id"], {})[(r["week"], r["lesson"])] = (r["status"], ts_str)
+        att.setdefault(r["student_id"], {})[(r["week"], _nl(r["lesson"]))] = (r["status"], ts_str)
 
     # ── Build workbook ────────────────────────────────────────────────────────
     wb = Workbook()
