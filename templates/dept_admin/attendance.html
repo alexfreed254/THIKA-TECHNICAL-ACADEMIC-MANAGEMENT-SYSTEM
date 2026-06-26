@@ -334,6 +334,12 @@
           <div class="ib-val">{{ matrix|length }}</div>
         </div>
       </div>
+      <div style="margin-left:12px;flex-shrink:0">
+        <a href="{{ url_for('dept_admin.attendance_matrix_pdf', class_id=class_filter, unit_id=unit_filter, term=term_filter, year=year_filter) }}"
+           class="btn-filter" style="display:inline-flex;align-items:center;gap:7px;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px">
+          <i class="fas fa-file-pdf"></i> Download PDF
+        </a>
+      </div>
     </div>
 
     <!-- ── Class summary ── -->

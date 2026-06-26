@@ -590,6 +590,276 @@ def attendance():
     )
 
 
+# ── Attendance Matrix PDF Download ───────────────────────────────────────────
+
+@dept_admin_bp.route("/attendance/pdf")
+@dept_admin_required
+def attendance_matrix_pdf():
+    """Generate the attendance matrix as a PDF with official header."""
+    import io, os
+    db      = get_service_client()
+    dept_id = _dept_id()
+
+    class_filter = request.args.get("class_id", "")
+    unit_filter  = request.args.get("unit_id", "")
+    term_filter  = request.args.get("term", "")
+    year_filter  = request.args.get("year", "")
+
+    if not (class_filter and unit_filter):
+        flash("Select a class and unit first.", "warning")
+        return redirect(url_for("dept_admin.attendance"))
+
+    LESSONS = ["L1", "L2", "L3", "L4"]
+    WEEKS   = list(range(1, 16))
+
+    def _norm_lesson(l):
+        s = str(l).strip()
+        return f"L{s}" if s in ("1", "2", "3", "4") else s
+
+    term_int = int(term_filter) if term_filter else None
+    year_int = int(year_filter) if year_filter else None
+
+    unit_obj  = (db.table("units").select("id, name, code").eq("id", unit_filter).single().execute().data or {})
+    cls_obj   = (db.table("classes").select("id, name").eq("id", class_filter).single().execute().data or {})
+    dept_obj  = (db.table("departments").select("name").eq("id", dept_id).single().execute().data or {})
+
+    enr_rows = (db.table("enrollments")
+                .select("student_id, user_profiles!enrollments_student_id_fkey(id, full_name, admission_no)")
+                .eq("class_id", class_filter).execute().data or [])
+
+    students_ordered = []
+    for e in enr_rows:
+        up = e.get("user_profiles") or {}
+        sid = up.get("id") or e.get("student_id")
+        if sid and not any(s["id"] == sid for s in students_ordered):
+            students_ordered.append({"id": sid, "full_name": up.get("full_name", "—"),
+                                     "admission_no": up.get("admission_no", "—")})
+    students_ordered.sort(key=lambda s: s["full_name"])
+
+    student_ids = [s["id"] for s in students_ordered]
+    att_rows = []
+    if student_ids:
+        q = (db.table("attendance").select("student_id, week, lesson, status")
+             .eq("unit_id", unit_filter).in_("student_id", student_ids))
+        if term_int: q = q.eq("term", term_int)
+        if year_int: q = q.eq("year", year_int)
+        att_rows = q.execute().data or []
+
+    pivot = {}
+    for r in att_rows:
+        pivot.setdefault(r["student_id"], {})[(r["week"], _norm_lesson(r["lesson"]))] = r["status"]
+
+    matrix = []
+    for s in students_ordered:
+        cells = {}
+        present = absent = 0
+        for w in WEEKS:
+            for l in LESSONS:
+                st = pivot.get(s["id"], {}).get((w, l))
+                cells[(w, l)] = st
+                if st == "present":   present += 1
+                elif st == "absent":  absent += 1
+        total = present + absent
+        pct   = round(present / total * 100, 1) if total else 0
+        matrix.append({"full_name": s["full_name"], "admission_no": s["admission_no"],
+                       "cells": cells, "present": present, "absent": absent,
+                       "total": total, "pct": pct})
+
+    try:
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, Image, HRFlowable)
+        from reportlab.lib.utils import ImageReader
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                                leftMargin=10*mm, rightMargin=10*mm,
+                                topMargin=10*mm, bottomMargin=10*mm)
+
+        styles = getSampleStyleSheet()
+        CENTER = ParagraphStyle("C", parent=styles["Normal"], alignment=TA_CENTER,
+                                fontName="Helvetica", fontSize=9)
+        BOLD_C = ParagraphStyle("BC", parent=CENTER, fontName="Helvetica-Bold")
+        INST   = ParagraphStyle("INST", parent=CENTER, fontName="Helvetica-Bold",
+                                fontSize=13, spaceAfter=2)
+        TITLE  = ParagraphStyle("TITLE", parent=CENTER, fontName="Helvetica-Bold",
+                                fontSize=11, spaceAfter=2)
+        SUB    = ParagraphStyle("SUB", parent=CENTER, fontName="Helvetica",
+                                fontSize=9, textColor=colors.HexColor("#374151"))
+
+        coat_path = os.path.join(os.path.dirname(__file__), "..", "static", "assets", "KENYACOATOFARMS.png")
+        logo_path = os.path.join(os.path.dirname(__file__), "..", "static", "assets", "THIKATTILOGO.jpg")
+
+        LOGO_H = 22*mm
+        def _img(path):
+            try:
+                img = Image(path)
+                img.drawHeight = LOGO_H
+                img.drawWidth  = LOGO_H * (img.imageWidth / img.imageHeight)
+                return img
+            except Exception:
+                return Paragraph("", CENTER)
+
+        header_data = [[
+            _img(coat_path),
+            [Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", INST),
+             Paragraph("P.O. Box 93 – 01000, Thika | Tel: 0726 154 461", SUB),
+             Spacer(1, 2*mm),
+             Paragraph("UNIT ATTENDANCE MATRIX", TITLE),
+             Paragraph(
+                 f"{unit_obj.get('code','')} – {unit_obj.get('name','')} &nbsp;|&nbsp; "
+                 f"Class: {cls_obj.get('name','')} &nbsp;|&nbsp; "
+                 f"Dept: {dept_obj.get('name','')} &nbsp;|&nbsp; "
+                 f"{'Term ' + str(term_int) if term_int else ''} "
+                 f"{'&nbsp;' + str(year_int) if year_int else ''}",
+                 SUB),
+            ],
+            _img(logo_path),
+        ]]
+        header_tbl = Table(header_data,
+                           colWidths=[28*mm, doc.width - 56*mm, 28*mm])
+        header_tbl.setStyle(TableStyle([
+            ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN",       (0, 0), (0,  0),  "LEFT"),
+            ("ALIGN",       (2, 0), (2,  0),  "RIGHT"),
+            ("ALIGN",       (1, 0), (1,  0),  "CENTER"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING",(0, 0), (-1, -1), 0),
+            ("TOPPADDING",  (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING",(0,0), (-1, -1), 0),
+        ]))
+
+        # ── Build matrix table ────────────────────────────────────────────
+        NAVY  = colors.HexColor("#0F2C54")
+        DBLUE = colors.HexColor("#1A3D6E")
+        WHITE = colors.white
+        GREEN = colors.HexColor("#D1FAE5")
+        RED   = colors.HexColor("#FEE2E2")
+        GREY  = colors.HexColor("#F3F4F6")
+
+        # Row 1: week span headers
+        week_row = ["#", "Trainee", "Adm No"]
+        for w in WEEKS:
+            week_row += [f"Week {w}"] + [""] * (len(LESSONS) - 1)
+        week_row += ["Present", "Absent", "Total", "%"]
+
+        # Row 2: lesson sub-headers
+        lesson_row = ["", "", ""]
+        for _ in WEEKS:
+            for l in LESSONS:
+                lesson_row.append(l)
+        lesson_row += ["", "", "", ""]
+
+        # Data rows
+        data_rows = []
+        for i, row in enumerate(matrix, 1):
+            r = [str(i), row["full_name"], row["admission_no"]]
+            for w in WEEKS:
+                for l in LESSONS:
+                    st = row["cells"].get((w, l))
+                    r.append("P" if st == "present" else ("A" if st == "absent" else ""))
+            r += [str(row["present"]), str(row["absent"]), str(row["total"]),
+                  f"{row['pct']}%"]
+            data_rows.append(r)
+
+        if not data_rows:
+            data_rows = [["—"] * len(week_row)]
+
+        tbl_data   = [week_row, lesson_row] + data_rows
+        n_cols     = len(week_row)
+        fixed_cols = 3
+        summary_cols = 4
+        lesson_cols  = n_cols - fixed_cols - summary_cols
+
+        # Column widths
+        name_w    = 38*mm
+        adm_w     = 18*mm
+        num_w     = 6*mm
+        idx_w     = 6*mm
+        summ_w    = 9*mm
+        lesson_cw = max(5*mm, (doc.width - name_w - adm_w - idx_w - summary_cols*summ_w) / lesson_cols)
+        col_widths = [idx_w, name_w, adm_w] + [lesson_cw] * lesson_cols + [summ_w] * summary_cols
+
+        tbl = Table(tbl_data, colWidths=col_widths, repeatRows=2)
+
+        # Span week header cells
+        span_cmds = []
+        for wi, w in enumerate(WEEKS):
+            cs = fixed_cols + wi * len(LESSONS)
+            ce = cs + len(LESSONS) - 1
+            span_cmds.append(("SPAN", (cs, 0), (ce, 0)))
+
+        cell_cmds = []
+        for ri, row in enumerate(data_rows, 2):
+            for ci, val in enumerate(row[fixed_cols:fixed_cols + lesson_cols], fixed_cols):
+                if val == "P":
+                    cell_cmds.append(("BACKGROUND", (ci, ri), (ci, ri), GREEN))
+                elif val == "A":
+                    cell_cmds.append(("BACKGROUND", (ci, ri), (ci, ri), RED))
+
+        tbl.setStyle(TableStyle([
+            # Header rows
+            ("BACKGROUND",  (0, 0), (-1, 0), NAVY),
+            ("TEXTCOLOR",   (0, 0), (-1, 0), WHITE),
+            ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE",    (0, 0), (-1, 0), 6),
+            ("BACKGROUND",  (0, 1), (-1, 1), DBLUE),
+            ("TEXTCOLOR",   (0, 1), (-1, 1), WHITE),
+            ("FONTNAME",    (0, 1), (-1, 1), "Helvetica-Bold"),
+            ("FONTSIZE",    (0, 1), (-1, 1), 5),
+            # Data rows
+            ("FONTNAME",    (0, 2), (-1, -1), "Helvetica"),
+            ("FONTSIZE",    (0, 2), (-1, -1), 6),
+            ("ROWBACKGROUNDS", (0, 2), (-1, -1), [WHITE, GREY]),
+            # Summary columns bold
+            ("FONTNAME",    (-4, 2), (-1, -1), "Helvetica-Bold"),
+            # Alignment
+            ("ALIGN",       (0, 0), (-1, -1), "CENTER"),
+            ("ALIGN",       (1, 2), (1, -1),  "LEFT"),
+            ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+            # Grid
+            ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#D1D5DB")),
+            ("LINEBELOW",   (0, 1), (-1, 1),  0.8, WHITE),
+            # Padding
+            ("TOPPADDING",  (0, 0), (-1, -1), 1.5),
+            ("BOTTOMPADDING",(0, 0),(-1, -1), 1.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 1.5),
+            ("RIGHTPADDING",(0, 0), (-1, -1), 1.5),
+        ] + span_cmds + cell_cmds))
+
+        term_lbl = f"Term{term_int}_" if term_int else ""
+        year_lbl = f"{year_int}_" if year_int else ""
+        fname    = (f"Attendance_Matrix_{unit_obj.get('code','')}_"
+                    f"{cls_obj.get('name','').replace(' ','_')}_"
+                    f"{term_lbl}{year_lbl}{datetime.now().strftime('%Y%m%d')}.pdf")
+
+        elements = [
+            header_tbl,
+            HRFlowable(width="100%", thickness=1.5, color=NAVY, spaceAfter=4*mm),
+            tbl,
+            Spacer(1, 4*mm),
+            Paragraph(f"Generated: {datetime.now().strftime('%d %B %Y at %H:%M')} | "
+                      f"Total trainees: {len(matrix)}", SUB),
+        ]
+        doc.build(elements)
+
+        buf.seek(0)
+        resp = make_response(buf.read())
+        resp.headers["Content-Type"]        = "application/pdf"
+        resp.headers["Content-Disposition"] = f'attachment; filename="{fname}"'
+        return resp
+
+    except ImportError:
+        flash("PDF generation requires reportlab. Run: pip install reportlab pillow", "warning")
+        return redirect(url_for("dept_admin.attendance",
+                                class_id=class_filter, unit_id=unit_filter,
+                                term=term_filter, year=year_filter))
+
+
 # ── Assessments Overview ──────────────────────────────────────────────────────
 
 @dept_admin_bp.route("/assessments")
