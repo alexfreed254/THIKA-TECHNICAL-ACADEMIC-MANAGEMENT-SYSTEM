@@ -483,7 +483,7 @@ def attendance():
                .eq("department_id", dept_id).order("name").execute().data or [])
 
     LESSONS = ["L1", "L2", "L3", "L4"]
-    WEEKS   = list(range(1, 11))          # weeks 1-10
+    WEEKS   = list(range(1, 16))          # weeks 1-15
     matrix  = []                          # list of student rows
     unit_obj = cls_obj = None
 

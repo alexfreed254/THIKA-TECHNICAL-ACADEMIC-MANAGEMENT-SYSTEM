@@ -587,7 +587,7 @@ def attendance():
     units = uq.order("name").execute().data or []
 
     LESSONS = ["L1", "L2", "L3", "L4"]
-    WEEKS   = list(range(1, 11))          # weeks 1-10
+    WEEKS   = list(range(1, 16))          # weeks 1-15
     matrix  = []
     unit_obj = cls_obj = None
     term_int = int(term_filter) if term_filter else None
