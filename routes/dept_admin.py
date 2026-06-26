@@ -674,6 +674,18 @@ def attendance_matrix_pdf():
         from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
                                         Table, TableStyle, Image, HRFlowable)
         from reportlab.lib.utils import ImageReader
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+
+        # Register a Unicode-capable font for ✓ and ✗ symbols
+        _CELL_FONT = "Helvetica"
+        try:
+            import matplotlib.font_manager as _fm
+            _fp = _fm.findfont(_fm.FontProperties(family="DejaVu Sans"))
+            pdfmetrics.registerFont(TTFont("DejaVu", _fp))
+            _CELL_FONT = "DejaVu"
+        except Exception:
+            pass  # fall back to Helvetica (may render as boxes on some viewers)
 
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
@@ -761,7 +773,7 @@ def attendance_matrix_pdf():
             for w in WEEKS:
                 for l in LESSONS:
                     st = row["cells"].get((w, l))
-                    r.append("P" if st == "present" else ("A" if st == "absent" else ""))
+                    r.append("✓" if st == "present" else ("✗" if st == "absent" else ""))
             r += [str(row["present"]), str(row["absent"]), str(row["total"]),
                   f"{row['pct']}%"]
             data_rows.append(r)
@@ -796,10 +808,12 @@ def attendance_matrix_pdf():
         cell_cmds = []
         for ri, row in enumerate(data_rows, 2):
             for ci, val in enumerate(row[fixed_cols:fixed_cols + lesson_cols], fixed_cols):
-                if val == "P":
+                if val == "✓":
                     cell_cmds.append(("BACKGROUND", (ci, ri), (ci, ri), GREEN))
-                elif val == "A":
+                    cell_cmds.append(("TEXTCOLOR",  (ci, ri), (ci, ri), colors.HexColor("#15803d")))
+                elif val == "✗":
                     cell_cmds.append(("BACKGROUND", (ci, ri), (ci, ri), RED))
+                    cell_cmds.append(("TEXTCOLOR",  (ci, ri), (ci, ri), colors.HexColor("#dc2626")))
 
         tbl.setStyle(TableStyle([
             # Header rows
@@ -811,8 +825,8 @@ def attendance_matrix_pdf():
             ("TEXTCOLOR",   (0, 1), (-1, 1), WHITE),
             ("FONTNAME",    (0, 1), (-1, 1), "Helvetica-Bold"),
             ("FONTSIZE",    (0, 1), (-1, 1), 5),
-            # Data rows
-            ("FONTNAME",    (0, 2), (-1, -1), "Helvetica"),
+            # Data rows — use Unicode-capable font for ✓/✗
+            ("FONTNAME",    (0, 2), (-1, -1), _CELL_FONT),
             ("FONTSIZE",    (0, 2), (-1, -1), 6),
             ("ROWBACKGROUNDS", (0, 2), (-1, -1), [WHITE, GREY]),
             # Summary columns bold
