@@ -3431,7 +3431,7 @@ def fingerprint_registration():
             })
         students.sort(key=lambda s: (s["class_name"], s["name"]))
 
-    from routes.biometric_state import active_enrollment, enrollment_lock
+    from routes.biometric_attendance import active_enrollment, enrollment_lock
     with enrollment_lock:
         active_enroll = dict(active_enrollment)
 
@@ -3521,7 +3521,7 @@ def fingerprint_remove():
 @dept_admin_required
 def fingerprint_start_enroll():
     from datetime import datetime as _dt
-    from routes.biometric_state import active_enrollment, enrollment_lock
+    from routes.biometric_attendance import active_enrollment, enrollment_lock
     data         = request.get_json(silent=True) or {}
     student_id   = (data.get("student_id")   or "").strip()
     student_name = (data.get("student_name") or "").strip()
@@ -3546,7 +3546,7 @@ def fingerprint_start_enroll():
 @dept_admin_bp.route("/fingerprint-registration/enroll-status")
 @dept_admin_required
 def fingerprint_enroll_status():
-    from routes.biometric_state import active_enrollment, enrollment_lock
+    from routes.biometric_attendance import active_enrollment, enrollment_lock
     with enrollment_lock:
         session = dict(active_enrollment)
     return jsonify(session)
@@ -3555,7 +3555,7 @@ def fingerprint_enroll_status():
 @dept_admin_bp.route("/fingerprint-registration/cancel-enroll", methods=["POST"])
 @dept_admin_required
 def fingerprint_cancel_enroll():
-    from routes.biometric_state import active_enrollment, enrollment_lock
+    from routes.biometric_attendance import active_enrollment, enrollment_lock
     with enrollment_lock:
         active_enrollment.clear()
     write_audit_log("fingerprint_enroll_cancel")

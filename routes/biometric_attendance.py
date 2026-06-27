@@ -21,7 +21,10 @@ _sessions = {}
 _lock = threading.Lock()
 
 # ── Shared enrollment state (imported by dept_admin.py) ──────────────────────
-from routes.biometric_state import active_enrollment as _active_enrollment, enrollment_lock as _enrollment_lock
+active_enrollment: dict = {}
+enrollment_lock = threading.Lock()
+_active_enrollment = active_enrollment
+_enrollment_lock   = enrollment_lock
 
 LESSON_TIMES = [
     {"value": "1", "label": "Lesson 1",  "time": "08:00 – 10:00 AM"},
