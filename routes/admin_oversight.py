@@ -207,27 +207,29 @@ def deputy_principal_academic():
     # Get enrollments by department
     enrollments_query = (db.table("enrollments")
                         .select("*, classes(name, department_id, courses(name, code), departments(name)), user_profiles:student_id(full_name, admission_no)"))
-    
-    if department_filter:
-        enrollments_query = enrollments_query.eq("classes.department_id", department_filter)
-    
+
     enrollments = enrollments_query.execute().data or []
-    
-    # Flatten enrollments for template compatibility
+
+    # Flatten enrollments for template compatibility; filter by department in Python
     for e in enrollments:
         cls = e.get("classes") or {}
         e["courses"] = cls.get("courses") or {}
         e["departments"] = cls.get("departments") or {}
         e["user_profiles"] = e.get("user_profiles") or {}
-    
+
+    if department_filter:
+        enrollments = [e for e in enrollments
+                       if (e.get("classes") or {}).get("department_id") == department_filter]
+
     # Get assessments by department
     assessments_query = (db.table("assessments")
                         .select("*, classes(department_id), units(name), user_profiles:user_profiles!assessments_student_id_fkey(full_name, admission_no)"))
-    
-    if department_filter:
-        assessments_query = assessments_query.eq("classes.department_id", department_filter)
-    
+
     assessments = assessments_query.execute().data or []
+
+    if department_filter:
+        assessments = [a for a in assessments
+                       if (a.get("classes") or {}).get("department_id") == department_filter]
     
     return render_template("admin_oversight/deputy_principal_academic.html",
                           enrollments=enrollments,

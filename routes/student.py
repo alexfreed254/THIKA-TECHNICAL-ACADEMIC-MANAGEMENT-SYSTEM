@@ -1321,20 +1321,17 @@ def poe_upload():
             # Get public URL
             public_url = storage_client.from_("assessment-evidence").get_public_url(storage_path)
             
-            # Save to database (assessments table or create new table for POE)
-            # For now, we'll use the existing assessments table
+            # Save to database using the correct assessments schema
             assessment_data = {
                 "student_id": student_id,
-                "unit_id": None,  # Will need to map unit_name to unit_id
-                "title": f"{assessment_type} Assessment {assessment_no} - {upload_choice}",
-                "description": f"POE Upload: {upload_choice} for {unit_name}",
-                "due_date": datetime.now().date(),
-                "submission_type": upload_choice,
+                "unit_id": None,
+                "assessment_type": assessment_type,
+                "assessment_no": assessment_no,
                 "status": "pending",
-                "evidence_urls": [public_url]
+                "script_file_path": storage_path,
+                "script_file_name": clean_filename,
             }
-            
-            # Insert into assessments table
+
             db.table("assessments").insert(assessment_data).execute()
             
             saved_records.append(clean_filename)
@@ -3258,11 +3255,11 @@ def check_in():
         
         # Calculate distance (simplified Haversine formula)
         import math
-        lat1, lon1 = float(latitude), float(longitude)
+        lat1_deg, lon1_deg = float(latitude), float(longitude)
         lat2, lon2 = float(company_lat), float(company_lon)
-        
-        # Convert to radians
-        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+        # Convert to radians for distance calculation only
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1_deg, lon1_deg, lat2, lon2])
         dlat = lat2 - lat1
         dlon = lon2 - lon1
         a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
@@ -3289,8 +3286,8 @@ def check_in():
         db.table("location_logs").insert({
             "student_id": student_id,
             "attachment_id": attachment_id,
-            "latitude": lat1,
-            "longitude": lon1,
+            "latitude": lat1_deg,
+            "longitude": lon1_deg,
             "accuracy_meters": float(accuracy_meters) if accuracy_meters else None,
             "is_within_geofence": is_within_geofence,
             "location_method": location_method,

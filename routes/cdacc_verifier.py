@@ -87,8 +87,8 @@ def verify_assessment(assessment_id):
         if feedback:
             update_data["feedback"] = feedback
         db.table("assessments").update(update_data).eq("id", assessment_id).execute()
-        write_audit_log(user["id"], "cdacc_verify_assessment",
-                        f"Assessment {assessment_id} → {new_status}")
+        write_audit_log("cdacc_verify_assessment",
+                        target=f"Assessment {assessment_id} → {new_status}")
         flash(f"Assessment {new_status} successfully.", "success")
     except Exception as e:
         flash(f"Error: {e}", "danger")
@@ -336,8 +336,6 @@ def trainee_poe():
             .order("uploaded_at", desc=True)
             .limit(1000))
 
-        if dept_filter:
-            query = query.eq("units.department_id", dept_filter)
         if class_filter:
             query = query.eq("class_id", class_filter)
         if status_filter:
@@ -349,6 +347,11 @@ def trainee_poe():
                 pass
 
         records = query.execute().data or []
+
+        # Filter by dept in Python (PostgREST dot-notation on joined tables not supported)
+        if dept_filter:
+            records = [r for r in records
+                       if (r.get("units") or {}).get("department_id") == dept_filter]
 
         if adm_filter:
             records = [r for r in records

@@ -22,7 +22,7 @@ def dashboard():
     
     # Get pending competency verifications
     pending_competencies = (db.table("competency_tracking")
-                           .select("*, user_profiles(full_name, admission_no), units(name, code), user_profiles!competency_tracking_assessed_by_fkey(full_name) as assessor_name")
+                           .select("*, user_profiles(full_name, admission_no), units(name, code), assessor:user_profiles!competency_tracking_assessed_by_fkey(full_name)")
                            .eq("verification_status", "pending")
                            .order("assessment_date", desc=True)
                            .execute().data or [])
@@ -63,7 +63,7 @@ def competency():
     
     # Build query
     query = (db.table("competency_tracking")
-            .select("*, user_profiles(full_name, admission_no), units(name, code, department_id), user_profiles!competency_tracking_assessed_by_fkey(full_name) as assessor_name")
+            .select("*, user_profiles(full_name, admission_no), units(name, code, department_id), assessor:user_profiles!competency_tracking_assessed_by_fkey(full_name)")
             .eq("verification_status", status))
     
     competencies = query.order("assessment_date", desc=True).execute().data or []

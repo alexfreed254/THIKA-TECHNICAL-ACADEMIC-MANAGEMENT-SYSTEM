@@ -108,8 +108,8 @@ def approve_attachment(att_id):
                 return redirect(url_for("liaison_officer.attachments"))
 
         db.table("industrial_attachments").update({"status": new_status}).eq("id", att_id).execute()
-        write_audit_log(user["id"], "update_attachment_status",
-                        f"Attachment {att_id} set to {new_status}")
+        write_audit_log("update_attachment_status",
+                        target=f"Attachment {att_id} set to {new_status}")
         flash(f"Attachment status updated to {new_status}.", "success")
     except Exception as e:
         flash(f"Error: {e}", "danger")
@@ -196,7 +196,7 @@ def review_logbook(log_id):
 
     try:
         db.table("digital_logbook").update(payload).eq("id", log_id).execute()
-        write_audit_log(user["id"], f"{action}_logbook", f"Log {log_id}")
+        write_audit_log(f"{action}_logbook", target=f"Log {log_id}")
         flash(f"Log entry {new_status}.", "success")
     except Exception as exc:
         flash(f"Error: {exc}", "error")

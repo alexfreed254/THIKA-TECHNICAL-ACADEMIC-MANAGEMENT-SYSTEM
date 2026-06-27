@@ -634,8 +634,7 @@ def initiate_clearance():
                     notification_type="info",
                     action_url="/clearance/approver",
                 )
-            for tid in ([tech_1_id] if tech_1_id else []) + (
-                        [tech_2_id] if tech_2_id else []):
+            for tid in tech_ids:
                 create_notification(
                     user_id=tid,
                     title="Trainee Clearance — Workshop Sign-Off Needed",

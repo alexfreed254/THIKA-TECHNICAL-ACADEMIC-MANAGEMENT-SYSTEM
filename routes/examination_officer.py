@@ -72,18 +72,25 @@ def exam_bookings():
                  "*, units(name, code), student:user_profiles!exam_bookings_student_id_fkey!inner(full_name, admission_no, enrollments(class_id, classes(name, departments(name)))), approver:user_profiles!exam_bookings_approved_by_fkey(full_name)"
     
     query = db.table("exam_bookings").select(select_str).eq("status", "approved")
-    
-    # Apply filters
-    if admission_no:
-        query = query.ilike("student.admission_no", f"%{admission_no}%")
-    if trainee_name:
-        query = query.ilike("student.full_name", f"%{trainee_name}%")
-    if class_id:
-        query = query.eq("student.enrollments.class_id", class_id)
+
     if year:
         query = query.gte("exam_date", f"{year}-01-01").lte("exam_date", f"{year}-12-31")
-    
+
     bookings = query.order("exam_date", desc=True).execute().data or []
+
+    # Filter on joined fields in Python (PostgREST dot-notation not supported)
+    if admission_no:
+        bookings = [b for b in bookings
+                    if admission_no.lower() in
+                    ((b.get("student") or {}).get("admission_no") or "").lower()]
+    if trainee_name:
+        bookings = [b for b in bookings
+                    if trainee_name.lower() in
+                    ((b.get("student") or {}).get("full_name") or "").lower()]
+    if class_id:
+        bookings = [b for b in bookings
+                    if any(e.get("class_id") == class_id
+                           for e in ((b.get("student") or {}).get("enrollments") or []))]
     
     # Flatten bookings
     for booking in bookings:

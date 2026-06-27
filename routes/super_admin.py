@@ -1580,8 +1580,8 @@ def send_notice():
             class_id=class_id,
             target_role=target_role,
         )
-        write_audit_log(user["id"], "send_system_notice",
-                        f"Notice '{title}' sent to {count} users")
+        write_audit_log("send_system_notice",
+                        target=f"Notice '{title}' sent to {count} users")
         flash(f"Notice sent successfully to {count} recipient(s).", "success")
     except Exception as e:
         flash(f"Failed to send notice: {e}", "danger")

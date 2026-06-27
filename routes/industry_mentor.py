@@ -307,7 +307,7 @@ def competency():
     
     # Build query
     query = (db.table("competency_tracking")
-            .select("*, user_profiles(full_name, admission_no), units(name, code), industrial_attachments(start_date, end_date, companies(name))")
+            .select("*, user_profiles(full_name, admission_no), units(name, code), industrial_attachments(start_date, end_date, companies(id, name))")
             .eq("competency_status", status))
     
     competencies = query.order("assessment_date", desc=True).execute().data or []
