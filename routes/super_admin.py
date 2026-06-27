@@ -9,7 +9,7 @@ Combines features from both:
 """
 
 from flask import (Blueprint, render_template, request,
-                   redirect, url_for, flash, abort, jsonify)
+                   redirect, url_for, flash, abort, jsonify, make_response)
 from auth_utils import super_admin_required, write_audit_log, current_user
 from db import get_service_client
 from werkzeug.security import generate_password_hash
@@ -2078,6 +2078,55 @@ def trainer_poe():
     return render_template("super_admin/trainer_poe.html",
                            trainers=trainers, departments=departments,
                            dept_filter=dept_filter, q=q)
+
+
+@super_admin_bp.route("/trainer-documents")
+@super_admin_required
+def trainer_documents():
+    db = _svc()
+    from datetime import datetime as _dt
+    doc_type   = request.args.get("document_type", "")
+    year       = request.args.get("year", str(_dt.now().year))
+    term       = request.args.get("term", "")
+    trainer_id = request.args.get("trainer_id", "")
+    query = (db.table("trainer_documents")
+        .select("*, units(name, code, department_id), classes(name), user_profiles(full_name, staff_no, department_id)")
+        .eq("academic_year", int(year)))
+    if term:       query = query.eq("term", term)
+    if doc_type:   query = query.eq("document_type", doc_type)
+    if trainer_id: query = query.eq("trainer_id", trainer_id)
+    docs = query.order("created_at", desc=True).execute().data or []
+    trainers = (db.table("user_profiles").select("id, full_name, staff_no")
+        .eq("role", "trainer").order("full_name").execute().data or [])
+    return render_template("super_admin/trainer_documents.html",
+                           documents=docs, trainers=trainers,
+                           document_type=doc_type, year=year, term=term, trainer_id=trainer_id)
+
+
+@super_admin_bp.route("/trainer-document-view/<document_id>")
+@super_admin_required
+def view_trainer_document(document_id):
+    db = _svc()
+    result = db.table("trainer_documents").select("*").eq("id", document_id).execute()
+    doc = result.data[0] if result.data else None
+    if not doc:
+        abort(404)
+    file_url = doc.get("file_url", "")
+    bucket = "assessment-scripts" if "/assessment-scripts/" in file_url else "documents"
+    split_key = f"/{bucket}/"
+    storage_path = file_url.split(split_key)[-1] if split_key in file_url else None
+    if not storage_path:
+        return redirect(file_url)
+    try:
+        raw = bytes(db.storage.from_(bucket).download(storage_path))
+    except Exception:
+        abort(404)
+    ct = doc.get("file_type") or "application/octet-stream"
+    fn = doc.get("file_name") or "document"
+    resp = make_response(raw)
+    resp.headers["Content-Type"] = ct
+    resp.headers["Content-Disposition"] = f"inline; filename=\"{fn}\""
+    return resp
 
 
 @super_admin_bp.route("/import", methods=["GET","POST"])
