@@ -2107,26 +2107,11 @@ def trainer_documents():
 @super_admin_required
 def view_trainer_document(document_id):
     db = _svc()
-    result = db.table("trainer_documents").select("*").eq("id", document_id).execute()
+    result = db.table("trainer_documents").select("id, file_url").eq("id", document_id).execute()
     doc = result.data[0] if result.data else None
-    if not doc:
+    if not doc or not doc.get("file_url"):
         abort(404)
-    file_url = doc.get("file_url", "")
-    bucket = "assessment-scripts" if "/assessment-scripts/" in file_url else "documents"
-    split_key = f"/{bucket}/"
-    storage_path = file_url.split(split_key)[-1] if split_key in file_url else None
-    if not storage_path:
-        return redirect(file_url)
-    try:
-        raw = bytes(db.storage.from_(bucket).download(storage_path))
-    except Exception:
-        abort(404)
-    ct = doc.get("file_type") or "application/octet-stream"
-    fn = doc.get("file_name") or "document"
-    resp = make_response(raw)
-    resp.headers["Content-Type"] = ct
-    resp.headers["Content-Disposition"] = f"inline; filename=\"{fn}\""
-    return resp
+    return redirect(doc["file_url"])
 
 
 @super_admin_bp.route("/import", methods=["GET","POST"])
