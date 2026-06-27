@@ -38,9 +38,9 @@ td{padding:10px 14px;border-bottom:1px solid #f5f5f5;font-size:13px}
       <tbody>
         {% for a in attachments %}
         <tr>
-          <td>{{ a.get('user_profiles',{}).get('full_name','—') }}<br><small style="color:#aaa">{{ a.get('user_profiles',{}).get('admission_no','') }}</small></td>
-          <td>{{ a.get('companies',{}).get('name','—') }}</td>
-          <td>{{ a.get('units',{}).get('name','—') }}</td>
+          <td>{{ (a.get('user_profiles') or {}).get('full_name','—') }}<br><small style="color:#aaa">{{ (a.get('user_profiles') or {}).get('admission_no','') }}</small></td>
+          <td>{{ (a.get('companies') or {}).get('name','—') }}</td>
+          <td>{{ (a.get('units') or {}).get('name','—') }}</td>
           <td>{{ a.get('start_date','—') or '—' }}</td>
           <td>{{ a.get('end_date','—') or '—' }}</td>
           <td><span class="badge badge-{{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
