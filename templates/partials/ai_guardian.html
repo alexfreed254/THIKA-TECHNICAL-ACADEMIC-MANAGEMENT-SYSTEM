@@ -1,0 +1,44 @@
+<!-- TTTI Guardian AI Assistant (shared) -->
+<link rel="stylesheet" href="/static/css/ai-guardian.css">
+
+<button id="ai-fab" type="button" onclick="toggleAI()" title="TTTI Guardian — AI Assistant" aria-label="Open AI Assistant">
+  <span id="ai-fab-pulse"></span>
+  <i class="fas fa-robot"></i>
+</button>
+
+<div id="ai-panel" role="dialog" aria-label="TTTI Guardian AI Assistant" aria-modal="false">
+  <div class="ai-hdr">
+    <div class="ai-hdr-avatar">
+      <i class="fas fa-robot"></i>
+      <span class="ai-online-dot"></span>
+    </div>
+    <div class="ai-hdr-info">
+      <div class="ai-hdr-name">TTTI Guardian</div>
+      <div class="ai-hdr-sub" id="ai-hdr-sub">AI Academic Assistant &bull; Online</div>
+    </div>
+    <div class="ai-hdr-actions">
+      <button type="button" class="ai-icon-btn" id="ai-expand-btn" onclick="toggleAIExpand()" title="Expand" aria-label="Expand panel">
+        <i class="fas fa-expand"></i>
+      </button>
+      <button type="button" class="ai-icon-btn" onclick="clearAIChat()" title="Clear chat" aria-label="Clear chat">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+      <button type="button" class="ai-icon-btn ai-close-btn" onclick="toggleAI()" aria-label="Close">&times;</button>
+    </div>
+  </div>
+
+  <div id="ai-messages" class="ai-msgs" aria-live="polite"></div>
+
+  <div class="ai-input-area">
+    <div class="ai-input-row">
+      <textarea id="ai-input" class="ai-input" rows="1" placeholder="Ask me anything…" autocomplete="off" aria-label="Message"></textarea>
+      <button type="button" id="ai-send-btn" class="ai-send-btn" onclick="sendAI()" title="Send" aria-label="Send message">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+    <div class="ai-hint">Enter to send &middot; Shift+Enter for new line &middot; Esc to close</div>
+    <div id="ai-chips" class="ai-chips"></div>
+  </div>
+</div>
+
+<script src="/static/js/ai-guardian.js" defer></script>

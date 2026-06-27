@@ -10,37 +10,215 @@ from db import get_service_client
 
 ai_bp = Blueprint("ai", __name__)
 
+# ── Role metadata ─────────────────────────────────────────────────────────────
+
+ROLE_PORTALS = {
+    "student": "Trainee Portal",
+    "trainer": "Trainer Portal",
+    "dept_admin": "Department Admin Portal",
+    "super_admin": "Super Admin Portal",
+    "examination_officer": "Examination Officer Portal",
+    "industry_mentor": "Industry Mentor Portal",
+    "internal_verifier": "Internal Verifier Portal",
+    "cdacc_verifier": "CDACC Verifier Portal",
+    "liaison_officer": "Liaison Officer Portal",
+    "workshop_technician": "Workshop Technician Portal",
+    "admin_oversight": "Admin Oversight Portal",
+}
+
+ROLE_SUGGESTIONS = {
+    "student": [
+        {"label": "My Units", "query": "Show my enrolled units", "icon": "book-open"},
+        {"label": "Attendance", "query": "What is my attendance?", "icon": "clipboard-list"},
+        {"label": "Marks", "query": "Show my marks and grades", "icon": "chart-line"},
+        {"label": "POE Status", "query": "Show my POE status", "icon": "folder-open"},
+        {"label": "Exam Booking", "query": "Can I book an exam?", "icon": "file-signature"},
+        {"label": "Clearance", "query": "What is my clearance status?", "icon": "clipboard-check"},
+    ],
+    "trainer": [
+        {"label": "My Classes", "query": "Show me my assigned classes", "icon": "chalkboard"},
+        {"label": "My Units", "query": "What units am I assigned to?", "icon": "book"},
+        {"label": "Pending POE", "query": "How many POE assessments need my review?", "icon": "clock"},
+        {"label": "Attendance", "query": "What is attendance for my trainees?", "icon": "clipboard-list"},
+        {"label": "Exam Bookings", "query": "Any exam bookings pending my review?", "icon": "file-signature"},
+        {"label": "Marks Entry", "query": "How do I enter marks?", "icon": "edit"},
+    ],
+    "dept_admin": [
+        {"label": "Dept Overview", "query": "Give me a department overview", "icon": "chart-pie"},
+        {"label": "Pending POE", "query": "How many pending POE reviews?", "icon": "clock"},
+        {"label": "Exam Bookings", "query": "How many pending exam bookings?", "icon": "file-signature"},
+        {"label": "Attendance", "query": "What is the department attendance?", "icon": "clipboard-list"},
+        {"label": "Clearance", "query": "How many clearance requests pending?", "icon": "clipboard-check"},
+    ],
+    "super_admin": [
+        {"label": "System Overview", "query": "Give me a full system overview", "icon": "server"},
+        {"label": "Pending Items", "query": "Show all pending items system-wide", "icon": "hourglass-half"},
+        {"label": "User Counts", "query": "How many users are registered?", "icon": "users"},
+        {"label": "Departments", "query": "How many departments are there?", "icon": "building"},
+    ],
+    "examination_officer": [
+        {"label": "Pending Bookings", "query": "How many exam bookings are pending?", "icon": "clock"},
+        {"label": "Approved", "query": "Show approved and confirmed bookings", "icon": "check-circle"},
+        {"label": "Stats", "query": "Give me an exam booking statistics overview", "icon": "chart-bar"},
+    ],
+    "industry_mentor": [
+        {"label": "My Trainees", "query": "Show me my assigned trainees", "icon": "user-graduate"},
+        {"label": "Logbook", "query": "How many logbook entries from my trainees?", "icon": "book"},
+    ],
+    "internal_verifier": [
+        {"label": "Pending", "query": "How many assessments are pending verification?", "icon": "clock"},
+        {"label": "Stats", "query": "Show me verification statistics", "icon": "chart-bar"},
+    ],
+}
+
+_DEFAULT_SUGGESTIONS = [
+    {"label": "Overview", "query": "Give me an overview of my dashboard", "icon": "tachometer-alt"},
+    {"label": "Pending Items", "query": "What items are pending my attention?", "icon": "bell"},
+    {"label": "Help", "query": "What can you help me with?", "icon": "question-circle"},
+]
+
+
+def _matches(kw: str, *phrases) -> bool:
+    """Return True if any phrase appears in the normalized question."""
+    return any(p in kw for p in phrases)
+
+
+def _first_name(user: dict) -> str:
+    name = (user.get("full_name") or "").strip()
+    return name.split()[0] if name else "there"
+
+
+def _suggestions(role: str) -> list:
+    return ROLE_SUGGESTIONS.get(role, _DEFAULT_SUGGESTIONS)
+
+
+def _ai_response(reply: str, role: str) -> dict:
+    return {"reply": reply, "suggestions": _suggestions(role)}
+
+
+def _help_text(role: str) -> str:
+    topics = {
+        "student": "My Units, Attendance, Marks, POE uploads, Assessments, Documents, Exam Booking, Industrial Attachment, Digital Logbook, Course Clearance, and Employment Status",
+        "trainer": "Assigned classes & units, POE reviews, attendance marking, exam bookings, marks entry, biometric attendance, and your trainer portfolio",
+        "dept_admin": "Department overview, pending POE reviews, exam bookings, clearance requests, attendance, trainees, and trainers",
+        "super_admin": "System statistics, pending items, user management, departments, audit logs, and data imports",
+        "examination_officer": "Exam booking reviews, approval status, and booking statistics",
+        "industry_mentor": "Assigned trainees and logbook entries",
+        "internal_verifier": "Pending assessment verifications and verification statistics",
+    }
+    label = ROLE_PORTALS.get(role, "your portal")
+    topic = topics.get(role, "your dashboard features, pending items, and navigation")
+    return (
+        f"I'm here to help with **{label}**.\n\n"
+        f"I can assist with: {topic}.\n\n"
+        f"Type a question naturally, or tap a **suggested question** below."
+    )
+
+
+def _universal(kw: str, role: str, user: dict):
+    """Handle greetings, thanks, and help across all roles."""
+    if _matches(kw, "thank", "thanks", "appreciate", "asante"):
+        return "You're welcome! Feel free to ask if you need anything else."
+    if _matches(kw, "hello", " hi", "hi ", "hey", "good morning", "good afternoon",
+                "good evening", "howdy", "greetings"):
+        return f"Hello **{_first_name(user)}**! I'm TTTI Guardian. How can I help you today?"
+    if _matches(kw, "help", "what can you", "what do you", "capabilities", "features",
+                "commands", "what can i ask"):
+        return _help_text(role)
+    if _matches(kw, "who are you", "what are you", "your name"):
+        return (
+            "I'm **TTTI Guardian** — the AI academic assistant for "
+            "Thika Technical Training Institute.\n\n"
+            "I answer questions about your records, pending tasks, and how to use portal features."
+        )
+    return None
+
+
+@ai_bp.route("/api/ai-meta", methods=["GET"])
+@login_required
+def ai_meta():
+    user = current_user()
+    role = (user.get("role") or "").lower()
+    db = get_service_client()
+    return jsonify({
+        "role": role,
+        "name": _first_name(user),
+        "portal": ROLE_PORTALS.get(role, "TTTI Portal"),
+        "suggestions": _suggestions(role),
+        "greeting": _build_greeting(db, user, role),
+    })
+
 
 @ai_bp.route("/api/ai-ask", methods=["POST"])
 @login_required
 def ai_ask():
     data = request.get_json(silent=True) or {}
-    question = (data.get("q") or "").strip().lower()
+    question = (data.get("q") or "").strip()
     if not question:
-        return jsonify({"reply": "Please type a question so I can help you."})
+        return jsonify(_ai_response("Please type a question so I can help you.", ""))
 
+    kw = question.lower()
     user = current_user()
     role = (user.get("role") or "").lower()
-    uid  = user["id"]
-    db   = get_service_client()
+    uid = user["id"]
+    db = get_service_client()
 
-    # ── Route to role-specific handler ───────────────────────────────────────
-    if role == "student":
-        return jsonify({"reply": _student(db, uid, question)})
-    elif role == "dept_admin":
-        return jsonify({"reply": _dept_admin(db, uid, user, question)})
-    elif role == "trainer":
-        return jsonify({"reply": _trainer(db, uid, question)})
-    elif role == "super_admin":
-        return jsonify({"reply": _super_admin(db, question)})
-    elif role == "examination_officer":
-        return jsonify({"reply": _exam_officer(db, question)})
-    elif role == "industry_mentor":
-        return jsonify({"reply": _industry_mentor(db, uid, question)})
-    elif role == "internal_verifier":
-        return jsonify({"reply": _internal_verifier(db, question)})
-    else:
-        return jsonify({"reply": _generic(role, question)})
+    universal = _universal(kw, role, user)
+    if universal:
+        return jsonify(_ai_response(universal, role))
+
+    handlers = {
+        "student": lambda: _student(db, uid, kw),
+        "dept_admin": lambda: _dept_admin(db, uid, user, kw),
+        "trainer": lambda: _trainer(db, uid, kw),
+        "super_admin": lambda: _super_admin(db, kw),
+        "examination_officer": lambda: _exam_officer(db, kw),
+        "industry_mentor": lambda: _industry_mentor(db, uid, kw),
+        "internal_verifier": lambda: _internal_verifier(db, kw),
+    }
+    handler = handlers.get(role, lambda: _generic(role, kw))
+    return jsonify(_ai_response(handler(), role))
+
+
+def _build_greeting(db, user: dict, role: str) -> str:
+    """Personalized opening message with a live data snapshot."""
+    name = _first_name(user)
+    portal = ROLE_PORTALS.get(role, "TTTI Portal")
+    try:
+        if role == "student":
+            rows = db.table("attendance").select("status").eq("student_id", user["id"]).execute().data or []
+            total = len(rows)
+            pct = round(sum(1 for r in rows if r.get("status") == "present") / total * 100, 1) if total else 0
+            snap = f"Attendance: **{pct}%**" if total else "No attendance records yet"
+        elif role == "trainer":
+            unit_ids = _trainer_unit_ids(db, user["id"])
+            pending = 0
+            if unit_ids:
+                pending = len(db.table("assessments").select("id").in_("unit_id", unit_ids)
+                              .eq("status", "pending").execute().data or [])
+            snap = f"**{pending}** pending POE review{'s' if pending != 1 else ''}"
+        elif role == "dept_admin" and user.get("department_id"):
+            dept_id = user["department_id"]
+            students = db.table("user_profiles").select("id", count="exact").eq("role", "student").eq("department_id", dept_id).execute().count or 0
+            snap = f"**{students}** trainees in your department"
+        elif role == "super_admin":
+            students = db.table("user_profiles").select("id", count="exact").eq("role", "student").execute().count or 0
+            snap = f"**{students}** trainees system-wide"
+        else:
+            snap = "Ready to assist"
+    except Exception:
+        snap = "Ready to assist"
+
+    return (
+        f"Hello **{name}**! I'm TTTI Guardian for the **{portal}**.\n\n"
+        f"Snapshot: {snap}.\n\n"
+        f"Ask me anything, or choose a suggestion below."
+    )
+
+
+def _trainer_unit_ids(db, uid: str) -> list:
+    rows = db.table("trainer_units").select("unit_id").eq("trainer_id", uid).execute().data or []
+    return [r["unit_id"] for r in rows]
 
 
 # ── Student ───────────────────────────────────────────────────────────────────
@@ -357,20 +535,39 @@ def _dept_admin(db, uid, user, kw):
 # ── Trainer ───────────────────────────────────────────────────────────────────
 
 def _trainer(db, uid, kw):
+    unit_ids = _trainer_unit_ids(db, uid)
+
     def my_classes():
         rows = db.table("classes").select("id, name").eq("trainer_id", uid).execute().data or []
         return rows
 
+    def my_units():
+        if not unit_ids:
+            return []
+        return db.table("units").select("name, code").in_("id", unit_ids).order("name").execute().data or []
+
     def pending_poe():
         try:
-            classes = my_classes()
-            if not classes:
+            if not unit_ids:
                 return 0
-            cids = [c["id"] for c in classes]
-            rows = db.table("assessments").select("id").in_("class_id", cids).eq("status", "pending").execute().data or []
+            rows = (db.table("assessments").select("id")
+                    .in_("unit_id", unit_ids).eq("status", "pending").execute().data or [])
             return len(rows)
         except Exception:
             return 0
+
+    def assessment_stats():
+        try:
+            if not unit_ids:
+                return 0, 0, 0, 0
+            rows = db.table("assessments").select("status").in_("unit_id", unit_ids).execute().data or []
+            total = len(rows)
+            pending = sum(1 for r in rows if r.get("status") == "pending")
+            approved = sum(1 for r in rows if r.get("status") == "approved")
+            rejected = sum(1 for r in rows if r.get("status") == "rejected")
+            return total, pending, approved, rejected
+        except Exception:
+            return 0, 0, 0, 0
 
     def att_summary():
         try:
@@ -378,7 +575,6 @@ def _trainer(db, uid, kw):
             if not classes:
                 return None
             cids = [c["id"] for c in classes]
-            # Get enrollments for trainer's classes
             enrollments = db.table("enrollments").select("student_id").in_("class_id", cids).execute().data or []
             sids = list({e["student_id"] for e in enrollments})
             if not sids:
@@ -402,8 +598,28 @@ def _trainer(db, uid, kw):
         except Exception:
             return 0
 
+    # Overview / dashboard
+    if _matches(kw, "overview", "summary", "dashboard", "snapshot", "status"):
+        total, pending, approved, rejected = assessment_stats()
+        classes = my_classes()
+        units = my_units()
+        return (
+            f"**Trainer dashboard snapshot:**\n"
+            f"• Assigned classes: {len(classes)}\n"
+            f"• Assigned units: {len(units)}\n"
+            f"• Assessments: {total} total ({pending} pending, {approved} approved, {rejected} returned)"
+        )
+
+    # Units
+    if _matches(kw, "unit", "units", "assigned unit", "my unit", "what units"):
+        units = my_units()
+        if not units:
+            return "You have no units assigned yet. Contact your department admin."
+        lines = [f"{u.get('code', '—')} — {u.get('name', '—')}" for u in units[:12]]
+        return f"Your assigned units ({len(units)}):\n" + "\n".join("• " + l for l in lines)
+
     # Classes
-    if any(x in kw for x in ("class", "unit", "my class", "assigned", "teach")):
+    if _matches(kw, "class", "my class", "assigned", "teach", "trainee"):
         classes = my_classes()
         if not classes:
             return "You have no classes assigned yet. Contact your department admin."
@@ -411,37 +627,54 @@ def _trainer(db, uid, kw):
         return f"Your assigned classes ({len(classes)}):\n" + "\n".join("• " + n for n in names)
 
     # POE reviews
-    if any(x in kw for x in ("poe", "assessment", "review", "pending", "portfolio", "upload")):
+    if _matches(kw, "poe", "assessment", "review", "pending", "portfolio", "upload", "script"):
         pp = pending_poe()
         if pp == 0:
-            return "No pending POE assessments waiting for your review right now."
-        return f"{pp} POE assessment{'s' if pp!=1 else ''} pending your review. Go to Assessments in the sidebar."
+            return "No pending POE assessments waiting for your review right now. Your queue is clear."
+        return f"**{pp}** POE assessment{'s' if pp != 1 else ''} pending your review.\nGo to **Trainee POE Review** in the sidebar, or open your dashboard pending table."
 
     # Attendance
-    if any(x in kw for x in ("attend", "present", "absent", "lesson", "mark")):
+    if _matches(kw, "attend", "present", "absent", "lesson", "mark attend", "biometric", "fingerprint"):
+        if _matches(kw, "biometric", "fingerprint"):
+            return "Use **Biometric Attendance** in the sidebar to start a fingerprint session for your class."
         result = att_summary()
         if not result:
-            return "No attendance data for your classes yet. Use Mark Attendance in the sidebar to record lessons."
+            return "No attendance data for your classes yet. Use **Mark Attendance** or **Biometric Attendance** in the sidebar."
         n_students, total, present, pct = result
-        return f"Attendance across your {n_students} trainees: {present}/{total} lessons = {pct}% overall."
+        return f"Attendance across your **{n_students}** trainees: {present}/{total} lessons = **{pct}%** overall."
+
+    # Marks
+    if _matches(kw, "mark", "grade", "score", "marks entry", "import mark", "result"):
+        if _matches(kw, "import"):
+            return "To bulk-import marks, go to **Import Marks** in the sidebar. Upload an Excel file with the required columns."
+        return "Enter marks via **Marks Entry** in the sidebar. Select your class and unit, then fill in trainee scores."
 
     # Exam bookings
-    if any(x in kw for x in ("exam", "book", "booking", "examination")):
+    if _matches(kw, "exam", "book", "booking", "examination"):
         pe = pending_exams()
         if pe == 0:
             return "No exam bookings pending your review for your classes."
-        return f"{pe} exam booking{'s' if pe!=1 else ''} pending review for your classes. Check Exam Bookings in the sidebar."
+        return f"**{pe}** exam booking{'s' if pe != 1 else ''} pending review. Check **Exam Bookings** in the sidebar."
 
-    # Portfolio / trainer portfolio
-    if any(x in kw for x in ("portfolio", "upload document", "trainer document", "my document")):
-        return "To upload your professional documents, go to My Portfolio in the sidebar. Supported formats: PDF, images, and videos up to 20MB."
+    # Portfolio / clearance
+    if _matches(kw, "portfolio", "trainer document", "my document", "upload document"):
+        return "Upload professional documents via **My Portfolio (POE)** in the sidebar. Supported: PDF, images, and videos up to 20MB."
+
+    if _matches(kw, "clear", "clearance"):
+        return "Review trainee clearance requests via **Clearance Approvals** in the sidebar."
 
     # Default
     pp = pending_poe()
     classes = my_classes()
-    return (f"I can help with your classes, pending POE reviews, attendance marking, exam bookings, and your portfolio.\n"
-            f"Quick summary — {len(classes)} class{'es' if len(classes)!=1 else ''} | {pp} pending POE review{'s' if pp!=1 else ''}.\n"
-            f"What would you like to know?")
+    units = my_units()
+    return (
+        f"I can help with your **classes**, **units**, pending **POE reviews**, "
+        f"**attendance**, **marks entry**, **exam bookings**, and your **portfolio**.\n\n"
+        f"Quick summary — {len(classes)} class{'es' if len(classes) != 1 else ''} | "
+        f"{len(units)} unit{'s' if len(units) != 1 else ''} | "
+        f"**{pp}** pending POE review{'s' if pp != 1 else ''}.\n\n"
+        f"What would you like to know?"
+    )
 
 
 # ── Super Admin ───────────────────────────────────────────────────────────────
