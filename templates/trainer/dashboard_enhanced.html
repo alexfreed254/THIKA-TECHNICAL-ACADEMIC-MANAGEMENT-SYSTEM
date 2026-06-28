@@ -3,902 +3,434 @@
 {% block page_title %}Trainer Dashboard{% endblock %}
 
 {% block extra_head %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  /* ── TTTI Trainer Dashboard design system ───────────────────── */
-  .tdash {
-    --ink: #122E33;
-    --ink-soft: #2C4D52;
-    --ink-fade: #5E7378;
-    --paper: #FAF7F0;
-    --paper-deep: #F3EDE0;
-    --card: #FFFFFF;
-    --gold: #A8720F;
-    --gold-bright: #D99A2B;
-    --gold-glow: rgba(217, 154, 43, 0.22);
-    --verify: #3E7A5E;
-    --verify-soft: rgba(62, 122, 94, 0.12);
-    --clay: #B5532E;
-    --clay-soft: rgba(181, 83, 46, 0.12);
-    --line: #E2DACB;
-    --line-soft: #EFE9DC;
-    --shadow-xs: 0 1px 2px rgba(18, 46, 51, 0.04);
-    --shadow-sm: 0 2px 8px rgba(18, 46, 51, 0.06), 0 1px 2px rgba(18, 46, 51, 0.04);
-    --shadow-md: 0 8px 24px rgba(18, 46, 51, 0.08), 0 2px 6px rgba(18, 46, 51, 0.04);
-    --shadow-lg: 0 16px 40px rgba(18, 46, 51, 0.1), 0 4px 12px rgba(18, 46, 51, 0.05);
-    --radius: 14px;
-    --display: "Bricolage Grotesque", system-ui, sans-serif;
-    --body: "Hanken Grotesk", system-ui, sans-serif;
-    --mono: "Space Mono", ui-monospace, monospace;
-    font-family: var(--body);
-    color: var(--ink);
-    background: var(--paper);
-    min-height: calc(100vh - var(--topbar-h));
-    padding: clamp(20px, 3vw, 32px);
-    -webkit-font-smoothing: antialiased;
-    line-height: 1.5;
-    position: relative;
-    overflow: hidden;
+  .stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-
-  .tdash::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 80% 50% at 100% -10%, rgba(217, 154, 43, 0.09), transparent 55%),
-      radial-gradient(ellipse 60% 40% at -5% 100%, rgba(62, 122, 94, 0.07), transparent 50%),
-      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.6), transparent 40%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .tdash::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(circle, rgba(18, 46, 51, 0.035) 1px, transparent 1px);
-    background-size: 22px 22px;
-    pointer-events: none;
-    z-index: 0;
-    mask-image: linear-gradient(to bottom, rgba(0,0,0,.5) 0%, transparent 70%);
-  }
-
-  .tdash > * { position: relative; z-index: 1; }
-  .tdash * { box-sizing: border-box; }
-  .tdash ::selection { background: var(--gold-bright); color: var(--ink); }
-  .tdash a { text-decoration: none; color: inherit; }
-  .tdash :focus-visible { outline: 2.5px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
-
-  /* entrance */
-  @keyframes tdash-rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .tdash .anim { animation: tdash-rise 0.55s cubic-bezier(.22,1,.36,1) both; }
-  .tdash .anim-d1 { animation-delay: .06s; }
-  .tdash .anim-d2 { animation-delay: .12s; }
-  .tdash .anim-d3 { animation-delay: .18s; }
-  .tdash .anim-d4 { animation-delay: .24s; }
-  .tdash .anim-d5 { animation-delay: .30s; }
-
-  /* hero header */
-  .tdash .hero {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    margin-bottom: 28px;
-    flex-wrap: wrap;
-  }
-
-  .tdash .eyebrow {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: var(--gold);
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  .tdash .eyebrow::before {
-    content: "";
-    width: 22px;
-    height: 2px;
-    background: linear-gradient(90deg, var(--gold), var(--gold-bright));
-    border-radius: 2px;
-  }
-
-  .tdash .hero h1 {
-    font-family: var(--display);
-    font-weight: 800;
-    font-size: clamp(28px, 3.5vw, 40px);
-    letter-spacing: -.03em;
-    line-height: 1.05;
-    margin: 0 0 10px;
-  }
-  .tdash .hero h1 em {
-    font-style: normal;
-    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .tdash .t-sub {
-    color: var(--ink-soft);
-    font-size: 15.5px;
-    margin: 0;
-    max-width: 520px;
-    line-height: 1.55;
-  }
-  .tdash .t-sub b { color: var(--gold); font-weight: 700; }
-
-  .tdash .hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 18px;
-  }
-
-  .tdash .qact {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 12.5px;
-    font-weight: 600;
-    border: 1px solid var(--line);
-    background: var(--card);
-    color: var(--ink-soft);
-    box-shadow: var(--shadow-xs);
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, color .18s ease;
-  }
-  .tdash .qact i { font-size: 12px; color: var(--gold); }
-  .tdash .qact:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
-    border-color: #EAD3A3;
-    color: var(--ink);
-  }
-  .tdash .qact.qact-primary {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--paper);
-  }
-  .tdash .qact.qact-primary i { color: var(--gold-bright); }
-  .tdash .qact.qact-primary:hover { background: var(--ink-soft); border-color: var(--ink-soft); }
-
-  .tdash .hero-badge {
-    flex-shrink: 0;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 16px 20px;
-    box-shadow: var(--shadow-sm);
-    text-align: center;
-    min-width: 120px;
-  }
-  .tdash .hero-badge .hb-day {
-    font-family: var(--display);
-    font-weight: 800;
-    font-size: 32px;
-    line-height: 1;
-    color: var(--ink);
-    letter-spacing: -.02em;
-  }
-  .tdash .hero-badge .hb-mon {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--gold);
-    font-weight: 700;
-    margin-top: 4px;
-  }
-
-  /* progress strip */
-  .tdash .prog-strip {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 14px 20px;
-    margin-bottom: 22px;
-    box-shadow: var(--shadow-xs);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .tdash .prog-strip .ps-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    white-space: nowrap;
-  }
-  .tdash .prog-strip .ps-label span { color: var(--verify); font-weight: 700; }
-  .tdash .prog-track {
-    flex: 1;
-    min-width: 120px;
-    height: 8px;
-    background: var(--line-soft);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .tdash .prog-fill {
-    height: 100%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--verify), #5BA87E);
-    transition: width .8s cubic-bezier(.22,1,.36,1);
-  }
-  .tdash .prog-meta {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--ink-fade);
-    white-space: nowrap;
-  }
-
-  /* KPI grid */
-  .tdash .kpis {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 26px;
-  }
-
-  .tdash .kpi {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 15px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-xs);
-    transition: transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s ease, border-color .22s ease;
-  }
-  .tdash .kpi:hover {
+  .stat-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: #D9CEB8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   }
-  .tdash .kpi .top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
+  /* chart card */
+  .chart-card {
+    background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);
+    border:1px solid #e5e7eb;overflow:hidden;
+    transition:transform .2s,box-shadow .2s;
   }
-  .tdash .kpi .chip {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    font-size: 17px;
-    transition: transform .22s ease;
-  }
-  .tdash .kpi:hover .chip { transform: scale(1.06); }
-  .tdash .kpi .num {
-    font-family: var(--display);
-    font-weight: 800;
-    font-size: clamp(28px, 3vw, 36px);
-    letter-spacing: -.03em;
-    line-height: 1;
-  }
-  .tdash .kpi .lab {
-    font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--ink-fade);
-    margin-bottom: 4px;
-  }
-  .tdash .kpi .cap { font-size: 13.5px; font-weight: 600; color: var(--ink-soft); }
-
-  .tdash .kpi.k-gold {
-    background: linear-gradient(145deg, #FFF9EE 0%, #FBF3E4 100%);
-    border-color: #EAD3A3;
-  }
-  .tdash .kpi.k-gold::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--gold), var(--gold-bright));
-  }
-  .tdash .kpi.k-gold::after {
-    content: "";
-    position: absolute;
-    bottom: -20px; right: -20px;
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    background: var(--gold-glow);
-    pointer-events: none;
-  }
-
-  .tdash .k-ink .chip { background: rgba(44, 77, 82, .1); color: var(--ink-soft); }
-  .tdash .k-ink .num { color: var(--ink); }
-  .tdash .k-gold .chip { background: rgba(168, 114, 15, .16); color: var(--gold); }
-  .tdash .k-gold .num { color: var(--gold); }
-  .tdash .k-green .chip { background: var(--verify-soft); color: var(--verify); }
-  .tdash .k-green .num { color: var(--verify); }
-  .tdash .k-clay .chip { background: var(--clay-soft); color: var(--clay); }
-  .tdash .k-clay .num { color: var(--clay); }
-
-  /* layout grid */
-  .tdash .layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  @media (min-width: 1100px) {
-    .tdash .layout.has-sidebar { grid-template-columns: 1fr 320px; align-items: start; }
-  }
-
-  /* card primitive */
-  .tdash .card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    margin-bottom: 0;
-    overflow: hidden;
-    box-shadow: var(--shadow-xs);
-    transition: box-shadow .22s ease;
-  }
-  .tdash .card:hover { box-shadow: var(--shadow-sm); }
-
-  .tdash .card-h {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--line-soft);
-    background: linear-gradient(180deg, #FDFCF9 0%, var(--card) 100%);
-  }
-  .tdash .card-h h2 {
-    font-family: var(--display);
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: -.01em;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .tdash .card-h h2 i { color: var(--gold); font-size: 14.5px; }
-  .tdash .card-h .right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-
-  .tdash .link {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--gold);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: color .15s, gap .15s;
-  }
-  .tdash .link:hover { color: var(--gold-bright); gap: 9px; }
-
-  .tdash .pillc {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
-    color: var(--ink);
-    padding: 2px 9px;
-    border-radius: 999px;
-    box-shadow: 0 2px 6px var(--gold-glow);
-  }
-
-  /* notifications */
-  .tdash .card.notif {
-    border-color: #EAD3A3;
-    margin-bottom: 24px;
-    background: linear-gradient(180deg, #FFFDF8 0%, var(--card) 100%);
-  }
-  .tdash .ntf {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 14px 22px;
-    border-bottom: 1px solid var(--line-soft);
-    transition: background .15s, padding-left .15s;
-    position: relative;
-  }
-  .tdash .ntf:last-child { border-bottom: none; }
-  .tdash .ntf:hover { background: #FFFCF5; padding-left: 26px; }
-  .tdash .ntf::before {
-    content: "";
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: transparent;
-    transition: background .15s;
-  }
-  .tdash .ntf:hover::before { background: var(--gold-bright); }
-
-  .tdash .nic {
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
-    display: grid;
-    place-items: center;
-    flex: none;
-    margin-top: 1px;
-    font-size: 13px;
-  }
-  .tdash .nt-info .nic { background: rgba(44, 77, 82, .1); color: var(--ink-soft); }
-  .tdash .nt-success .nic { background: var(--verify-soft); color: var(--verify); }
-  .tdash .nt-warning .nic { background: rgba(168, 114, 15, .14); color: var(--gold); }
-  .tdash .nt-error .nic { background: var(--clay-soft); color: var(--clay); }
-
-  .tdash .ntf .ncon { flex: 1; min-width: 0; }
-  .tdash .ntf .ncon .ntitle { font-size: 14px; font-weight: 600; margin: 0; line-height: 1.3; }
-  .tdash .ntf .ncon .nmsg {
-    font-size: 12.5px;
-    color: var(--ink-soft);
-    margin: 4px 0 0;
-    line-height: 1.45;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .tdash .ntf .nview {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--gold);
-    white-space: nowrap;
-    flex: none;
-    margin-top: 4px;
-    transition: color .15s;
-  }
-  .tdash .ntf .nview:hover { color: var(--gold-bright); }
-
-  .tdash .btn-link {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-family: var(--body);
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--gold);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 0;
-    transition: color .15s;
-  }
-  .tdash .btn-link:hover { color: var(--gold-bright); }
-  .tdash .mark-all-form { display: inline; }
-
-  .tdash .card-f {
-    padding: 13px 22px;
-    border-top: 1px solid var(--line-soft);
-    text-align: right;
-    background: #FCFAF4;
-  }
-
-  /* table */
-  .tdash .tbl-wrap { overflow-x: auto; }
-  .tdash table { width: 100%; border-collapse: collapse; }
-  .tdash thead th {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--ink-fade);
-    text-align: left;
-    font-weight: 700;
-    padding: 13px 22px;
-    border-bottom: 1px solid var(--line);
-    background: #FCFAF4;
-    white-space: nowrap;
-  }
-  .tdash thead th.r { text-align: right; }
-  .tdash tbody td {
-    padding: 14px 22px;
-    border-bottom: 1px solid var(--line-soft);
-    vertical-align: middle;
-  }
-  .tdash tbody tr:last-child td { border-bottom: none; }
-  .tdash tbody tr { transition: background .15s; }
-  .tdash tbody tr:hover { background: #FDFCF7; }
-
-  .tdash .trainee {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .tdash .avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--ink-soft), var(--ink));
-    color: var(--paper);
-    font-family: var(--display);
-    font-weight: 700;
-    font-size: 13px;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    letter-spacing: .02em;
-  }
-  .tdash .sname { font-size: 14px; font-weight: 600; line-height: 1.2; }
-  .tdash .sadm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-fade); margin-top: 2px; }
-  .tdash .cell { font-size: 13.5px; color: var(--ink-soft); }
-  .tdash .when { font-family: var(--mono); font-size: 11px; color: var(--ink-fade); }
-
-  .tdash .badge {
-    font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    padding: 4px 10px;
-    border-radius: 6px;
-    background: rgba(44, 77, 82, .08);
-    color: var(--ink-soft);
-    white-space: nowrap;
-    border: 1px solid rgba(44, 77, 82, .08);
-  }
-
-  .tdash .ucode {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--gold);
-    background: rgba(168, 114, 15, .1);
-    padding: 4px 10px;
-    border-radius: 7px;
-    white-space: nowrap;
-    border: 1px solid rgba(168, 114, 15, .15);
-  }
-
-  .tdash .r { text-align: right; }
-
-  .tdash .btn {
-    font-family: var(--body);
-    font-weight: 600;
-    font-size: 12px;
-    padding: 8px 16px;
-    border-radius: 9px;
-    border: none;
-    background: var(--ink);
-    color: var(--paper);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-    box-shadow: 0 2px 8px rgba(18, 46, 51, .18);
-    white-space: nowrap;
-  }
-  .tdash .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(18, 46, 51, .22);
-    background: var(--ink-soft);
-  }
-  .tdash .btn:active { transform: translateY(0); }
-
-  /* units sidebar */
-  .tdash .unit-list { padding: 6px 0; }
-  .tdash .unit-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--line-soft);
-    transition: background .15s, padding-left .15s;
-  }
-  .tdash .unit-item:last-child { border-bottom: none; }
-  .tdash .unit-item:hover { background: #FDFCF7; padding-left: 24px; }
-  .tdash .unit-item .u-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    background: rgba(168, 114, 15, .1);
-    color: var(--gold);
-    display: grid;
-    place-items: center;
-    font-size: 13px;
-    flex-shrink: 0;
-  }
-  .tdash .unit-item .u-name {
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--ink);
-    line-height: 1.3;
-  }
-
-  /* empty state */
-  .tdash .empty {
-    padding: 56px 22px;
-    text-align: center;
-  }
-  .tdash .empty .empty-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: var(--line-soft);
-    display: grid;
-    place-items: center;
-    margin: 0 auto 18px;
-    font-size: 28px;
-    color: var(--ink-fade);
-  }
-  .tdash .empty h3 {
-    font-family: var(--display);
-    font-size: 17px;
-    font-weight: 700;
-    margin: 0 0 6px;
-    color: var(--ink);
-  }
-  .tdash .empty p { color: var(--ink-fade); font-size: 14px; margin: 0; }
-
-  /* dark mode */
-  body.dark-mode .tdash {
-    --ink: #E8F0F1;
-    --ink-soft: #A8BFC3;
-    --ink-fade: #6B8A90;
-    --paper: #0F1A1C;
-    --paper-deep: #152428;
-    --card: #1A2B2F;
-    --line: rgba(255,255,255,.08);
-    --line-soft: rgba(255,255,255,.05);
-    --shadow-xs: 0 1px 2px rgba(0,0,0,.2);
-    --shadow-sm: 0 2px 8px rgba(0,0,0,.25);
-    --shadow-md: 0 8px 24px rgba(0,0,0,.3);
-  }
-  body.dark-mode .tdash::before {
-    background:
-      radial-gradient(ellipse 80% 50% at 100% -10%, rgba(217, 154, 43, 0.06), transparent 55%),
-      radial-gradient(ellipse 60% 40% at -5% 100%, rgba(62, 122, 94, 0.05), transparent 50%);
-  }
-  body.dark-mode .tdash .card-h { background: linear-gradient(180deg, #1E3034 0%, var(--card) 100%); }
-  body.dark-mode .tdash .card-f { background: #152428; }
-  body.dark-mode .tdash thead th { background: #152428; }
-  body.dark-mode .tdash tbody tr:hover { background: rgba(255,255,255,.03); }
-  body.dark-mode .tdash .kpi.k-gold { background: linear-gradient(145deg, #2A2318 0%, #1F2A24 100%); }
-  body.dark-mode .tdash .card.notif { background: linear-gradient(180deg, #1E2A1E 0%, var(--card) 100%); }
-  body.dark-mode .tdash .ntf:hover { background: rgba(255,255,255,.03); }
-  body.dark-mode .tdash .qact { background: var(--card); }
-  body.dark-mode .tdash .empty .empty-icon { background: rgba(255,255,255,.06); }
-
-  @media (max-width: 1000px) { .tdash .kpis { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 600px) {
-    .tdash { padding: 16px; }
-    .tdash .kpis { grid-template-columns: 1fr; }
-    .tdash .hero-badge { display: none; }
-    .tdash .hero-actions { gap: 6px; }
-    .tdash .qact { font-size: 11.5px; padding: 7px 11px; }
-    .tdash thead th, .tdash tbody td { padding: 12px 14px; }
-    .tdash .btn { padding: 7px 12px; font-size: 11px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .tdash * { transition: none !important; animation: none !important; }
-  }
+  .chart-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.11);}
+  .chart-head{padding:14px 20px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;}
+  .chart-head h3{font-size:14px;font-weight:700;color:#111827;margin:0;display:flex;align-items:center;gap:7px;}
+  .chart-head .csub{font-size:11.5px;color:#9ca3af;}
+  .chart-body{padding:16px 18px 18px;}
+  .chart-body canvas{max-height:210px;}
+  /* donut center */
+  .donut-wrap{position:relative;display:flex;align-items:center;justify-content:center;}
+  .donut-center{position:absolute;text-align:center;pointer-events:none;}
+  .donut-center strong{display:block;font-size:24px;font-weight:800;color:#111827;line-height:1;}
+  .donut-center span{font-size:10px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+  /* legend */
+  .leg-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .leg-pill{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#6b7280;}
+  .leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  /* mini stats */
+  .amini-row{display:flex;border-top:1px solid #f3f4f6;margin-top:14px;}
+  .amini{flex:1;text-align:center;padding:10px 6px;border-right:1px solid #f3f4f6;}
+  .amini:last-child{border-right:none;}
+  .amini strong{display:block;font-size:18px;font-weight:800;color:#111827;line-height:1;}
+  .amini span{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  /* section label */
+  .sec-label{font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.1em;text-transform:uppercase;
+    margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+  .sec-label::after{content:'';flex:1;height:1px;background:#e5e7eb;}
 </style>
 {% endblock %}
 
 {% block content %}
-{% set first_name = (current_user.full_name.split()[0] if current_user and current_user.full_name else 'Trainer') %}
-{% set total = stats.total or 0 %}
-{% set approved = stats.approved or 0 %}
-{% set approval_pct = ((approved / total * 100)|round|int) if total > 0 else 0 %}
+<div class="bg-gray-50 min-h-screen p-6">
 
-<div class="tdash">
-
-  <!-- Hero -->
-  <div class="hero anim">
-    <div class="hero-main">
-      <div class="eyebrow">Trainer Portal · {{ current_month if current_month else 'June 2026' }}</div>
-      <h1><span id="greeting">Welcome back</span>, <em>{{ first_name }}</em></h1>
-      <p class="t-sub">
-        {% if stats.pending %}
-        You have <b>{{ stats.pending }}</b> assessment{{ 's' if stats.pending != 1 else '' }} awaiting your review.
-        {% else %}
-        Your review queue is clear — <b>great work</b> keeping assessments up to date.
-        {% endif %}
-      </p>
-      <div class="hero-actions">
-        <a href="/trainer/assessments" class="qact qact-primary"><i class="fas fa-tasks"></i> Review POE</a>
-        <a href="/trainer/attendance" class="qact"><i class="fas fa-clipboard-list"></i> Attendance</a>
-        <a href="/trainer/marks-entry" class="qact"><i class="fas fa-edit"></i> Marks Entry</a>
-        <a href="/trainer/portfolio" class="qact"><i class="fas fa-folder-open"></i> Portfolio</a>
-      </div>
-    </div>
-    <div class="hero-badge" aria-hidden="true">
-      <div class="hb-day" id="todayDay">—</div>
-      <div class="hb-mon" id="todayMon">—</div>
-    </div>
-  </div>
-
-  <!-- Approval progress -->
-  {% if total > 0 %}
-  <div class="prog-strip anim anim-d1">
-    <div class="ps-label">Approval rate: <span>{{ approval_pct }}%</span></div>
-    <div class="prog-track" role="progressbar" aria-valuenow="{{ approval_pct }}" aria-valuemin="0" aria-valuemax="100">
-      <div class="prog-fill" style="width:{{ approval_pct }}%"></div>
-    </div>
-    <div class="prog-meta">{{ approved }} of {{ total }} approved</div>
-  </div>
-  {% endif %}
-
-  <!-- KPIs -->
-  <div class="kpis anim anim-d2">
-    <div class="kpi k-ink">
-      <div class="top">
-        <span class="chip"><i class="fas fa-file-alt"></i></span>
-        <span class="num">{{ total }}</span>
-      </div>
-      <div class="lab">Total assessments</div>
-      <div class="cap">All submissions</div>
-    </div>
-    <div class="kpi k-gold">
-      <div class="top">
-        <span class="chip"><i class="fas fa-clock"></i></span>
-        <span class="num">{{ stats.pending or 0 }}</span>
-      </div>
-      <div class="lab">Pending review</div>
-      <div class="cap">Awaiting your action</div>
-    </div>
-    <div class="kpi k-green">
-      <div class="top">
-        <span class="chip"><i class="fas fa-check-circle"></i></span>
-        <span class="num">{{ approved }}</span>
-      </div>
-      <div class="lab">Approved</div>
-      <div class="cap">Folded into competency</div>
-    </div>
-    <div class="kpi k-clay">
-      <div class="top">
-        <span class="chip"><i class="fas fa-rotate-left"></i></span>
-        <span class="num">{{ stats.rejected or 0 }}</span>
-      </div>
-      <div class="lab">Returned</div>
-      <div class="cap">Sent back for revision</div>
-    </div>
-  </div>
-
-  <!-- Main layout -->
-  <div class="layout{% if units_list %} has-sidebar{% endif %}">
-
-    <div class="layout-main">
-
-      <!-- Notifications -->
-      {% if unread_notifications %}
-      <div class="card notif anim anim-d3">
-        <div class="card-h">
-          <h2><i class="fas fa-bell"></i>New notifications <span class="pillc">{{ unread_notifications|length }}</span></h2>
-          <div class="right">
-            <form action="/notifications/mark-all-read" method="post" class="mark-all-form">
-              <button type="submit" class="btn-link">Mark all read <i class="fas fa-check-double"></i></button>
-            </form>
-          </div>
-        </div>
-        {% for n in unread_notifications %}
-        {% set icon_map = {'info':'info-circle','success':'check-circle','warning':'exclamation-triangle','error':'exclamation-circle'} %}
-        {% set ntype = n.type if n.type in ['info','success','warning','error'] else 'info' %}
-        <div class="ntf nt-{{ ntype }}">
-          <div class="nic"><i class="fas fa-{{ icon_map.get(n.type, 'info-circle') }}"></i></div>
-          <div class="ncon">
-            <p class="ntitle">{{ n.title }}</p>
-            <p class="nmsg">{{ n.message }}</p>
-          </div>
-          {% if n.action_url %}
-          <a href="{{ n.action_url }}" class="nview">View <i class="fas fa-arrow-right"></i></a>
-          {% endif %}
-        </div>
-        {% endfor %}
-        <div class="card-f"><a href="/notifications" class="link">View all notifications <i class="fas fa-arrow-right"></i></a></div>
-      </div>
+  <!-- Header Section -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome back, {{ current_user.full_name if current_user and current_user.full_name else 'Trainer' }}!</h1>
+    <p class="text-gray-600">{{ current_month if current_month else 'June 2026' }} &nbsp;·&nbsp;
+      {% if stats.pending %}
+        <span class="text-orange-600 font-semibold">{{ stats.pending }} assessment{{ 's' if stats.pending != 1 else '' }} awaiting review</span>
+      {% else %}
+        <span class="text-green-600 font-semibold">Review queue is clear — great work!</span>
       {% endif %}
+    </p>
+  </div>
 
-      <!-- Pending Assessments -->
-      <div class="card anim anim-d4">
-        <div class="card-h">
-          <h2><i class="fas fa-clock"></i>Pending assessments</h2>
-          <div class="right">
-            {% if pending_assessments %}
-            <span class="pillc">{{ pending_assessments|length }}</span>
-            {% endif %}
-            <a href="/trainer/assessments" class="link">View all <i class="fas fa-arrow-right"></i></a>
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+          <i class="fas fa-file-alt text-purple-600 text-xl"></i>
+        </div>
+        <span class="text-2xl font-bold text-purple-600">{{ stats.total or 0 }}</span>
+      </div>
+      <h3 class="text-gray-600 text-sm font-medium mb-1">Total Assessments</h3>
+      <p class="text-gray-900 text-lg font-semibold">All Submissions</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+          <i class="fas fa-clock text-orange-600 text-xl"></i>
+        </div>
+        <span class="text-2xl font-bold text-orange-600">{{ stats.pending or 0 }}</span>
+      </div>
+      <h3 class="text-gray-600 text-sm font-medium mb-1">Pending Review</h3>
+      <p class="text-gray-900 text-lg font-semibold">Awaiting Action</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+          <i class="fas fa-check-circle text-green-600 text-xl"></i>
+        </div>
+        <span class="text-2xl font-bold text-green-600">{{ stats.approved or 0 }}</span>
+      </div>
+      <h3 class="text-gray-600 text-sm font-medium mb-1">Approved</h3>
+      <p class="text-gray-900 text-lg font-semibold">Completed</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+          <i class="fas fa-times-circle text-red-600 text-xl"></i>
+        </div>
+        <span class="text-2xl font-bold text-red-600">{{ stats.rejected or 0 }}</span>
+      </div>
+      <h3 class="text-gray-600 text-sm font-medium mb-1">Rejected</h3>
+      <p class="text-gray-900 text-lg font-semibold">Needs Revision</p>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       ANALYTICS SECTION — Charts & graphs
+       ═══════════════════════════════════════════════ -->
+
+  <div class="sec-label mb-4"><i class="fas fa-chart-bar text-purple-600"></i> Performance Analytics</div>
+
+  <!-- Row 1: Assessment donut · 7-day attendance trend · Attendance rate per unit -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+    <!-- Assessment status donut -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3><i class="fas fa-file-alt" style="color:#9333ea"></i> Assessment Status</h3>
+        <span class="csub">{{ stats.total or 0 }} total</span>
+      </div>
+      <div class="chart-body">
+        <div class="donut-wrap" style="height:170px">
+          <canvas id="tcAssess"></canvas>
+          <div class="donut-center">
+            <strong>{{ stats.total or 0 }}</strong>
+            <span>Total</span>
           </div>
         </div>
-        {% if pending_assessments %}
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Trainee</th>
-                <th>Unit</th>
-                <th>Class</th>
-                <th>Type</th>
-                <th>Uploaded</th>
-                <th class="r">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for a in pending_assessments %}
-              {% set fname = a.get('user_profiles',{}).get('full_name','—') %}
-              {% set parts = fname.split() if fname and fname != '—' else [] %}
-              {% set initials = ((parts[0][:1] ~ (parts[1][:1] if parts|length > 1 else ''))|upper) if parts else '?' %}
-              <tr>
-                <td>
-                  <div class="trainee">
-                    <div class="avatar" aria-hidden="true">{{ initials }}</div>
-                    <div>
-                      <div class="sname">{{ fname }}</div>
-                      <div class="sadm">{{ a.get('user_profiles',{}).get('admission_no','') }}</div>
-                    </div>
-                  </div>
-                </td>
-                <td><span class="cell">{{ a.get('units',{}).get('name','—') }}</span></td>
-                <td><span class="cell">{{ a.get('classes',{}).get('name','—') }}</span></td>
-                <td><span class="badge">{{ a.get('assessment_type','—') }}</span></td>
-                <td><span class="when">{{ a.get('uploaded_at','—')[:10] if a.get('uploaded_at') else '—' }}</span></td>
-                <td class="r">
-                  <a href="/trainer/assessment/{{ a.id }}/review" class="btn"><i class="fas fa-eye"></i> Review</a>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="leg-row">
+          <div class="leg-pill"><div class="leg-dot" style="background:#f59e0b"></div>Pending <strong style="color:#111827;margin-left:3px">{{ stats.pending or 0 }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#10b981"></div>Approved <strong style="color:#111827;margin-left:3px">{{ stats.approved or 0 }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#ef4444"></div>Returned <strong style="color:#111827;margin-left:3px">{{ stats.rejected or 0 }}</strong></div>
         </div>
-        {% else %}
-        <div class="empty">
-          <div class="empty-icon"><i class="fas fa-clipboard-check"></i></div>
-          <h3>All caught up</h3>
-          <p>No assessments waiting. Your queue is clear.</p>
-        </div>
-        {% endif %}
       </div>
     </div>
 
-    <!-- Assigned units sidebar -->
-    {% if units_list %}
-    <aside class="layout-side anim anim-d5">
-      <div class="card">
-        <div class="card-h">
-          <h2><i class="fas fa-book"></i>My units</h2>
-          <div class="right"><span class="pillc">{{ units_list|length }}</span></div>
-        </div>
-        <div class="unit-list">
-          {% for u in units_list %}
-          <div class="unit-item">
-            <div class="u-icon"><i class="fas fa-book-open"></i></div>
-            <div>
-              <div class="ucode">{{ u.code }}</div>
-              <div class="u-name">{{ u.name }}</div>
+    <!-- 7-day attendance trend -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3><i class="fas fa-calendar-check" style="color:#10b981"></i> 7-Day Attendance</h3>
+        <span class="csub">My units · last 7 days</span>
+      </div>
+      <div class="chart-body">
+        <canvas id="tcTrend" style="max-height:195px"></canvas>
+      </div>
+    </div>
+
+    <!-- Attendance rate per unit (progress bars) -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3><i class="fas fa-users" style="color:#3b82f6"></i> Attendance by Unit</h3>
+        <span class="csub">Presence rate</span>
+      </div>
+      <div class="chart-body" style="padding:14px 16px 16px">
+        {% set att_lbls  = att_unit_labels  | from_json if att_unit_labels  else [] %}
+        {% set att_pres  = att_unit_present | from_json if att_unit_present else [] %}
+        {% set att_abs   = att_unit_absent  | from_json if att_unit_absent  else [] %}
+        {% if att_lbls %}
+          {% for i in range(att_lbls|length) %}
+          {% set tot = (att_pres[i]|int) + (att_abs[i]|int) %}
+          {% set pct = ((att_pres[i]|int / tot * 100)|round|int) if tot > 0 else 0 %}
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <span style="font-size:12px;font-weight:600;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px" title="{{ att_lbls[i] }}">{{ att_lbls[i] }}</span>
+              <span style="font-size:11px;font-weight:700;color:#6b7280;flex-shrink:0;margin-left:6px">{{ pct }}%</span>
+            </div>
+            <div style="height:7px;background:#f3f4f6;border-radius:999px;overflow:hidden">
+              <div style="height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:999px;width:{{ pct }}%"></div>
             </div>
           </div>
           {% endfor %}
-        </div>
+        {% else %}
+          <div style="text-align:center;padding:36px 0;color:#9ca3af;font-size:13px">
+            <i class="fas fa-calendar-times" style="font-size:28px;display:block;margin-bottom:10px;opacity:.4"></i>
+            No attendance data yet
+          </div>
+        {% endif %}
       </div>
-    </aside>
-    {% endif %}
+    </div>
 
   </div>
+
+  <!-- Row 2: Assessments per unit grouped bar (full width) -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3><i class="fas fa-layer-group" style="color:#8b5cf6"></i> Assessments per Unit</h3>
+        <span class="csub">Pending · Approved · Returned</span>
+      </div>
+      <div class="chart-body">
+        <canvas id="tcAssUnit" style="max-height:220px"></canvas>
+      </div>
+    </div>
+
+    <!-- Approval rate summary card -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3><i class="fas fa-chart-pie" style="color:#f59e0b"></i> Approval Rate</h3>
+        <span class="csub">This trainer</span>
+      </div>
+      <div class="chart-body">
+        {% set total = stats.total or 0 %}
+        {% set approved = stats.approved or 0 %}
+        {% set pct = ((approved / total * 100)|round|int) if total > 0 else 0 %}
+        <div style="text-align:center;padding:12px 0 8px">
+          <div style="font-size:52px;font-weight:900;color:#111827;line-height:1;font-family:'Poppins',sans-serif">{{ pct }}<span style="font-size:24px;color:#9ca3af">%</span></div>
+          <div style="font-size:12px;color:#6b7280;font-weight:600;margin-top:6px;text-transform:uppercase;letter-spacing:.06em">Approval Rate</div>
+          <div style="background:#f3f4f6;border-radius:999px;height:10px;overflow:hidden;margin:14px 0 12px">
+            <div style="background:linear-gradient(90deg,#10b981,#34d399);height:100%;border-radius:999px;width:{{ pct }}%;transition:width .8s"></div>
+          </div>
+        </div>
+        <div class="amini-row">
+          <div class="amini"><strong style="color:#f59e0b">{{ stats.pending or 0 }}</strong><span>Pending</span></div>
+          <div class="amini"><strong style="color:#10b981">{{ stats.approved or 0 }}</strong><span>Approved</span></div>
+          <div class="amini"><strong style="color:#ef4444">{{ stats.rejected or 0 }}</strong><span>Returned</span></div>
+          <div class="amini"><strong>{{ total }}</strong><span>Total</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- ═══════════════ END ANALYTICS ═══════════════ -->
+
+  <!-- Inline Unread Notifications -->
+  {% if unread_notifications %}
+  <div class="bg-white rounded-xl shadow-sm mb-8 border border-purple-100">
+    <div class="px-6 py-4 border-b border-purple-50 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-gray-900">
+        <i class="fas fa-bell text-purple-600 mr-2"></i>New Notifications
+        <span class="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full ml-2">{{ unread_notifications|length }}</span>
+      </h2>
+      <form action="/notifications/mark-all-read" method="post" style="display:inline">
+        <button type="submit" class="text-purple-600 hover:text-purple-700 text-sm font-semibold">
+          Mark all read <i class="fas fa-check-double ml-1"></i>
+        </button>
+      </form>
+    </div>
+    <ul class="divide-y divide-gray-50">
+      {% for n in unread_notifications %}
+      {% set icon_map = {'info':'info-circle','success':'check-circle','warning':'exclamation-triangle','error':'exclamation-circle'} %}
+      {% set color_map = {'info':'blue','success':'green','warning':'yellow','error':'red'} %}
+      {% set c = color_map.get(n.type, 'blue') %}
+      <li class="px-6 py-4 flex items-start gap-4 hover:bg-purple-50 transition">
+        <div class="w-9 h-9 rounded-full bg-{{ c }}-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <i class="fas fa-{{ icon_map.get(n.type, 'info-circle') }} text-{{ c }}-600 text-sm"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-gray-900">{{ n.title }}</p>
+          <p class="text-xs text-gray-500 mt-0.5">{{ n.message }}</p>
+        </div>
+        {% if n.action_url %}
+        <a href="{{ n.action_url }}" class="text-purple-600 hover:text-purple-800 text-xs font-semibold flex-shrink-0 mt-1">
+          View <i class="fas fa-arrow-right ml-0.5"></i>
+        </a>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="px-6 py-3 border-t border-gray-50 text-right">
+      <a href="/notifications" class="text-purple-600 hover:text-purple-700 text-sm font-semibold">
+        View all notifications <i class="fas fa-arrow-right ml-1"></i>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Pending Assessments Table -->
+  <div class="bg-white rounded-xl shadow-sm mb-8 border border-gray-100">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-gray-900">
+        <i class="fas fa-clock text-orange-600 mr-2"></i>Pending Assessments
+        {% if pending_assessments %}
+        <span class="inline-block bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full ml-2">{{ pending_assessments|length }}</span>
+        {% endif %}
+      </h2>
+      <a href="/trainer/assessments" class="text-purple-600 hover:text-purple-700 text-sm font-semibold">
+        View All <i class="fas fa-arrow-right ml-1"></i>
+      </a>
+    </div>
+    {% if pending_assessments %}
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Unit</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Uploaded</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for a in pending_assessments %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-6 py-4">
+              <div>
+                <p class="text-sm font-medium text-gray-900">{{ a.get('user_profiles',{}).get('full_name','—') }}</p>
+                <p class="text-xs text-gray-500">{{ a.get('user_profiles',{}).get('admission_no','') }}</p>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <span class="text-sm text-gray-900">{{ a.get('units',{}).get('name','—') }}</span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="text-sm text-gray-900">{{ a.get('classes',{}).get('name','—') }}</span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">{{ a.get('assessment_type','—') }}</span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="text-sm text-gray-600">{{ a.get('uploaded_at','—')[:10] if a.get('uploaded_at') else '—' }}</span>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <a href="/trainer/assessment/{{ a.id }}/review"
+                 class="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-purple-700 transition inline-flex items-center gap-1">
+                <i class="fas fa-eye"></i> Review
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-12 text-center">
+      <i class="fas fa-clipboard-check text-gray-300 text-5xl mb-4 block"></i>
+      <p class="text-gray-500">No pending assessments. Great job!</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- My Assigned Units -->
+  {% if units_list %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-lg font-bold text-gray-900">
+        <i class="fas fa-book text-purple-600 mr-2"></i>My Assigned Units
+        <span class="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full ml-2">{{ units_list|length }}</span>
+      </h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Code</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for u in units_list %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-6 py-4">
+              <span class="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded">{{ u.code }}</span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="text-sm text-gray-900">{{ u.name }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 
 <script>
-(function () {
-  var now = new Date();
-  var h = now.getHours();
-  var greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  var el = document.getElementById('greeting');
-  if (el) el.textContent = greet;
+(function(){
+  const ease = 'easeInOutQuart';
+  const grid = 'rgba(0,0,0,0.04)';
 
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var dayEl = document.getElementById('todayDay');
-  var monEl = document.getElementById('todayMon');
-  if (dayEl) dayEl.textContent = now.getDate();
-  if (monEl) monEl.textContent = months[now.getMonth()] + ' ' + now.getFullYear();
+  /* ── Assessment status donut ── */
+  (function(){
+    var ctx = document.getElementById('tcAssess'); if(!ctx) return;
+    new Chart(ctx, {type:'doughnut',
+      data:{labels:['Pending','Approved','Returned'],
+            datasets:[{data:[{{ stats.pending or 0 }},{{ stats.approved or 0 }},{{ stats.rejected or 0 }}],
+              backgroundColor:['#f59e0b','#10b981','#ef4444'],
+              borderWidth:3, borderColor:'#fff', hoverBorderWidth:4}]},
+      options:{cutout:'72%', plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw}}},
+        animation:{duration:800,easing:ease}}});
+  })();
+
+  /* ── 7-day attendance trend ── */
+  (function(){
+    var ctx = document.getElementById('tcTrend'); if(!ctx) return;
+    new Chart(ctx, {type:'line',
+      data:{labels:{{ trend_labels|safe }},
+            datasets:[
+              {label:'Present', data:{{ trend_present|safe }},
+               borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.10)',
+               fill:true, tension:.4, pointBackgroundColor:'#10b981', pointRadius:4, borderWidth:2.5},
+              {label:'Absent', data:{{ trend_absent|safe }},
+               borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.07)',
+               fill:true, tension:.4, pointBackgroundColor:'#ef4444', pointRadius:4, borderWidth:2.5}
+            ]},
+      options:{responsive:true, maintainAspectRatio:true,
+        plugins:{legend:{position:'top',labels:{font:{size:11},usePointStyle:true}}},
+        scales:{x:{grid:{color:grid},ticks:{font:{size:10}}},
+                y:{grid:{color:grid},beginAtZero:true,ticks:{stepSize:1,font:{size:10}}}},
+        animation:{duration:900,easing:ease}}});
+  })();
+
+  /* ── Assessments per unit grouped bar ── */
+  (function(){
+    var ctx = document.getElementById('tcAssUnit'); if(!ctx) return;
+    new Chart(ctx, {type:'bar',
+      data:{labels:{{ assess_unit_labels|safe }},
+            datasets:[
+              {label:'Pending',  data:{{ assess_unit_pending|safe }},  backgroundColor:'rgba(245,158,11,.80)', borderColor:'#f59e0b', borderWidth:1.5, borderRadius:5},
+              {label:'Approved', data:{{ assess_unit_approved|safe }}, backgroundColor:'rgba(16,185,129,.80)', borderColor:'#10b981', borderWidth:1.5, borderRadius:5},
+              {label:'Returned', data:{{ assess_unit_rejected|safe }}, backgroundColor:'rgba(239,68,68,.75)',  borderColor:'#ef4444', borderWidth:1.5, borderRadius:5}
+            ]},
+      options:{responsive:true, maintainAspectRatio:true,
+        plugins:{legend:{position:'top',labels:{font:{size:11},usePointStyle:true}},
+          tooltip:{mode:'index',intersect:false}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:11}}},
+                y:{grid:{color:grid},beginAtZero:true,ticks:{font:{size:11}}}},
+        animation:{duration:900,easing:ease}}});
+  })();
+
 })();
 </script>
 {% endblock %}

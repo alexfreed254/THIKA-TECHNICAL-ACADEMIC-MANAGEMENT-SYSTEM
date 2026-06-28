@@ -13,9 +13,10 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import (trainer_required, write_audit_log, current_user)
 from db import get_service_client
 from notifications import get_user_notifications
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import re
 import os
+import json
 
 trainer_bp = Blueprint("trainer", __name__)
 
@@ -163,42 +164,95 @@ def dashboard():
     user = current_user()
     stats = {}
     
+    # Analytics defaults
+    att_unit_labels = att_unit_present = att_unit_absent = []
+    assess_unit_labels = assess_unit_pending = assess_unit_approved = assess_unit_rejected = []
+    trend_labels = trend_present = trend_absent = []
+    pending_assessments = []
+    units_list = []
+
     try:
         assigned_unit_ids = _trainer_assigned_unit_ids(db)
 
-        # Assessment stats
-        q = db.table("assessments").select("status")
+        # ── Assessment stats ───────────────────────────────────────────────────
         if assigned_unit_ids:
-            q = q.in_("unit_id", assigned_unit_ids)
-        elif user.get("role") == "trainer":
-            # Trainer with no units assigned — show nothing
-            q = q.eq("unit_id", "none")
+            all_a = (db.table("assessments").select("status")
+                     .in_("unit_id", assigned_unit_ids).execute().data or [])
+        else:
+            all_a = []  # No units assigned — nothing to show (avoids UUID "none" error)
 
-        all_a = q.execute().data or []
-        stats["total"] = len(all_a)
-        stats["pending"] = sum(1 for a in all_a if a["status"] == "pending")
+        stats["total"]    = len(all_a)
+        stats["pending"]  = sum(1 for a in all_a if a["status"] == "pending")
         stats["approved"] = sum(1 for a in all_a if a["status"] == "approved")
         stats["rejected"] = sum(1 for a in all_a if a["status"] == "rejected")
 
-        # Pending assessments
-        q2 = (db.table("assessments")
-              .select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no, mobile_number), units(name), classes(name)")
-              .eq("status", "pending")
-              .order("uploaded_at", desc=True)
-              .limit(15))
+        # ── Pending assessments (for table) ───────────────────────────────────
         if assigned_unit_ids:
-            q2 = q2.in_("unit_id", assigned_unit_ids)
-        pending_assessments = q2.execute().data or []
+            pending_assessments = (db.table("assessments")
+                .select("*, user_profiles!assessments_student_id_fkey(full_name, admission_no, mobile_number), units(name), classes(name)")
+                .eq("status", "pending")
+                .in_("unit_id", assigned_unit_ids)
+                .order("uploaded_at", desc=True)
+                .limit(15).execute().data or [])
 
-        # Get assigned units
-        units_list = []
+        # ── Assigned units list ────────────────────────────────────────────────
         if assigned_unit_ids:
-            units_list = db.table("units").select("*").in_("id", assigned_unit_ids).order("name").execute().data or []
+            units_list = (db.table("units").select("*")
+                          .in_("id", assigned_unit_ids).order("name").execute().data or [])
+
+        # ── Analytics: Attendance per unit ─────────────────────────────────────
+        if assigned_unit_ids:
+            att_rows = (db.table("attendance")
+                        .select("status, units!inner(name)")
+                        .in_("unit_id", assigned_unit_ids)
+                        .execute().data or [])
+            att_map = {}
+            for row in att_rows:
+                uname = (row.get("units") or {}).get("name", "Unknown")
+                b = att_map.setdefault(uname, {"present": 0, "absent": 0})
+                if row.get("status") == "present":
+                    b["present"] += 1
+                else:
+                    b["absent"] += 1
+            att_unit_labels   = list(att_map.keys())
+            att_unit_present  = [att_map[u]["present"] for u in att_unit_labels]
+            att_unit_absent   = [att_map[u]["absent"]  for u in att_unit_labels]
+
+        # ── Analytics: 7-day attendance trend ─────────────────────────────────
+        for i in range(6, -1, -1):
+            day = (date.today() - timedelta(days=i)).isoformat()
+            trend_labels.append(day[5:])
+            if assigned_unit_ids:
+                day_rows = (db.table("attendance")
+                            .select("status")
+                            .in_("unit_id", assigned_unit_ids)
+                            .eq("attendance_date", day)
+                            .execute().data or [])
+                trend_present.append(sum(1 for r in day_rows if r.get("status") == "present"))
+                trend_absent.append(sum(1 for r in day_rows if r.get("status") != "present"))
+            else:
+                trend_present.append(0)
+                trend_absent.append(0)
+
+        # ── Analytics: Assessments per unit breakdown ──────────────────────────
+        if assigned_unit_ids:
+            a_rows = (db.table("assessments")
+                      .select("status, units!inner(name)")
+                      .in_("unit_id", assigned_unit_ids)
+                      .execute().data or [])
+            a_map = {}
+            for row in a_rows:
+                uname = (row.get("units") or {}).get("name", "Unknown")
+                b = a_map.setdefault(uname, {"pending": 0, "approved": 0, "rejected": 0})
+                s = row.get("status", "pending")
+                b[s] = b.get(s, 0) + 1
+            assess_unit_labels   = list(a_map.keys())
+            assess_unit_pending  = [a_map[u]["pending"]  for u in assess_unit_labels]
+            assess_unit_approved = [a_map[u]["approved"] for u in assess_unit_labels]
+            assess_unit_rejected = [a_map[u]["rejected"] for u in assess_unit_labels]
 
     except Exception as e:
         flash(f"Error loading dashboard: {e}", "danger")
-        pending_assessments = []
-        units_list = []
 
     unread_notifications = get_user_notifications(user["id"], unread_only=True, limit=5)
 
@@ -206,7 +260,18 @@ def dashboard():
                           stats=stats,
                           pending_assessments=pending_assessments,
                           units_list=units_list,
-                          unread_notifications=unread_notifications)
+                          unread_notifications=unread_notifications,
+                          # analytics
+                          att_unit_labels=json.dumps(att_unit_labels),
+                          att_unit_present=json.dumps(att_unit_present),
+                          att_unit_absent=json.dumps(att_unit_absent),
+                          trend_labels=json.dumps(trend_labels),
+                          trend_present=json.dumps(trend_present),
+                          trend_absent=json.dumps(trend_absent),
+                          assess_unit_labels=json.dumps(assess_unit_labels),
+                          assess_unit_pending=json.dumps(assess_unit_pending),
+                          assess_unit_approved=json.dumps(assess_unit_approved),
+                          assess_unit_rejected=json.dumps(assess_unit_rejected))
 
 
 # ── Attendance Capture ─────────────────────────────────────────────────────────
