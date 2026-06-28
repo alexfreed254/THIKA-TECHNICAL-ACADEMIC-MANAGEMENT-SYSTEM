@@ -14,6 +14,8 @@ from auth_utils import super_admin_required, write_audit_log, current_user
 from db import get_service_client
 from werkzeug.security import generate_password_hash
 from notifications import create_notification
+from datetime import date, timedelta
+import json
 
 super_admin_bp = Blueprint("super_admin", __name__)
 
@@ -153,8 +155,10 @@ def dashboard():
             cc = db.table("classes").select("id", count="exact").eq("department_id", did).execute().count or 0
             sc = db.table("user_profiles").select("id", count="exact").eq("department_id", did).eq("role", "student").execute().count or 0
             tc = db.table("user_profiles").select("id", count="exact").eq("department_id", did).eq("role", "trainer").execute().count or 0
+            uc = db.table("units").select("id", count="exact").eq("department_id", did).execute().count or 0
             dept_stats.append({"id": did, "name": d["name"],
-                               "class_count": cc, "student_count": sc, "trainer_count": tc})
+                               "class_count": cc, "student_count": sc,
+                               "trainer_count": tc, "unit_count": uc})
 
         # ── Recent audit logs ─────────────────────────────────────────────────
         recent_logs = (
@@ -163,8 +167,58 @@ def dashboard():
             .order("created_at", desc=True).limit(10).execute().data or []
         )
 
+        # ── Analytics: 7-day attendance trend (system-wide) ───────────────────
+        trend_labels, trend_present, trend_absent = [], [], []
+        for i in range(6, -1, -1):
+            day = (date.today() - timedelta(days=i)).isoformat()
+            trend_labels.append(day[5:])
+            day_rows = db.table("attendance").select("status").eq("attendance_date", day).execute().data or []
+            trend_present.append(sum(1 for r in day_rows if r.get("status") == "present"))
+            trend_absent.append(sum(1 for r in day_rows if r.get("status") != "present"))
+
+        # ── Analytics: Industrial attachments system-wide ─────────────────────
+        ia_rows = db.table("industrial_attachments").select("status").execute().data or []
+        ia_stats = {"pending": 0, "approved": 0, "active": 0, "completed": 0, "rejected": 0, "terminated": 0}
+        for r in ia_rows:
+            s = r.get("status", "pending")
+            ia_stats[s] = ia_stats.get(s, 0) + 1
+
+        # ── Analytics: Course applications system-wide ────────────────────────
+        ca_rows = db.table("course_applications").select("status").execute().data or []
+        ca_stats = {"pending": 0, "approved": 0, "rejected": 0}
+        for r in ca_rows:
+            s = r.get("status", "pending")
+            ca_stats[s] = ca_stats.get(s, 0) + 1
+
+        # ── Analytics: Assessment types breakdown ─────────────────────────────
+        typed_rows = db.table("assessments").select("assessment_type").execute().data or []
+        atype_map = {}
+        for r in typed_rows:
+            t = r.get("assessment_type") or "Other"
+            atype_map[t] = atype_map.get(t, 0) + 1
+        atype_labels = list(atype_map.keys())
+        atype_counts = [atype_map[t] for t in atype_labels]
+
+        # ── Analytics: Students per department (for chart) ────────────────────
+        dept_chart_labels  = [d["name"] for d in dept_stats]
+        dept_chart_students = [d["student_count"] for d in dept_stats]
+        dept_chart_trainers = [d["trainer_count"] for d in dept_stats]
+        dept_chart_classes  = [d["class_count"] for d in dept_stats]
+
+        # ── Analytics: User role breakdown ────────────────────────────────────
+        role_map = {}
+        for u in all_users:
+            r = u.get("role", "other")
+            role_map[r] = role_map.get(r, 0) + 1
+
     except Exception as e:
         flash(f'Error loading dashboard: {e}', 'danger')
+        trend_labels = trend_present = trend_absent = []
+        ia_stats = {"pending": 0, "approved": 0, "active": 0, "completed": 0, "rejected": 0, "terminated": 0}
+        ca_stats = {"pending": 0, "approved": 0, "rejected": 0}
+        atype_labels = atype_counts = []
+        dept_chart_labels = dept_chart_students = dept_chart_trainers = dept_chart_classes = []
+        role_map = {}
 
     return render_template("super_admin/welcome.html",
                            stats=stats,
@@ -177,7 +231,20 @@ def dashboard():
                            recent_assessments=recent_assessments,
                            recent_clearances=recent_clearances,
                            recent_logs=recent_logs,
-                           dept_stats=dept_stats)
+                           dept_stats=dept_stats,
+                           # analytics (JSON-safe)
+                           trend_labels=json.dumps(trend_labels),
+                           trend_present=json.dumps(trend_present),
+                           trend_absent=json.dumps(trend_absent),
+                           ia_stats=ia_stats,
+                           ca_stats=ca_stats,
+                           atype_labels=json.dumps(atype_labels),
+                           atype_counts=json.dumps(atype_counts),
+                           dept_chart_labels=json.dumps(dept_chart_labels),
+                           dept_chart_students=json.dumps(dept_chart_students),
+                           dept_chart_trainers=json.dumps(dept_chart_trainers),
+                           dept_chart_classes=json.dumps(dept_chart_classes),
+                           role_map=role_map)
 
 
 # ── Departments ───────────────────────────────────────────────────────────────
