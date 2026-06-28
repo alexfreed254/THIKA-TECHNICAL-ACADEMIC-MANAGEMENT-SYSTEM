@@ -3767,3 +3767,110 @@ def fingerprint_cancel_enroll():
         active_enrollment.clear()
     write_audit_log("fingerprint_enroll_cancel")
     return jsonify({"success": True})
+
+
+# ── Industrial Attachment Marks ───────────────────────────────────────────────
+
+from routes.attachment_helpers import (
+    get_grading_config, compute_weighted_grade, score_to_cdacc
+)
+
+@dept_admin_bp.route("/attachment-marks")
+@dept_admin_required
+def attachment_marks():
+    db      = get_service_client()
+    dept_id = _dept_id()
+
+    student_ids = _dept_student_ids(db, dept_id)
+    attachments = []
+    grades_map  = {}
+    config      = get_grading_config(db, dept_id)
+
+    if student_ids:
+        raw = (db.table("industrial_attachments")
+                 .select("id, student_id, start_date, end_date, status, "
+                         "companies(name), "
+                         "student:user_profiles!industrial_attachments_student_id_fkey"
+                         "(full_name, admission_no)")
+                 .in_("student_id", student_ids)
+                 .order("created_at", desc=True)
+                 .execute().data or [])
+
+        att_ids = [a["id"] for a in raw]
+        if att_ids:
+            grade_rows = (db.table("attachment_grades")
+                            .select("*")
+                            .in_("attachment_id", att_ids)
+                            .execute().data or [])
+            grades_map = {g["attachment_id"]: g for g in grade_rows}
+
+        for a in raw:
+            a["_grade"] = grades_map.get(a["id"])
+        attachments = raw
+
+    # stats
+    total   = len(attachments)
+    graded  = sum(1 for a in attachments if a.get("_grade"))
+    pending = total - graded
+    scores  = [float(a["_grade"]["weighted_total"]) for a in attachments
+               if a.get("_grade") and a["_grade"].get("weighted_total") is not None]
+    avg     = round(sum(scores) / len(scores), 1) if scores else 0
+
+    return render_template(
+        "dept_admin/attachment_marks.html",
+        attachments=attachments,
+        config=config,
+        stats={"total": total, "graded": graded, "pending": pending, "avg": avg},
+    )
+
+
+@dept_admin_bp.route("/attachment-marks/<att_id>/save", methods=["POST"])
+@dept_admin_required
+def save_attachment_marks(att_id):
+    db      = get_service_client()
+    dept_id = _dept_id()
+    user    = current_user()
+
+    # Verify this attachment belongs to a dept student
+    student_ids = _dept_student_ids(db, dept_id)
+    att_row = (db.table("industrial_attachments")
+                 .select("id, student_id")
+                 .eq("id", att_id)
+                 .limit(1)
+                 .execute().data or [])
+    if not att_row or att_row[0].get("student_id") not in student_ids:
+        return jsonify({"ok": False, "error": "Not authorised"}), 403
+
+    def _f(name):
+        try:    return float(request.form.get(name) or 0)
+        except: return 0.0
+
+    scores = {
+        "score_gps_attendance":   _f("score_gps_attendance"),
+        "score_logbook":          _f("score_logbook"),
+        "score_mentor_eval":      _f("score_mentor_eval"),
+        "score_trainer_assessment":_f("score_trainer_assessment"),
+        "score_final_report":     _f("score_final_report"),
+    }
+    config  = get_grading_config(db, dept_id)
+    weights = {k: v for k, v in config.items() if k.startswith("weight_")}
+    total   = compute_weighted_grade(scores, weights)
+    grade   = score_to_cdacc(total)
+
+    payload = {**scores, "weighted_total": total, "final_grade": grade,
+               "graded_by": user["id"], "graded_at": datetime.utcnow().isoformat()}
+
+    existing = (db.table("attachment_grades")
+                  .select("id")
+                  .eq("attachment_id", att_id)
+                  .limit(1)
+                  .execute().data or [])
+    if existing:
+        db.table("attachment_grades").update(payload).eq("attachment_id", att_id).execute()
+    else:
+        payload["attachment_id"] = att_id
+        db.table("attachment_grades").insert(payload).execute()
+
+    write_audit_log("save_attachment_marks", target=f"attachment:{att_id}",
+                    detail={"grade": grade, "total": total})
+    return jsonify({"ok": True, "total": total, "grade": grade})

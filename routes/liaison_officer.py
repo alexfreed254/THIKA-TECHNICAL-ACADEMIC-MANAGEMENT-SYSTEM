@@ -717,3 +717,92 @@ def grade_attachment(att_id):
         existing_grade=existing_grade,
         mentor_criteria=MENTOR_CRITERIA,
     )
+
+
+# ── Industrial Attachment Marks (list + save) ─────────────────────────────────
+
+from flask import jsonify as _jsonify
+
+@liaison_officer_bp.route("/attachment-marks")
+@login_required
+@liaison_officer_required
+def attachment_marks():
+    db     = get_service_client()
+    config = get_grading_config(db)
+
+    raw = (db.table("industrial_attachments")
+             .select("id, student_id, start_date, end_date, status, "
+                     "companies(name), "
+                     "student:user_profiles!industrial_attachments_student_id_fkey"
+                     "(full_name, admission_no)")
+             .order("created_at", desc=True)
+             .limit(500)
+             .execute().data or [])
+
+    att_ids = [a["id"] for a in raw]
+    grades_map = {}
+    if att_ids:
+        grade_rows = (db.table("attachment_grades")
+                        .select("*")
+                        .in_("attachment_id", att_ids)
+                        .execute().data or [])
+        grades_map = {g["attachment_id"]: g for g in grade_rows}
+
+    for a in raw:
+        a["_grade"] = grades_map.get(a["id"])
+
+    total   = len(raw)
+    graded  = sum(1 for a in raw if a.get("_grade"))
+    pending = total - graded
+    scores  = [float(a["_grade"]["weighted_total"]) for a in raw
+               if a.get("_grade") and a["_grade"].get("weighted_total") is not None]
+    avg     = round(sum(scores) / len(scores), 1) if scores else 0
+
+    return render_template(
+        "liaison_officer/attachment_marks.html",
+        attachments=raw,
+        config=config,
+        stats={"total": total, "graded": graded, "pending": pending, "avg": avg},
+    )
+
+
+@liaison_officer_bp.route("/attachment-marks/<att_id>/save", methods=["POST"])
+@login_required
+@liaison_officer_required
+def save_attachment_marks(att_id):
+    db   = get_service_client()
+    user = current_user()
+
+    def _f(name):
+        try:    return float(request.form.get(name) or 0)
+        except: return 0.0
+
+    scores = {
+        "score_gps_attendance":    _f("score_gps_attendance"),
+        "score_logbook":           _f("score_logbook"),
+        "score_mentor_eval":       _f("score_mentor_eval"),
+        "score_trainer_assessment": _f("score_trainer_assessment"),
+        "score_final_report":      _f("score_final_report"),
+    }
+    config  = get_grading_config(db)
+    weights = {k: v for k, v in config.items() if k.startswith("weight_")}
+    total   = compute_weighted_grade(scores, weights)
+    grade   = score_to_cdacc(total)
+
+    payload = {**scores, "weighted_total": total, "final_grade": grade,
+               "graded_by": user["id"], "graded_at": datetime.utcnow().isoformat()}
+
+    existing = (db.table("attachment_grades")
+                  .select("id")
+                  .eq("attachment_id", att_id)
+                  .limit(1)
+                  .execute().data or [])
+    if existing:
+        db.table("attachment_grades").update(payload).eq("attachment_id", att_id).execute()
+    else:
+        payload["attachment_id"] = att_id
+        db.table("attachment_grades").insert(payload).execute()
+
+    write_audit_log("save_attachment_marks", target=f"attachment:{att_id}",
+                    detail={"grade": grade, "total": total})
+    return _jsonify({"ok": True, "total": total, "grade": grade})
