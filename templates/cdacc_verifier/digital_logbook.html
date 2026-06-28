@@ -6,6 +6,33 @@
 {% block extra_style %}
 .fi{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;background:#f9fafb;color:#111827;outline:none;transition:border-color .18s}
 .fi:focus{border-color:#1d4ed8;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+
+/* Entry card */
+.log-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:box-shadow .18s}
+.log-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.log-card-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;border-bottom:1px solid #f1f5f9;background:#fafbfc}
+.log-meta-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.log-idx{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.log-stu-name{font-weight:800;font-size:13px;color:#0f172a}
+.log-stu-adm{font-size:11px;color:#64748b;font-family:monospace}
+.log-dept{font-size:10.5px;font-weight:700;background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;padding:2px 8px;border-radius:9999px}
+.log-date-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 16px 8px;background:#f8fafc;border-bottom:1px solid #f1f5f9}
+.log-meta-chip{display:flex;align-items:center;gap:5px;font-size:12px;color:#475569;font-weight:600}
+.log-meta-chip i{color:#94a3b8;font-size:11px}
+.log-card-body{padding:14px 16px}
+.log-field-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:4px}
+.log-field-text{font-size:13px;color:#1e293b;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.log-section{margin-bottom:12px}
+.log-section:last-child{margin-bottom:0}
+.log-divider{height:1px;background:#f1f5f9;margin:10px 0}
+.status-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:700;border:1px solid transparent}
+.sp-approved{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.sp-pending{background:#fef9c3;color:#a16207;border-color:#fde68a}
+.sp-rejected{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+.hrs-badge{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700}
+
+/* Search highlight */
+mark{background:#fef9c3;padding:0 1px;border-radius:2px}
 {% endblock %}
 
 {% block content %}
@@ -16,10 +43,11 @@
     <h1 class="text-xl font-extrabold flex items-center gap-2 mb-1">
       <i class="fas fa-book-open text-yellow-400"></i> Digital Logbook Entries
     </h1>
-    <p class="text-blue-200 text-sm">All daily logbook entries submitted by trainees during industrial attachment.</p>
+    <p class="text-blue-200 text-sm">All daily logbook entries submitted by trainees — full task descriptions shown.</p>
     {% set approved_count = entries|selectattr('mentor_approval_status','equalto','approved')|list|length %}
     {% set pending_count  = entries|selectattr('mentor_approval_status','equalto','pending')|list|length %}
-    <div class="grid grid-cols-4 gap-3 mt-4">
+    {% set rejected_count = entries|selectattr('mentor_approval_status','equalto','rejected')|list|length %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
       <div class="bg-white/10 rounded-xl p-3 border border-white/15">
         <div class="text-2xl font-black">{{ entries|length }}</div>
         <div class="text-xs text-blue-200 font-bold uppercase mt-1">Total Entries</div>
@@ -44,20 +72,20 @@
   <!-- Filters -->
   <form method="GET" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-end">
     <div class="flex-1 min-w-32">
-      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Admission No</label>
-      <input class="fi" type="text" name="admission_no" value="{{ adm_filter }}" placeholder="Search…">
+      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Admission No / Name</label>
+      <input class="fi" type="text" name="admission_no" value="{{ adm_filter }}" placeholder="Search trainee…">
     </div>
     <div class="flex-1 min-w-40">
       <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Department</label>
       <select class="fi" name="dept_id">
-        <option value="">— All —</option>
+        <option value="">— All Departments —</option>
         {% for d in departments %}
         <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="w-40">
-      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Mentor Status</label>
       <select class="fi" name="status">
         <option value="">All Status</option>
         <option value="pending"  {% if status == 'pending' %}selected{% endif %}>Pending</option>
@@ -68,73 +96,132 @@
     <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition">
       <i class="fas fa-filter mr-1"></i> Filter
     </button>
-    <a href="/cdacc-verifier/digital-logbook" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-bold transition">
+    <a href="/cdacc-verifier/digital-logbook"
+       class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-bold transition">
       <i class="fas fa-times"></i>
     </a>
   </form>
 
-  <!-- Table -->
-  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-    <div class="px-6 py-3 border-b border-gray-100 flex items-center" style="background:linear-gradient(135deg,#0f2c54,#1a3d6e)">
-      <i class="fas fa-book-open text-yellow-400 mr-2"></i>
-      <span class="text-white font-bold text-sm">Logbook Register</span>
-      <span class="ml-auto text-xs text-blue-200 bg-white/10 px-3 py-1 rounded-full">{{ entries|length }} entries</span>
-    </div>
+  <!-- Live search bar -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 mb-5 flex items-center gap-3">
+    <i class="fas fa-search text-gray-400"></i>
+    <input type="text" id="liveSearch" placeholder="Search within results — tasks, skills, achievements…"
+           class="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
+           oninput="liveFilter(this.value)">
+    <span id="liveCount" class="text-xs text-gray-400 font-semibold whitespace-nowrap">{{ entries|length }} entries</span>
+  </div>
+
+  <!-- Entry cards -->
+  <div id="entryList">
     {% if entries %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">#</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Trainee</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Dept</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Date</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Time Slot</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Tasks Performed</th>
-            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Hrs</th>
-            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-50">
-          {% for e in entries %}
-          {% set stu  = e.get('student') or {} %}
-          {% set dept = (stu.get('departments') or {}) %}
-          {% set st   = (e.get('mentor_approval_status') or 'pending') %}
-          <tr class="hover:bg-blue-50/30 transition">
-            <td class="px-4 py-3 text-xs text-gray-400">{{ loop.index }}</td>
-            <td class="px-4 py-3">
-              <a href="/cdacc-verifier/trainees/{{ stu.get('id', e.student_id if e.get('student_id') else '') }}"
-                 class="font-bold text-blue-700 hover:underline text-sm">{{ stu.get('full_name','—') }}</a>
-              <div class="text-xs text-gray-400 font-mono">{{ stu.get('admission_no','') }}</div>
-            </td>
-            <td class="px-4 py-3">
-              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{{ dept.get('name','—') }}</span>
-            </td>
-            <td class="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{{ e.log_date or '—' }}</td>
-            <td class="px-4 py-3 text-xs text-gray-500">{{ e.entry_time or '—' }}</td>
-            <td class="px-4 py-3">
-              <span class="text-sm text-gray-800">{{ (e.tasks_performed or '')[:90] }}{% if (e.tasks_performed or '')|length > 90 %}…{% endif %}</span>
-            </td>
-            <td class="px-4 py-3 text-center font-bold text-gray-700">{{ e.hours_worked or '—' }}</td>
-            <td class="px-4 py-3 text-center">
-              <span class="px-2 py-0.5 rounded-full text-xs font-bold
-                {{ 'bg-green-100 text-green-700 border border-green-200' if st == 'approved'
-                   else 'bg-red-100 text-red-700 border border-red-200' if st == 'rejected'
-                   else 'bg-yellow-100 text-yellow-700 border border-yellow-200' }}">
-                {{ st|title }}
-              </span>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+      {% for e in entries %}
+      {% set stu  = e.get('student') or {} %}
+      {% set dept = (stu.get('departments') or {}) %}
+      {% set st   = (e.get('mentor_approval_status') or 'pending') %}
+
+      <div class="log-card" data-search="{{ ((stu.get('full_name') or '') ~ ' ' ~ (stu.get('admission_no') or '') ~ ' ' ~ (e.tasks_performed or '') ~ ' ' ~ (e.skills_applied or '') ~ ' ' ~ (e.achievements or ''))|lower }}">
+
+        <!-- Card header: trainee info + status -->
+        <div class="log-card-header">
+          <div class="log-meta-left">
+            <div class="log-idx">{{ loop.index }}</div>
+            <div>
+              <a href="/cdacc-verifier/trainees/{{ stu.get('id','') }}"
+                 class="log-stu-name hover:underline text-blue-800">{{ stu.get('full_name','—') }}</a>
+              <div class="log-stu-adm">{{ stu.get('admission_no','') }}</div>
+            </div>
+            <span class="log-dept">{{ dept.get('name','—') }}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            {% if e.hours_worked %}<span class="hrs-badge"><i class="fas fa-clock mr-1"></i>{{ e.hours_worked }} hrs</span>{% endif %}
+            <span class="status-pill sp-{{ st }}">
+              <i class="fas fa-{{ 'check-circle' if st == 'approved' else 'clock' if st == 'pending' else 'times-circle' }}"></i>
+              {{ st|title }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Date / time slot row -->
+        <div class="log-date-row">
+          <span class="log-meta-chip"><i class="fas fa-calendar-day"></i> {{ e.log_date or '—' }}</span>
+          {% if e.entry_time %}<span class="log-meta-chip"><i class="fas fa-hourglass-half"></i> {{ e.entry_time }}</span>{% endif %}
+        </div>
+
+        <!-- Body: full text fields -->
+        <div class="log-card-body">
+
+          <div class="log-section">
+            <div class="log-field-label"><i class="fas fa-tasks mr-1"></i> Tasks Performed</div>
+            <div class="log-field-text tasks-text">{{ e.tasks_performed or '—' }}</div>
+          </div>
+
+          {% if e.skills_applied %}
+          <div class="log-divider"></div>
+          <div class="log-section">
+            <div class="log-field-label"><i class="fas fa-wrench mr-1"></i> Skills Applied</div>
+            <div class="log-field-text">{{ e.skills_applied }}</div>
+          </div>
+          {% endif %}
+
+          {% if e.achievements %}
+          <div class="log-divider"></div>
+          <div class="log-section">
+            <div class="log-field-label"><i class="fas fa-trophy mr-1"></i> Achievements</div>
+            <div class="log-field-text">{{ e.achievements }}</div>
+          </div>
+          {% endif %}
+
+          {% if e.challenges_encountered %}
+          <div class="log-divider"></div>
+          <div class="log-section">
+            <div class="log-field-label"><i class="fas fa-exclamation-triangle mr-1"></i> Challenges</div>
+            <div class="log-field-text">{{ e.challenges_encountered }}</div>
+          </div>
+          {% endif %}
+
+          {% if e.mentor_comments %}
+          <div class="log-divider"></div>
+          <div class="log-section">
+            <div class="log-field-label" style="color:#15803d"><i class="fas fa-comment-dots mr-1"></i> Mentor Comment</div>
+            <div class="log-field-text" style="color:#166534;background:#f0fdf4;border-radius:8px;padding:8px 12px;border:1px solid #bbf7d0">{{ e.mentor_comments }}</div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+      {% endfor %}
+
+      <div id="noResults" style="display:none" class="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100">
+        <i class="fas fa-search text-4xl block mb-3 text-gray-200"></i>
+        <p class="font-semibold">No entries match your search.</p>
+      </div>
+
     {% else %}
-    <div class="text-center py-16 text-gray-400">
+    <div class="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-100">
       <i class="fas fa-book-open text-5xl block mb-3 text-gray-200"></i>
       <p class="font-semibold">No logbook entries found</p>
+      <p class="text-sm mt-1">Adjust the filters above to broaden your search.</p>
     </div>
     {% endif %}
   </div>
+
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function liveFilter(q) {
+  q = q.toLowerCase().trim();
+  var cards = document.querySelectorAll('#entryList .log-card');
+  var n = 0;
+  cards.forEach(function(c) {
+    var match = !q || c.dataset.search.includes(q);
+    c.style.display = match ? '' : 'none';
+    if (match) n++;
+  });
+  document.getElementById('liveCount').textContent = n + ' entries';
+  var nr = document.getElementById('noResults');
+  if (nr) nr.style.display = (n === 0 && cards.length > 0) ? 'block' : 'none';
+}
+</script>
 {% endblock %}
