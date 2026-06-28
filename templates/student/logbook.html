@@ -134,37 +134,135 @@
 
 /* ── Evidence upload zone ────────────────────── */
 .drop-zone {
-  border: 2px dashed #cbd5e1; 
-  border-radius: 12px; 
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
   padding: 28px 20px;
-  text-align: center; 
-  cursor: pointer; 
+  text-align: center;
+  cursor: pointer;
   transition: all .2s;
   background: #f8fafc;
 }
 .drop-zone:hover, .drop-zone.dragover {
-  border-color: #2563eb; 
+  border-color: #2563eb;
   background: #eff6ff;
 }
 .drop-zone.has-files { border-color: #16a34a; background: #f0fdf4; }
-.drop-zone-icon { font-size: 36px; color: #94a3b8; margin-bottom: 10px; }
+.drop-zone-icon { font-size: 36px; color: #94a3b8; margin-bottom: 10px; transition: color .2s; }
+.drop-zone.has-files .drop-zone-icon { color: #16a34a; }
 .drop-zone-text { font-size: 13.5px; font-weight: 600; color: #475569; }
 .drop-zone-hint { font-size: 11.5px; color: #94a3b8; margin-top: 5px; }
-.file-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; justify-content: center; }
-.file-tag {
-  display: inline-flex; 
-  align-items: center; 
-  gap: 6px;
-  background: #dcfce7; 
-  padding: 4px 11px; 
-  border-radius: 9999px;
-  font-size: 12px; 
-  color: #15803d; 
-  font-weight: 600; 
-  border: 1px solid #bbf7d0;
+.drop-zone-count { display:none; margin-top:8px; font-size:13px; font-weight:700; color:#16a34a; }
+.drop-zone.has-files .drop-zone-count { display:block; }
+.drop-zone.has-files .drop-zone-hint  { display:none; }
+
+/* ── File preview panel ────────────────────────── */
+.ev-preview-panel {
+  display: none;
+  margin-top: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
 }
-.file-tag.video-tag { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
-.file-tag .rm { cursor: pointer; color: #dc2626; font-weight: 900; margin-left: 2px; padding: 0 2px; }
+.ev-preview-panel.visible { display: block; }
+.ev-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+.ev-preview-head .ev-count-badge {
+  background: #0f2c54;
+  color: #fff;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.ev-preview-head .ev-total-size {
+  font-weight: 500;
+  color: #94a3b8;
+  margin-left: 8px;
+}
+.ev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 14px;
+}
+@media(max-width:480px){ .ev-grid { grid-template-columns: repeat(2,1fr); gap:8px; } }
+
+.ev-item {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8fafc;
+  position: relative;
+  transition: box-shadow .2s;
+}
+.ev-item:hover { box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+.ev-item-thumb {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  display: block;
+  background: #e2e8f0;
+}
+.ev-item-placeholder {
+  width: 100%;
+  height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 28px;
+}
+.ev-item-placeholder.vid { background: #f5f3ff; color: #7c3aed; }
+.ev-item-placeholder.doc { background: #fef2f2; color: #dc2626; }
+.ev-item-placeholder.aud { background: #f0fdf4; color: #16a34a; }
+.ev-item-info {
+  padding: 7px 9px 8px;
+}
+.ev-item-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ev-item-size {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.ev-item-rm {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(220,38,38,.9);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+  transition: background .15s, transform .15s;
+}
+.ev-item-rm:hover { background: #b91c1c; transform: scale(1.1); }
 
 /* ── Submit button ───────────────────────────── */
 .btn-submit {
@@ -483,15 +581,30 @@
         <label class="f-label">Evidence (Photos / Videos) <span class="req">*</span>
           <span style="font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px">Upload photos or videos showing your work</span>
         </label>
+
         <div class="drop-zone" id="dropZone" style="position:relative">
-          <!-- Overlay input covers the full zone so any click opens the file picker directly -->
+          <!-- Overlaid input: click anywhere on zone opens file picker directly -->
           <input type="file" id="fileInput" name="evidence" multiple
                  style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"
                  accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/avi,video/webm,application/pdf">
           <div class="drop-zone-icon" style="pointer-events:none"><i class="fas fa-cloud-upload-alt"></i></div>
           <div class="drop-zone-text" style="pointer-events:none">Click to upload or drag &amp; drop files here</div>
           <div class="drop-zone-hint" style="pointer-events:none">Photos (JPG, PNG, WEBP) &bull; Videos (MP4, MOV) &bull; Max 50MB per file</div>
-          <div class="file-tags" id="fileTags" style="position:relative;z-index:3"></div>
+          <div class="drop-zone-count" style="pointer-events:none" id="dzCount"></div>
+        </div>
+
+        <!-- File preview panel — shown after selection -->
+        <div class="ev-preview-panel" id="evPreviewPanel">
+          <div class="ev-preview-head">
+            <span>
+              <i class="fas fa-images" style="color:#2563eb;margin-right:6px"></i>
+              Selected files
+              <span class="ev-count-badge" id="evCountBadge">0</span>
+              <span class="ev-total-size" id="evTotalSize"></span>
+            </span>
+            <span style="color:#94a3b8;font-weight:500;font-size:11px">Click <strong style="color:#dc2626">&times;</strong> to remove a file</span>
+          </div>
+          <div class="ev-grid" id="evGrid"></div>
         </div>
       </div>
 
@@ -644,9 +757,17 @@
   const open  = body.style.display !== 'none';
   body.style.display  = open ? 'none' : 'block';
   if (arrow) arrow.classList.toggle('open', !open);
-}/* ── File drag-drop & tags ───────────────────── */const dropZone  = document.getElementById('dropZone');const fileInput = document.getElementById('fileInput');const fileTags  = document.getElementById('fileTags');let allFiles = [];if (dropZone && fileInput) {
-  // No programmatic click needed — the overlaid input covers the whole zone.
-  // Drag-drop events still needed because drag fires on the outer div, not the input.
+}/* ── File drag-drop & preview ─────────────────── */
+const dropZone     = document.getElementById('dropZone');
+const fileInput    = document.getElementById('fileInput');
+const evPreview    = document.getElementById('evPreviewPanel');
+const evGrid       = document.getElementById('evGrid');
+const evCountBadge = document.getElementById('evCountBadge');
+const evTotalSize  = document.getElementById('evTotalSize');
+const dzCount      = document.getElementById('dzCount');
+let allFiles = [];
+
+if (dropZone && fileInput) {
   dropZone.addEventListener('dragover', e => {
     e.preventDefault();
     dropZone.classList.add('dragover');
@@ -657,59 +778,104 @@
   dropZone.addEventListener('drop', e => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files && e.dataTransfer.files.length) {
-      mergeFiles(e.dataTransfer.files);
-    }
+    if (e.dataTransfer.files && e.dataTransfer.files.length) mergeFiles(e.dataTransfer.files);
   });
   fileInput.addEventListener('change', () => {
     if (fileInput.files && fileInput.files.length) {
       mergeFiles(fileInput.files);
-      // Reset so the same file can be re-selected after removal
       fileInput.value = '';
     }
   });
-}function mergeFiles(incoming) {
+}
+
+function mergeFiles(incoming) {
   Array.from(incoming).forEach(f => {
     if (!allFiles.find(x => x.name === f.name && x.size === f.size)) allFiles.push(f);
   });
-  renderTags();
+  renderPreview();
   syncInput();
-}function removeFile(idx) {
-  allFiles.splice(idx, 1);
-  renderTags();
-  syncInput();
-}function renderTags() {
-  if (!fileTags) return;
-  fileTags.innerHTML = '';
-  allFiles.forEach((f, i) => {
-    const isVideo = f.type.startsWith('video/');
-    const isPdf = f.type === 'application/pdf';
-    let iconClass = 'image';
-    if(isVideo) iconClass = 'video';
-    if(isPdf) iconClass = 'file-pdf';
+}
 
-    const tag = document.createElement('span');
-    tag.className = 'file-tag' + (isVideo ? ' video-tag' : '');
-    
-    // Scoped event handlers instead of global string maps to prevent event bugs
-    tag.innerHTML = `<i class="fas fa-${iconClass}"></i> <span></span> <span class="rm">&times;</span>`;
-    tag.querySelector('span').textContent = f.name.length > 20 ? f.name.slice(0,18)+'…' : f.name;
-    tag.querySelector('.rm').addEventListener('click', (e) => {
-      e.stopPropagation();
-      removeFile(i);
-    });
-    
-    fileTags.appendChild(tag);
+function removeFile(idx) {
+  allFiles.splice(idx, 1);
+  renderPreview();
+  syncInput();
+}
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+function renderPreview() {
+  const hasFiles = allFiles.length > 0;
+  dropZone.classList.toggle('has-files', hasFiles);
+  if (evPreview)    evPreview.classList.toggle('visible', hasFiles);
+  if (!evGrid)      return;
+
+  // Update header stats
+  if (evCountBadge) evCountBadge.textContent = allFiles.length;
+  if (evTotalSize)  evTotalSize.textContent   = '· ' + fmtBytes(allFiles.reduce((s,f)=>s+f.size,0));
+  if (dzCount)      dzCount.textContent        = allFiles.length + ' file' + (allFiles.length!==1?'s':'')+' selected — click to add more';
+
+  evGrid.innerHTML = '';
+
+  allFiles.forEach((f, i) => {
+    const isImage = f.type.startsWith('image/');
+    const isVideo = f.type.startsWith('video/');
+    const isAudio = f.type.startsWith('audio/');
+    const isPdf   = f.type === 'application/pdf';
+
+    const item = document.createElement('div');
+    item.className = 'ev-item';
+
+    // Remove button
+    const rmBtn = document.createElement('button');
+    rmBtn.type = 'button';
+    rmBtn.className = 'ev-item-rm';
+    rmBtn.title = 'Remove';
+    rmBtn.innerHTML = '&times;';
+    rmBtn.addEventListener('click', e => { e.stopPropagation(); removeFile(i); });
+    item.appendChild(rmBtn);
+
+    if (isImage) {
+      // Real image thumbnail via object URL
+      const img = document.createElement('img');
+      img.className = 'ev-item-thumb';
+      img.alt = f.name;
+      img.src = URL.createObjectURL(f);
+      img.onload = () => URL.revokeObjectURL(img.src); // free memory after paint
+      item.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      const cls  = isVideo ? 'vid' : isPdf ? 'doc' : isAudio ? 'aud' : 'doc';
+      const icon = isVideo ? 'fa-play-circle' : isPdf ? 'fa-file-pdf' : isAudio ? 'fa-headphones' : 'fa-file';
+      ph.className = 'ev-item-placeholder ' + cls;
+      ph.innerHTML = `<i class="fas ${icon}" style="font-size:34px"></i><span style="font-size:10px;font-weight:700;opacity:.7">${isVideo?'VIDEO':isPdf?'PDF':isAudio?'AUDIO':'FILE'}</span>`;
+      item.appendChild(ph);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'ev-item-info';
+    info.innerHTML = `<div class="ev-item-name" title="${f.name}">${f.name.length>22?f.name.slice(0,20)+'…':f.name}</div><div class="ev-item-size">${fmtBytes(f.size)}</div>`;
+    item.appendChild(info);
+
+    evGrid.appendChild(item);
   });
-  if (dropZone) dropZone.classList.toggle('has-files', allFiles.length > 0);
-}function syncInput() {
+}
+
+function syncInput() {
   if (!fileInput) return;
   const dt = new DataTransfer();
   allFiles.forEach(f => dt.items.add(f));
   fileInput.files = dt.files;
-}/* ── Form submit spinner ─────────────────────── */const logForm = document.getElementById('logForm');if (logForm) {
-  logForm.addEventListener('submit', function(e) {
-    // Rebuild fileInput.files from allFiles before the form sends
+}
+
+/* ── Form submit spinner ─────────────────────── */
+const logForm = document.getElementById('logForm');
+if (logForm) {
+  logForm.addEventListener('submit', function() {
     syncInput();
     const btn = document.getElementById('submitBtn');
     if (btn) {
@@ -717,6 +883,10 @@
       btn.disabled = true;
     }
   });
-}/* ── Spin keyframe ───────────────────────────── */const s = document.createElement('style');
-s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';document.head.appendChild(s);</script>
+}
+
+/* ── Spin keyframe ───────────────────────────── */
+const s = document.createElement('style');
+s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(s);</script>
 {% endblock %}
