@@ -123,3 +123,11 @@ CREATE TABLE IF NOT EXISTS attachment_grades (
 INSERT INTO attachment_grading_config (department_id, is_active)
 SELECT NULL, TRUE
 WHERE NOT EXISTS (SELECT 1 FROM attachment_grading_config WHERE department_id IS NULL);
+
+-- ── 5. Exam bookings: persist year, series and term ──────────────────────────
+-- exam_session had constraint ('morning','afternoon','evening') which prevented
+-- storing the numeric series (1/2/3).  Add dedicated columns instead.
+ALTER TABLE exam_bookings
+    ADD COLUMN IF NOT EXISTS exam_year     INTEGER,
+    ADD COLUMN IF NOT EXISTS exam_series_no INTEGER,
+    ADD COLUMN IF NOT EXISTS exam_term      INTEGER;

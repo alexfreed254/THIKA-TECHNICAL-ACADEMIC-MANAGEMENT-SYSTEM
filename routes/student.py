@@ -2023,7 +2023,9 @@ def exam_booking_submit():
                 "student_id":           student_id,
                 "unit_id":              uid,
                 "exam_date":            str(datetime.now().date()),
-                "exam_session":         series,          # raw "1"/"2"/"3" — matches DB constraint
+                "exam_year":            int(year) if str(year).isdigit() else datetime.now().year,
+                "exam_series_no":       int(series) if str(series).isdigit() else 1,
+                "exam_term":            int(term) if str(term).isdigit() else 1,
                 "purpose":              f"{ud['type']} — {form_data.get('module_level','')}",
                 "status":               "pending",
                 "serial_number":        serial_number,
@@ -2106,9 +2108,10 @@ def download_exam_booking(booking_id):
     if not all_rows:
         all_rows = [booking_row]
 
-    first = all_rows[0]
-    series = str(first.get("exam_session", "1"))
-    year   = str(first.get("exam_date", str(datetime.now().year)))[:4]
+    first  = all_rows[0]
+    series = str(first.get("exam_series_no") or 1)
+    year   = str(first.get("exam_year") or str(datetime.now().year))
+    term   = str(first.get("exam_term") or 1)
 
     # ── 3. Student / course / documents ─────────────────────────────────────
     student    = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data or {}
@@ -2152,7 +2155,7 @@ def download_exam_booking(booking_id):
             student=student, course_name=course_name, course_code=course_code,
             department_name=department_name, units_data=units_data,
             serial_number=serial_number or booking_id[:8].upper(),
-            year=year, series=series, term="",
+            year=year, series=series, term=term,
             documents=documents,
             storage_client=db.storage,
         )
