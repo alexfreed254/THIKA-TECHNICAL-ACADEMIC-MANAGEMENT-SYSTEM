@@ -162,6 +162,18 @@ from datetime import datetime as _dt
 _EAT = pytz.timezone("Africa/Nairobi")
 
 
+@app.template_filter("from_json")
+def from_json_filter(value):
+    """Parse a JSON string into a Python object for use in Jinja2 templates."""
+    import json as _json
+    if not value:
+        return []
+    try:
+        return _json.loads(value)
+    except Exception:
+        return []
+
+
 @app.template_filter("to_eat")
 def to_eat_filter(value, fmt="%d %b %Y %H:%M"):
     """Convert a UTC ISO datetime string (from Supabase) to EAT.
