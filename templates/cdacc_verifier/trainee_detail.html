@@ -1,0 +1,375 @@
+{% extends "cdacc_verifier/base.html" %}
+{% block title %}{{ student.get('full_name','Trainee') }} — Profile{% endblock %}
+{% block page_title %}Trainee Profile: {{ student.get('full_name','') }}{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+
+{% block extra_style %}
+/* Tab system */
+.tab-btn{padding:9px 18px;font-size:12.5px;font-weight:700;border:none;background:transparent;cursor:pointer;border-bottom:3px solid transparent;color:#64748b;transition:.18s;white-space:nowrap}
+.tab-btn.active{color:#1e40af;border-bottom-color:#1e40af}
+.tab-btn:hover:not(.active){color:#0f172a}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Grade badges */
+.gb-M{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.gb-P{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.gb-C{background:#fef3c7;color:#a16207;border:1px solid #fcd34d}
+.gb-U,.gb-NYC{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+.gb-nil{background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0}
+
+/* Progress bar */
+.pbar{height:6px;border-radius:3px;background:#e2e8f0;overflow:hidden;margin-top:4px}
+.pbar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Back link -->
+  <a href="/cdacc-verifier/trainees"
+     class="inline-flex items-center gap-2 text-blue-700 hover:underline text-sm font-semibold mb-4">
+    <i class="fas fa-arrow-left"></i> Back to Trainee List
+  </a>
+
+  <!-- Student hero card -->
+  {% set dept = student.get('departments') or {} %}
+  {% set cls  = student.get('classes') or {} %}
+  <div class="rounded-2xl mb-5 p-5 text-white" style="background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%)">
+    <div class="flex flex-wrap gap-5 items-start">
+      <div class="w-16 h-16 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center text-3xl">
+        <i class="fas fa-user-graduate text-yellow-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-2xl font-extrabold mb-0.5">{{ student.get('full_name','—') }}</h1>
+        <div class="flex flex-wrap gap-3 text-sm text-blue-200 mt-1">
+          <span><i class="fas fa-id-card mr-1 text-yellow-400"></i>{{ student.get('admission_no','—') }}</span>
+          <span><i class="fas fa-building mr-1 text-yellow-400"></i>{{ dept.get('name','—') }}</span>
+          <span><i class="fas fa-users mr-1 text-yellow-400"></i>{{ cls.get('name','—') }}</span>
+          {% if student.get('email') %}<span><i class="fas fa-envelope mr-1"></i>{{ student.email }}</span>{% endif %}
+          {% if student.get('phone') %}<span><i class="fas fa-phone mr-1"></i>{{ student.phone }}</span>{% endif %}
+        </div>
+      </div>
+      <!-- Quick stats -->
+      <div class="flex gap-3 flex-wrap">
+        {% set total_marks = namespace(n=0) %}{% for t, rows in marks_by_type.items() %}{% set total_marks.n = total_marks.n + rows|length %}{% endfor %}
+        <div class="bg-white/10 border border-white/15 rounded-xl p-3 text-center min-w-20">
+          <div class="text-2xl font-black">{{ total_marks.n }}</div>
+          <div class="text-xs text-blue-200 font-bold uppercase mt-1">Marks Entries</div>
+        </div>
+        <div class="bg-white/10 border border-white/15 rounded-xl p-3 text-center min-w-20">
+          <div class="text-2xl font-black">{{ uploads|length }}</div>
+          <div class="text-xs text-blue-200 font-bold uppercase mt-1">PDFs Uploaded</div>
+        </div>
+        <div class="bg-white/10 border border-white/15 rounded-xl p-3 text-center min-w-20">
+          <div class="text-2xl font-black">{{ logbook|length }}</div>
+          <div class="text-xs text-blue-200 font-bold uppercase mt-1">Logbook Entries</div>
+        </div>
+        <div class="bg-white/10 border border-white/15 rounded-xl p-3 text-center min-w-20">
+          {% set first_grade = att_grades|selectattr('grade')|list %}
+          <div class="text-2xl font-black">
+            {% if first_grade and first_grade[0].grade %}{{ first_grade[0].grade.get('final_grade','—') }}{% else %}—{% endif %}
+          </div>
+          <div class="text-xs text-blue-200 font-bold uppercase mt-1">Att. Grade</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab navigation -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="flex overflow-x-auto border-b border-gray-100 px-4 gap-1">
+      <button class="tab-btn active" onclick="showTab('marks',this)">
+        <i class="fas fa-chart-bar mr-1.5"></i> Formative Marks
+      </button>
+      <button class="tab-btn" onclick="showTab('attachment',this)">
+        <i class="fas fa-star-half-alt mr-1.5"></i> Attachment Marks
+      </button>
+      <button class="tab-btn" onclick="showTab('mentoring',this)">
+        <i class="fas fa-file-pdf mr-1.5"></i> Mentoring / Logbook PDFs
+      </button>
+      <button class="tab-btn" onclick="showTab('logbook',this)">
+        <i class="fas fa-book-open mr-1.5"></i> Digital Logbook
+      </button>
+    </div>
+
+    <!-- ─────────── TAB 1: Formative Marks ─────────── -->
+    <div class="tab-panel active p-5" id="tab-marks">
+      {% set type_labels = {
+          'oral':'Oral Assessment','practical':'Practical Assessment',
+          'written':'Written Assessment','theory':'Theory Assessment','other':'Other'
+      } %}
+      {% set type_icons = {
+          'oral':'fa-microphone','practical':'fa-tools',
+          'written':'fa-pen','theory':'fa-book','other':'fa-file'
+      } %}
+      {% set type_colors = {
+          'oral':'blue','practical':'green',
+          'written':'purple','theory':'orange','other':'gray'
+      } %}
+
+      {% if marks_by_type %}
+        {% for atype in ['oral','practical','written','theory','other'] %}
+        {% if marks_by_type.get(atype) %}
+        {% set rows = marks_by_type[atype] %}
+        {% set avg_pct = (rows|map(attribute='percentage')|select|list|sum / rows|map(attribute='percentage')|select|list|length)|round(1) if rows|map(attribute='percentage')|select|list else 0 %}
+
+        <!-- Assessment type section -->
+        <div class="mb-6">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold
+                        bg-{{ type_colors[atype] }}-100 text-{{ type_colors[atype] }}-700">
+              <i class="fas {{ type_icons[atype] }}"></i>
+            </div>
+            <h3 class="font-extrabold text-gray-900 text-sm">{{ type_labels[atype] }}</h3>
+            <span class="bg-{{ type_colors[atype] }}-100 text-{{ type_colors[atype] }}-700 px-2 py-0.5 rounded-full text-xs font-bold">
+              {{ rows|length }} assessments
+            </span>
+            <span class="ml-auto text-xs text-gray-500">Avg: <strong class="{{ 'text-green-600' if avg_pct >= 70 else 'text-amber-600' if avg_pct >= 50 else 'text-red-600' }}">{{ avg_pct }}%</strong></span>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-gray-100">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Assessment Name</th>
+                  <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Unit</th>
+                  <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Class</th>
+                  <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Trainer</th>
+                  <th class="px-3 py-2.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Year / Term</th>
+                  <th class="px-3 py-2.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Score</th>
+                  <th class="px-3 py-2.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">%</th>
+                  <th class="px-3 py-2.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Grade</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                {% for r in rows %}
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="px-3 py-2.5 font-semibold text-gray-900">{{ r.name or '—' }}</td>
+                  <td class="px-3 py-2.5">
+                    <span class="font-mono text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{{ r.code }}</span>
+                    <span class="text-xs text-gray-700 ml-1">{{ r.unit }}</span>
+                  </td>
+                  <td class="px-3 py-2.5 text-xs text-gray-500">{{ r.class_name }}</td>
+                  <td class="px-3 py-2.5 text-xs text-gray-500">{{ r.trainer }}</td>
+                  <td class="px-3 py-2.5 text-center text-xs text-gray-600">
+                    {{ r.year or '—' }}{% if r.term %} / T{{ r.term }}{% endif %}
+                  </td>
+                  <td class="px-3 py-2.5 text-center">
+                    <span class="font-bold text-gray-800">
+                      {% if r.marks_obtained is not none %}{{ r.marks_obtained }}{% else %}—{% endif %} / {{ r.max_marks }}
+                    </span>
+                    {% if r.percentage is not none %}
+                    <div class="pbar">
+                      <div class="pbar-fill" style="width:{{ r.percentage }}%;background:{{ '#16a34a' if r.percentage >= 70 else '#d97706' if r.percentage >= 50 else '#dc2626' }}"></div>
+                    </div>
+                    {% endif %}
+                  </td>
+                  <td class="px-3 py-2.5 text-center font-bold {{ 'text-green-600' if r.percentage and r.percentage >= 70 else 'text-amber-600' if r.percentage and r.percentage >= 50 else 'text-red-500' }}">
+                    {{ r.percentage if r.percentage is not none else '—' }}%
+                  </td>
+                  <td class="px-3 py-2.5 text-center">
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-black border gb-{{ r.grade if r.grade else 'nil' }}">
+                      {{ r.grade or '?' }}
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      {% else %}
+      <div class="text-center py-12 text-gray-400">
+        <i class="fas fa-chart-bar text-4xl block mb-3 text-gray-200"></i>
+        <p class="font-semibold">No formative assessment marks recorded for this trainee.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ─────────── TAB 2: Attachment Marks ─────────── -->
+    <div class="tab-panel p-5" id="tab-attachment">
+      {% if att_grades %}
+        {% for item in att_grades %}
+        {% set a = item.attachment %}
+        {% set g = item.grade %}
+        {% set co = a.get('companies') or {} %}
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-4">
+          <div class="flex flex-wrap gap-4 items-start mb-4">
+            <div class="flex-1 min-w-0">
+              <div class="font-extrabold text-gray-900 text-base">{{ co.get('name','Unknown Company') }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">
+                <span class="mr-3"><i class="fas fa-calendar mr-1"></i>{{ a.get('start_date','—') }} → {{ a.get('end_date','—') }}</span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold
+                  {{ 'bg-green-100 text-green-700' if (a.get('status') or '') == 'active'
+                     else 'bg-blue-100 text-blue-700' if (a.get('status') or '') == 'completed'
+                     else 'bg-yellow-100 text-yellow-700' }}">
+                  {{ (a.get('status') or 'pending')|title }}
+                </span>
+              </div>
+            </div>
+            {% if g and g.get('final_grade') %}
+            <div class="text-center">
+              <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black border-2 gb-{{ g.final_grade }}">
+                {{ g.final_grade }}
+              </div>
+              <div class="text-xs text-gray-500 font-bold mt-1">
+                {{ g.weighted_total|round(1) if g.weighted_total else '—' }}%
+              </div>
+            </div>
+            {% else %}
+            <span class="text-sm text-gray-400 italic">Not yet graded</span>
+            {% endif %}
+          </div>
+
+          {% if g %}
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {% set score_fields = [
+              ('score_gps_attendance','GPS Attendance','fa-map-marker-alt','#f59e0b'),
+              ('score_logbook','Digital Logbook','fa-book','#60a5fa'),
+              ('score_mentor_eval','Mentor Evaluation','fa-handshake','#a78bfa'),
+              ('score_trainer_assessment','Trainer Assessment','fa-chalkboard-teacher','#34d399'),
+              ('score_final_report','Final Report','fa-file-alt','#fb7185'),
+            ] %}
+            {% for field, label, icon, color in score_fields %}
+            {% set val = g.get(field) %}
+            <div class="bg-white border border-gray-100 rounded-xl p-3">
+              <div class="flex items-center gap-2 mb-1">
+                <i class="fas {{ icon }} text-xs" style="color:{{ color }}"></i>
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">{{ label }}</span>
+              </div>
+              <div class="text-xl font-black text-gray-800">
+                {% if val is not none %}{{ val|round(1) }}{% else %}—{% endif %}
+              </div>
+              {% if val is not none %}
+              <div class="pbar mt-1">
+                <div class="pbar-fill" style="width:{{ val }}%;background:{{ color }}"></div>
+              </div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="text-center py-12 text-gray-400">
+        <i class="fas fa-star-half-alt text-4xl block mb-3 text-gray-200"></i>
+        <p class="font-semibold">No attachment records found for this trainee.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ─────────── TAB 3: Mentoring / Logbook PDFs ─────────── -->
+    <div class="tab-panel p-5" id="tab-mentoring">
+      {% if uploads %}
+      <div class="grid gap-3">
+        {% for u in uploads %}
+        <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center text-red-600 text-2xl flex-shrink-0">
+            <i class="fas fa-file-pdf"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-gray-900 text-sm">{{ u.title }}</div>
+            <div class="text-xs text-gray-400 font-mono mt-0.5">{{ u.file_name }}
+              {% if u.file_size %} · {{ (u.file_size/1024)|round(1) }} KB{% endif %}
+            </div>
+            {% if u.description %}
+            <div class="text-xs text-gray-500 mt-1">{{ u.description[:120] }}{% if u.description|length > 120 %}…{% endif %}</div>
+            {% endif %}
+            <div class="text-xs text-gray-400 mt-1"><i class="fas fa-calendar mr-1"></i>{{ (u.uploaded_at or u.created_at or '')[:10] }}</div>
+          </div>
+          <a href="{{ u.file_url }}" target="_blank" rel="noopener"
+             class="flex-shrink-0 inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">
+            <i class="fas fa-external-link-alt"></i> Open PDF
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-12 text-gray-400">
+        <i class="fas fa-file-pdf text-4xl block mb-3 text-gray-200"></i>
+        <p class="font-semibold">No mentoring tool PDFs uploaded by this trainee.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ─────────── TAB 4: Digital Logbook ─────────── -->
+    <div class="tab-panel p-5" id="tab-logbook">
+      {% if logbook %}
+      <div class="overflow-x-auto rounded-xl border border-gray-100">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">#</th>
+              <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Date</th>
+              <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Slot</th>
+              <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Tasks Performed</th>
+              <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Skills Applied</th>
+              <th class="px-3 py-2.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Hrs</th>
+              <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Achievements</th>
+              <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Challenges</th>
+              <th class="px-3 py-2.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
+              <th class="px-3 py-2.5 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Evidence</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for e in logbook %}
+            {% set st = (e.get('mentor_approval_status') or 'pending') %}
+            <tr class="hover:bg-gray-50 transition align-top">
+              <td class="px-3 py-2.5 text-xs text-gray-400">{{ loop.index }}</td>
+              <td class="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap font-semibold">{{ e.log_date or '—' }}</td>
+              <td class="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{{ e.entry_time or '—' }}</td>
+              <td class="px-3 py-2.5 text-xs text-gray-800 max-w-xs">{{ e.tasks_performed or '—' }}</td>
+              <td class="px-3 py-2.5 text-xs text-gray-600 max-w-xs">{{ e.skills_applied or '—' }}</td>
+              <td class="px-3 py-2.5 text-center font-bold text-gray-700 text-xs">{{ e.hours_worked or '—' }}</td>
+              <td class="px-3 py-2.5 text-xs text-gray-600 max-w-xs">{{ e.achievements or '—' }}</td>
+              <td class="px-3 py-2.5 text-xs text-gray-500 max-w-xs">{{ e.challenges_encountered or '—' }}</td>
+              <td class="px-3 py-2.5 text-center">
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold
+                  {{ 'bg-green-100 text-green-700' if st == 'approved'
+                     else 'bg-red-100 text-red-700' if st == 'rejected'
+                     else 'bg-yellow-100 text-yellow-700' }}">
+                  {{ st|title }}
+                </span>
+              </td>
+              <td class="px-3 py-2.5 text-center">
+                {% if e._evidence %}
+                  {% for ev_url in e._evidence %}
+                  <a href="{{ ev_url }}" target="_blank" rel="noopener"
+                     class="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded text-xs font-semibold mb-0.5 transition">
+                    <i class="fas fa-paperclip"></i>
+                  </a>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-gray-300 text-xs">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-12 text-gray-400">
+        <i class="fas fa-book-open text-4xl block mb-3 text-gray-200"></i>
+        <p class="font-semibold">No digital logbook entries for this trainee.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- end card -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+{% endblock %}

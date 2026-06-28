@@ -404,3 +404,225 @@ def trainee_poe():
                            class_filter=class_filter,
                            adm_filter=adm_filter,
                            status_filter=status_filter)
+
+# ── Trainee Profiles list ─────────────────────────────────────────────────────
+
+@cdacc_verifier_bp.route("/trainees")
+@login_required
+@cdacc_verifier_required
+def trainee_list():
+    db      = get_service_client()
+    dept_id = request.args.get("dept_id", "")
+    q       = request.args.get("q", "").strip()
+    try:
+        query = (db.table("user_profiles")
+                   .select("id, full_name, admission_no, department_id, departments(name), class_id, classes(name)")
+                   .eq("role", "student")
+                   .order("full_name"))
+        if dept_id:
+            query = query.eq("department_id", dept_id)
+        trainees = query.limit(500).execute().data or []
+        if q:
+            ql = q.lower()
+            trainees = [t for t in trainees
+                        if ql in (t.get("full_name") or "").lower()
+                        or ql in (t.get("admission_no") or "").lower()]
+        departments = db.table("departments").select("id, name").order("name").execute().data or []
+    except Exception as e:
+        flash(f"Error loading trainees: {e}", "danger")
+        trainees, departments = [], []
+
+    return render_template("cdacc_verifier/trainee_list.html",
+                           trainees=trainees, departments=departments,
+                           dept_id=dept_id, q=q)
+
+
+@cdacc_verifier_bp.route("/trainees/<student_id>")
+@login_required
+@cdacc_verifier_required
+def trainee_detail(student_id):
+    import os
+    db = get_service_client()
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip()
+
+    try:
+        stu_rows = (db.table("user_profiles")
+                      .select("id, full_name, admission_no, department_id, departments(name), class_id, classes(name), phone, email")
+                      .eq("id", student_id).limit(1).execute().data or [])
+        if not stu_rows:
+            flash("Trainee not found.", "warning")
+            return redirect(url_for("cdacc_verifier.trainee_list"))
+        student = stu_rows[0]
+
+        # Formative marks
+        all_fas = (db.table("formative_assessments")
+                     .select("id, unit_id, class_id, trainer_id, assessment_type, assessment_name, "
+                             "max_marks, year, term, "
+                             "units(name, code), classes(name), "
+                             "trainer:user_profiles!formative_assessments_trainer_id_fkey(full_name)")
+                     .order("year", desc=True)
+                     .limit(1000).execute().data or [])
+        fa_map = {a["id"]: a for a in all_fas}
+
+        fm_rows = (db.table("formative_marks")
+                     .select("assessment_id, marks_obtained")
+                     .eq("student_id", student_id)
+                     .execute().data or [])
+
+        marks_by_type = {}
+        for m in fm_rows:
+            fa = fa_map.get(m["assessment_id"])
+            if not fa:
+                continue
+            atype = (fa.get("assessment_type") or "other").lower()
+            mo    = m.get("marks_obtained")
+            mm    = fa.get("max_marks") or 100
+            pct   = round(mo / mm * 100, 1) if mo is not None and mm else None
+            grade = ("M" if pct and pct >= 70 else "P" if pct and pct >= 60 else
+                     "C" if pct and pct >= 50 else "U" if pct is not None else "N/A")
+            marks_by_type.setdefault(atype, []).append({
+                "name":           fa.get("assessment_name", ""),
+                "unit":           (fa.get("units") or {}).get("name", ""),
+                "code":           (fa.get("units") or {}).get("code", ""),
+                "class_name":     (fa.get("classes") or {}).get("name", ""),
+                "trainer":        (fa.get("trainer") or {}).get("full_name", ""),
+                "year":           fa.get("year"),
+                "term":           fa.get("term"),
+                "marks_obtained": mo,
+                "max_marks":      mm,
+                "percentage":     pct,
+                "grade":          grade,
+            })
+        for t in marks_by_type:
+            marks_by_type[t].sort(key=lambda r: (r.get("year") or 0, r.get("term") or 0), reverse=True)
+
+        # Attachment marks
+        atts = (db.table("industrial_attachments")
+                  .select("id, status, start_date, end_date, company_id, companies(name)")
+                  .eq("student_id", student_id)
+                  .order("created_at", desc=True).limit(5).execute().data or [])
+        att_grades = []
+        if atts:
+            a_ids = [a["id"] for a in atts]
+            grades_raw = (db.table("attachment_grades")
+                            .select("*").in_("attachment_id", a_ids).execute().data or [])
+            grades_map = {g["attachment_id"]: g for g in grades_raw}
+            for a in atts:
+                att_grades.append({"attachment": a, "grade": grades_map.get(a["id"])})
+
+        # Mentoring tool uploads
+        uploads = (db.table("mentoring_tool_uploads")
+                     .select("*").eq("student_id", student_id)
+                     .order("uploaded_at", desc=True).execute().data or [])
+
+        # Digital logbook
+        logbook = (db.table("digital_logbook")
+                     .select("id, log_date, entry_time, tasks_performed, skills_applied, "
+                             "hours_worked, challenges_encountered, achievements, "
+                             "mentor_approval_status, mentor_comments, evidence_urls")
+                     .eq("student_id", student_id)
+                     .order("log_date", desc=True).limit(300).execute().data or [])
+        for entry in logbook:
+            urls = entry.get("evidence_urls") or []
+            entry["_evidence"] = [
+                f"{supabase_url}/storage/v1/object/public/assessment-evidence/{u}" for u in urls if u
+            ]
+
+    except Exception as e:
+        flash(f"Error loading trainee data: {e}", "danger")
+        student, marks_by_type, att_grades, uploads, logbook = {}, {}, [], [], []
+
+    return render_template("cdacc_verifier/trainee_detail.html",
+                           student=student,
+                           marks_by_type=marks_by_type,
+                           att_grades=att_grades,
+                           uploads=uploads,
+                           logbook=logbook)
+
+
+# ── Attachment Marks ──────────────────────────────────────────────────────────
+
+@cdacc_verifier_bp.route("/attachment-marks")
+@login_required
+@cdacc_verifier_required
+def attachment_marks():
+    db      = get_service_client()
+    dept_id = request.args.get("dept_id", "")
+    try:
+        grades = (db.table("attachment_grades")
+                    .select("*, attachment:industrial_attachments!attachment_id("
+                            "id, student_id, status, start_date, end_date, company_id, "
+                            "student:user_profiles!student_id(full_name, admission_no, department_id, departments(name)), "
+                            "companies(name)"
+                            ")")
+                    .order("graded_at", desc=True).limit(500).execute().data or [])
+        if dept_id:
+            grades = [g for g in grades
+                      if ((g.get("attachment") or {}).get("student") or {}).get("department_id") == dept_id]
+        departments = db.table("departments").select("id, name").order("name").execute().data or []
+    except Exception as e:
+        flash(f"Error: {e}", "danger")
+        grades, departments = [], []
+
+    return render_template("cdacc_verifier/attachment_marks.html",
+                           grades=grades, departments=departments, dept_id=dept_id)
+
+
+# ── Mentoring Tool PDFs ───────────────────────────────────────────────────────
+
+@cdacc_verifier_bp.route("/mentoring-tools")
+@login_required
+@cdacc_verifier_required
+def mentoring_tools():
+    db      = get_service_client()
+    dept_id = request.args.get("dept_id", "")
+    try:
+        rows = (db.table("mentoring_tool_uploads")
+                  .select("*, student:user_profiles!student_id(full_name, admission_no, department_id, departments(name))")
+                  .order("uploaded_at", desc=True).limit(500).execute().data or [])
+        if dept_id:
+            rows = [r for r in rows
+                    if ((r.get("student") or {}).get("department_id")) == dept_id]
+        departments = db.table("departments").select("id, name").order("name").execute().data or []
+    except Exception as e:
+        flash(f"Error: {e}", "danger")
+        rows, departments = [], []
+
+    return render_template("cdacc_verifier/mentoring_tools.html",
+                           uploads=rows, departments=departments, dept_id=dept_id)
+
+
+# ── Digital Logbook ───────────────────────────────────────────────────────────
+
+@cdacc_verifier_bp.route("/digital-logbook")
+@login_required
+@cdacc_verifier_required
+def digital_logbook():
+    db         = get_service_client()
+    dept_id    = request.args.get("dept_id", "")
+    adm_filter = request.args.get("admission_no", "").strip()
+    status     = request.args.get("status", "")
+    try:
+        query = (db.table("digital_logbook")
+                   .select("id, log_date, entry_time, tasks_performed, hours_worked, "
+                           "mentor_approval_status, created_at, "
+                           "student:user_profiles!student_id(full_name, admission_no, department_id, departments(name))")
+                   .order("log_date", desc=True).limit(500))
+        if status:
+            query = query.eq("mentor_approval_status", status)
+        rows = query.execute().data or []
+        if dept_id:
+            rows = [r for r in rows
+                    if ((r.get("student") or {}).get("department_id")) == dept_id]
+        if adm_filter:
+            rows = [r for r in rows
+                    if adm_filter.lower() in ((r.get("student") or {}).get("admission_no") or "").lower()]
+        departments = db.table("departments").select("id, name").order("name").execute().data or []
+    except Exception as e:
+        flash(f"Error: {e}", "danger")
+        rows, departments = [], []
+
+    return render_template("cdacc_verifier/digital_logbook.html",
+                           entries=rows, departments=departments,
+                           dept_id=dept_id, adm_filter=adm_filter, status=status)
+

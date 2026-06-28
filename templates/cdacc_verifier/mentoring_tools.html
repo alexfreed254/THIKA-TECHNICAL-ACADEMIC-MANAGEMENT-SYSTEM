@@ -1,0 +1,128 @@
+{% extends "cdacc_verifier/base.html" %}
+{% block title %}Mentoring Tool / Logbooks{% endblock %}
+{% block page_title %}Mentoring Tool / Hardcopy Logbooks{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+
+{% block extra_style %}
+.fi{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;background:#f9fafb;color:#111827;outline:none;transition:border-color .18s}
+.fi:focus{border-color:#1d4ed8;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Hero -->
+  <div class="rounded-2xl mb-6 p-5 text-white" style="background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%)">
+    <h1 class="text-xl font-extrabold flex items-center gap-2 mb-1">
+      <i class="fas fa-file-pdf text-yellow-400"></i> Mentoring Tool / Hardcopy Logbooks
+    </h1>
+    <p class="text-blue-200 text-sm">Scanned PDF documents submitted by trainees for mentor assessment review.</p>
+    {% set unique_students = uploads|map(attribute='student')|selectattr('full_name')|list|map(attribute='full_name')|unique|list %}
+    <div class="grid grid-cols-3 gap-3 mt-4">
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black">{{ uploads|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Total Uploads</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black">{{ unique_students|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Trainees</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black">{{ departments|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Departments</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <form method="GET" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-end">
+    <div class="flex-1 min-w-40">
+      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Department</label>
+      <select class="fi" name="dept_id">
+        <option value="">— All Departments —</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition">
+      <i class="fas fa-filter mr-1"></i> Filter
+    </button>
+    <a href="/cdacc-verifier/mentoring-tools" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-bold transition">
+      <i class="fas fa-times"></i>
+    </a>
+  </form>
+
+  <!-- Table -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-3 border-b border-gray-100 flex items-center" style="background:linear-gradient(135deg,#0f2c54,#1a3d6e)">
+      <i class="fas fa-folder-open text-yellow-400 mr-2"></i>
+      <span class="text-white font-bold text-sm">Submitted Mentoring Documents</span>
+      <span class="ml-auto text-xs text-blue-200 bg-white/10 px-3 py-1 rounded-full">{{ uploads|length }} files</span>
+    </div>
+    {% if uploads %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">#</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Document</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Trainee</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Department</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Size</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for u in uploads %}
+          {% set stu  = u.get('student') or {} %}
+          {% set dept = (stu.get('departments') or {}) %}
+          <tr class="hover:bg-red-50/30 transition">
+            <td class="px-4 py-3 text-xs text-gray-400">{{ loop.index }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center text-red-600 text-lg flex-shrink-0">
+                  <i class="fas fa-file-pdf"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900 text-sm">{{ u.title }}</div>
+                  <div class="text-xs text-gray-400 font-mono">{{ u.file_name }}</div>
+                  {% if u.description %}
+                  <div class="text-xs text-gray-500 mt-0.5">{{ u.description[:80] }}{% if u.description|length > 80 %}…{% endif %}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <a href="/cdacc-verifier/trainees/{{ stu.get('id',u.student_id) }}"
+                 class="font-bold text-blue-700 hover:underline text-sm">{{ stu.get('full_name','—') }}</a>
+              <div class="text-xs text-gray-400 font-mono">{{ stu.get('admission_no','') }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{{ dept.get('name','—') }}</span>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{{ (u.uploaded_at or u.created_at or '')[:10] }}</td>
+            <td class="px-4 py-3 text-xs text-gray-400">
+              {% if u.file_size %}{{ (u.file_size/1024)|round(1) }} KB{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-center">
+              <a href="{{ u.file_url }}" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                <i class="fas fa-eye"></i> Open PDF
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-16 text-gray-400">
+      <i class="fas fa-file-pdf text-5xl block mb-3 text-gray-200"></i>
+      <p class="font-semibold">No documents uploaded yet</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

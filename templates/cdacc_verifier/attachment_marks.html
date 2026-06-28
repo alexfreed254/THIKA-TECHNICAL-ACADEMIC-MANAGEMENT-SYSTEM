@@ -1,0 +1,134 @@
+{% extends "cdacc_verifier/base.html" %}
+{% block title %}Attachment Marks{% endblock %}
+{% block page_title %}Industrial Attachment Marks{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+
+{% block extra_style %}
+.fi{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;background:#f9fafb;color:#111827;outline:none;transition:border-color .18s}
+.fi:focus{border-color:#1d4ed8;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+.gb-M{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.gb-P{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.gb-C{background:#fef3c7;color:#a16207;border:1px solid #fcd34d}
+.gb-NYC{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+.gb-nil{background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0}
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Hero -->
+  <div class="rounded-2xl mb-6 p-5 text-white" style="background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%)">
+    <h1 class="text-xl font-extrabold flex items-center gap-2 mb-1">
+      <i class="fas fa-star-half-alt text-yellow-400"></i> Industrial Attachment Marks
+    </h1>
+    <p class="text-blue-200 text-sm">Weighted attachment grades for all trainees across all departments.</p>
+    {% set graded = grades|selectattr('final_grade')|list %}
+    <div class="grid grid-cols-4 gap-3 mt-4">
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black">{{ grades|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Total Graded</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black text-green-300">{{ grades|selectattr('final_grade','equalto','M')|list|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Merit</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black text-blue-300">{{ grades|selectattr('final_grade','equalto','P')|list|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Pass</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black text-red-300">{{ grades|selectattr('final_grade','equalto','NYC')|list|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">NYC</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <form method="GET" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-end">
+    <div class="flex-1 min-w-40">
+      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Department</label>
+      <select class="fi" name="dept_id">
+        <option value="">— All Departments —</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition">
+      <i class="fas fa-filter mr-1"></i> Filter
+    </button>
+    <a href="/cdacc-verifier/attachment-marks" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-bold transition">
+      <i class="fas fa-times"></i>
+    </a>
+  </form>
+
+  <!-- Table -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-3 border-b border-gray-100 flex items-center" style="background:linear-gradient(135deg,#0f2c54,#1a3d6e)">
+      <i class="fas fa-table text-yellow-400 mr-2"></i>
+      <span class="text-white font-bold text-sm">Attachment Grading Register</span>
+      <span class="ml-auto text-xs text-blue-200 bg-white/10 px-3 py-1 rounded-full">{{ grades|length }} records</span>
+    </div>
+    {% if grades %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Student</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Dept</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Company</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">GPS</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Logbook</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Mentor</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Trainer</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Report</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Total%</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Grade</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for g in grades %}
+          {% set att = g.get('attachment') or {} %}
+          {% set stu = att.get('student') or {} %}
+          {% set dept = (stu.get('departments') or {}) %}
+          {% set co  = att.get('companies') or {} %}
+          <tr class="hover:bg-blue-50/30 transition">
+            <td class="px-4 py-3">
+              <a href="/cdacc-verifier/trainees/{{ stu.get('id', att.get('student_id','')) }}"
+                 class="font-bold text-blue-700 hover:underline text-sm">{{ stu.get('full_name','—') }}</a>
+              <div class="text-xs text-gray-400 font-mono">{{ stu.get('admission_no','') }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{{ dept.get('name','—') }}</span>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-600">{{ co.get('name','—') }}</td>
+            {% for field in ['score_gps_attendance','score_logbook','score_mentor_eval','score_trainer_assessment','score_final_report'] %}
+            <td class="px-4 py-3 text-center">
+              <span class="font-bold {{ 'text-green-600' if (g.get(field) or 0) >= 70 else 'text-amber-600' if (g.get(field) or 0) >= 50 else 'text-red-500' }}">
+                {% if g.get(field) is not none %}{{ g[field]|round(1) }}{% else %}—{% endif %}
+              </span>
+            </td>
+            {% endfor %}
+            <td class="px-4 py-3 text-center">
+              <span class="font-bold text-gray-800">{% if g.get('weighted_total') is not none %}{{ g.weighted_total|round(1) }}%{% else %}—{% endif %}</span>
+            </td>
+            <td class="px-4 py-3 text-center">
+              {% set gr = g.get('final_grade') or '' %}
+              <span class="inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-black border gb-{{ gr if gr else 'nil' }}">
+                {{ gr or '?' }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-16 text-gray-400">
+      <i class="fas fa-star-half-alt text-5xl block mb-3 text-gray-200"></i>
+      <p class="font-semibold">No attachment marks found</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

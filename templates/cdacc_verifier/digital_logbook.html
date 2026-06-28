@@ -1,0 +1,140 @@
+{% extends "cdacc_verifier/base.html" %}
+{% block title %}Digital Logbook{% endblock %}
+{% block page_title %}Digital Logbook Entries{% endblock %}
+{% block extra_head %}<script src="https://cdn.tailwindcss.com"></script>{% endblock %}
+
+{% block extra_style %}
+.fi{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;background:#f9fafb;color:#111827;outline:none;transition:border-color .18s}
+.fi:focus{border-color:#1d4ed8;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Hero -->
+  <div class="rounded-2xl mb-6 p-5 text-white" style="background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%)">
+    <h1 class="text-xl font-extrabold flex items-center gap-2 mb-1">
+      <i class="fas fa-book-open text-yellow-400"></i> Digital Logbook Entries
+    </h1>
+    <p class="text-blue-200 text-sm">All daily logbook entries submitted by trainees during industrial attachment.</p>
+    {% set approved_count = entries|selectattr('mentor_approval_status','equalto','approved')|list|length %}
+    {% set pending_count  = entries|selectattr('mentor_approval_status','equalto','pending')|list|length %}
+    <div class="grid grid-cols-4 gap-3 mt-4">
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black">{{ entries|length }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Total Entries</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black text-green-300">{{ approved_count }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Approved</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black text-yellow-300">{{ pending_count }}</div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Pending</div>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 border border-white/15">
+        <div class="text-2xl font-black">
+          {{ entries|map(attribute='student')|selectattr('full_name')|list|map(attribute='full_name')|unique|list|length }}
+        </div>
+        <div class="text-xs text-blue-200 font-bold uppercase mt-1">Trainees</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-end">
+    <div class="flex-1 min-w-32">
+      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Admission No</label>
+      <input class="fi" type="text" name="admission_no" value="{{ adm_filter }}" placeholder="Search…">
+    </div>
+    <div class="flex-1 min-w-40">
+      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Department</label>
+      <select class="fi" name="dept_id">
+        <option value="">— All —</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {% if dept_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="w-40">
+      <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+      <select class="fi" name="status">
+        <option value="">All Status</option>
+        <option value="pending"  {% if status == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+      </select>
+    </div>
+    <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition">
+      <i class="fas fa-filter mr-1"></i> Filter
+    </button>
+    <a href="/cdacc-verifier/digital-logbook" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-bold transition">
+      <i class="fas fa-times"></i>
+    </a>
+  </form>
+
+  <!-- Table -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-3 border-b border-gray-100 flex items-center" style="background:linear-gradient(135deg,#0f2c54,#1a3d6e)">
+      <i class="fas fa-book-open text-yellow-400 mr-2"></i>
+      <span class="text-white font-bold text-sm">Logbook Register</span>
+      <span class="ml-auto text-xs text-blue-200 bg-white/10 px-3 py-1 rounded-full">{{ entries|length }} entries</span>
+    </div>
+    {% if entries %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">#</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Trainee</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Dept</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Time Slot</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Tasks Performed</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Hrs</th>
+            <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for e in entries %}
+          {% set stu  = e.get('student') or {} %}
+          {% set dept = (stu.get('departments') or {}) %}
+          {% set st   = (e.get('mentor_approval_status') or 'pending') %}
+          <tr class="hover:bg-blue-50/30 transition">
+            <td class="px-4 py-3 text-xs text-gray-400">{{ loop.index }}</td>
+            <td class="px-4 py-3">
+              <a href="/cdacc-verifier/trainees/{{ stu.get('id', e.student_id if e.get('student_id') else '') }}"
+                 class="font-bold text-blue-700 hover:underline text-sm">{{ stu.get('full_name','—') }}</a>
+              <div class="text-xs text-gray-400 font-mono">{{ stu.get('admission_no','') }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{{ dept.get('name','—') }}</span>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{{ e.log_date or '—' }}</td>
+            <td class="px-4 py-3 text-xs text-gray-500">{{ e.entry_time or '—' }}</td>
+            <td class="px-4 py-3">
+              <span class="text-sm text-gray-800">{{ (e.tasks_performed or '')[:90] }}{% if (e.tasks_performed or '')|length > 90 %}…{% endif %}</span>
+            </td>
+            <td class="px-4 py-3 text-center font-bold text-gray-700">{{ e.hours_worked or '—' }}</td>
+            <td class="px-4 py-3 text-center">
+              <span class="px-2 py-0.5 rounded-full text-xs font-bold
+                {{ 'bg-green-100 text-green-700 border border-green-200' if st == 'approved'
+                   else 'bg-red-100 text-red-700 border border-red-200' if st == 'rejected'
+                   else 'bg-yellow-100 text-yellow-700 border border-yellow-200' }}">
+                {{ st|title }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-16 text-gray-400">
+      <i class="fas fa-book-open text-5xl block mb-3 text-gray-200"></i>
+      <p class="font-semibold">No logbook entries found</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
