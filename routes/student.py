@@ -274,7 +274,13 @@ def dashboard():
     }
     recent_logbook_entries = []
     pending_competencies = 0
-    
+
+    # Pre-seed so template never crashes if the try block below fails
+    stats.setdefault('attachment_active', 0)
+    stats.setdefault('attachment_total', 0)
+    stats.setdefault('logbook_entries', 0)
+    stats.setdefault('pending_competencies', 0)
+
     try:
         # Get current active attachment
         attachments = (db.table("industrial_attachments")
@@ -301,9 +307,10 @@ def dashboard():
                 attachment_stats['pending'] += 1
         
         # Get recent logbook entries (last 5)
+        # digital_logbook has no FK to units, so we only select its own columns
         if current_attachment:
             recent_logbook_entries = (db.table("digital_logbook")
-                                     .select("*, units(name, code)")
+                                     .select("*")
                                      .eq("student_id", student_id)
                                      .eq("attachment_id", current_attachment["id"])
                                      .order("log_date", desc=True)

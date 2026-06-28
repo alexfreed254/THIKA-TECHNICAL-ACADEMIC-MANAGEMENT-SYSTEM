@@ -1261,7 +1261,7 @@
           <span>•</span>
           <span><i class="far fa-clock"></i> {{ log.hours_spent }} hours</span>
           <span>•</span>
-          <span class="unit-tag" style="padding:0; border:none; background:none;">{{ log.units.code }}</span>
+          <span>{{ log.hours_spent or 0 }} hrs</span>
         </div>
       </div>
       <span class="sb {% if log.mentor_approval_status == 'approved' %}sb-green{% elif log.mentor_approval_status == 'rejected' %}sb-red{% else %}sb-yellow{% endif %}">
