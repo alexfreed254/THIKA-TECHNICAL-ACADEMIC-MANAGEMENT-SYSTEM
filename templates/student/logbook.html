@@ -483,14 +483,16 @@
         <label class="f-label">Evidence (Photos / Videos) <span class="req">*</span>
           <span style="font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px">Upload photos or videos showing your work</span>
         </label>
-        <div class="drop-zone" id="dropZone">
-          <div class="drop-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-          <div class="drop-zone-text">Click to upload or drag &amp; drop files here</div>
-          <div class="drop-zone-hint">Photos (JPG, PNG, WEBP) &bull; Videos (MP4, MOV) &bull; Max 50MB per file</div>
-          <div class="file-tags" id="fileTags"></div>
+        <div class="drop-zone" id="dropZone" style="position:relative">
+          <!-- Overlay input covers the full zone so any click opens the file picker directly -->
+          <input type="file" id="fileInput" name="evidence" multiple
+                 style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"
+                 accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/avi,video/webm,application/pdf">
+          <div class="drop-zone-icon" style="pointer-events:none"><i class="fas fa-cloud-upload-alt"></i></div>
+          <div class="drop-zone-text" style="pointer-events:none">Click to upload or drag &amp; drop files here</div>
+          <div class="drop-zone-hint" style="pointer-events:none">Photos (JPG, PNG, WEBP) &bull; Videos (MP4, MOV) &bull; Max 50MB per file</div>
+          <div class="file-tags" id="fileTags" style="position:relative;z-index:3"></div>
         </div>
-        <input type="file" id="fileInput" name="evidence" multiple hidden
-               accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/avi,video/webm,application/pdf">
       </div>
 
       <div style="display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap">
@@ -643,28 +645,27 @@
   body.style.display  = open ? 'none' : 'block';
   if (arrow) arrow.classList.toggle('open', !open);
 }/* ── File drag-drop & tags ───────────────────── */const dropZone  = document.getElementById('dropZone');const fileInput = document.getElementById('fileInput');const fileTags  = document.getElementById('fileTags');let allFiles = [];if (dropZone && fileInput) {
-  // Safe trigger click directly on dropZone surface (excluding tags button clicks)
-  dropZone.addEventListener('click', e => {
-    if(!e.target.classList.contains('rm')) {
-      fileInput.click();
-    }
+  // No programmatic click needed — the overlaid input covers the whole zone.
+  // Drag-drop events still needed because drag fires on the outer div, not the input.
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
   });
-
-  dropZone.addEventListener('dragover', e => { 
-    e.preventDefault(); 
-    dropZone.classList.add('dragover'); 
+  dropZone.addEventListener('dragleave', e => {
+    if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('dragover');
   });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
   dropZone.addEventListener('drop', e => {
-    e.preventDefault(); 
+    e.preventDefault();
     dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length) {
       mergeFiles(e.dataTransfer.files);
     }
   });
   fileInput.addEventListener('change', () => {
-    if (fileInput.files) {
+    if (fileInput.files && fileInput.files.length) {
       mergeFiles(fileInput.files);
+      // Reset so the same file can be re-selected after removal
+      fileInput.value = '';
     }
   });
 }function mergeFiles(incoming) {
@@ -708,6 +709,8 @@
   fileInput.files = dt.files;
 }/* ── Form submit spinner ─────────────────────── */const logForm = document.getElementById('logForm');if (logForm) {
   logForm.addEventListener('submit', function(e) {
+    // Rebuild fileInput.files from allFiles before the form sends
+    syncInput();
     const btn = document.getElementById('submitBtn');
     if (btn) {
       btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;"></span> Uploading…';
