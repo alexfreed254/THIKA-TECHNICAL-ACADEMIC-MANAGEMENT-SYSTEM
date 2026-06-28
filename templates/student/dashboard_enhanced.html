@@ -1252,20 +1252,21 @@
       <a href="/student/logbook">View All</a>
     </div>
     {% for log in recent_logbook_entries %}
+    {% set task_text = log.get('tasks_performed') or '' %}
     <div class="card-list-row">
       <div class="card-list-main">
-        <div class="card-list-title">{{ log.task_title }}</div>
-        <div class="card-list-desc" style="margin-top:2px; margin-bottom:6px;">{{ log.task_description[:140] }}{% if log.task_description|length > 140 %}…{% endif %}</div>
+        <div class="card-list-title">{{ task_text[:70] }}{% if task_text|length > 70 %}…{% endif %}</div>
+        <div class="card-list-desc" style="margin-top:2px; margin-bottom:6px;">{{ task_text[:140] }}{% if task_text|length > 140 %}…{% endif %}</div>
         <div class="card-list-meta">
-          <span><i class="far fa-calendar"></i> {{ log.log_date }}</span>
+          <span><i class="far fa-calendar"></i> {{ log.get('log_date','—') }}</span>
           <span>•</span>
-          <span><i class="far fa-clock"></i> {{ log.hours_spent }} hours</span>
+          <span><i class="far fa-clock"></i> {{ log.get('entry_time','—') }}</span>
           <span>•</span>
-          <span>{{ log.hours_spent or 0 }} hrs</span>
+          <span>{{ log.get('hours_worked', 0) }} hrs</span>
         </div>
       </div>
-      <span class="sb {% if log.mentor_approval_status == 'approved' %}sb-green{% elif log.mentor_approval_status == 'rejected' %}sb-red{% else %}sb-yellow{% endif %}">
-        {{ log.mentor_approval_status | title }}
+      <span class="sb {% if log.get('mentor_approval_status') == 'approved' %}sb-green{% elif log.get('mentor_approval_status') == 'rejected' %}sb-red{% else %}sb-yellow{% endif %}">
+        {{ (log.get('mentor_approval_status') or 'pending') | title }}
       </span>
     </div>
     {% endfor %}
