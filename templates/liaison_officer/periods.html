@@ -109,11 +109,31 @@ select.inp{cursor:pointer}
 
 /* Eligibility section */
 .elig-section{padding:20px 24px}
-.elig-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.elig-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px}
 .elig-head h4{font-size:13.5px;font-weight:700;color:var(--text);margin:0;display:flex;align-items:center;gap:8px}
 .elig-head h4 i{color:#8b5cf6}
 .elig-search{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;outline:none;width:200px;color:var(--text)}
 .elig-search:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+
+/* Class chips */
+.class-chips-wrap{margin-bottom:14px}
+.class-chips-label{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.class-chips-row{display:flex;flex-wrap:wrap;gap:7px}
+.cls-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1.5px solid var(--border);border-radius:9999px;background:#fff;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;transition:.15s;white-space:nowrap}
+.cls-chip:hover{border-color:#8b5cf6;color:#7c3aed;background:#faf5ff}
+.cls-chip.active{border-color:#8b5cf6;background:#8b5cf6;color:#fff}
+.cls-chip.active .cls-count{background:rgba(255,255,255,.25);color:#fff}
+.cls-count{background:#f1f5f9;color:var(--sub);border-radius:9999px;padding:1px 8px;font-size:11px;font-weight:800;transition:.15s}
+.cls-level{font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(139,92,246,.12);color:#7c3aed;font-weight:700}
+.cls-chip.active .cls-level{background:rgba(255,255,255,.2);color:#fff}
+
+/* Select actions bar */
+.sel-actions{display:flex;align-items:center;gap:14px;padding:9px 14px;background:#f8fafc;border:1.5px solid var(--border);border-radius:9px;margin-bottom:12px;flex-wrap:wrap}
+.sel-all-lbl{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;user-select:none}
+.sel-all-lbl input[type=checkbox]{accent-color:#8b5cf6;width:15px;height:15px;cursor:pointer}
+.vis-count{font-size:12px;color:var(--sub);margin-left:auto}
+.btn-deselect{padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:#fff;font-size:11.5px;font-weight:700;color:var(--sub);cursor:pointer;transition:.15s}
+.btn-deselect:hover{border-color:#ef4444;color:#dc2626}
 
 .elig-table-wrap{border:1.5px solid var(--border);border-radius:12px;overflow:hidden;max-height:340px;overflow-y:auto}
 .elig-table{width:100%;border-collapse:collapse}
@@ -313,33 +333,85 @@ select.inp{cursor:pointer}
             </div>
           </div>
 
-          <!-- Eligibility table -->
+          <!-- Eligibility section -->
           <div class="elig-section">
             <form method="POST">
               <input type="hidden" name="action" value="eligibility">
               <input type="hidden" name="period_id" value="{{ p.id }}">
 
+              <!-- Section header + search -->
               <div class="elig-head">
                 <h4><i class="fas fa-user-check"></i> Trainee Eligibility &amp; Intro Letters</h4>
                 <input class="elig-search" type="text" placeholder="Search trainee…"
-                       oninput="filterStudents(this, 'tbl-{{ p.id }}')" autocomplete="off">
+                       oninput="filterStudents(this,'tbl-{{ p.id }}','chips-{{ p.id }}','vc-{{ p.id }}')"
+                       autocomplete="off">
               </div>
 
+              <!-- ── Class filter chips ── -->
+              {% if classes_with_students %}
+              <div class="class-chips-wrap">
+                <div class="class-chips-label"><i class="fas fa-filter"></i> Filter by class</div>
+                <div class="class-chips-row" id="chips-{{ p.id }}">
+                  <button type="button" class="cls-chip active"
+                          data-cid="all"
+                          onclick="filterClass(this,'tbl-{{ p.id }}','all','vc-{{ p.id }}')">
+                    <i class="fas fa-th-list"></i> All Classes
+                    <span class="cls-count">{{ students|length }}</span>
+                  </button>
+                  {% for cls in classes_with_students %}
+                  <button type="button" class="cls-chip"
+                          data-cid="{{ cls.id }}"
+                          onclick="filterClass(this,'tbl-{{ p.id }}','{{ cls.id }}','vc-{{ p.id }}')">
+                    <i class="fas fa-users"></i>
+                    {{ cls.name }}
+                    {% if cls.level %}<span class="cls-level">{{ cls.level }}</span>{% endif %}
+                    <span class="cls-count">{{ class_student_counts.get(cls.id, 0) }}</span>
+                  </button>
+                  {% endfor %}
+                  {% if unclassified_count > 0 %}
+                  <button type="button" class="cls-chip"
+                          data-cid="unclassified"
+                          onclick="filterClass(this,'tbl-{{ p.id }}','unclassified','vc-{{ p.id }}')">
+                    <i class="fas fa-question-circle"></i> No Class
+                    <span class="cls-count">{{ unclassified_count }}</span>
+                  </button>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
               {% if students %}
+              <!-- Select-all actions bar -->
+              <div class="sel-actions">
+                <label class="sel-all-lbl">
+                  <input type="checkbox" id="selAll-{{ p.id }}"
+                         onchange="toggleSelectAll(this,'tbl-{{ p.id }}')">
+                  Select all visible as eligible
+                </label>
+                <button type="button" class="btn-deselect"
+                        onclick="deselectAll('tbl-{{ p.id }}',document.getElementById('selAll-{{ p.id }}'))">
+                  <i class="fas fa-times"></i> Deselect all
+                </button>
+                <span class="vis-count" id="vc-{{ p.id }}">{{ students|length }} trainee{{ 's' if students|length != 1 }}</span>
+              </div>
+
               <div class="elig-table-wrap">
                 <table class="elig-table" id="tbl-{{ p.id }}">
                   <thead>
                     <tr>
                       <th>Trainee</th>
-                      <th class="center" style="width:90px">Eligible</th>
+                      <th style="font-size:10px;color:#64748b;font-weight:700">Class / Course</th>
+                      <th class="center" style="width:85px">Eligible</th>
                       <th class="center" style="width:100px">Intro Letter</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for s in students %}
-                    {% set el = eligibility.get(p.id, {}).get(s.id) %}
+                    {% set el  = eligibility.get(p.id, {}).get(s.id) %}
+                    {% set sc  = student_class_map.get(s.id, {}) %}
+                    {% set cid = sc.get('class_id', 'unclassified') %}
                     {% set initials = ((s.full_name.split()[0][:1] ~ (s.full_name.split()[1][:1] if s.full_name.split()|length > 1 else ''))|upper) if s.full_name else '?' %}
-                    <tr data-name="{{ s.full_name|lower }}">
+                    <tr data-name="{{ s.full_name|lower }}" data-cid="{{ cid }}">
                       <td>
                         <div class="student-cell">
                           <div class="avatar-sm">{{ initials }}</div>
@@ -348,6 +420,14 @@ select.inp{cursor:pointer}
                             <div class="student-adm">{{ s.admission_no or '—' }}</div>
                           </div>
                         </div>
+                      </td>
+                      <td style="font-size:12px;color:var(--sub)">
+                        {% if sc.get('class_name') %}
+                        <span style="font-weight:600;color:var(--text);display:block">{{ sc.class_name }}</span>
+                        {% if sc.get('level') %}<span style="font-size:10.5px">{{ sc.level }}{% if sc.get('course_code') %} · {{ sc.course_code }}{% endif %}</span>{% endif %}
+                        {% else %}
+                        <span style="color:#94a3b8;font-style:italic">Not enrolled</span>
+                        {% endif %}
                       </td>
                       <td>
                         <div class="chk-wrap">
@@ -369,9 +449,9 @@ select.inp{cursor:pointer}
                 </table>
               </div>
 
-              <!-- Stats row -->
-              {% set elig_map = eligibility.get(p.id, {}) %}
-              {% set elig_count = elig_map.values()|selectattr('is_eligible')|list|length %}
+              <!-- Stats + save row -->
+              {% set elig_map   = eligibility.get(p.id, {}) %}
+              {% set elig_count  = elig_map.values()|selectattr('is_eligible')|list|length %}
               {% set intro_count = elig_map.values()|selectattr('introduction_letter_issued')|list|length %}
               <div style="display:flex;gap:12px;margin-top:14px;align-items:center;flex-wrap:wrap">
                 <span style="font-size:12px;color:var(--sub)">
@@ -415,21 +495,91 @@ select.inp{cursor:pointer}
 </div>
 
 <script>
-function updateFileLabel(input){
+/* ── File upload label ── */
+function updateFileLabel(input) {
   var label = document.getElementById('fileLabel');
-  if(input.files && input.files[0]){
+  if (input.files && input.files[0]) {
     label.textContent = input.files[0].name;
     document.getElementById('fileZone').style.borderColor = '#10b981';
-    document.getElementById('fileZone').style.background = '#f0fdf4';
+    document.getElementById('fileZone').style.background  = '#f0fdf4';
   }
 }
 
-function filterStudents(input, tableId){
-  var q = input.value.toLowerCase();
-  var rows = document.querySelectorAll('#'+tableId+' tbody tr');
-  rows.forEach(function(row){
-    row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+/* ── Helpers ── */
+function getVisibleRows(tableId) {
+  return Array.from(document.querySelectorAll('#' + tableId + ' tbody tr'))
+              .filter(function(r){ return r.style.display !== 'none'; });
+}
+
+function updateVisCount(countId, n, total) {
+  var el = document.getElementById(countId);
+  if (el) el.textContent = n + ' of ' + total + ' trainee' + (total !== 1 ? 's' : '');
+}
+
+/* ── Class chip filter ── */
+function filterClass(chip, tableId, classId, countId) {
+  // Activate chip
+  var row = chip.closest('.class-chips-row');
+  if (row) row.querySelectorAll('.cls-chip').forEach(function(c){ c.classList.remove('active'); });
+  chip.classList.add('active');
+
+  var rows  = document.querySelectorAll('#' + tableId + ' tbody tr');
+  var total = rows.length;
+  var shown = 0;
+
+  rows.forEach(function(r) {
+    var cid  = r.dataset.cid || 'unclassified';
+    var show = (classId === 'all') || (cid === classId);
+    r.style.display = show ? '' : 'none';
+    if (show) shown++;
   });
+
+  updateVisCount(countId, shown, total);
+
+  // Reset select-all checkbox
+  var sa = document.getElementById('selAll-' + tableId.replace('tbl-', ''));
+  if (sa) sa.checked = false;
+}
+
+/* ── Name search (respects active class filter) ── */
+function filterStudents(input, tableId, chipsId, countId) {
+  var q = input.value.toLowerCase();
+
+  // Determine active class filter
+  var activeCid = 'all';
+  var chipsRow  = document.getElementById(chipsId);
+  if (chipsRow) {
+    var active = chipsRow.querySelector('.cls-chip.active');
+    if (active) activeCid = active.dataset.cid || 'all';
+  }
+
+  var rows  = document.querySelectorAll('#' + tableId + ' tbody tr');
+  var total = rows.length;
+  var shown = 0;
+
+  rows.forEach(function(r) {
+    var cid       = r.dataset.cid || 'unclassified';
+    var classOk   = (activeCid === 'all') || (cid === activeCid);
+    var nameOk    = !q || (r.dataset.name || '').includes(q);
+    var show      = classOk && nameOk;
+    r.style.display = show ? '' : 'none';
+    if (show) shown++;
+  });
+
+  updateVisCount(countId, shown, total);
+}
+
+/* ── Select / deselect all visible ── */
+function toggleSelectAll(checkbox, tableId) {
+  getVisibleRows(tableId).forEach(function(r) {
+    var chk = r.querySelector('.chk-elig');
+    if (chk) chk.checked = checkbox.checked;
+  });
+}
+
+function deselectAll(tableId, selAllChk) {
+  document.querySelectorAll('#' + tableId + ' .chk-elig').forEach(function(c){ c.checked = false; });
+  if (selAllChk) selAllChk.checked = false;
 }
 </script>
 {% endblock %}

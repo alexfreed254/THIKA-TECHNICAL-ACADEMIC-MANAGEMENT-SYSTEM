@@ -551,6 +551,54 @@ def attachment_periods():
                   .order("full_name")
                   .limit(500)
                   .execute().data or [])
+
+    # Load all classes (for class-based eligibility selection)
+    classes_list = []
+    try:
+        classes_list = (db.table("classes")
+                          .select("id, name, level, intake_year, intake_month, courses(name, code), departments(name)")
+                          .order("name")
+                          .execute().data or [])
+    except Exception:
+        pass
+
+    # Build student_id → class info map from enrollments
+    student_class_map = {}  # student_id → {"class_id": ..., "class_name": ...}
+    try:
+        enr_rows = (db.table("enrollments")
+                      .select("student_id, class_id, classes(id, name, level, courses(code))")
+                      .execute().data or [])
+        for e in enr_rows:
+            cls = e.get("classes") or {}
+            student_class_map[e["student_id"]] = {
+                "class_id":   cls.get("id", ""),
+                "class_name": cls.get("name", ""),
+                "level":      cls.get("level", ""),
+                "course_code": (cls.get("courses") or {}).get("code", ""),
+            }
+    except Exception:
+        pass
+
+    # Build unique classes that have enrolled students (for class chips)
+    seen_cids = set()
+    classes_with_students = []
+    class_student_counts = {}
+    for s in students:
+        sc = student_class_map.get(s["id"], {})
+        cid = sc.get("class_id", "")
+        if cid:
+            class_student_counts[cid] = class_student_counts.get(cid, 0) + 1
+            if cid not in seen_cids:
+                seen_cids.add(cid)
+                classes_with_students.append({
+                    "id":          cid,
+                    "name":        sc.get("class_name", ""),
+                    "level":       sc.get("level", ""),
+                    "course_code": sc.get("course_code", ""),
+                })
+    classes_with_students.sort(key=lambda x: x["name"])
+    unclassified_count = sum(1 for s in students if not student_class_map.get(s["id"], {}).get("class_id"))
+
     eligibility = {}
     if periods and _table_ok_periods(db):
         try:
@@ -564,6 +612,11 @@ def attachment_periods():
         "liaison_officer/periods.html",
         periods=periods,
         students=students,
+        classes_list=classes_list,
+        student_class_map=student_class_map,
+        classes_with_students=classes_with_students,
+        class_student_counts=class_student_counts,
+        unclassified_count=unclassified_count,
         eligibility=eligibility,
         current_year=datetime.now().year,
         today=datetime.now().strftime("%Y-%m-%d"),
