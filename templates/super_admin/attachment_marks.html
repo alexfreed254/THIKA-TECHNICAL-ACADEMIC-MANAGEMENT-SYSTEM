@@ -1,0 +1,420 @@
+{% extends "super_admin/base.html" %}
+{% block title %}Attachment Marks{% endblock %}
+{% block page_title %}Industrial Attachment Marks{% endblock %}
+
+{% block extra_style %}
+.am-wrap{padding:24px;background:#f1f5f9;min-height:calc(100vh - 64px)}
+
+/* Hero */
+.am-hero{background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%);border-radius:14px;padding:24px 28px 20px;margin-bottom:22px;color:#fff;position:relative;overflow:hidden}
+.am-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 100% 0%,rgba(245,158,11,.12),transparent 60%);pointer-events:none}
+.am-hero-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.am-hero h1{font-size:18px;font-weight:800;margin:0 0 3px;display:flex;align-items:center;gap:9px;color:#fff}
+.am-hero h1 i{color:#f59e0b}
+.am-hero p{font-size:12.5px;color:#bfdbfe;margin:0}
+.am-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.am-kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:11px;padding:13px 16px}
+.am-kpi-num{font-size:26px;font-weight:900;color:#fff;line-height:1}
+.am-kpi-lbl{font-size:10.5px;color:rgba(255,255,255,.6);margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+
+/* Grade dist row */
+.grade-dist{display:flex;gap:10px;flex-wrap:wrap}
+.gd-pill{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:9px;font-size:12px;font-weight:700;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}
+.gd-letter{font-size:17px;font-weight:900}
+.gd-M .gd-letter{color:#86efac}.gd-P .gd-letter{color:#93c5fd}.gd-C .gd-letter{color:#fcd34d}.gd-NYC .gd-letter{color:#fca5a5}
+.gd-count{color:#fff}.gd-lbl{color:rgba(255,255,255,.6);font-size:10.5px}
+
+/* Weight legend */
+.wt-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:rgba(255,255,255,.65);margin-top:10px}
+.wt-item{display:flex;align-items:center;gap:5px}
+.wt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Toolbar */
+.am-toolbar{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 5px rgba(0,0,0,.05);padding:13px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.am-search{flex:1;min-width:160px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a}
+.am-search:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.am-filter{padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a;background:#fff;cursor:pointer}
+.am-chips{display:flex;gap:8px;flex-wrap:wrap}
+.am-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f0;background:#f8fafc;color:#64748b;transition:.15s}
+.am-chip.active{background:#0f2c54;color:#fff;border-color:#0f2c54}
+.am-chip:hover:not(.active){background:#e2e8f0}
+
+/* Table card */
+.am-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 5px rgba(0,0,0,.05);overflow:hidden}
+.am-card-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:12px 18px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.am-card-head i{color:#f59e0b}
+.row-count{margin-left:auto;font-size:11px;font-weight:600;opacity:.75;background:rgba(255,255,255,.12);border-radius:20px;padding:2px 10px}
+.am-tbl-wrap{overflow-x:auto}
+.am-tbl{width:100%;border-collapse:collapse}
+.am-tbl thead th{background:#f8fafc;padding:9px 11px;text-align:left;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;border-bottom:1.5px solid #e2e8f0;white-space:nowrap}
+.am-tbl thead th.ctr{text-align:center}
+.am-tbl tbody td{padding:10px 11px;border-bottom:1px solid #f1f5f9;font-size:12.5px;color:#0f172a;vertical-align:middle}
+.am-tbl tbody tr:last-child td{border-bottom:none}
+.am-tbl tbody tr:hover td{background:#fafbfc}
+.am-tbl tbody tr[data-hidden="1"]{display:none}
+.stu-name{font-weight:700;color:#0f172a}
+.stu-adm{font-size:11px;color:#64748b;margin-top:1px}
+.dept-chip{font-size:10.5px;font-weight:700;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:2px 8px;border-radius:5px;display:inline-block}
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;font-size:10.5px;font-weight:700;border:1px solid transparent}
+.sp-active{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.sp-completed{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
+.sp-pending{background:#fef9c3;color:#a16207;border-color:#fde68a}
+.score-cell{text-align:center;font-size:12px;font-weight:700}
+.score-val{color:#0f172a}.score-dash{color:#cbd5e1}
+.grade-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:900;border:2px solid transparent}
+.gb-M{background:#dcfce7;color:#15803d;border-color:#86efac}
+.gb-P{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+.gb-C{background:#fef3c7;color:#a16207;border-color:#fcd34d}
+.gb-NYC{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+.gb-nil{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;font-size:10px}
+.total-pill{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:700;background:#f1f5f9;color:#334155}
+.btn-enter{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;border:none;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn-enter:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,44,84,.28)}
+.btn-enter i{color:#fbbf24}
+.btn-edit{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-edit:hover{background:#dbeafe}
+.empty-row td{text-align:center;padding:50px 24px;color:#94a3b8}
+.empty-row td i{font-size:40px;display:block;margin-bottom:10px;color:#cbd5e1}
+
+/* Modal */
+.am-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,28,54,.55);z-index:3000;align-items:center;justify-content:center;padding:16px}
+.am-modal-bg.open{display:flex}
+.am-modal{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:94vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.28);animation:amSlide .22s ease}
+@keyframes amSlide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.am-modal-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:16px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2}
+.am-modal-head h3{font-size:14px;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
+.am-modal-head h3 i{color:#f59e0b}
+.am-modal-close{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.am-modal-close:hover{background:rgba(255,255,255,.25)}
+.am-modal-body{padding:20px}
+.am-stu-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.am-stu-card strong{font-size:13px;color:#0f172a;font-weight:700}
+.am-stu-card span{font-size:12px;color:#64748b;margin-left:6px}
+.score-row{display:grid;grid-template-columns:1fr 80px 56px;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.score-row:last-of-type{border-bottom:none}
+.score-label{font-size:12.5px;font-weight:600;color:#0f172a}
+.score-label small{display:block;font-size:10.5px;font-weight:400;color:#64748b;margin-top:1px}
+.score-inp{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:700;text-align:center;outline:none;color:#0f172a;transition:.15s;box-sizing:border-box}
+.score-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.score-wt{font-size:11px;font-weight:700;color:#64748b;text-align:center;background:#f1f5f9;padding:4px 6px;border-radius:6px}
+.am-result{background:linear-gradient(135deg,#0f2c54,#1a3d6e);border-radius:10px;padding:14px 18px;margin:16px 0 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.am-result-score{font-size:28px;font-weight:900;color:#fff;line-height:1}
+.am-result-lbl{font-size:11px;color:rgba(255,255,255,.6);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.am-result-grade{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;border:3px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff}
+.am-save-btn{width:100%;padding:12px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.18s;box-shadow:0 4px 12px rgba(15,44,84,.28)}
+.am-save-btn:hover{transform:translateY(-1px)}
+.am-save-btn i{color:#f59e0b}
+.am-toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none}
+.am-toast.show{opacity:1;transform:translateY(0)}
+@media(max-width:620px){.am-kpis{grid-template-columns:1fr 1fr}.score-row{grid-template-columns:1fr 70px 46px}}
+{% endblock %}
+
+{% block content %}
+<div class="am-wrap">
+
+  <!-- Hero -->
+  <div class="am-hero">
+    <div class="am-hero-top">
+      <div>
+        <h1><i class="fas fa-star-half-alt"></i> Industrial Attachment Marks</h1>
+        <p>View and enter grading scores for all trainees across all departments.</p>
+      </div>
+    </div>
+    <div class="am-kpis">
+      <div class="am-kpi">
+        <div class="am-kpi-num">{{ stats.total }}</div>
+        <div class="am-kpi-lbl">Total Attachments</div>
+      </div>
+      <div class="am-kpi">
+        <div class="am-kpi-num">{{ stats.graded }}</div>
+        <div class="am-kpi-lbl">Graded</div>
+      </div>
+      <div class="am-kpi">
+        <div class="am-kpi-num">{{ stats.pending }}</div>
+        <div class="am-kpi-lbl">Pending</div>
+      </div>
+      <div class="am-kpi">
+        <div class="am-kpi-num">{{ stats.avg }}%</div>
+        <div class="am-kpi-lbl">Avg Score</div>
+      </div>
+    </div>
+
+    <!-- Grade distribution -->
+    <div class="grade-dist">
+      <span class="gd-pill gd-M"><span class="gd-letter">M</span><span class="gd-count">{{ grade_dist.M }}</span><span class="gd-lbl">Merit</span></span>
+      <span class="gd-pill gd-P"><span class="gd-letter">P</span><span class="gd-count">{{ grade_dist.P }}</span><span class="gd-lbl">Pass</span></span>
+      <span class="gd-pill gd-C"><span class="gd-letter">C</span><span class="gd-count">{{ grade_dist.C }}</span><span class="gd-lbl">Credit</span></span>
+      <span class="gd-pill gd-NYC"><span class="gd-letter">NYC</span><span class="gd-count">{{ grade_dist.NYC }}</span><span class="gd-lbl">Not Yet Competent</span></span>
+    </div>
+
+    <div class="wt-legend">
+      <span style="font-weight:700">Weights:</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#f59e0b"></span> GPS {{ (config.weight_gps_attendance or 10)|int }}%</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#60a5fa"></span> Logbook {{ (config.weight_logbook or 20)|int }}%</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#a78bfa"></span> Mentor {{ (config.weight_mentor_eval or 30)|int }}%</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#34d399"></span> Trainer {{ (config.weight_trainer_assessment or 30)|int }}%</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#fb7185"></span> Report {{ (config.weight_final_report or 10)|int }}%</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="am-toolbar">
+    <input class="am-search" type="text" id="amSearch"
+           placeholder="&#xf002;  Search student, admission no or company…"
+           oninput="amSearch(this.value)" autocomplete="off">
+    <select class="am-filter" id="deptFilter" onchange="amDept(this.value)">
+      <option value="">All Departments</option>
+      {% for d in departments|sort %}
+      <option value="{{ d|lower }}">{{ d }}</option>
+      {% endfor %}
+    </select>
+    <div class="am-chips">
+      <span class="am-chip active" onclick="amFilter('all',this)">All</span>
+      <span class="am-chip" onclick="amFilter('graded',this)">Graded</span>
+      <span class="am-chip" onclick="amFilter('pending',this)">Pending</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="am-card">
+    <div class="am-card-head">
+      <i class="fas fa-table"></i> National Attachment Grading Register
+      <span class="row-count" id="rowCount">{{ attachments|length }} records</span>
+    </div>
+    <div class="am-tbl-wrap">
+      <table class="am-tbl" id="amTable">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Department</th>
+            <th>Company</th>
+            <th>Period</th>
+            <th class="ctr">Status</th>
+            <th class="ctr">GPS</th>
+            <th class="ctr">Logbook</th>
+            <th class="ctr">Mentor</th>
+            <th class="ctr">Trainer</th>
+            <th class="ctr">Report</th>
+            <th class="ctr">Total</th>
+            <th class="ctr">Grade</th>
+            <th class="ctr">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in attachments %}
+          {% set g   = a.get('_grade') %}
+          {% set stu = a.get('student') or {} %}
+          {% set co  = a.get('companies') or {} %}
+          {% set att_status = (a.get('status') or 'pending').lower() %}
+          <tr data-grade="{{ 'graded' if g else 'pending' }}"
+              data-dept="{{ a._dept_name|lower }}"
+              data-search="{{ ((stu.get('full_name') or '') ~ ' ' ~ (stu.get('admission_no') or '') ~ ' ' ~ (co.get('name') or '') ~ ' ' ~ a._dept_name)|lower }}"
+              id="row-{{ a.id }}">
+            <td>
+              <div class="stu-name">{{ stu.get('full_name') or '—' }}</div>
+              <div class="stu-adm">{{ stu.get('admission_no') or '' }}</div>
+            </td>
+            <td><span class="dept-chip">{{ a._dept_name }}</span></td>
+            <td style="font-size:12px;color:#475569">{{ co.get('name') or '—' }}</td>
+            <td style="font-size:11.5px;color:#64748b;white-space:nowrap">
+              {% if a.get('start_date') %}{{ a.start_date }}{% if a.get('end_date') %} → {{ a.end_date }}{% endif %}{% else %}—{% endif %}
+            </td>
+            <td class="ctr">
+              <span class="status-pill {{ 'sp-active' if att_status == 'active' else 'sp-completed' if att_status == 'completed' else 'sp-pending' }}">
+                {{ att_status|title }}
+              </span>
+            </td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_gps_attendance|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_logbook|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_mentor_eval|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_trainer_assessment|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_final_report|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="ctr">
+              {% if g and g.get('weighted_total') is not none %}
+              <span class="total-pill">{{ g.weighted_total|round(1) }}%</span>
+              {% else %}<span class="score-dash">—</span>{% endif %}
+            </td>
+            <td class="ctr">
+              {% if g and g.get('final_grade') %}
+              <span class="grade-badge gb-{{ g.final_grade }}">{{ g.final_grade }}</span>
+              {% else %}<span class="grade-badge gb-nil">?</span>{% endif %}
+            </td>
+            <td class="ctr">
+              <button class="{{ 'btn-edit' if g else 'btn-enter' }}"
+                      onclick="openMarks('{{ a.id }}','{{ stu.get('full_name','') }}','{{ co.get('name','') }}','{{ a._dept_name }}',
+                        {{ (g.score_gps_attendance or 0) if g else 0 }},
+                        {{ (g.score_logbook or 0) if g else 0 }},
+                        {{ (g.score_mentor_eval or 0) if g else 0 }},
+                        {{ (g.score_trainer_assessment or 0) if g else 0 }},
+                        {{ (g.score_final_report or 0) if g else 0 }})">
+                <i class="fas {{ 'fa-pen' if g else 'fa-plus' }}"></i>
+                {{ 'Edit' if g else 'Enter Marks' }}
+              </button>
+            </td>
+          </tr>
+          {% else %}
+          <tr class="empty-row"><td colspan="13"><i class="fas fa-star-half-alt"></i> No attachment records found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Marks Modal -->
+<div class="am-modal-bg" id="amModalBg" onclick="bgClose(event)">
+  <div class="am-modal">
+    <div class="am-modal-head">
+      <h3><i class="fas fa-star-half-alt"></i> Enter Attachment Marks</h3>
+      <button class="am-modal-close" onclick="closeMarks()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="am-modal-body">
+      <div class="am-stu-card">
+        <strong id="modalStu">—</strong>
+        <span id="modalCo"></span>
+        <span id="modalDept" style="display:block;margin-top:3px;font-size:11px;color:#3b82f6;font-weight:700"></span>
+      </div>
+      <form id="marksForm">
+        <input type="hidden" id="currentAttId" value="">
+        <div class="score-row">
+          <div class="score-label">GPS Attendance<small>Geofenced check-in records</small></div>
+          <input class="score-inp" type="number" id="s_gps" name="score_gps_attendance" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">{{ (config.weight_gps_attendance or 10)|int }}%</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Digital Logbook<small>Quality and completeness</small></div>
+          <input class="score-inp" type="number" id="s_log" name="score_logbook" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">{{ (config.weight_logbook or 20)|int }}%</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Mentor Evaluation<small>Industry supervisor score</small></div>
+          <input class="score-inp" type="number" id="s_men" name="score_mentor_eval" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">{{ (config.weight_mentor_eval or 30)|int }}%</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Trainer Assessment<small>Institute trainer score</small></div>
+          <input class="score-inp" type="number" id="s_tra" name="score_trainer_assessment" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">{{ (config.weight_trainer_assessment or 30)|int }}%</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Final Report<small>Written report quality</small></div>
+          <input class="score-inp" type="number" id="s_rep" name="score_final_report" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">{{ (config.weight_final_report or 10)|int }}%</div>
+        </div>
+        <div class="am-result">
+          <div>
+            <div class="am-result-score"><span id="livePct">0.0</span>%</div>
+            <div class="am-result-lbl">Weighted Total</div>
+          </div>
+          <div id="liveGrade" class="am-result-grade">?</div>
+        </div>
+        <button type="button" class="am-save-btn" id="saveBtn" onclick="saveMarks()">
+          <i class="fas fa-save"></i> Save Marks
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="am-toast" id="amToast"></div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+var WEIGHTS = {
+  gps: {{ (config.weight_gps_attendance or 10)|float }},
+  log: {{ (config.weight_logbook or 20)|float }},
+  men: {{ (config.weight_mentor_eval or 30)|float }},
+  tra: {{ (config.weight_trainer_assessment or 30)|float }},
+  rep: {{ (config.weight_final_report or 10)|float }},
+};
+var TOTAL_W = WEIGHTS.gps + WEIGHTS.log + WEIGHTS.men + WEIGHTS.tra + WEIGHTS.rep;
+
+function calcTotal() {
+  var gps = parseFloat(document.getElementById('s_gps').value)||0;
+  var log = parseFloat(document.getElementById('s_log').value)||0;
+  var men = parseFloat(document.getElementById('s_men').value)||0;
+  var tra = parseFloat(document.getElementById('s_tra').value)||0;
+  var rep = parseFloat(document.getElementById('s_rep').value)||0;
+  var pct = (gps*WEIGHTS.gps + log*WEIGHTS.log + men*WEIGHTS.men + tra*WEIGHTS.tra + rep*WEIGHTS.rep) / TOTAL_W;
+  pct = Math.round(pct*10)/10;
+  document.getElementById('livePct').textContent = pct.toFixed(1);
+  var g  = pct>=80?'M':pct>=65?'P':pct>=50?'C':'NYC';
+  var el = document.getElementById('liveGrade');
+  el.textContent = g;
+  el.style.background = {M:'rgba(22,163,74,.3)',P:'rgba(29,78,216,.3)',C:'rgba(217,119,6,.3)',NYC:'rgba(220,38,38,.3)'}[g];
+}
+
+function openMarks(id, stu, co, dept, gps, log, men, tra, rep) {
+  document.getElementById('currentAttId').value = id;
+  document.getElementById('modalStu').textContent = stu;
+  document.getElementById('modalCo').textContent  = co ? ' — ' + co : '';
+  document.getElementById('modalDept').textContent = dept ? dept : '';
+  document.getElementById('s_gps').value = gps;
+  document.getElementById('s_log').value = log;
+  document.getElementById('s_men').value = men;
+  document.getElementById('s_tra').value = tra;
+  document.getElementById('s_rep').value = rep;
+  calcTotal();
+  document.getElementById('amModalBg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMarks() {
+  document.getElementById('amModalBg').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function bgClose(e){ if(e.target===document.getElementById('amModalBg'))closeMarks(); }
+
+function saveMarks() {
+  var id  = document.getElementById('currentAttId').value;
+  var btn = document.getElementById('saveBtn');
+  var fd  = new FormData(document.getElementById('marksForm'));
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+  fetch('/super-admin/attachment-marks/'+id+'/save',{method:'POST',body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> Save Marks';
+      if(d.ok){closeMarks();showToast('Saved — Grade: '+d.grade+' ('+d.total.toFixed(1)+'%)');setTimeout(function(){location.reload();},1200);}
+      else showToast(d.error||'Save failed',true);
+    })
+    .catch(function(){btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> Save Marks';showToast('Network error',true);});
+}
+function showToast(msg,err){
+  var t=document.getElementById('amToast');
+  t.textContent=msg; t.style.background=err?'#dc2626':'#1e293b';
+  t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},3000);
+}
+
+/* Search */
+function amSearch(q){
+  q=q.toLowerCase();
+  var rows=document.querySelectorAll('#amTable tbody tr[data-search]');
+  var n=0;
+  rows.forEach(function(r){
+    var show=r.dataset.search.includes(q)&&(!_filterMode||_filterMode==='all'||r.dataset.grade===_filterMode)&&(!_deptMode||r.dataset.dept.includes(_deptMode));
+    r.setAttribute('data-hidden',show?'0':'1'); if(show)n++;
+  });
+  document.getElementById('rowCount').textContent=n+' records';
+}
+
+var _filterMode='all', _deptMode='';
+function amFilter(mode,el){
+  _filterMode=mode;
+  document.querySelectorAll('.am-chip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active'); _applyFilters();
+}
+function amDept(v){ _deptMode=v.toLowerCase(); _applyFilters(); }
+function _applyFilters(){
+  var q=document.getElementById('amSearch').value.toLowerCase();
+  var rows=document.querySelectorAll('#amTable tbody tr[data-search]');
+  var n=0;
+  rows.forEach(function(r){
+    var show=r.dataset.search.includes(q)
+      &&(_filterMode==='all'||r.dataset.grade===_filterMode)
+      &&(!_deptMode||r.dataset.dept.includes(_deptMode));
+    r.setAttribute('data-hidden',show?'0':'1'); if(show)n++;
+  });
+  document.getElementById('rowCount').textContent=n+' records';
+}
+</script>
+{% endblock %}

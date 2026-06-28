@@ -2348,3 +2348,114 @@ def delete_scanner(scanner_id):
         flash(f"Error removing scanner: {e}", "error")
 
     return redirect(url_for("super_admin.biometric_scanners"))
+
+
+# ── Industrial Attachment Marks ───────────────────────────────────────────────
+
+from routes.attachment_helpers import (
+    get_grading_config, compute_weighted_grade, score_to_cdacc
+)
+
+@super_admin_bp.route("/attachment-marks")
+@super_admin_required
+def attachment_marks():
+    db = get_service_client()
+
+    # All attachments across all departments
+    raw = (db.table("industrial_attachments")
+             .select("id, student_id, start_date, end_date, status, "
+                     "companies(name), "
+                     "student:user_profiles!industrial_attachments_student_id_fkey"
+                     "(full_name, admission_no, department_id), "
+                     "units(name, code)")
+             .order("created_at", desc=True)
+             .limit(1000)
+             .execute().data or [])
+
+    # Fetch grades for every attachment in one query
+    att_ids = [a["id"] for a in raw]
+    grades_map = {}
+    if att_ids:
+        grade_rows = (db.table("attachment_grades")
+                        .select("*")
+                        .in_("attachment_id", att_ids)
+                        .execute().data or [])
+        grades_map = {g["attachment_id"]: g for g in grade_rows}
+
+    # Department name lookup
+    depts_map = {}
+    try:
+        depts = db.table("departments").select("id, name").execute().data or []
+        depts_map = {d["id"]: d["name"] for d in depts}
+    except Exception:
+        pass
+
+    for a in raw:
+        a["_grade"] = grades_map.get(a["id"])
+        stu = a.get("student") or {}
+        a["_dept_name"] = depts_map.get(stu.get("department_id"), "—")
+
+    total   = len(raw)
+    graded  = sum(1 for a in raw if a.get("_grade"))
+    pending = total - graded
+    scores  = [float(a["_grade"]["weighted_total"]) for a in raw
+               if a.get("_grade") and a["_grade"].get("weighted_total") is not None]
+    avg     = round(sum(scores) / len(scores), 1) if scores else 0
+
+    # Grade distribution
+    grade_dist = {"M": 0, "P": 0, "C": 0, "NYC": 0}
+    for a in raw:
+        g = a.get("_grade")
+        if g and g.get("final_grade") in grade_dist:
+            grade_dist[g["final_grade"]] += 1
+
+    config = get_grading_config(db)
+
+    return render_template(
+        "super_admin/attachment_marks.html",
+        attachments=raw,
+        config=config,
+        stats={"total": total, "graded": graded, "pending": pending, "avg": avg},
+        grade_dist=grade_dist,
+        departments=list(depts_map.values()),
+    )
+
+
+@super_admin_bp.route("/attachment-marks/<att_id>/save", methods=["POST"])
+@super_admin_required
+def save_attachment_marks(att_id):
+    db   = get_service_client()
+    user = current_user()
+
+    def _f(name):
+        try:    return float(request.form.get(name) or 0)
+        except: return 0.0
+
+    scores = {
+        "score_gps_attendance":    _f("score_gps_attendance"),
+        "score_logbook":           _f("score_logbook"),
+        "score_mentor_eval":       _f("score_mentor_eval"),
+        "score_trainer_assessment": _f("score_trainer_assessment"),
+        "score_final_report":      _f("score_final_report"),
+    }
+    config  = get_grading_config(db)
+    weights = {k: v for k, v in config.items() if k.startswith("weight_")}
+    total   = compute_weighted_grade(scores, weights)
+    grade   = score_to_cdacc(total)
+
+    from datetime import datetime as _dt
+    payload = {**scores, "weighted_total": total, "final_grade": grade,
+               "graded_by": user["id"], "graded_at": _dt.utcnow().isoformat()}
+
+    existing = (db.table("attachment_grades")
+                  .select("id").eq("attachment_id", att_id)
+                  .limit(1).execute().data or [])
+    if existing:
+        db.table("attachment_grades").update(payload).eq("attachment_id", att_id).execute()
+    else:
+        payload["attachment_id"] = att_id
+        db.table("attachment_grades").insert(payload).execute()
+
+    write_audit_log("save_attachment_marks", target=f"attachment:{att_id}",
+                    detail={"grade": grade, "total": total})
+    return jsonify({"ok": True, "total": total, "grade": grade})
