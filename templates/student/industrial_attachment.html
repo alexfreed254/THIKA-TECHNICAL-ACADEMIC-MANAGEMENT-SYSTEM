@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {% endblock %}
 
 {% block extra_style %}
@@ -764,8 +764,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var lng = {{ _co.get('longitude') }};
     var siteMap = L.map('siteMap').setView([lat, lng], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
     }).addTo(siteMap);
+    setTimeout(function(){ siteMap.invalidateSize(); }, 100);
     var icon = L.divIcon({
       className: '',
       html: '<div style="background:#1e5a9f;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
@@ -785,8 +787,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var defaultLat = -1.0332, defaultLng = 37.0694; // Thika
     var regMap = L.map('regMap').setView([defaultLat, defaultLng], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
     }).addTo(regMap);
+    setTimeout(function(){ regMap.invalidateSize(); }, 100);
 
     var regMarker = null;
     function setMapPoint(lat, lng) {
