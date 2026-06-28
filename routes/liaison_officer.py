@@ -49,7 +49,7 @@ def dashboard():
             .execute().data or [])
 
         recent_logbooks = (db.table("digital_logbook")
-            .select("*, user_profiles!digital_logbook_student_id_fkey(full_name, admission_no), units(name, code)")
+            .select("*, user_profiles!digital_logbook_student_id_fkey(full_name, admission_no), industrial_attachments!digital_logbook_attachment_id_fkey(companies(name))")
             .order("log_date", desc=True)
             .limit(8)
             .execute().data or [])
