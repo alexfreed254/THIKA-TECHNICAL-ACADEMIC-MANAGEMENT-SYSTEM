@@ -1,0 +1,215 @@
+{% extends "student/base.html" %}
+{% block title %}My Attachment Marks{% endblock %}
+{% block page_title %}My Attachment Marks{% endblock %}
+
+{% block extra_style %}
+.mam-wrap{padding:20px;background:#f1f5f9;min-height:calc(100vh - 64px)}
+
+/* Hero */
+.mam-hero{background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%);border-radius:14px;padding:22px 26px 20px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden}
+.mam-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 100% 0%,rgba(245,158,11,.12),transparent 60%);pointer-events:none}
+.mam-hero h1{font-size:18px;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:9px;color:#fff}
+.mam-hero h1 i{color:#f59e0b}
+.mam-hero p{font-size:12.5px;color:#bfdbfe;margin:0}
+
+/* Grade card (main result) */
+.grade-card{background:#fff;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:18px;overflow:hidden}
+.grade-card-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.grade-card-head h2{font-size:14px;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
+.grade-card-head h2 i{color:#f59e0b}
+.att-meta{font-size:11.5px;color:rgba(255,255,255,.7);display:flex;gap:14px;flex-wrap:wrap}
+.att-meta span{display:flex;align-items:center;gap:5px}
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:700}
+.sp-active{background:#dcfce7;color:#15803d}
+.sp-completed{background:#dbeafe;color:#1d4ed8}
+.sp-pending{background:#fef9c3;color:#a16207}
+
+/* Result summary band */
+.result-band{display:flex;align-items:center;gap:0;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.result-total{flex:1;padding:18px 20px;border-right:1px solid #e2e8f0}
+.result-total-num{font-size:36px;font-weight:900;color:#0f2c54;line-height:1}
+.result-total-lbl{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.result-grade{padding:18px 24px;text-align:center;min-width:100px}
+.big-grade{font-size:42px;font-weight:900;line-height:1}
+.big-grade-lbl{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.grade-M{color:#15803d}.grade-P{color:#1d4ed8}.grade-C{color:#a16207}.grade-NYC{color:#dc2626}.grade-nil{color:#94a3b8}
+.result-remark{flex:1;padding:18px 20px;border-left:1px solid #e2e8f0}
+.remark-text{font-size:13.5px;font-weight:700;color:#0f172a;margin-bottom:4px}
+.remark-sub{font-size:12px;color:#64748b}
+
+/* Components */
+.components-body{padding:18px 20px}
+.components-title{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.comp-row{display:grid;grid-template-columns:180px 1fr 60px 60px;align-items:center;gap:12px;margin-bottom:10px}
+.comp-label{font-size:12.5px;font-weight:600;color:#0f172a}
+.comp-label small{display:block;font-size:10.5px;font-weight:400;color:#64748b}
+.comp-bar-wrap{position:relative;height:10px;background:#f1f5f9;border-radius:99px;overflow:hidden}
+.comp-bar{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.comp-score{font-size:12.5px;font-weight:800;color:#0f172a;text-align:right}
+.comp-wt{font-size:10.5px;font-weight:700;color:#94a3b8;text-align:right}
+.comp-nd{font-size:12px;color:#94a3b8;font-style:italic}
+
+/* Bar colours */
+.bar-gps{background:linear-gradient(90deg,#f59e0b,#fcd34d)}
+.bar-log{background:linear-gradient(90deg,#3b82f6,#93c5fd)}
+.bar-men{background:linear-gradient(90deg,#8b5cf6,#c4b5fd)}
+.bar-tra{background:linear-gradient(90deg,#10b981,#6ee7b7)}
+.bar-rep{background:linear-gradient(90deg,#f43f5e,#fda4af)}
+
+/* Pending state */
+.pending-card{background:#fff;border-radius:14px;border:2px dashed #e2e8f0;padding:40px 24px;text-align:center;margin-bottom:18px}
+.pending-card i{font-size:48px;color:#cbd5e1;display:block;margin-bottom:14px}
+.pending-card h3{font-size:16px;font-weight:800;color:#475569;margin:0 0 6px}
+.pending-card p{font-size:13px;color:#94a3b8;margin:0}
+
+/* No attachment */
+.no-att{background:#fff;border-radius:14px;border:2px dashed #e2e8f0;padding:50px 24px;text-align:center}
+.no-att i{font-size:52px;color:#cbd5e1;display:block;margin-bottom:14px}
+.no-att h3{font-size:16px;font-weight:800;color:#475569;margin:0 0 6px}
+.no-att p{font-size:13px;color:#94a3b8;margin:0 0 16px}
+.btn-go{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none;transition:.15s}
+.btn-go:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(15,44,84,.28)}
+.btn-go i{color:#fbbf24}
+
+/* Weight info */
+.weight-info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-top:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.weight-info-title{font-size:11px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-right:4px}
+.wt-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#475569}
+.wt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+@media(max-width:580px){
+  .comp-row{grid-template-columns:1fr 60px 50px;gap:8px}
+  .comp-row .comp-bar-wrap{display:none}
+  .result-band{flex-direction:column}
+  .result-total,.result-grade,.result-remark{border:none;border-bottom:1px solid #e2e8f0;width:100%;box-sizing:border-box}
+}
+{% endblock %}
+
+{% block content %}
+<div class="mam-wrap">
+
+  <div class="mam-hero">
+    <h1><i class="fas fa-star-half-alt"></i> My Attachment Marks</h1>
+    <p>View your industrial attachment performance grades as entered by your department.</p>
+  </div>
+
+  {% if not attachments %}
+  <!-- No attachment at all -->
+  <div class="no-att">
+    <i class="fas fa-industry"></i>
+    <h3>No Attachment Record Found</h3>
+    <p>You have not yet registered an industrial attachment placement.</p>
+    <a href="/student/industrial-attachment" class="btn-go"><i class="fas fa-plus"></i> Register Placement</a>
+  </div>
+
+  {% else %}
+  {% for a in attachments %}
+  {% set g   = a.get('_grade') %}
+  {% set co  = a.get('companies') or {} %}
+  {% set att_status = (a.get('status') or 'pending').lower() %}
+
+  <div class="grade-card">
+    <!-- Header -->
+    <div class="grade-card-head">
+      <h2><i class="fas fa-building"></i> {{ co.get('name') or 'Company' }}</h2>
+      <div class="att-meta">
+        {% if co.get('city') %}<span><i class="fas fa-map-marker-alt"></i> {{ co.city }}</span>{% endif %}
+        {% if a.get('start_date') %}<span><i class="fas fa-calendar"></i> {{ a.start_date }}{% if a.get('end_date') %} → {{ a.end_date }}{% endif %}</span>{% endif %}
+        <span>
+          <span class="status-pill {{ 'sp-active' if att_status == 'active' else 'sp-completed' if att_status == 'completed' else 'sp-pending' }}">
+            {{ att_status|title }}
+          </span>
+        </span>
+      </div>
+    </div>
+
+    {% if g and g.get('weighted_total') is not none %}
+    <!-- ── GRADED: show result band + components ── -->
+    {% set total = g.weighted_total|float %}
+    {% set grade = g.final_grade or ('M' if total >= 80 else 'P' if total >= 65 else 'C' if total >= 50 else 'NYC') %}
+
+    <div class="result-band">
+      <div class="result-total">
+        <div class="result-total-num">{{ total|round(1) }}%</div>
+        <div class="result-total-lbl">Weighted Total Score</div>
+      </div>
+      <div class="result-grade">
+        <div class="big-grade grade-{{ grade }}">{{ grade }}</div>
+        <div class="big-grade-lbl">Final Grade</div>
+      </div>
+      <div class="result-remark">
+        {% if grade == 'M' %}
+        <div class="remark-text" style="color:#15803d"><i class="fas fa-trophy" style="color:#f59e0b"></i> Merit — Excellent</div>
+        <div class="remark-sub">Outstanding performance. You exceeded all expectations during your attachment.</div>
+        {% elif grade == 'P' %}
+        <div class="remark-text" style="color:#1d4ed8"><i class="fas fa-check-circle"></i> Pass — Very Good</div>
+        <div class="remark-sub">Good performance. You demonstrated competence throughout your attachment.</div>
+        {% elif grade == 'C' %}
+        <div class="remark-text" style="color:#a16207"><i class="fas fa-star-half-alt"></i> Credit — Satisfactory</div>
+        <div class="remark-sub">Satisfactory performance. You met the minimum competency requirements.</div>
+        {% else %}
+        <div class="remark-text" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i> NYC — Needs Improvement</div>
+        <div class="remark-sub">You did not yet meet the required competency level. Speak to your trainer for guidance.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Component breakdown -->
+    <div class="components-body">
+      <div class="components-title"><i class="fas fa-sliders-h" style="color:#3b82f6"></i> Score Breakdown by Component</div>
+
+      {% set comps = [
+        ('GPS Attendance',    'Geofenced daily check-in records',    g.score_gps_attendance,    config.weight_gps_attendance    or 10, 'bar-gps'),
+        ('Digital Logbook',   'Quality &amp; completeness of entries', g.score_logbook,            config.weight_logbook            or 20, 'bar-log'),
+        ('Mentor Evaluation', 'Score from industry supervisor',       g.score_mentor_eval,        config.weight_mentor_eval        or 30, 'bar-men'),
+        ('Trainer Assessment','Institute trainer assessment',         g.score_trainer_assessment, config.weight_trainer_assessment or 30, 'bar-tra'),
+        ('Final Report',      'Quality of your written report',      g.score_final_report,       config.weight_final_report       or 10, 'bar-rep'),
+      ] %}
+
+      {% for label, hint, score, wt, bar_cls in comps %}
+      <div class="comp-row">
+        <div class="comp-label">{{ label }}<small>{{ hint }}</small></div>
+        <div class="comp-bar-wrap">
+          {% if score is not none %}
+          <div class="comp-bar {{ bar_cls }}" style="width:{{ [score|float, 100]|min }}%"></div>
+          {% endif %}
+        </div>
+        {% if score is not none %}
+        <div class="comp-score">{{ score|float|round(1) }}/100</div>
+        {% else %}
+        <div class="comp-nd">—</div>
+        {% endif %}
+        <div class="comp-wt">{{ wt|int }}%</div>
+      </div>
+      {% endfor %}
+
+      <!-- Weight info strip -->
+      <div class="weight-info">
+        <span class="weight-info-title">Grade key:</span>
+        <span class="wt-tag"><span class="wt-dot" style="background:#15803d"></span> M ≥ 80%</span>
+        <span class="wt-tag"><span class="wt-dot" style="background:#1d4ed8"></span> P ≥ 65%</span>
+        <span class="wt-tag"><span class="wt-dot" style="background:#a16207"></span> C ≥ 50%</span>
+        <span class="wt-tag"><span class="wt-dot" style="background:#dc2626"></span> NYC &lt; 50%</span>
+        {% if g.get('graded_at') %}
+        <span style="margin-left:auto;font-size:11px;color:#64748b">
+          <i class="fas fa-clock"></i> Graded {{ g.graded_at[:10] }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% else %}
+    <!-- ── NOT YET GRADED ── -->
+    <div class="pending-card">
+      <i class="fas fa-hourglass-half"></i>
+      <h3>Marks Not Yet Entered</h3>
+      <p>Your department has not yet entered marks for this attachment.<br>Check back after your attachment period ends.</p>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endfor %}
+  {% endif %}
+
+</div>
+{% endblock %}

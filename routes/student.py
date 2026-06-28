@@ -3978,3 +3978,53 @@ def ai_ask():
         att_info = poe_info = ""
     summary = f" Your quick summary — {att_info} | {poe_info}." if att_info else ""
     return jsonify({"reply": f"I can help with: attendance, POE uploads, exam booking, clearance, admission documents, industrial attachment, logbook, and marks.{summary}\n\nWhat would you like to know?"})
+
+
+# ── My Attachment Marks (read-only view for the trainee) ─────────────────────
+
+@student_bp.route("/attachment-marks")
+@student_required
+def my_attachment_marks():
+    db         = get_service_client()
+    user       = current_user()
+    student_id = user["id"]
+
+    # Fetch all attachments for this student (most recent first)
+    attachments = (db.table("industrial_attachments")
+                     .select("id, start_date, end_date, status, "
+                             "companies(name, address, city)")
+                     .eq("student_id", student_id)
+                     .order("created_at", desc=True)
+                     .execute().data or [])
+
+    # Fetch grades for each attachment
+    grades_map = {}
+    att_ids = [a["id"] for a in attachments]
+    if att_ids:
+        grade_rows = (db.table("attachment_grades")
+                        .select("*")
+                        .in_("attachment_id", att_ids)
+                        .execute().data or [])
+        grades_map = {g["attachment_id"]: g for g in grade_rows}
+
+    for a in attachments:
+        a["_grade"] = grades_map.get(a["id"])
+
+    # Grading config (weights) — try dept-specific then global default
+    config = {"weight_gps_attendance": 10, "weight_logbook": 20,
+              "weight_mentor_eval": 30, "weight_trainer_assessment": 30,
+              "weight_final_report": 10}
+    try:
+        cfg_rows = (db.table("attachment_grading_config")
+                      .select("*").eq("is_active", True).limit(1)
+                      .execute().data or [])
+        if cfg_rows:
+            config.update({k: v for k, v in cfg_rows[0].items() if k.startswith("weight_")})
+    except Exception:
+        pass
+
+    return render_template(
+        "student/attachment_marks.html",
+        attachments=attachments,
+        config=config,
+    )
