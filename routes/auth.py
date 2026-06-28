@@ -387,8 +387,9 @@ def _get_base_template(role: str) -> str:
     }
     if role in ("library_hod", "sports_hod", "service_clearance_officer"):
         return "service_dept/base.html"
-    if role in ("environment_hod", "dean_students", "finance_officer"):
-        return "clearance_approver/base.html"
+    if role in ("environment_hod", "dean_students", "finance_officer",
+                "registrar", "deputy_principal", "quality_assurance_officer"):
+        return "admin_oversight/base.html"
     return mapping.get(role, "dept_admin/base.html")
 
 

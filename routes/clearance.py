@@ -71,6 +71,28 @@ CATEGORY_LABELS = {
     "hod_home":     "Home Department HOD (Final)",
 }
 
+# Portal base template per role (clearance pages reuse the role's sidebar/layout)
+CLEARANCE_PORTAL_BASE = {
+    "trainer":               "trainer/base.html",
+    "dept_admin":            "dept_admin/base.html",
+    "liaison_officer":       "liaison_officer/base.html",
+    "workshop_technician":   "workshop_technician/base.html",
+    "super_admin":           "super_admin/base.html",
+    "library_hod":           "service_dept/base.html",
+    "sports_hod":            "service_dept/base.html",
+    "service_clearance_officer": "service_dept/base.html",
+    "environment_hod":       "admin_oversight/base.html",
+    "dean_students":         "admin_oversight/base.html",
+    "finance_officer":       "admin_oversight/base.html",
+    "registrar":             "admin_oversight/base.html",
+    "deputy_principal":      "admin_oversight/base.html",
+    "quality_assurance_officer": "admin_oversight/base.html",
+}
+
+
+def _portal_base_template(role: str) -> str:
+    return CLEARANCE_PORTAL_BASE.get(role, "dept_admin/base.html")
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -738,8 +760,7 @@ def service_dept_dashboard():
     cleared   = [r for r in all_rows if r.get("status") == "approved"]
     rejected  = [r for r in all_rows if r.get("status") == "rejected"]
 
-    return render_template(
-        "clearance/service_dept_dashboard.html",
+    template_kwargs = dict(
         pending=pending,
         cleared=cleared,
         rejected=rejected,
@@ -747,7 +768,17 @@ def service_dept_dashboard():
         meta=meta,
         user_role=role,
         CATEGORY_LABELS=CATEGORY_LABELS,
+        portal_base=_portal_base_template(role),
     )
+    try:
+        from routes.service_dept import DEPT_CONFIG
+        if role in DEPT_CONFIG:
+            template_kwargs["config"] = DEPT_CONFIG[role]
+            template_kwargs["user"] = user
+    except ImportError:
+        pass
+
+    return render_template("clearance/service_dept_dashboard.html", **template_kwargs)
 
 
 # ── Approver dashboard ────────────────────────────────────────────────────────
@@ -896,6 +927,7 @@ def approver_dashboard():
         stage2_pending=stage2_pending,
         user_role=role,
         CATEGORY_LABELS=CATEGORY_LABELS,
+        portal_base=_portal_base_template(role),
     )
 
 
@@ -1783,4 +1815,5 @@ def manage_trainers(request_id):
         approved_count=approved_count,
         required_count=required_count,
         stage1_done=(cr.get("stage", 1) >= 2),
+        portal_base=_portal_base_template(user["role"]),
     )

@@ -1,0 +1,69 @@
+{% extends "liaison_officer/base.html" %}
+{% block title %}Attachment Periods{% endblock %}
+{% block page_title %}Attachment Application Periods{% endblock %}
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6 max-w-6xl mx-auto space-y-6">
+  <div class="bg-white rounded-xl border shadow-sm p-6">
+    <h2 class="text-lg font-bold mb-4"><i class="fas fa-calendar-plus text-blue-600"></i> Open Attachment Period</h2>
+    <p class="text-sm text-gray-600 mb-4">Step 1: Open the application window, publish deadlines, upload introduction letters, and approve eligible trainees.</p>
+    <form method="POST" enctype="multipart/form-data" class="grid md:grid-cols-2 gap-4">
+      <input type="hidden" name="action" value="create">
+      <input class="border rounded-lg p-2 text-sm" name="name" placeholder="Period name" required>
+      <select class="border rounded-lg p-2 text-sm" name="term" required>
+        <option value="Jan-Apr">Jan – Apr</option>
+        <option value="May-Aug">May – Aug</option>
+        <option value="Sept-Dec">Sept – Dec</option>
+      </select>
+      <input class="border rounded-lg p-2 text-sm" type="number" name="year" value="{{ current_year }}" required>
+      <input class="border rounded-lg p-2 text-sm" type="date" name="application_opens" required>
+      <input class="border rounded-lg p-2 text-sm" type="date" name="application_closes" required>
+      <input class="border rounded-lg p-2 text-sm" type="date" name="placement_deadline">
+      <input class="border rounded-lg p-2 text-sm md:col-span-2" type="file" name="introduction_letter" accept=".pdf,.jpg,.jpeg,.png">
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_open" value="1"> Open immediately</label>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold md:col-span-2 w-fit">Create Period</button>
+    </form>
+  </div>
+
+  {% for p in periods %}
+  <div class="bg-white rounded-xl border shadow-sm p-6">
+    <div class="flex justify-between items-start flex-wrap gap-3 mb-4">
+      <div>
+        <h3 class="font-bold text-lg">{{ p.name }} ({{ p.term }} {{ p.year }})</h3>
+        <p class="text-sm text-gray-600">{{ p.application_opens }} → {{ p.application_closes }}</p>
+        {% if p.introduction_letter_url %}
+        <a href="{{ p.introduction_letter_url }}" target="_blank" class="text-blue-700 text-sm font-semibold">Introduction letter</a>
+        {% endif %}
+      </div>
+      <form method="POST">
+        <input type="hidden" name="action" value="toggle">
+        <input type="hidden" name="period_id" value="{{ p.id }}">
+        <input type="hidden" name="is_open" value="{{ 0 if p.is_open else 1 }}">
+        <button class="px-3 py-1 rounded-lg text-xs font-bold {{ 'bg-red-100 text-red-700' if p.is_open else 'bg-green-100 text-green-700' }}">
+          {{ 'Close Period' if p.is_open else 'Open Period' }}
+        </button>
+      </form>
+    </div>
+
+    <form method="POST">
+      <input type="hidden" name="action" value="eligibility">
+      <input type="hidden" name="period_id" value="{{ p.id }}">
+      <p class="text-sm font-bold mb-2">Approve eligible trainees &amp; issue introduction letters</p>
+      <div class="max-h-64 overflow-y-auto border rounded-lg p-2 text-sm space-y-1">
+        {% for s in students %}
+        {% set el = eligibility.get(p.id, {}).get(s.id) %}
+        <label class="flex items-center gap-2 py-1 border-b border-gray-50">
+          <input type="checkbox" name="student_ids" value="{{ s.id }}" {% if el and el.is_eligible %}checked{% endif %}>
+          <span class="flex-1">{{ s.full_name }} ({{ s.admission_no }})</span>
+          <input type="checkbox" name="intro_{{ s.id }}" value="1" title="Intro letter issued" {% if el and el.introduction_letter_issued %}checked{% endif %}>
+          <span class="text-xs text-gray-500">Intro</span>
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit" class="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Save Eligibility</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="text-gray-500 text-sm">No periods yet. Create one above, or run <code>attachment_workflow_migration.sql</code> in Supabase.</p>
+  {% endfor %}
+</div>
+{% endblock %}

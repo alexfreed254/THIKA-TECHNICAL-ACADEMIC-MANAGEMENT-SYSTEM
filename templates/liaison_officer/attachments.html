@@ -6,7 +6,7 @@
 <div class="bg-gray-50 min-h-screen p-6">
   <div class="bg-white rounded-xl shadow-sm border border-gray-100">
     <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
-      <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-briefcase text-blue-500 mr-2"></i>Attachment Activation Desk</h2>
+      <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-briefcase text-blue-500 mr-2"></i>Placement Review Desk</h2>
       <div class="flex gap-2 flex-wrap items-center">
         {% for s in ['','pending','approved','active','completed','rejected'] %}
         <a href="?status={{ s }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold border
@@ -99,15 +99,16 @@
               </span>
             </td>
             <td class="px-4 py-3">
-              {% if a.status == 'approved' and letter_status == 'approved' %}
-              <form method="POST" action="/liaison-officer/attachments/{{ a.id }}/approve">
+              {% set ps = a.get('placement_status','pending_verification') %}
+              {% if a.status == 'approved' and ps == 'verified' %}
+              <form method="POST" action="/liaison-officer/attachments/{{ a.id }}/approve" class="inline">
                 <input type="hidden" name="status" value="active">
-                <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700">Activate</button>
+                <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold">Activate</button>
               </form>
               {% elif a.status == 'pending' %}
-              <div class="text-xs text-orange-600 font-semibold">Waiting for HOD / dept admin review</div>
-              {% elif letter_status != 'approved' %}
-              <div class="text-xs text-gray-500 font-semibold">Letter review must be approved first</div>
+              <a href="/liaison-officer/attachments/{{ a.id }}" class="text-blue-700 text-xs font-bold">Review placement</a>
+              {% elif a.status == 'approved' %}
+              <a href="/liaison-officer/attachments/{{ a.id }}" class="text-emerald-700 text-xs font-bold">Assign trainer</a>
               {% else %}—{% endif %}
             </td>
           </tr>

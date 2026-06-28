@@ -84,8 +84,10 @@ def get_filename_from_url(url):
         return 'Unknown'
     return url.split('/').pop().split('?')[0]
 
-# Template helpers are passed via app context_processor in app.py
-# (Blueprint objects don't have jinja_env; registration happens on the app)
+from routes.attachment_helpers import (
+    student_can_submit_placement, get_open_period, upload_placement_document,
+    notify_liaison_officers, placement_status_label, attachment_periods_exist,
+)
 
 
 def _validate_password(pwd: str) -> Optional[str]:
@@ -3034,6 +3036,23 @@ def industrial_attachment():
                      .order("check_in_time", desc=True)
                      .execute().data or [])
 
+    open_period = get_open_period(db)
+    can_submit = True
+    submit_block_msg = ""
+    if open_period:
+        eligible = student_can_submit_placement(
+            db, student_id,
+            open_period.get("term", ""),
+            open_period.get("year", datetime.now().year),
+        )
+        can_submit, submit_block_msg, _ = eligible
+    elif attachment_periods_exist(db):
+        can_submit = False
+        submit_block_msg = (
+            "No attachment application window is currently open. "
+            "The liaison officer will open the period and issue introduction letters when ready."
+        )
+
     return render_template("student/industrial_attachment.html",
                           current_attachment=current_attachment,
                           all_attachments=all_attachments,
@@ -3041,69 +3060,133 @@ def industrial_attachment():
                           course_name=course_name,
                           companies=[],
                           today_logs=today_logs,
-                          profile=profile)
+                          profile=profile,
+                          open_period=open_period,
+                          can_submit_placement=can_submit,
+                          submit_block_msg=submit_block_msg,
+                          placement_status_label=placement_status_label)
 
 
 @student_bp.route("/industrial-attachment/request", methods=["POST"])
 @student_required
 def request_attachment():
-    """Request a new industrial attachment placement."""
+    """Submit placement details after securing a company externally."""
     db = get_service_client()
     user = current_user()
     student_id = user["id"]
-    
-    company_name       = (request.form.get("company_name") or "").strip()
-    company_address    = (request.form.get("company_address") or "").strip()
-    supervisor_name    = (request.form.get("supervisor_name") or "").strip()
+
+    company_name = (request.form.get("company_name") or "").strip()
+    industry = (request.form.get("industry") or "Other").strip()
+    company_department = (request.form.get("company_department") or "").strip()
+    company_address = (request.form.get("company_address") or "").strip()
+    county = (request.form.get("county") or "").strip()
+    town = (request.form.get("town") or "").strip()
+    company_email = (request.form.get("company_email") or "").strip()
+    company_phone = (request.form.get("company_phone") or "").strip()
+    website = (request.form.get("website") or "").strip()
+
+    supervisor_name = (request.form.get("supervisor_name") or "").strip()
+    supervisor_position = (request.form.get("supervisor_position") or "").strip()
     supervisor_contact = (request.form.get("supervisor_contact") or "").strip()
-    trainee_role       = (request.form.get("trainee_role") or "").strip()
-    attachment_term    = (request.form.get("attachment_term") or "").strip()
-    attachment_year_raw= (request.form.get("attachment_year") or "").strip()
-    raw_unit_id        = (request.form.get("unit_id") or "").strip()
-    unit_id = raw_unit_id if raw_unit_id and raw_unit_id.lower() not in ("none", "null", "undefined", "") else None
-    start_date         = (request.form.get("start_date") or "").strip()
-    end_date           = (request.form.get("end_date") or "").strip()
-    mobile_number      = (request.form.get("mobile_number") or "").strip()
-    acceptance_letter  = request.files.get("acceptance_letter")
+    supervisor_email = (request.form.get("supervisor_email") or "").strip()
+
+    attachment_term = (request.form.get("attachment_term") or "").strip()
+    attachment_year_raw = (request.form.get("attachment_year") or "").strip()
+    start_date = (request.form.get("start_date") or "").strip()
+    end_date = (request.form.get("end_date") or "").strip()
+    expected_hours = (request.form.get("expected_working_hours") or "").strip()
+    mobile_number = (request.form.get("mobile_number") or "").strip()
+
+    acceptance_letter = request.files.get("acceptance_letter")
+    offer_letter = request.files.get("offer_letter")
+    intro_letter = request.files.get("introduction_letter")
+    company_stamp = request.files.get("company_stamp")
+    signed_form = request.files.get("signed_acceptance_form")
 
     lat_raw = request.form.get("latitude", "").strip()
     lng_raw = request.form.get("longitude", "").strip()
     try:
-        latitude  = float(lat_raw) if lat_raw else None
+        latitude = float(lat_raw) if lat_raw else None
         longitude = float(lng_raw) if lng_raw else None
     except ValueError:
         latitude = longitude = None
 
-    if not all([company_name, company_address, supervisor_name, supervisor_contact,
-                trainee_role, attachment_term, start_date, end_date]):
-        flash("All required fields must be filled in.", "error")
+    if not all([company_name, company_address, county, town, supervisor_name,
+                supervisor_position, supervisor_contact, attachment_term, start_date, end_date]):
+        flash("Please complete all required placement fields.", "error")
         return redirect(url_for("student.industrial_attachment"))
 
     if not acceptance_letter or not acceptance_letter.filename:
-        flash("Upload the official company acceptance letter before submitting this attachment.", "error")
+        flash("Upload the company acceptance letter before submitting.", "error")
         return redirect(url_for("student.industrial_attachment"))
 
     try:
-        acceptance_letter_url, acceptance_letter_path = _upload_attachment_letter(
+        year_int = int(attachment_year_raw) if attachment_year_raw else datetime.now().year
+    except ValueError:
+        year_int = datetime.now().year
+
+    allowed, block_msg, ctx = student_can_submit_placement(db, student_id, attachment_term, year_int)
+    if not allowed:
+        flash(block_msg, "error")
+        return redirect(url_for("student.industrial_attachment"))
+
+    period = ctx.get("period")
+    period_id = period.get("id") if period else None
+
+    try:
+        letter_url, letter_path = upload_placement_document(
             acceptance_letter, student_id, company_name
         )
 
-        # 1. Create company record from trainee-supplied info
-        company_payload = {
-            "name":                    company_name,
-            "industry_classification": "Other",
-            "address":                 company_address,
-            "contact_person":          supervisor_name,
-            "contact_phone":           supervisor_contact,
-            "is_active":               True,
-            "available_slots":         1,
-            "created_by":              student_id,
-        }
-        if latitude  is not None: company_payload["latitude"]  = latitude
-        if longitude is not None: company_payload["longitude"] = longitude
+        doc_urls = {}
+        for label, fobj in [
+            ("offer_letter", offer_letter),
+            ("introduction_letter", intro_letter),
+            ("company_stamp", company_stamp),
+            ("signed_acceptance_form", signed_form),
+        ]:
+            if fobj and fobj.filename:
+                url, _path = upload_placement_document(fobj, student_id, label)
+                doc_urls[label + "_url"] = url
 
-        company_res = db.table("companies").insert(company_payload).execute()
-        company_id  = company_res.data[0]["id"]
+        company_payload = {
+            "name": company_name,
+            "industry_classification": industry if industry in (
+                "Electrical Engineering", "Mechanical Engineering", "Information Technology",
+                "Civil Engineering", "Automotive Engineering", "Hospitality",
+                "Business Management", "Health Sciences", "Agriculture",
+                "Construction", "Manufacturing", "Other"
+            ) else "Other",
+            "address": company_address,
+            "city": town,
+            "county": county,
+            "email": company_email or None,
+            "phone_number": company_phone or None,
+            "website": website or None,
+            "company_department": company_department or None,
+            "contact_person": supervisor_name,
+            "contact_phone": supervisor_contact,
+            "contact_email": supervisor_email or None,
+            "is_active": True,
+            "available_slots": 1,
+            "created_by": student_id,
+        }
+        if latitude is not None:
+            company_payload["latitude"] = latitude
+        if longitude is not None:
+            company_payload["longitude"] = longitude
+
+        def _insert_company(payload):
+            try:
+                return db.table("companies").insert(payload).execute()
+            except Exception:
+                fallback = dict(payload)
+                for k in ("county", "company_department"):
+                    fallback.pop(k, None)
+                return db.table("companies").insert(fallback).execute()
+
+        company_res = _insert_company(company_payload)
+        company_id = company_res.data[0]["id"]
 
         if mobile_number:
             try:
@@ -3111,56 +3194,68 @@ def request_attachment():
             except Exception:
                 pass
 
-        # 2. Create attachment record
-        att_payload = {
-            "student_id":  student_id,
-            "company_id":  company_id,
-            "unit_id":     unit_id if unit_id else None,
-            "start_date":  start_date,
-            "end_date":    end_date,
-            "status":      "pending",
-            "created_by":  student_id,
-            "acceptance_letter_url": acceptance_letter_url,
-            "acceptance_letter_name": acceptance_letter.filename,
-            "acceptance_letter_path": acceptance_letter_path,
-            "acceptance_letter_status": "pending",
+        placement_details = {
+            "county": county,
+            "town": town,
+            "company_department": company_department,
+            "expected_working_hours": expected_hours,
+            "workflow": "placement_first_v1",
         }
-        # New extended fields — columns added via migration
-        try:
-            att_payload["attachment_term"] = attachment_term
-            if attachment_year_raw:
-                att_payload["attachment_year"] = int(attachment_year_raw)
-            if trainee_role:
-                att_payload["trainee_role"] = trainee_role
-        except (ValueError, Exception):
-            pass
 
-        db.table("industrial_attachments").insert(att_payload).execute()
+        att_payload = {
+            "student_id": student_id,
+            "company_id": company_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "status": "pending",
+            "placement_status": "pending_verification",
+            "created_by": student_id,
+            "acceptance_letter_url": letter_url,
+            "acceptance_letter_name": acceptance_letter.filename,
+            "acceptance_letter_path": letter_path,
+            "acceptance_letter_status": "pending",
+            "supervisor_email": supervisor_email or None,
+            "supervisor_position": supervisor_position,
+            "expected_working_hours": expected_hours or None,
+            "placement_details": placement_details,
+            "attachment_term": attachment_term,
+            "attachment_year": year_int,
+        }
+        if period_id:
+            att_payload["period_id"] = period_id
+        att_payload.update(doc_urls)
 
-        try:
-            from notifications import create_notification
-            dept_admins = (db.table("user_profiles")
-                             .select("id")
-                             .eq("role", "dept_admin")
-                             .eq("department_id", user.get("department_id"))
-                             .execute().data or [])
-            for admin in dept_admins:
-                create_notification(
-                    user_id=admin["id"],
-                    title="Attachment Letter Awaiting Review",
-                    message=f"{user.get('full_name', 'A trainee')} submitted an industrial attachment acceptance letter for {company_name}.",
-                    notification_type="info",
-                    action_url="/dept-admin/attachments?status=pending",
-                )
-        except Exception:
-            pass
+        def _insert_attachment(payload):
+            try:
+                return db.table("industrial_attachments").insert(payload).execute()
+            except Exception:
+                fallback = dict(payload)
+                for k in (
+                    "placement_status", "placement_details", "period_id",
+                    "expected_working_hours", "supervisor_position",
+                    "offer_letter_url", "introduction_letter_url",
+                    "company_stamp_url", "signed_acceptance_form_url",
+                ):
+                    fallback.pop(k, None)
+                return db.table("industrial_attachments").insert(fallback).execute()
 
-        write_audit_log("request_attachment", target=f"company:{company_id}",
-                        detail={"company": company_name, "supervisor": supervisor_name,
-                                "term": attachment_term, "role": trainee_role})
-        flash("Attachment request submitted successfully. Your official acceptance letter is now awaiting HOD / department approval.", "success")
+        _insert_attachment(att_payload)
+
+        notify_liaison_officers(
+            db,
+            title="New Placement Submission",
+            message=f"{user.get('full_name', 'A trainee')} submitted placement details for {company_name}.",
+            action_url="/liaison-officer/attachments?status=pending",
+        )
+
+        write_audit_log("submit_placement", target=f"company:{company_id}",
+                        detail={"company": company_name, "supervisor": supervisor_name, "term": attachment_term})
+        flash(
+            "Placement submitted successfully. The liaison officer will verify your company details and documents.",
+            "success",
+        )
     except Exception as e:
-        flash(f"Error submitting attachment request: {e}", "error")
+        flash(f"Error submitting placement: {e}", "error")
 
     return redirect(url_for("student.industrial_attachment"))
 

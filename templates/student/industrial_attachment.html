@@ -267,7 +267,7 @@
         <div>
           <div style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:6px">{{ co.get('name','Current attachment') }}</div>
           <div style="font-size:13px;color:#64748b;line-height:1.6;max-width:760px">
-            Your official company acceptance letter must be reviewed by your home department HOD / admin before the attachment is fully approved and activated.
+            Your placement is verified by the <strong>Industrial Liaison Officer</strong> after you secure a company externally and upload acceptance documents.
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -287,18 +287,23 @@
         </div>
         <div class="flow-step">
           <div class="flow-step-num">2</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Upload to Portal</div>
-          <div style="font-size:12.5px;color:#64748b">Submit your placement details and attach the signed company letter.</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Find Placement Externally</div>
+          <div style="font-size:12.5px;color:#64748b">Visit companies, apply by email/phone, or use referrals — <strong>not through this portal</strong>.</div>
         </div>
         <div class="flow-step">
           <div class="flow-step-num">3</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Department Review</div>
-          <div style="font-size:12.5px;color:#64748b">The HOD / department admin checks the document and records approval comments.</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Company Accepts You</div>
+          <div style="font-size:12.5px;color:#64748b">Obtain acceptance/offer letter, supervisor details, and reporting date.</div>
         </div>
         <div class="flow-step">
           <div class="flow-step-num">4</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Activation</div>
-          <div style="font-size:12.5px;color:#64748b">Once department-approved, the placement can proceed to the active attachment stage.</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Submit Placement Here</div>
+          <div style="font-size:12.5px;color:#64748b">Upload company details and documents for liaison verification.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">5</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Liaison Activates</div>
+          <div style="font-size:12.5px;color:#64748b">After approval, GPS attendance and digital logbook are enabled.</div>
         </div>
       </div>
     </div>
@@ -507,13 +512,27 @@
 ══════════════════════════════════════════════════════════════════ #}
 <div class="ia-card">
   <div class="ia-card-head">
-    <i class="fas fa-plus-circle"></i>
-    Register Industrial Attachment
+    <i class="fas fa-upload"></i>
+    Submit Attachment Placement
   </div>
   <div style="padding:28px">
-    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:24px;font-size:13.5px;color:#92400e;display:flex;gap:12px;align-items:flex-start;line-height:1.5">
-      <i class="fas fa-info-circle" style="flex-shrink:0;margin-top:2px"></i>
-      <span>You can register a new attachment at any time — including future terms. Each submission is tracked separately in the history above and reviewed by your department.</span>
+    {% if open_period %}
+    <div style="background:#ecfdf5;border:1px solid #86efac;border-radius:12px;padding:14px;margin-bottom:20px;font-size:13.5px;color:#166534">
+      <i class="fas fa-door-open"></i> <strong>{{ open_period.name }}</strong> is open until {{ open_period.application_closes }}.
+      {% if open_period.introduction_letter_url %}
+      <a href="{{ open_period.introduction_letter_url }}" target="_blank" style="color:#15803d;font-weight:700;margin-left:8px">Download introduction letter</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if not can_submit_placement %}
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;margin-bottom:20px;font-size:14px;color:#991b1b">
+      <i class="fas fa-lock"></i> {{ submit_block_msg or 'Placement submission is not available right now.' }}
+    </div>
+    {% else %}
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:24px;font-size:13.5px;color:#1e40af;line-height:1.55">
+      <i class="fas fa-info-circle"></i>
+      You find your own placement outside the institute. After the company accepts you, submit their details and upload your acceptance letter here.
     </div>
 
     <form method="POST" action="/student/industrial-attachment/request" id="attachForm" enctype="multipart/form-data">
@@ -570,26 +589,57 @@
       <div class="form-section-hdr">
         <i class="fas fa-building"></i> Company / Workplace Details
       </div>
-      <div class="form-grid" style="margin-bottom:24px">
+      <div class="form-grid three" style="margin-bottom:24px">
         <div class="f-field">
-          <label class="f-label">Company / Place Name <span class="req">*</span></label>
-          <input class="f-input" type="text" name="company_name" required
-                 placeholder="e.g. Kenya Power, ABC Motors, Self-employed">
+          <label class="f-label">Company Name <span class="req">*</span></label>
+          <input class="f-input" type="text" name="company_name" required placeholder="Company name">
         </div>
         <div class="f-field">
-          <label class="f-label">Location / Address <span class="req">*</span></label>
-          <input class="f-input" type="text" name="company_address" required
-                 placeholder="e.g. Industrial Area, Nairobi / Thika Town">
+          <label class="f-label">Industry <span class="req">*</span></label>
+          <select class="f-select" name="industry" required>
+            <option value="Other">Other</option>
+            <option>Electrical Engineering</option>
+            <option>Mechanical Engineering</option>
+            <option>Information Technology</option>
+            <option>Automotive Engineering</option>
+            <option>Manufacturing</option>
+            <option>Construction</option>
+            <option>Hospitality</option>
+            <option>Business Management</option>
+          </select>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Department / Section</label>
+          <input class="f-input" type="text" name="company_department" placeholder="e.g. Production">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Physical Address <span class="req">*</span></label>
+          <input class="f-input" type="text" name="company_address" required>
+        </div>
+        <div class="f-field">
+          <label class="f-label">County <span class="req">*</span></label>
+          <input class="f-input" type="text" name="county" required placeholder="e.g. Kiambu">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Town <span class="req">*</span></label>
+          <input class="f-input" type="text" name="town" required placeholder="e.g. Thika">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Company Email</label>
+          <input class="f-input" type="email" name="company_email">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Company Phone</label>
+          <input class="f-input" type="tel" name="company_phone">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Website</label>
+          <input class="f-input" type="url" name="website" placeholder="https://">
         </div>
       </div>
 
-      <div style="margin-bottom:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px">
-        <div style="font-size:12px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
-          <i class="fas fa-file-signature"></i> Official Acceptance Letter Required
-        </div>
-        <div style="font-size:13px;color:#334155;line-height:1.6">
-          Upload the official acceptance letter issued by the company. Your HOD / department admin will review this letter before the attachment is approved.
-        </div>
+      <div style="margin-bottom:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;font-size:13px;color:#334155">
+        Upload documents after securing placement externally. The liaison officer verifies them — not a company search in this portal.
       </div>
 
       {# ── GPS LOCATION ── #}
@@ -620,54 +670,52 @@
         </div>
       </div>
 
-      {# ── TRAINEE ROLE ── #}
-      <div class="form-section-hdr">
-        <i class="fas fa-hard-hat"></i> Industry Supervisor Role
-      </div>
-      <div style="margin-bottom:24px">
-        <div class="f-field">
-          <label class="f-label">Industry Supervisor Role <span class="req">*</span></label>
-          <select class="f-select" name="trainee_role" required>
-            <option value="">— Select Your Role —</option>
-            <option>Human Resources Manager</option>
-            <option>Technical Supervisor</option>
-            <option>Department Manager</option>
-            <option>IT Manager</option>
-            <option>Workshop Supervisor</option>
-            <option>Site Engineer</option>
-            <option>Training Coordinator</option>
-            <option>Operations Manager</option>
-            <option>Director / CEO</option>
-            <option>Other</option>
-          </select>
-        </div>
-      </div>
-
       {# ── SUPERVISOR DETAILS ── #}
       <div class="form-section-hdr">
-        <i class="fas fa-user-tie"></i> Industry Supervisor Details
+        <i class="fas fa-user-tie"></i> Supervisor Information
       </div>
       <div class="form-grid" style="margin-bottom:24px">
         <div class="f-field">
-          <label class="f-label">Supervisor Full Name <span class="req">*</span></label>
-          <input class="f-input" type="text" name="supervisor_name" required
-                 placeholder="e.g. John Mwangi">
+          <label class="f-label">Full Name <span class="req">*</span></label>
+          <input class="f-input" type="text" name="supervisor_name" required>
         </div>
         <div class="f-field">
-          <label class="f-label">Supervisor Phone <span class="req">*</span></label>
-          <input class="f-input" type="tel" name="supervisor_contact" required
-                 placeholder="e.g. 0712 345 678">
+          <label class="f-label">Position <span class="req">*</span></label>
+          <input class="f-input" type="text" name="supervisor_position" required placeholder="e.g. Workshop Supervisor">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Phone <span class="req">*</span></label>
+          <input class="f-input" type="tel" name="supervisor_contact" required>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Email</label>
+          <input class="f-input" type="email" name="supervisor_email">
         </div>
       </div>
 
       <div class="form-section-hdr">
-        <i class="fas fa-file-upload"></i> Acceptance Letter Upload
+        <i class="fas fa-file-upload"></i> Upload Documents
       </div>
-      <div style="margin-bottom:28px">
+      <div class="form-grid" style="margin-bottom:24px">
         <div class="f-field">
-          <label class="f-label">Official Company Acceptance Letter <span class="req">*</span></label>
+          <label class="f-label">Acceptance Letter <span class="req">*</span></label>
           <input class="f-input" type="file" name="acceptance_letter" accept=".pdf,.jpg,.jpeg,.png" required>
-          <span class="f-hint">Accepted formats: PDF, JPG, JPEG, PNG. Upload the signed and stamped company acceptance letter.</span>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Offer Letter (optional)</label>
+          <input class="f-input" type="file" name="offer_letter" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Introduction Letter (optional)</label>
+          <input class="f-input" type="file" name="introduction_letter" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Company Stamp (optional)</label>
+          <input class="f-input" type="file" name="company_stamp" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Signed Acceptance Form (optional)</label>
+          <input class="f-input" type="file" name="signed_acceptance_form" accept=".pdf,.jpg,.jpeg,.png">
         </div>
       </div>
 
@@ -675,7 +723,7 @@
       <div class="form-section-hdr">
         <i class="fas fa-calendar-check"></i> Attachment Timeline
       </div>
-      <div class="form-grid" style="margin-bottom:28px">
+      <div class="form-grid three" style="margin-bottom:28px">
         <div class="f-field">
           <label class="f-label">Start Date <span class="req">*</span></label>
           <input class="f-input" type="date" name="start_date" required id="startDate">
@@ -684,15 +732,18 @@
           <label class="f-label">End Date <span class="req">*</span></label>
           <input class="f-input" type="date" name="end_date" required id="endDate">
         </div>
+        <div class="f-field">
+          <label class="f-label">Expected Working Hours</label>
+          <input class="f-input" type="text" name="expected_working_hours" placeholder="e.g. 8am–5pm, Mon–Fri">
+        </div>
       </div>
 
-      <input type="hidden" name="unit_id" value="">
-
       <button type="submit" class="btn-primary">
-        <i class="fas fa-paper-plane"></i> Submit Attachment Registration
+        <i class="fas fa-paper-plane"></i> Submit Placement
       </button>
 
     </form>
+    {% endif %}
   </div>
 </div>
 

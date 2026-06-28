@@ -7,12 +7,15 @@ coordinates supervisors and attachment records.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, Response
 from auth_utils import login_required, liaison_officer_required, current_user, write_audit_log
 from db import get_service_client
-from datetime import datetime
+from routes.attachment_helpers import (
+    list_periods, get_open_period, is_student_eligible,
+    upload_placement_document, placement_status_label,
+    notify_liaison_officers, get_grading_config, compute_weighted_grade,
+    score_to_cdacc, MENTOR_CRITERIA, week_bounds,
+)
+from datetime import datetime, date, timedelta
 
 liaison_officer_bp = Blueprint("liaison_officer", __name__)
-
-
-@liaison_officer_bp.route("/")
 @liaison_officer_bp.route("/dashboard")
 @login_required
 @liaison_officer_required
@@ -68,14 +71,140 @@ def attachments():
     db = get_service_client()
     status_filter = request.args.get("status", "")
     query = (db.table("industrial_attachments")
-               .select("*, user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no, departments(name)), companies(name, address)")
+               .select("*, user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no, departments(name)), companies(name, address, email, city, county)")
                .order("created_at", desc=True)
                .limit(200))
     if status_filter:
         query = query.eq("status", status_filter)
-    attachments = query.execute().data or []
+    attachments_list = query.execute().data or []
     return render_template("liaison_officer/attachments.html",
-                           attachments=attachments, status_filter=status_filter)
+                           attachments=attachments_list, status_filter=status_filter)
+
+
+@liaison_officer_bp.route("/attachments/<att_id>")
+@login_required
+@liaison_officer_required
+def placement_detail(att_id):
+    db = get_service_client()
+    att = (db.table("industrial_attachments")
+           .select("*, user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no, mobile_number, department_id, departments(name)), companies(*)")
+           .eq("id", att_id)
+           .limit(1)
+           .execute().data or [])
+    if not att:
+        flash("Placement not found.", "warning")
+        return redirect(url_for("liaison_officer.attachments"))
+    record = att[0]
+    trainer_name = ""
+    if record.get("institute_trainer_id"):
+        tr = (db.table("user_profiles").select("full_name").eq("id", record["institute_trainer_id"]).limit(1).execute().data or [])
+        trainer_name = tr[0].get("full_name", "") if tr else ""
+    record["_trainer_name"] = trainer_name
+
+    trainers = (db.table("user_profiles")
+                .select("id, full_name")
+                .eq("role", "trainer")
+                .order("full_name")
+                .execute().data or [])
+    departments = db.table("departments").select("id, name").order("name").execute().data or []
+
+    return render_template(
+        "liaison_officer/placement_detail.html",
+        att=record,
+        trainers=trainers,
+        departments=departments,
+        placement_status_label=placement_status_label,
+    )
+
+
+@liaison_officer_bp.route("/attachments/<att_id>/review", methods=["POST"])
+@login_required
+@liaison_officer_required
+def review_placement(att_id):
+    db = get_service_client()
+    user = current_user()
+    action = request.form.get("action", "")
+    comments = (request.form.get("comments") or "").strip()
+
+    if action not in ("approve", "reject", "needs_info"):
+        flash("Invalid review action.", "warning")
+        return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+    try:
+        payload = {
+            "liaison_review_comments": comments or None,
+            "liaison_reviewed_by": user["id"],
+            "liaison_reviewed_at": datetime.utcnow().isoformat(),
+        }
+        if action == "approve":
+            payload.update({
+                "placement_status": "verified",
+                "acceptance_letter_status": "approved",
+                "status": "approved",
+                "approved_by": user["id"],
+                "approved_at": datetime.utcnow().isoformat(),
+            })
+            msg = "Placement verified. Assign an institute trainer and activate when ready."
+        elif action == "reject":
+            payload.update({
+                "placement_status": "rejected",
+                "acceptance_letter_status": "rejected",
+                "status": "rejected",
+            })
+            msg = "Placement rejected."
+        else:
+            payload.update({
+                "placement_status": "needs_info",
+                "status": "pending",
+            })
+            msg = "Trainee notified to provide more information."
+
+        db.table("industrial_attachments").update(payload).eq("id", att_id).execute()
+        write_audit_log(f"placement_{action}", target=f"attachment:{att_id}")
+        flash(msg, "success")
+    except Exception as e:
+        flash(f"Error: {e}", "danger")
+    return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+
+@liaison_officer_bp.route("/attachments/<att_id>/assign", methods=["POST"])
+@login_required
+@liaison_officer_required
+def assign_and_activate(att_id):
+    db = get_service_client()
+    user = current_user()
+    trainer_id = (request.form.get("institute_trainer_id") or "").strip()
+    department_id = (request.form.get("department_id") or "").strip()
+    activate = request.form.get("activate") == "1"
+
+    try:
+        current = (db.table("industrial_attachments")
+                     .select("id, status, placement_status")
+                     .eq("id", att_id).limit(1).execute().data or [])
+        if not current:
+            flash("Placement not found.", "warning")
+            return redirect(url_for("liaison_officer.attachments"))
+
+        record = current[0]
+        ps = record.get("placement_status") or ""
+        if record.get("status") not in ("approved",) and ps != "verified":
+            flash("Placement must be verified before assignment/activation.", "warning")
+            return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+        payload = {}
+        if trainer_id:
+            payload["institute_trainer_id"] = trainer_id
+        if department_id:
+            payload["department_id"] = department_id
+        if activate:
+            payload["status"] = "active"
+        if payload:
+            db.table("industrial_attachments").update(payload).eq("id", att_id).execute()
+            write_audit_log("assign_attachment", target=f"attachment:{att_id}", detail=payload)
+            flash("Trainer assigned and attachment activated." if activate else "Assignment saved.", "success")
+    except Exception as e:
+        flash(f"Error: {e}", "danger")
+    return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
 
 
 @liaison_officer_bp.route("/attachments/<att_id>/approve", methods=["POST"])
@@ -100,12 +229,10 @@ def approve_attachment(att_id):
 
         record = current[0]
         if new_status == "active":
-            if record.get("status") != "approved":
-                flash("Only department-approved attachments can be activated.", "warning")
-                return redirect(url_for("liaison_officer.attachments"))
-            if (record.get("acceptance_letter_status") or "pending") != "approved":
-                flash("The acceptance letter must be approved by the department before activation.", "warning")
-                return redirect(url_for("liaison_officer.attachments"))
+            ps = record.get("placement_status") or "verified"
+            if record.get("status") not in ("approved",) and ps not in ("verified",):
+                flash("Placement must be verified by liaison before activation.", "warning")
+                return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
 
         db.table("industrial_attachments").update({"status": new_status}).eq("id", att_id).execute()
         write_audit_log("update_attachment_status",
@@ -352,3 +479,187 @@ def export_attachments():
     return Response(buf.read(),
                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f"attachment; filename={fname}"})
+
+
+# ── Attachment periods (Step 1: liaison opens window) ─────────────────────────
+
+@liaison_officer_bp.route("/periods", methods=["GET", "POST"])
+@login_required
+@liaison_officer_required
+def attachment_periods():
+    db = get_service_client()
+    user = current_user()
+
+    if request.method == "POST":
+        action = request.form.get("action", "create")
+        try:
+            if action == "create":
+                payload = {
+                    "name": (request.form.get("name") or "").strip(),
+                    "term": request.form.get("term"),
+                    "year": int(request.form.get("year") or datetime.now().year),
+                    "application_opens": request.form.get("application_opens"),
+                    "application_closes": request.form.get("application_closes"),
+                    "placement_deadline": request.form.get("placement_deadline") or None,
+                    "notes": (request.form.get("notes") or "").strip() or None,
+                    "is_open": request.form.get("is_open") == "1",
+                    "created_by": user["id"],
+                }
+                intro = request.files.get("introduction_letter")
+                if intro and intro.filename:
+                    url, path = upload_placement_document(intro, user["id"], "intro_letter")
+                    payload["introduction_letter_url"] = url
+                    payload["introduction_letter_path"] = path
+                db.table("attachment_periods").insert(payload).execute()
+                flash("Attachment period created.", "success")
+
+            elif action == "toggle":
+                pid = request.form.get("period_id")
+                is_open = request.form.get("is_open") == "1"
+                db.table("attachment_periods").update({"is_open": is_open}).eq("id", pid).execute()
+                flash("Period updated.", "success")
+
+            elif action == "eligibility":
+                pid = request.form.get("period_id")
+                student_ids = request.form.getlist("student_ids")
+                for sid in student_ids:
+                    existing = (db.table("attachment_period_eligibility")
+                                .select("id")
+                                .eq("period_id", pid).eq("student_id", sid)
+                                .limit(1).execute().data or [])
+                    row = {
+                        "period_id": pid,
+                        "student_id": sid,
+                        "is_eligible": True,
+                        "introduction_letter_issued": request.form.get(f"intro_{sid}") == "1",
+                        "approved_by": user["id"],
+                        "approved_at": datetime.utcnow().isoformat(),
+                    }
+                    if existing:
+                        db.table("attachment_period_eligibility").update(row).eq("id", existing[0]["id"]).execute()
+                    else:
+                        db.table("attachment_period_eligibility").insert(row).execute()
+                flash(f"Marked {len(student_ids)} trainee(s) as eligible.", "success")
+        except Exception as e:
+            flash(f"Error: {e}", "danger")
+        return redirect(url_for("liaison_officer.attachment_periods"))
+
+    periods = list_periods(db)
+    students = (db.table("user_profiles")
+                  .select("id, full_name, admission_no, departments(name)")
+                  .eq("role", "student")
+                  .order("full_name")
+                  .limit(500)
+                  .execute().data or [])
+    eligibility = {}
+    if periods and _table_ok_periods(db):
+        try:
+            rows = db.table("attachment_period_eligibility").select("*").execute().data or []
+            for r in rows:
+                eligibility.setdefault(r["period_id"], {})[r["student_id"]] = r
+        except Exception:
+            pass
+
+    return render_template(
+        "liaison_officer/periods.html",
+        periods=periods,
+        students=students,
+        eligibility=eligibility,
+        current_year=datetime.now().year,
+    )
+
+
+def _table_ok_periods(db):
+    try:
+        db.table("attachment_periods").select("id").limit(1).execute()
+        return True
+    except Exception:
+        return False
+
+
+# ── Final grading ─────────────────────────────────────────────────────────────
+
+@liaison_officer_bp.route("/attachments/<att_id>/grade", methods=["GET", "POST"])
+@login_required
+@liaison_officer_required
+def grade_attachment(att_id):
+    db = get_service_client()
+    user = current_user()
+
+    att_rows = (db.table("industrial_attachments")
+                .select("*, user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no, department_id)")
+                .eq("id", att_id).limit(1).execute().data or [])
+    if not att_rows:
+        flash("Attachment not found.", "warning")
+        return redirect(url_for("liaison_officer.attachments"))
+    att = att_rows[0]
+    dept_id = (att.get("user_profiles") or {}).get("department_id") or att.get("department_id")
+    config = get_grading_config(db, dept_id)
+
+    if request.method == "POST":
+        try:
+            scores = {
+                "score_gps_attendance": float(request.form.get("score_gps_attendance") or 0),
+                "score_logbook": float(request.form.get("score_logbook") or 0),
+                "score_mentor_eval": float(request.form.get("score_mentor_eval") or 0),
+                "score_trainer_assessment": float(request.form.get("score_trainer_assessment") or 0),
+                "score_final_report": float(request.form.get("score_final_report") or 0),
+            }
+            mentor_fields = {}
+            mentor_total = 0
+            for field, _label, max_pts in MENTOR_CRITERIA:
+                val = float(request.form.get(field) or 0)
+                mentor_fields[field] = min(val, max_pts)
+                mentor_total += mentor_fields[field]
+            scores["score_mentor_eval"] = mentor_total
+
+            weights = {
+                "weight_gps_attendance": float(config.get("weight_gps_attendance", 10)),
+                "weight_logbook": float(config.get("weight_logbook", 20)),
+                "weight_mentor_eval": float(config.get("weight_mentor_eval", 30)),
+                "weight_trainer_assessment": float(config.get("weight_trainer_assessment", 30)),
+                "weight_final_report": float(config.get("weight_final_report", 10)),
+            }
+            weighted = compute_weighted_grade(scores, weights)
+            grade = score_to_cdacc(weighted)
+
+            grade_payload = {
+                **scores,
+                **mentor_fields,
+                "weighted_total": weighted,
+                "final_grade": grade,
+                "graded_by": user["id"],
+                "graded_at": datetime.utcnow().isoformat(),
+            }
+            existing = (db.table("attachment_grades")
+                        .select("id").eq("attachment_id", att_id).limit(1).execute().data or [])
+            if existing:
+                db.table("attachment_grades").update(grade_payload).eq("attachment_id", att_id).execute()
+            else:
+                grade_payload["attachment_id"] = att_id
+                db.table("attachment_grades").insert(grade_payload).execute()
+
+            db.table("industrial_attachments").update({
+                "final_grade": grade,
+                "status": "completed",
+            }).eq("id", att_id).execute()
+
+            flash(f"Final grade recorded: {grade} ({weighted}%).", "success")
+            return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+        except Exception as e:
+            flash(f"Grading error: {e}", "danger")
+
+    existing_grade = None
+    try:
+        rows = db.table("attachment_grades").select("*").eq("attachment_id", att_id).limit(1).execute().data or []
+        existing_grade = rows[0] if rows else None
+    except Exception:
+        pass
+
+    return render_template(
+        "liaison_officer/grade_attachment.html",
+        att=att,
+        config=config,
+        existing_grade=existing_grade,
+        mentor_criteria=MENTOR_CRITERIA,
+    )

@@ -1,0 +1,108 @@
+{% extends "liaison_officer/base.html" %}
+{% block title %}Review Placement{% endblock %}
+{% block page_title %}Placement Review{% endblock %}
+{% block content %}
+<div class="bg-gray-50 min-h-screen p-6 max-w-5xl mx-auto">
+  <a href="{{ url_for('liaison_officer.attachments') }}" class="text-blue-700 text-sm font-semibold mb-4 inline-block"><i class="fas fa-arrow-left"></i> Back to placements</a>
+
+  {% set up = att.get('user_profiles') or {} %}
+  {% set co = att.get('companies') or {} %}
+  {% set ps = att.get('placement_status') or 'pending_verification' %}
+
+  <div class="bg-white rounded-xl border shadow-sm p-6 mb-6">
+    <div class="flex flex-wrap justify-between gap-4 mb-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">{{ up.get('full_name','—') }}</h1>
+        <p class="text-sm text-gray-500">{{ up.get('admission_no','') }}</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">{{ (att.status or 'pending')|upper }}</span>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">{{ placement_status_label(ps) }}</span>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 text-sm">
+      <div>
+        <h3 class="font-bold text-gray-700 mb-2">Company</h3>
+        <p><strong>{{ co.get('name','—') }}</strong></p>
+        <p class="text-gray-600">{{ co.get('address','') }}</p>
+        <p class="text-gray-600">{{ co.get('county','') }} {{ co.get('city','') }}</p>
+        <p class="text-gray-600">{{ co.get('email','') }} {{ co.get('phone_number','') }}</p>
+      </div>
+      <div>
+        <h3 class="font-bold text-gray-700 mb-2">Supervisor</h3>
+        <p>{{ co.get('contact_person','—') }} — {{ att.get('supervisor_position','') }}</p>
+        <p class="text-gray-600">{{ co.get('contact_phone','') }} {{ att.get('supervisor_email','') }}</p>
+        <p class="text-gray-600 mt-2">{{ att.get('start_date','') }} → {{ att.get('end_date','') }}</p>
+        <p class="text-gray-600">Hours: {{ att.get('expected_working_hours','—') }}</p>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-3">
+      {% if att.get('acceptance_letter_url') %}
+      <a href="{{ att.acceptance_letter_url }}" target="_blank" class="text-blue-700 text-sm font-semibold"><i class="fas fa-file-pdf"></i> Acceptance Letter</a>
+      {% endif %}
+      {% if att.get('offer_letter_url') %}
+      <a href="{{ att.offer_letter_url }}" target="_blank" class="text-blue-700 text-sm font-semibold"><i class="fas fa-file"></i> Offer Letter</a>
+      {% endif %}
+      {% if att.get('introduction_letter_url') %}
+      <a href="{{ att.introduction_letter_url }}" target="_blank" class="text-blue-700 text-sm font-semibold"><i class="fas fa-file"></i> Introduction Letter</a>
+      {% endif %}
+    </div>
+
+    {% if att.get('liaison_review_comments') %}
+    <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">{{ att.liaison_review_comments }}</div>
+    {% endif %}
+  </div>
+
+  {% if ps in ('pending_verification', 'needs_info') %}
+  <div class="bg-white rounded-xl border shadow-sm p-6 mb-6">
+    <h2 class="font-bold mb-4">Review Placement</h2>
+    <form method="POST" action="{{ url_for('liaison_officer.review_placement', att_id=att.id) }}" class="space-y-3">
+      <textarea name="comments" rows="3" class="w-full border rounded-lg p-3 text-sm" placeholder="Comments for trainee (required for reject / request info)…"></textarea>
+      <div class="flex flex-wrap gap-2">
+        <button name="action" value="approve" type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Approve</button>
+        <button name="action" value="needs_info" type="submit" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold">Request More Info</button>
+        <button name="action" value="reject" type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Reject</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if att.status in ('approved',) or ps == 'verified' %}
+  <div class="bg-white rounded-xl border shadow-sm p-6 mb-6">
+    <h2 class="font-bold mb-4">Assign Institute Trainer &amp; Activate</h2>
+    <form method="POST" action="{{ url_for('liaison_officer.assign_and_activate', att_id=att.id) }}" class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="text-xs font-bold text-gray-600">Institute Trainer</label>
+        <select name="institute_trainer_id" class="w-full border rounded-lg p-2 text-sm mt-1">
+          <option value="">— Select trainer —</option>
+          {% for t in trainers %}
+          <option value="{{ t.id }}" {% if att.get('institute_trainer_id') == t.id %}selected{% endif %}>{{ t.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600">Department</label>
+        <select name="department_id" class="w-full border rounded-lg p-2 text-sm mt-1">
+          <option value="">— Select department —</option>
+          {% for d in departments %}
+          <option value="{{ d.id }}" {% if att.get('department_id') == d.id %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2 flex gap-2">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Save Assignment</button>
+        <button type="submit" name="activate" value="1" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Save &amp; Activate Attachment</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if att.status == 'active' %}
+  <a href="{{ url_for('liaison_officer.grade_attachment', att_id=att.id) }}" class="inline-flex bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold">
+    <i class="fas fa-graduation-cap mr-2"></i> Final Grading
+  </a>
+  {% endif %}
+</div>
+{% endblock %}

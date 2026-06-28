@@ -1,0 +1,43 @@
+{% extends "industry_mentor/base.html" %}
+{% block title %}Weekly Attendance{% endblock %}
+{% block page_title %}Weekly Attendance{% endblock %}
+{% block content %}
+<div class="p-6 max-w-4xl mx-auto">
+  <p class="text-sm text-gray-600 mb-6">Mark trainee attendance weekly as industry supervisor/mentor.</p>
+
+  {% for a in attachments %}
+  {% set up = a.get('user_profiles') or {} %}
+  <div class="bg-white border rounded-xl p-5 mb-4 shadow-sm">
+    <h3 class="font-bold">{{ up.get('full_name','—') }} <span class="text-gray-500 text-sm">({{ up.get('admission_no','') }})</span></h3>
+    <form method="POST" action="{{ url_for('industry_mentor.mark_weekly_attendance') }}" class="grid md:grid-cols-4 gap-3 mt-3 items-end">
+      <input type="hidden" name="attachment_id" value="{{ a.id }}">
+      <label class="text-sm">Week starting (Monday)
+        <input type="date" name="week_start" class="w-full border rounded p-2 mt-1" required>
+      </label>
+      <label class="text-sm">Days present
+        <input type="number" name="days_present" min="0" max="7" class="w-full border rounded p-2 mt-1" required>
+      </label>
+      <label class="text-sm">Days absent
+        <input type="number" name="days_absent" min="0" max="7" class="w-full border rounded p-2 mt-1" value="0">
+      </label>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold h-fit">Submit Week</button>
+      <textarea name="comments" class="md:col-span-4 border rounded p-2 text-sm" rows="2" placeholder="Comments (optional)"></textarea>
+    </form>
+  </div>
+  {% else %}
+  <p class="text-gray-500">No active trainees at your company.</p>
+  {% endfor %}
+
+  {% if records %}
+  <h3 class="font-bold mt-8 mb-3">Recent weekly records</h3>
+  <table class="w-full text-sm border">
+    <thead class="bg-gray-50"><tr><th class="p-2 text-left">Week</th><th class="p-2">Present</th><th class="p-2">Absent</th><th class="p-2 text-left">Comments</th></tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr class="border-t"><td class="p-2">{{ r.week_start }}</td><td class="p-2 text-center">{{ r.days_present }}</td><td class="p-2 text-center">{{ r.days_absent }}</td><td class="p-2">{{ r.mentor_comments or '—' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

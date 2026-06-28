@@ -461,3 +461,87 @@ def location():
     
     return render_template("industry_mentor/location.html",
                           location_logs=company_logs)
+
+
+# ── Weekly attendance (supervisor marks weekly) ───────────────────────────────
+
+@industry_mentor_bp.route("/weekly-attendance")
+@login_required
+@industry_mentor_required
+def weekly_attendance():
+    db = get_service_client()
+    user = current_user()
+    mentor = (db.table("mentors").select("company_id").eq("user_id", user["id"]).limit(1).execute().data or [])
+    if not mentor:
+        flash("Mentor profile not found.", "error")
+        return redirect(url_for("industry_mentor.dashboard"))
+    company_id = mentor[0]["company_id"]
+
+    attachments = (db.table("industrial_attachments")
+                   .select("id, start_date, end_date, user_profiles!industrial_attachments_student_id_fkey(full_name, admission_no)")
+                   .eq("company_id", company_id)
+                   .eq("status", "active")
+                   .execute().data or [])
+
+    records = []
+    try:
+        att_ids = [a["id"] for a in attachments]
+        if att_ids:
+            records = (db.table("attachment_weekly_attendance")
+                       .select("*")
+                       .in_("attachment_id", att_ids)
+                       .order("week_start", desc=True)
+                       .execute().data or [])
+    except Exception:
+        pass
+
+    return render_template(
+        "industry_mentor/weekly_attendance.html",
+        attachments=attachments,
+        records=records,
+    )
+
+
+@industry_mentor_bp.route("/weekly-attendance/mark", methods=["POST"])
+@login_required
+@industry_mentor_required
+def mark_weekly_attendance():
+    db = get_service_client()
+    user = current_user()
+    attachment_id = request.form.get("attachment_id", "").strip()
+    week_start = request.form.get("week_start", "").strip()
+    days_present = int(request.form.get("days_present") or 0)
+    days_absent = int(request.form.get("days_absent") or 0)
+    comments = (request.form.get("comments") or "").strip()
+
+    if not attachment_id or not week_start:
+        flash("Attachment and week are required.", "error")
+        return redirect(url_for("industry_mentor.weekly_attendance"))
+
+    from datetime import date, timedelta
+    ws = date.fromisoformat(week_start)
+    we = ws + timedelta(days=6)
+
+    payload = {
+        "attachment_id": attachment_id,
+        "week_start": week_start,
+        "week_end": we.isoformat(),
+        "days_present": min(max(days_present, 0), 7),
+        "days_absent": min(max(days_absent, 0), 7),
+        "mentor_comments": comments or None,
+        "marked_by": user["id"],
+        "marked_at": datetime.utcnow().isoformat(),
+        "status": "submitted",
+    }
+    try:
+        existing = (db.table("attachment_weekly_attendance")
+                    .select("id").eq("attachment_id", attachment_id).eq("week_start", week_start)
+                    .limit(1).execute().data or [])
+        if existing:
+            db.table("attachment_weekly_attendance").update(payload).eq("id", existing[0]["id"]).execute()
+        else:
+            db.table("attachment_weekly_attendance").insert(payload).execute()
+        flash("Weekly attendance recorded.", "success")
+    except Exception as e:
+        flash(f"Could not save weekly attendance: {e}. Run attachment_workflow_migration.sql if needed.", "danger")
+    return redirect(url_for("industry_mentor.weekly_attendance"))
