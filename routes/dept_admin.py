@@ -3874,3 +3874,29 @@ def save_attachment_marks(att_id):
     write_audit_log("save_attachment_marks", target=f"attachment:{att_id}",
                     detail={"grade": grade, "total": total})
     return jsonify({"ok": True, "total": total, "grade": grade})
+
+
+# ── Mentoring Tool / Logbook — Dept Admin view ───────────────────────────────
+
+@dept_admin_bp.route("/mentoring-tools")
+@dept_admin_required
+def view_mentoring_tools():
+    db      = get_service_client()
+    user    = current_user()
+    dept_id = user.get("department_id")
+    stu_ids = _dept_student_ids(db, dept_id)
+    if not stu_ids:
+        return render_template("dept_admin/mentoring_tools.html", uploads=[])
+    rows = (db.table("mentoring_tool_uploads")
+              .select("*, student:user_profiles!student_id(full_name,admission_no,department_id), attachment:industrial_attachments!attachment_id(id,company_id,status)")
+              .in_("student_id", stu_ids)
+              .order("uploaded_at", desc=True)
+              .execute().data or [])
+    co_ids = list({r["attachment"]["company_id"] for r in rows if r.get("attachment") and r["attachment"].get("company_id")})
+    co_map = {}
+    if co_ids:
+        for co in (db.table("companies").select("id,name").in_("id", co_ids).execute().data or []):
+            co_map[co["id"]] = co["name"]
+    for r in rows:
+        r["_company"] = co_map.get((r.get("attachment") or {}).get("company_id", ""), "—")
+    return render_template("dept_admin/mentoring_tools.html", uploads=rows)

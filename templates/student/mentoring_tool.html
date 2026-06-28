@@ -1,0 +1,182 @@
+{% extends "student/base.html" %}
+{% block title %}Mentoring Tool / Logbook{% endblock %}
+{% block page_title %}Mentoring Tool / Hardcopy Logbook{% endblock %}
+
+{% block extra_style %}
+.mt-wrap{padding:24px;background:#f1f5f9;min-height:calc(100vh - 64px)}
+
+/* Hero */
+.mt-hero{background:linear-gradient(135deg,#0b1735 0%,#0f2255 55%,#1e40af 100%);border-radius:14px;padding:22px 28px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden}
+.mt-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 100% 0%,rgba(251,191,36,.12),transparent 60%);pointer-events:none}
+.mt-hero h1{font-size:18px;font-weight:800;margin:0 0 3px;display:flex;align-items:center;gap:9px}
+.mt-hero h1 i{color:#f59e0b}
+.mt-hero p{font-size:12.5px;color:#bfdbfe;margin:0}
+
+/* Upload card */
+.mt-upload-card{background:#fff;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:24px;margin-bottom:24px}
+.mt-upload-card h2{font-size:14px;font-weight:800;color:#0f172a;margin:0 0 16px;display:flex;align-items:center;gap:8px}
+.mt-upload-card h2 i{color:#3b82f6}
+.mt-form-grid{display:grid;gap:14px}
+.mt-field label{display:block;font-size:11.5px;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.mt-field input[type=text], .mt-field textarea{width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;color:#0f172a;outline:none;box-sizing:border-box;font-family:inherit;transition:.15s}
+.mt-field input:focus, .mt-field textarea:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.mt-field textarea{min-height:70px;resize:vertical}
+
+/* Drop zone */
+.mt-dropzone{border:2px dashed #cbd5e1;border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:.2s;background:#f8fafc;position:relative}
+.mt-dropzone.dragover{border-color:#3b82f6;background:#eff6ff}
+.mt-dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.mt-dz-icon{font-size:34px;color:#cbd5e1;margin-bottom:10px}
+.mt-dz-text{font-size:13px;font-weight:600;color:#64748b}
+.mt-dz-sub{font-size:11.5px;color:#94a3b8;margin-top:4px}
+.mt-dz-file{display:none;font-size:13px;color:#1d4ed8;font-weight:600;margin-top:10px;padding:8px 14px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe}
+
+/* Upload btn */
+.mt-upload-btn{margin-top:16px;width:100%;padding:12px;background:linear-gradient(135deg,#0b1735,#1e40af);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.18s;box-shadow:0 4px 14px rgba(11,23,53,.25)}
+.mt-upload-btn:hover{transform:translateY(-1px)}
+.mt-upload-btn i{color:#fbbf24}
+.mt-upload-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+/* Files list */
+.mt-list-card{background:#fff;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+.mt-list-head{background:linear-gradient(135deg,#0b1735,#0f2255);color:#fff;padding:13px 18px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.mt-list-head i{color:#f59e0b}
+.mt-list-head .count{margin-left:auto;font-size:11px;opacity:.7;background:rgba(255,255,255,.12);border-radius:20px;padding:2px 10px}
+.mt-file-row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #f1f5f9}
+.mt-file-row:last-child{border-bottom:none}
+.mt-file-icon{width:42px;height:42px;border-radius:10px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:20px;color:#dc2626;flex-shrink:0}
+.mt-file-info{flex:1;min-width:0}
+.mt-file-title{font-size:13px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt-file-meta{font-size:11px;color:#64748b;margin-top:2px}
+.mt-file-desc{font-size:12px;color:#475569;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt-file-actions{display:flex;gap:6px;flex-shrink:0}
+.btn-view{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:none;transition:.15s}
+.btn-view:hover{background:#dbeafe}
+.btn-del{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#fff0f0;color:#dc2626;border:1.5px solid #fca5a5;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:none;transition:.15s}
+.btn-del:hover{background:#fee2e2}
+.mt-empty{padding:50px 24px;text-align:center;color:#94a3b8}
+.mt-empty i{font-size:44px;display:block;margin-bottom:12px;color:#cbd5e1}
+.mt-empty p{font-size:13px;margin:4px 0 0}
+
+/* Progress */
+.mt-progress-bar{height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;margin-top:10px;display:none}
+.mt-progress-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#1d4ed8);border-radius:2px;transition:width .3s}
+{% endblock %}
+
+{% block content %}
+<div class="mt-wrap">
+  <div class="mt-hero">
+    <h1><i class="fas fa-file-pdf"></i> Mentoring Tool / Hardcopy Logbook</h1>
+    <p>Upload scanned PDFs of your mentoring assessment tool or handwritten logbook pages for review by your liaison officer and department admin.</p>
+  </div>
+
+  <!-- Upload form -->
+  <div class="mt-upload-card">
+    <h2><i class="fas fa-cloud-upload-alt"></i> Upload New Document</h2>
+    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+      <div class="mt-form-grid">
+        <div class="mt-field">
+          <label>Document Title <span style="color:#dc2626">*</span></label>
+          <input type="text" name="title" required maxlength="120"
+                 placeholder="e.g. Week 1-4 Logbook Pages, Mentoring Tool Part A…">
+        </div>
+        <div class="mt-field">
+          <label>Description (optional)</label>
+          <textarea name="description" maxlength="400"
+                    placeholder="Brief note about what is covered in this document…"></textarea>
+        </div>
+        <div class="mt-field">
+          <label>PDF File <span style="color:#dc2626">*</span></label>
+          <div class="mt-dropzone" id="dropZone">
+            <input type="file" name="pdf_file" accept=".pdf" required id="pdfInput" onchange="fileChosen(this)">
+            <div class="mt-dz-icon"><i class="fas fa-file-pdf"></i></div>
+            <div class="mt-dz-text">Click to browse or drag &amp; drop</div>
+            <div class="mt-dz-sub">PDF only · Max 20 MB</div>
+            <div class="mt-dz-file" id="dzFile"></div>
+          </div>
+          <div class="mt-progress-bar" id="progressBar">
+            <div class="mt-progress-fill" id="progressFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="mt-upload-btn" id="uploadBtn">
+        <i class="fas fa-cloud-upload-alt"></i> Upload Document
+      </button>
+    </form>
+  </div>
+
+  <!-- Uploaded files -->
+  <div class="mt-list-card">
+    <div class="mt-list-head">
+      <i class="fas fa-folder-open"></i> My Uploaded Documents
+      <span class="count">{{ uploads|length }} file{{ 's' if uploads|length != 1 else '' }}</span>
+    </div>
+    {% if uploads %}
+      {% for u in uploads %}
+      <div class="mt-file-row">
+        <div class="mt-file-icon"><i class="fas fa-file-pdf"></i></div>
+        <div class="mt-file-info">
+          <div class="mt-file-title">{{ u.title }}</div>
+          <div class="mt-file-meta">
+            {{ u.file_name }}
+            {% if u.file_size %} · {{ (u.file_size / 1024)|round(1) }} KB{% endif %}
+            · {{ (u.uploaded_at or u.created_at or '')[:10] }}
+          </div>
+          {% if u.description %}<div class="mt-file-desc">{{ u.description }}</div>{% endif %}
+        </div>
+        <div class="mt-file-actions">
+          <a class="btn-view" href="{{ u.file_url }}" target="_blank" rel="noopener">
+            <i class="fas fa-eye"></i> View
+          </a>
+          <form method="POST" action="/student/mentoring-tool/{{ u.id }}/delete"
+                onsubmit="return confirm('Delete «{{ u.title }}»? This cannot be undone.')">
+            <button type="submit" class="btn-del"><i class="fas fa-trash-alt"></i> Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="mt-empty">
+        <i class="fas fa-file-circle-plus"></i>
+        <strong>No documents uploaded yet</strong>
+        <p>Use the form above to upload scanned PDFs of your mentoring tool or handwritten logbook pages.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function fileChosen(input) {
+  var f = input.files[0];
+  if (!f) return;
+  var el = document.getElementById('dzFile');
+  el.style.display = 'block';
+  el.textContent = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+}
+
+var dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', function(){ dz.classList.remove('dragover'); });
+dz.addEventListener('drop', function(e){
+  e.preventDefault(); dz.classList.remove('dragover');
+  var files = e.dataTransfer.files;
+  if (files.length) {
+    document.getElementById('pdfInput').files = files;
+    fileChosen(document.getElementById('pdfInput'));
+  }
+});
+
+document.getElementById('uploadForm').addEventListener('submit', function(){
+  var btn = document.getElementById('uploadBtn');
+  var pb  = document.getElementById('progressBar');
+  var pf  = document.getElementById('progressFill');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';
+  pb.style.display = 'block';
+  var w = 0;
+  var t = setInterval(function(){ w = Math.min(w + 8, 85); pf.style.width = w + '%'; }, 200);
+});
+</script>
+{% endblock %}

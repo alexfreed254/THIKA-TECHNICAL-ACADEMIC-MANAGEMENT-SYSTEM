@@ -4028,3 +4028,113 @@ def my_attachment_marks():
         attachments=attachments,
         config=config,
     )
+
+
+# ── Mentoring Tool / Hardcopy Logbook Upload ─────────────────────────────────
+
+MENTORING_BUCKET = "assessment-scripts"
+
+@student_bp.route("/mentoring-tool", methods=["GET", "POST"])
+@student_required
+def mentoring_tool():
+    db         = get_service_client()
+    user       = current_user()
+    student_id = user["id"]
+
+    if request.method == "POST":
+        title       = (request.form.get("title") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        file        = request.files.get("pdf_file")
+
+        if not title:
+            flash("Please provide a title for this upload.", "danger")
+            return redirect(url_for("student.mentoring_tool"))
+
+        if not file or not file.filename:
+            flash("Please select a PDF file to upload.", "danger")
+            return redirect(url_for("student.mentoring_tool"))
+
+        ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        if ext not in ("pdf",):
+            flash("Only PDF files are accepted.", "danger")
+            return redirect(url_for("student.mentoring_tool"))
+
+        raw = file.read()
+        if not raw:
+            flash("The selected file is empty.", "danger")
+            return redirect(url_for("student.mentoring_tool"))
+
+        if len(raw) > 20 * 1024 * 1024:   # 20 MB cap
+            flash("File exceeds the 20 MB limit.", "danger")
+            return redirect(url_for("student.mentoring_tool"))
+
+        storage_path = f"mentoring_tools/{student_id}/{uuid.uuid4().hex}_{file.filename}"
+        try:
+            db.storage.from_(MENTORING_BUCKET).upload(
+                path=storage_path,
+                file=raw,
+                file_options={"content-type": "application/pdf", "x-upsert": "true"},
+            )
+            base_url = os.environ.get("SUPABASE_URL", "").strip()
+            file_url = f"{base_url}/storage/v1/object/public/{MENTORING_BUCKET}/{storage_path}"
+
+            # Get the student's current attachment (optional FK)
+            att_rows = (db.table("industrial_attachments")
+                          .select("id").eq("student_id", student_id)
+                          .order("created_at", desc=True).limit(1)
+                          .execute().data or [])
+            att_id = att_rows[0]["id"] if att_rows else None
+
+            db.table("mentoring_tool_uploads").insert({
+                "student_id":    student_id,
+                "attachment_id": att_id,
+                "title":         title,
+                "description":   description or None,
+                "file_url":      file_url,
+                "storage_path":  storage_path,
+                "file_name":     file.filename,
+                "file_size":     len(raw),
+            }).execute()
+
+            write_audit_log("upload_mentoring_tool", target=f"student:{student_id}",
+                            detail={"title": title, "size": len(raw)})
+            flash(f'"{title}" uploaded successfully.', "success")
+        except Exception as e:
+            flash(f"Upload failed: {e}", "danger")
+
+        return redirect(url_for("student.mentoring_tool"))
+
+    # GET — list own uploads
+    uploads = (db.table("mentoring_tool_uploads")
+                 .select("*")
+                 .eq("student_id", student_id)
+                 .order("uploaded_at", desc=True)
+                 .execute().data or [])
+
+    return render_template("student/mentoring_tool.html", uploads=uploads)
+
+
+@student_bp.route("/mentoring-tool/<upload_id>/delete", methods=["POST"])
+@student_required
+def delete_mentoring_tool(upload_id):
+    db         = get_service_client()
+    user       = current_user()
+    student_id = user["id"]
+
+    row = (db.table("mentoring_tool_uploads")
+             .select("id, storage_path, title")
+             .eq("id", upload_id)
+             .eq("student_id", student_id)
+             .limit(1).execute().data or [])
+    if not row:
+        flash("Upload not found.", "danger")
+        return redirect(url_for("student.mentoring_tool"))
+
+    try:
+        db.storage.from_(MENTORING_BUCKET).remove([row[0]["storage_path"]])
+    except Exception:
+        pass
+    db.table("mentoring_tool_uploads").delete().eq("id", upload_id).execute()
+    write_audit_log("delete_mentoring_tool", target=f"upload:{upload_id}")
+    flash(f'"{row[0]["title"]}" deleted.', "success")
+    return redirect(url_for("student.mentoring_tool"))

@@ -124,7 +124,26 @@ INSERT INTO attachment_grading_config (department_id, is_active)
 SELECT NULL, TRUE
 WHERE NOT EXISTS (SELECT 1 FROM attachment_grading_config WHERE department_id IS NULL);
 
--- ── 5. Exam bookings: persist year, series and term ──────────────────────────
+-- ── 5. Mentoring tool / hardcopy logbook uploads ─────────────────────────────
+-- Allows a trainee to upload multiple scanned PDFs of their mentoring tool
+-- or hardcopy logbook for review by the liaison officer, dept admin & super admin.
+CREATE TABLE IF NOT EXISTS mentoring_tool_uploads (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    student_id    UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    attachment_id UUID REFERENCES industrial_attachments(id) ON DELETE SET NULL,
+    title         TEXT NOT NULL,
+    description   TEXT,
+    file_url      TEXT NOT NULL,
+    storage_path  TEXT NOT NULL,
+    file_name     TEXT NOT NULL,
+    file_size     BIGINT,
+    uploaded_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_mentoring_tool_uploads_student
+    ON mentoring_tool_uploads(student_id, uploaded_at DESC);
+
+-- ── 6. Exam bookings: persist year, series and term ──────────────────────────
 -- exam_session had constraint ('morning','afternoon','evening') which prevented
 -- storing the numeric series (1/2/3).  Add dedicated columns instead.
 ALTER TABLE exam_bookings

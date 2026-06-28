@@ -1,0 +1,146 @@
+{% extends "super_admin/base.html" %}
+{% block title %}Mentoring Tool / Logbooks{% endblock %}
+{% block page_title %}Mentoring Tool / Hardcopy Logbooks{% endblock %}
+
+{% block extra_style %}
+.mt-wrap{padding:24px;background:#f1f5f9;min-height:calc(100vh - 64px)}
+.mt-hero{background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%);border-radius:14px;padding:22px 28px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden}
+.mt-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 100% 0%,rgba(245,158,11,.12),transparent 60%);pointer-events:none}
+.mt-hero h1{font-size:18px;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+.mt-hero h1 i{color:#f59e0b}
+.mt-hero p{font-size:12.5px;color:#bfdbfe;margin:0}
+.mt-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.mt-kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:11px;padding:12px 16px}
+.mt-kpi-num{font-size:24px;font-weight:900;color:#fff}
+.mt-kpi-lbl{font-size:10.5px;color:rgba(255,255,255,.6);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+
+.mt-toolbar{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 5px rgba(0,0,0,.05);padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.mt-search{flex:1;min-width:160px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a}
+.mt-search:focus{border-color:#0f2c54;box-shadow:0 0 0 3px rgba(15,44,84,.1)}
+.mt-filter{padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a;background:#fff;cursor:pointer}
+
+.mt-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 5px rgba(0,0,0,.05);overflow:hidden}
+.mt-card-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:12px 18px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.mt-card-head i{color:#f59e0b}
+.row-count{margin-left:auto;font-size:11px;opacity:.7;background:rgba(255,255,255,.12);border-radius:20px;padding:2px 10px}
+
+.mt-tbl{width:100%;border-collapse:collapse}
+.mt-tbl thead th{background:#f8fafc;padding:9px 12px;text-align:left;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;border-bottom:1.5px solid #e2e8f0;white-space:nowrap}
+.mt-tbl tbody td{padding:12px 12px;border-bottom:1px solid #f1f5f9;font-size:12.5px;color:#0f172a;vertical-align:middle}
+.mt-tbl tbody tr:last-child td{border-bottom:none}
+.mt-tbl tbody tr:hover td{background:#fafbfc}
+.mt-tbl tbody tr[data-hidden="1"]{display:none}
+.stu-name{font-weight:700;color:#0f172a}
+.stu-adm{font-size:11px;color:#64748b}
+.dept-chip{font-size:10.5px;font-weight:700;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:2px 8px;border-radius:5px;display:inline-block}
+.pdf-icon{width:36px;height:36px;border-radius:8px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:17px;color:#dc2626;flex-shrink:0}
+.file-info-cell{display:flex;align-items:center;gap:10px}
+.file-title{font-weight:700;color:#0f172a;font-size:12.5px}
+.file-meta{font-size:11px;color:#94a3b8;margin-top:1px}
+.file-desc{font-size:11.5px;color:#475569;margin-top:2px}
+.btn-view{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:none;transition:.15s;white-space:nowrap}
+.btn-view:hover{background:#dbeafe}
+@media(max-width:620px){.mt-kpis{grid-template-columns:1fr 1fr}}
+{% endblock %}
+
+{% block content %}
+<div class="mt-wrap">
+  <div class="mt-hero">
+    <h1><i class="fas fa-file-pdf"></i> Mentoring Tool / Hardcopy Logbooks</h1>
+    <p>System-wide view of all scanned mentoring tools and hardcopy logbook PDFs submitted by trainees across all departments.</p>
+    {% set unique_students = uploads|map(attribute='student')|selectattr('full_name')|list|map(attribute='full_name')|unique|list %}
+    {% set unique_depts = uploads|map(attribute='_dept')|unique|list|reject('equalto','—')|list %}
+    <div class="mt-kpis">
+      <div class="mt-kpi"><div class="mt-kpi-num">{{ uploads|length }}</div><div class="mt-kpi-lbl">Total Uploads</div></div>
+      <div class="mt-kpi"><div class="mt-kpi-num">{{ unique_students|length }}</div><div class="mt-kpi-lbl">Trainees</div></div>
+      <div class="mt-kpi"><div class="mt-kpi-num">{{ unique_depts|length }}</div><div class="mt-kpi-lbl">Departments</div></div>
+      <div class="mt-kpi"><div class="mt-kpi-num">{{ uploads|selectattr('description')|list|length }}</div><div class="mt-kpi-lbl">With Description</div></div>
+    </div>
+  </div>
+
+  <div class="mt-toolbar">
+    <input class="mt-search" type="text" id="mtSearch"
+           placeholder="Search student, admission no, department or document title…"
+           oninput="doSearch(this.value)">
+    <select class="mt-filter" id="deptFilter" onchange="doFilter()">
+      <option value="">All Departments</option>
+      {% for d in unique_depts|sort %}
+      <option value="{{ d|lower }}">{{ d }}</option>
+      {% endfor %}
+    </select>
+    <span id="rowCount" style="font-size:12px;color:#64748b;white-space:nowrap">{{ uploads|length }} records</span>
+  </div>
+
+  <div class="mt-card">
+    <div class="mt-card-head">
+      <i class="fas fa-folder-open"></i> National Mentoring Document Register
+      <span class="row-count" id="headCount">{{ uploads|length }}</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="mt-tbl" id="mtTable">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Student</th>
+            <th>Department</th>
+            <th>Company</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in uploads %}
+          {% set stu = u.get('student') or {} %}
+          <tr data-search="{{ ((stu.get('full_name') or '') ~ ' ' ~ (stu.get('admission_no') or '') ~ ' ' ~ (u._dept) ~ ' ' ~ (u.get('title') or ''))|lower }}"
+              data-dept="{{ u._dept|lower }}">
+            <td>
+              <div class="file-info-cell">
+                <div class="pdf-icon"><i class="fas fa-file-pdf"></i></div>
+                <div>
+                  <div class="file-title">{{ u.title }}</div>
+                  <div class="file-meta">{{ u.file_name }}{% if u.file_size %} · {{ (u.file_size/1024)|round(1) }} KB{% endif %}</div>
+                  {% if u.description %}<div class="file-desc">{{ u.description[:80] }}{% if u.description|length > 80 %}…{% endif %}</div>{% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="stu-name">{{ stu.get('full_name') or '—' }}</div>
+              <div class="stu-adm">{{ stu.get('admission_no') or '' }}</div>
+            </td>
+            <td><span class="dept-chip">{{ u._dept }}</span></td>
+            <td style="font-size:12px;color:#475569">{{ u._company }}</td>
+            <td style="font-size:12px;color:#475569;white-space:nowrap">{{ (u.uploaded_at or u.created_at or '')[:10] }}</td>
+            <td>
+              <a class="btn-view" href="{{ u.file_url }}" target="_blank" rel="noopener">
+                <i class="fas fa-eye"></i> Open PDF
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" style="text-align:center;padding:50px;color:#94a3b8"><i class="fas fa-file-circle-xmark" style="font-size:40px;display:block;margin-bottom:12px;color:#cbd5e1"></i>No documents submitted yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+var _dept = '';
+function doSearch(q){ q = q.toLowerCase(); _apply(q, _dept); }
+function doFilter(){ _dept = document.getElementById('deptFilter').value.toLowerCase(); _apply(document.getElementById('mtSearch').value.toLowerCase(), _dept); }
+function _apply(q, dept){
+  var rows = document.querySelectorAll('#mtTable tbody tr[data-search]');
+  var n = 0;
+  rows.forEach(function(r){
+    var show = r.dataset.search.includes(q) && (!dept || r.dataset.dept.includes(dept));
+    r.setAttribute('data-hidden', show ? '0' : '1');
+    if (show) n++;
+  });
+  document.getElementById('headCount').textContent = n;
+  document.getElementById('rowCount').textContent  = n + ' records';
+}
+</script>
+{% endblock %}
