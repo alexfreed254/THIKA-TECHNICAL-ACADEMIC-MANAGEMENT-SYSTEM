@@ -2565,14 +2565,16 @@ INDUSTRIES = ['Electrical Engineering','Mechanical Engineering','Information Tec
 @dept_admin_required
 def companies():
     db = get_service_client()
-    dept_id = _dept_id()
     industry = request.args.get("industry", "")
-    query = db.table("companies").select("*").eq("department_id", dept_id)
+    # Show ALL companies (same as super admin) — no dept_id filter
+    query = db.table("companies").select("*, departments(name)")
     if industry:
         query = query.eq("industry_classification", industry)
     companies_list = query.order("name").execute().data or []
+    departments = db.table("departments").select("id, name").order("name").execute().data or []
     return render_template("dept_admin/companies.html",
-                           companies=companies_list, industries=INDUSTRIES, industry=industry)
+                           companies=companies_list, industries=INDUSTRIES,
+                           industry=industry, departments=departments)
 
 
 @dept_admin_bp.route("/companies/<company_id>")

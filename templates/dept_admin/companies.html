@@ -3,113 +3,108 @@
 {% block page_title %}Industry Partners{% endblock %}
 
 {% block extra_style %}
-<style>
-:root{--navy:#0f2c54;--navy2:#1a3d6e;--gold:#f59e0b;--surface:#fff;--border:#e2e8f0;--text:#0f172a;--sub:#64748b;--muted:#f8fafc}
-*{box-sizing:border-box}
+/* ── Industry Partners page ── */
+.ip-wrap{padding:24px;background:#f1f5f9;min-height:calc(100vh - 64px)}
 
-.ip-wrap{padding:28px;background:#f1f5f9;min-height:100vh}
-
-/* ── Hero ── */
-.ip-hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1e40af 100%);border-radius:16px;padding:26px 32px 22px;margin-bottom:26px;color:#fff;position:relative;overflow:hidden}
+/* Hero */
+.ip-hero{background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 60%,#1e40af 100%);border-radius:14px;padding:24px 28px 20px;margin-bottom:22px;color:#fff;position:relative;overflow:hidden}
 .ip-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 100% 0%,rgba(245,158,11,.13),transparent 60%);pointer-events:none}
-.ip-hero h1{font-size:20px;font-weight:800;margin:0 0 5px;display:flex;align-items:center;gap:10px}
-.ip-hero h1 i{font-size:18px;color:var(--gold)}
-.ip-hero p{font-size:13px;color:#bfdbfe;margin:0 0 18px}
-.ip-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-@media(max-width:700px){.ip-kpis{grid-template-columns:repeat(2,1fr)}}
-.ip-kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px 16px}
-.ip-kpi-num{font-size:26px;font-weight:900;color:#fff;line-height:1}
-.ip-kpi-lbl{font-size:11px;color:rgba(255,255,255,.65);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.ip-hero-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.ip-hero h1{font-size:19px;font-weight:800;margin:0;display:flex;align-items:center;gap:10px;color:#fff}
+.ip-hero h1 i{color:#f59e0b}
+.ip-hero p{font-size:12.5px;color:#bfdbfe;margin:0}
+.ip-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.ip-kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:11px;padding:13px 15px}
+.ip-kpi-num{font-size:24px;font-weight:900;color:#fff;line-height:1}
+.ip-kpi-lbl{font-size:10.5px;color:rgba(255,255,255,.65);margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 
-/* ── Toolbar ── */
-.ip-toolbar{background:var(--surface);border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.ip-search{flex:1;min-width:180px;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;outline:none;color:var(--text)}
+/* Toolbar */
+.ip-toolbar{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 6px rgba(0,0,0,.05);padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ip-search{flex:1;min-width:160px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a}
 .ip-search:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
-.ip-filter{padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;outline:none;color:var(--text);background:#fff;cursor:pointer;min-width:180px}
+.ip-filter{padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a;background:#fff;cursor:pointer}
 .ip-filter:focus{border-color:#3b82f6}
-.btn-add-co{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:linear-gradient(135deg,var(--navy),#1e40af);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer;transition:.18s;box-shadow:0 4px 12px rgba(15,44,84,.25);white-space:nowrap}
-.btn-add-co:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(15,44,84,.32)}
-.btn-add-co i{color:var(--gold)}
+.btn-add-co{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:.18s;box-shadow:0 3px 10px rgba(15,44,84,.22);white-space:nowrap}
+.btn-add-co:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(15,44,84,.3)}
+.btn-add-co i{color:#f59e0b}
 
-/* ── Table card ── */
-.ip-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);overflow:hidden}
-.ip-card-head{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:14px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:9px}
-.ip-card-head i{color:var(--gold)}
-.ip-card-head .co-count{margin-left:auto;font-size:12px;font-weight:600;opacity:.8;background:rgba(255,255,255,.12);border-radius:20px;padding:3px 12px}
-
+/* Table card */
+.ip-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden}
+.ip-card-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:13px 20px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+.ip-card-head i{color:#f59e0b}
+.ip-card-head .co-count{margin-left:auto;font-size:12px;font-weight:600;opacity:.8;background:rgba(255,255,255,.12);border-radius:20px;padding:2px 11px}
 .co-table-wrap{overflow-x:auto}
 .co-table{width:100%;border-collapse:collapse}
-.co-table thead th{background:#f8fafc;padding:11px 14px;text-align:left;font-size:10.5px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.co-table thead th{background:#f8fafc;padding:10px 13px;text-align:left;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.07em;border-bottom:1.5px solid #e2e8f0;white-space:nowrap}
 .co-table thead th.center{text-align:center}
-.co-table tbody td{padding:13px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;color:var(--text);vertical-align:middle}
+.co-table tbody td{padding:12px 13px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a;vertical-align:middle}
 .co-table tbody tr:last-child td{border-bottom:none}
 .co-table tbody tr:hover td{background:#fafbfc}
-
-.co-name{font-weight:700;color:var(--text)}
-.co-industry{font-size:12px;color:var(--sub);margin-top:2px}
-.co-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--navy),#1e40af);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.co-cell{display:flex;align-items:center;gap:11px}
-
-.badge-active{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:9999px;font-size:11.5px;font-weight:700;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
-.badge-active::before{content:'';width:6px;height:6px;border-radius:50%;background:#16a34a}
-.badge-inactive{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:9999px;font-size:11.5px;font-weight:700;background:#f1f5f9;color:#64748b;border:1px solid var(--border)}
-
-.slots-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:9999px;font-size:12px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
-
-.btn-edit-co{padding:6px 13px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
-.btn-edit-co:hover{background:#dbeafe;border-color:#93c5fd}
-.btn-del-co{padding:6px 13px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
-.btn-del-co:hover{background:#fee2e2;border-color:#fca5a5}
-.act-wrap{display:flex;gap:7px;align-items:center}
-
-.empty-co{text-align:center;padding:56px 24px}
-.empty-co i{font-size:48px;color:#cbd5e1;display:block;margin-bottom:14px}
-.empty-co h3{font-size:16px;font-weight:700;color:var(--sub);margin:0 0 6px}
+.co-avatar{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.co-cell{display:flex;align-items:center;gap:10px}
+.co-name{font-weight:700;color:#0f172a}
+.co-sub{font-size:11px;color:#64748b;margin-top:1px}
+.badge-active{display:inline-flex;align-items:center;gap:4px;padding:3px 11px;border-radius:9999px;font-size:11px;font-weight:700;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.badge-active::before{content:'';width:5px;height:5px;border-radius:50%;background:#16a34a}
+.badge-inactive{display:inline-flex;align-items:center;gap:4px;padding:3px 11px;border-radius:9999px;font-size:11px;font-weight:700;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+.slots-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:9999px;font-size:11.5px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.dept-pill{font-size:11px;font-weight:700;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:2px 9px;border-radius:6px;display:inline-block}
+.btn-edit-co{padding:5px 11px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-edit-co:hover{background:#dbeafe}
+.btn-del-co{padding:5px 11px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-del-co:hover{background:#fee2e2}
+.act-wrap{display:flex;gap:6px;align-items:center}
+.empty-co{text-align:center;padding:52px 24px}
+.empty-co i{font-size:44px;color:#cbd5e1;display:block;margin-bottom:12px}
+.empty-co h3{font-size:15px;font-weight:700;color:#64748b;margin:0 0 5px}
 .empty-co p{font-size:13px;color:#94a3b8;margin:0}
 
-/* ── Modal ── */
-.ip-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,28,54,.5);z-index:2000;align-items:center;justify-content:center;padding:20px}
+/* Modal */
+.ip-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,28,54,.55);z-index:2000;align-items:center;justify-content:center;padding:16px}
 .ip-modal-bg.open{display:flex}
-.ip-modal{background:#fff;border-radius:18px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:slideUp .2s ease}
-@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
-.ip-modal-head{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:18px 24px;border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:space-between}
-.ip-modal-head h3{font-size:16px;font-weight:800;margin:0;display:flex;align-items:center;gap:9px}
-.ip-modal-head h3 i{color:var(--gold)}
-.ip-modal-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.ip-modal{background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:94vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.28);animation:mdSlide .22s ease}
+@keyframes mdSlide{from{transform:translateY(18px);opacity:0}to{transform:translateY(0);opacity:1}}
+.ip-modal-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:16px 22px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.ip-modal-head h3{font-size:15px;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
+.ip-modal-head h3 i{color:#f59e0b}
+.ip-modal-close{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .ip-modal-close:hover{background:rgba(255,255,255,.25)}
-.ip-modal-body{padding:24px}
-.fm-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media(max-width:500px){.fm-row{grid-template-columns:1fr}}
-.fm-group{margin-bottom:15px}
-.fm-group label{display:block;font-size:11.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.ip-modal-body{padding:22px}
+.fm-row{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fm-group{margin-bottom:14px}
+.fm-group label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
 .fm-group label .req{color:#ef4444;margin-left:2px}
-.fm-inp{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;color:var(--text);outline:none;transition:.15s}
+.fm-inp{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;outline:none;transition:.15s;box-sizing:border-box}
 .fm-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
 .fm-inp::placeholder{color:#94a3b8}
-textarea.fm-inp{resize:vertical;min-height:76px}
-.fm-divider{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;display:flex;align-items:center;gap:10px}
-.fm-divider::before,.fm-divider::after{content:'';flex:1;height:1px;background:var(--border)}
-.fm-toggle{display:flex;align-items:center;gap:10px;padding:12px 15px;background:var(--muted);border-radius:10px;border:1.5px solid var(--border)}
-.fm-toggle label{font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;flex:1}
-.ip-toggle{position:relative;width:42px;height:24px;flex-shrink:0}
-.ip-toggle input{opacity:0;width:0;height:0;position:absolute}
-.ip-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.25s}
-.ip-slider::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.ip-toggle input:checked~.ip-slider{background:#10b981}
-.ip-toggle input:checked~.ip-slider::after{transform:translateX(18px)}
-.btn-modal-save{width:100%;padding:13px;background:linear-gradient(135deg,var(--navy),#1e40af);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:.18s;box-shadow:0 4px 14px rgba(15,44,84,.3);margin-top:4px}
-.btn-modal-save:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(15,44,84,.35)}
-.btn-modal-save i{color:var(--gold)}
-</style>
+textarea.fm-inp{resize:vertical;min-height:70px}
+.fm-divider{font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 12px;display:flex;align-items:center;gap:9px}
+.fm-divider::before,.fm-divider::after{content:'';flex:1;height:1px;background:#e2e8f0}
+.fm-toggle{display:flex;align-items:center;gap:10px;padding:11px 14px;background:#f8fafc;border-radius:9px;border:1.5px solid #e2e8f0;margin-bottom:16px}
+.fm-toggle-label{font-size:13px;font-weight:600;color:#0f172a;cursor:pointer;flex:1}
+.ip-tog{position:relative;width:40px;height:22px;flex-shrink:0}
+.ip-tog input{opacity:0;width:0;height:0;position:absolute}
+.ip-slid{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.25s}
+.ip-slid::after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.ip-tog input:checked~.ip-slid{background:#10b981}
+.ip-tog input:checked~.ip-slid::after{transform:translateX(18px)}
+.btn-modal-save{width:100%;padding:12px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.18s;box-shadow:0 4px 12px rgba(15,44,84,.28)}
+.btn-modal-save:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(15,44,84,.35)}
+.btn-modal-save i{color:#f59e0b}
+@media(max-width:600px){.ip-kpis{grid-template-columns:1fr 1fr}.fm-row{grid-template-columns:1fr}.ip-toolbar{flex-direction:column;align-items:stretch}}
 {% endblock %}
 
 {% block content %}
 <div class="ip-wrap">
 
-  <!-- ── Hero ── -->
+  <!-- Hero -->
   <div class="ip-hero">
-    <h1><i class="fas fa-industry"></i> Industry Partners</h1>
-    <p>Manage companies partnered with your department for industrial attachment placements.</p>
+    <div class="ip-hero-top">
+      <div>
+        <h1><i class="fas fa-industry"></i> Industry Partners</h1>
+        <p>All companies available for industrial attachment placements across departments.</p>
+      </div>
+    </div>
     <div class="ip-kpis">
       <div class="ip-kpi">
         <div class="ip-kpi-num">{{ companies|length }}</div>
@@ -124,17 +119,18 @@ textarea.fm-inp{resize:vertical;min-height:76px}
         <div class="ip-kpi-lbl">Total Slots</div>
       </div>
       <div class="ip-kpi">
-        {% set classified = companies|selectattr('industry_classification')|map(attribute='industry_classification')|list|unique|list %}
-        <div class="ip-kpi-num">{{ classified|length }}</div>
+        {% set inds = companies|map(attribute='industry_classification')|select|list|unique|list %}
+        <div class="ip-kpi-num">{{ inds|length }}</div>
         <div class="ip-kpi-lbl">Industries</div>
       </div>
     </div>
   </div>
 
-  <!-- ── Toolbar ── -->
+  <!-- Toolbar -->
   <div class="ip-toolbar">
-    <input class="ip-search" type="text" id="coSearch" placeholder="Search company name or city…"
-           oninput="searchTable(this.value)" autocomplete="off">
+    <input class="ip-search" type="text" id="coSearch"
+           placeholder="&#xf002;  Search company, city or contact…"
+           oninput="coSearch(this.value)" autocomplete="off">
     <select class="ip-filter" onchange="location.href='/dept-admin/companies?industry='+this.value">
       <option value="">All Industries</option>
       {% for ind in industries %}
@@ -146,11 +142,11 @@ textarea.fm-inp{resize:vertical;min-height:76px}
     </button>
   </div>
 
-  <!-- ── Table card ── -->
+  <!-- Table card -->
   <div class="ip-card">
     <div class="ip-card-head">
       <i class="fas fa-building"></i> Companies
-      <span class="co-count">{{ companies|length }} partner{{ 's' if companies|length != 1 }}</span>
+      <span class="co-count" id="coCountLbl">{{ companies|length }} partner{{ 's' if companies|length != 1 }}</span>
     </div>
     <div class="co-table-wrap">
       <table class="co-table" id="coTable">
@@ -158,7 +154,8 @@ textarea.fm-inp{resize:vertical;min-height:76px}
           <tr>
             <th>Company</th>
             <th>Industry</th>
-            <th>Location</th>
+            <th>Department</th>
+            <th>City</th>
             <th>Contact</th>
             <th class="center">Slots</th>
             <th class="center">Status</th>
@@ -167,38 +164,37 @@ textarea.fm-inp{resize:vertical;min-height:76px}
         </thead>
         <tbody>
           {% for c in companies %}
-          {% set initials = (c.name[:1]|upper) if c.name else '?' %}
-          <tr data-search="{{ (c.name ~ ' ' ~ (c.city or '') ~ ' ' ~ (c.industry_classification or ''))|lower }}">
+          {% set initials = (c.name[:2]|upper) if c.name else '?' %}
+          <tr data-search="{{ (c.name ~ ' ' ~ (c.city or '') ~ ' ' ~ (c.industry_classification or '') ~ ' ' ~ ((c.departments or {}).get('name','')))|lower }}">
             <td>
               <div class="co-cell">
                 <div class="co-avatar">{{ initials }}</div>
                 <div>
                   <div class="co-name">{{ c.name }}</div>
-                  <div class="co-industry">{{ c.industry_classification or '—' }}</div>
+                  {% if c.website %}<div class="co-sub"><a href="{{ c.website }}" target="_blank" style="color:#3b82f6;text-decoration:none;font-size:11px">{{ c.website[:30] }}{% if c.website|length > 30 %}…{% endif %}</a></div>{% endif %}
                 </div>
               </div>
             </td>
-            <td style="font-size:12.5px">
-              {{ c.industry_classification or '—' }}
-            </td>
-            <td style="font-size:12.5px">
-              {% if c.city or c.address %}
-              <span style="font-weight:600">{{ c.city or '' }}</span>
-              {% if c.address %}<br><span style="font-size:11px;color:var(--sub)">{{ c.address[:40] }}{% if (c.address|length) > 40 %}…{% endif %}</span>{% endif %}
-              {% else %}—{% endif %}
-            </td>
-            <td style="font-size:12.5px">
-              {% if c.contact_person %}
-              <span style="font-weight:600">{{ c.contact_person }}</span>
+            <td style="font-size:12px;color:#475569">{{ c.industry_classification or '—' }}</td>
+            <td>
+              {% set dept = (c.get('departments') or {}).get('name','') %}
+              {% if dept %}
+              <span class="dept-pill">{{ dept }}</span>
+              {% else %}
+              <span style="color:#94a3b8;font-size:12px">—</span>
               {% endif %}
-              {% if c.contact_phone %}<br><span style="font-size:11px;color:var(--sub)"><i class="fas fa-phone" style="font-size:10px;margin-right:3px"></i>{{ c.contact_phone }}</span>{% endif %}
+            </td>
+            <td style="font-size:12.5px">
+              {{ c.city or '—' }}
+              {% if c.address %}<div style="font-size:11px;color:#94a3b8">{{ c.address[:35] }}{% if (c.address|length) > 35 %}…{% endif %}</div>{% endif %}
+            </td>
+            <td style="font-size:12.5px">
+              {% if c.contact_person %}<span style="font-weight:600">{{ c.contact_person }}</span>{% endif %}
+              {% if c.contact_phone %}<div style="font-size:11px;color:#64748b"><i class="fas fa-phone" style="font-size:9px;margin-right:3px"></i>{{ c.contact_phone }}</div>{% endif %}
               {% if not c.contact_person and not c.contact_phone %}—{% endif %}
             </td>
             <td class="center">
-              <span class="slots-pill">
-                <i class="fas fa-chair" style="font-size:10px"></i>
-                {{ c.available_slots or 0 }}
-              </span>
+              <span class="slots-pill">{{ c.available_slots or 0 }}</span>
             </td>
             <td class="center">
               <span class="{{ 'badge-active' if c.is_active else 'badge-inactive' }}">
@@ -210,7 +206,7 @@ textarea.fm-inp{resize:vertical;min-height:76px}
                 <button class="btn-edit-co" onclick="openModal('edit','{{ c.id }}')">
                   <i class="fas fa-pen"></i> Edit
                 </button>
-                <button class="btn-del-co" onclick="deleteCompany('{{ c.id }}','{{ c.name|replace("'","\\'")|e }}')">
+                <button class="btn-del-co" onclick="doDelete('{{ c.id }}','{{ c.name|replace("'","\\'")|e }}')">
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -218,11 +214,11 @@ textarea.fm-inp{resize:vertical;min-height:76px}
           </tr>
           {% else %}
           <tr>
-            <td colspan="7">
+            <td colspan="8">
               <div class="empty-co">
                 <i class="fas fa-industry"></i>
-                <h3>No industry partners yet</h3>
-                <p>Click <strong>Add Company</strong> above to register your first industry partner.</p>
+                <h3>No industry partners found</h3>
+                <p>Click <strong>Add Company</strong> to register the first partner.</p>
               </div>
             </td>
           </tr>
@@ -234,7 +230,7 @@ textarea.fm-inp{resize:vertical;min-height:76px}
 
 </div>
 
-<!-- ── Add / Edit Modal ── -->
+<!-- Add / Edit Modal -->
 <div class="ip-modal-bg" id="coModalBg" onclick="bgClose(event)">
   <div class="ip-modal" id="coModal">
     <div class="ip-modal-head">
@@ -252,7 +248,7 @@ textarea.fm-inp{resize:vertical;min-height:76px}
 
         <div class="fm-row">
           <div class="fm-group">
-            <label>Industry Classification <span class="req">*</span></label>
+            <label>Industry <span class="req">*</span></label>
             <select class="fm-inp" name="industry_classification" required>
               <option value="">Select industry…</option>
               {% for ind in industries %}
@@ -261,8 +257,24 @@ textarea.fm-inp{resize:vertical;min-height:76px}
             </select>
           </div>
           <div class="fm-group">
+            <label>Department</label>
+            <select class="fm-inp" name="department_id">
+              <option value="">— None —</option>
+              {% for d in departments %}
+              <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="fm-row">
+          <div class="fm-group">
             <label>Available Slots</label>
             <input class="fm-inp" type="number" name="available_slots" value="0" min="0">
+          </div>
+          <div class="fm-group">
+            <label>Geofence Radius (m)</label>
+            <input class="fm-inp" type="number" name="geofence_radius_meters" value="300" min="50">
           </div>
         </div>
 
@@ -277,10 +289,7 @@ textarea.fm-inp{resize:vertical;min-height:76px}
             <label>City / Town</label>
             <input class="fm-inp" type="text" name="city" placeholder="e.g. Thika">
           </div>
-          <div class="fm-group">
-            <label>Geofence Radius (m)</label>
-            <input class="fm-inp" type="number" name="geofence_radius_meters" value="300" min="50">
-          </div>
+          <div class="fm-group"></div>
         </div>
         <div class="fm-row">
           <div class="fm-group">
@@ -298,27 +307,27 @@ textarea.fm-inp{resize:vertical;min-height:76px}
         <div class="fm-row">
           <div class="fm-group">
             <label>Contact Person</label>
-            <input class="fm-inp" type="text" name="contact_person" placeholder="Full name">
+            <input class="fm-inp" type="text" name="contact_person">
           </div>
           <div class="fm-group">
             <label>Contact Phone</label>
-            <input class="fm-inp" type="tel" name="contact_phone" placeholder="+254…">
+            <input class="fm-inp" type="tel" name="contact_phone">
           </div>
         </div>
         <div class="fm-row">
           <div class="fm-group">
             <label>Contact Email</label>
-            <input class="fm-inp" type="email" name="contact_email" placeholder="hr@company.com">
+            <input class="fm-inp" type="email" name="contact_email">
           </div>
           <div class="fm-group">
             <label>Phone Number</label>
-            <input class="fm-inp" type="tel" name="phone_number" placeholder="Main line">
+            <input class="fm-inp" type="tel" name="phone_number">
           </div>
         </div>
         <div class="fm-row">
           <div class="fm-group">
             <label>Email</label>
-            <input class="fm-inp" type="email" name="email" placeholder="info@company.com">
+            <input class="fm-inp" type="email" name="email">
           </div>
           <div class="fm-group">
             <label>Website</label>
@@ -330,19 +339,19 @@ textarea.fm-inp{resize:vertical;min-height:76px}
 
         <div class="fm-group">
           <label>Description</label>
-          <textarea class="fm-inp" name="description" placeholder="Brief description of the company and what trainees will do…"></textarea>
+          <textarea class="fm-inp" name="description" placeholder="Brief description of company and trainee activities…"></textarea>
         </div>
 
-        <div class="fm-toggle" style="margin-bottom:18px">
-          <label for="isActiveChk">Company is active and accepting trainees</label>
-          <label class="ip-toggle">
+        <div class="fm-toggle">
+          <span class="fm-toggle-label">Active — accepting trainees</span>
+          <label class="ip-tog">
             <input type="checkbox" name="is_active" id="isActiveChk" checked>
-            <span class="ip-slider"></span>
+            <span class="ip-slid"></span>
           </label>
         </div>
 
         <button type="submit" class="btn-modal-save">
-          <i class="fas fa-save"></i> <span id="saveBtnText">Save Company</span>
+          <i class="fas fa-save"></i> <span id="saveLbl">Save Company</span>
         </button>
       </form>
     </div>
@@ -352,55 +361,58 @@ textarea.fm-inp{resize:vertical;min-height:76px}
 
 {% block scripts %}
 <script>
-/* ── Search ── */
-function searchTable(q) {
+/* ── Live search ── */
+function coSearch(q) {
   q = q.toLowerCase();
-  document.querySelectorAll('#coTable tbody tr[data-search]').forEach(function(r) {
-    r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+  var rows = document.querySelectorAll('#coTable tbody tr[data-search]');
+  var shown = 0;
+  rows.forEach(function(r) {
+    var show = r.dataset.search.includes(q);
+    r.style.display = show ? '' : 'none';
+    if (show) shown++;
   });
+  var lbl = document.getElementById('coCountLbl');
+  if (lbl) lbl.textContent = shown + ' partner' + (shown !== 1 ? 's' : '');
 }
 
 /* ── Modal ── */
-function openModal(mode, companyId) {
-  var bg    = document.getElementById('coModalBg');
-  var form  = document.getElementById('coForm');
-  var title = document.getElementById('modalTitle');
-  var idFld = document.getElementById('coId');
-  var btn   = document.getElementById('saveBtnText');
-
+function openModal(mode, cid) {
+  var bg   = document.getElementById('coModalBg');
+  var form = document.getElementById('coForm');
   form.reset();
-  idFld.value = '';
+  document.getElementById('coId').value = '';
   document.getElementById('isActiveChk').checked = true;
 
-  if (mode === 'edit' && companyId) {
-    title.innerHTML = '<i class="fas fa-pen"></i> Edit Company';
-    btn.textContent = 'Save Changes';
-    idFld.value     = companyId;
-
-    fetch('/dept-admin/companies/' + companyId)
+  if (mode === 'edit' && cid) {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> Edit Company';
+    document.getElementById('saveLbl').textContent  = 'Save Changes';
+    document.getElementById('coId').value = cid;
+    fetch('/dept-admin/companies/' + cid)
       .then(function(r){ return r.json(); })
       .then(function(d) {
-        form.name.value                       = d.name || '';
-        form.industry_classification.value    = d.industry_classification || '';
-        form.available_slots.value            = d.available_slots || 0;
-        form.address.value                    = d.address || '';
-        form.city.value                       = d.city || '';
-        form.geofence_radius_meters.value     = d.geofence_radius_meters || 300;
-        form.latitude.value                   = d.latitude || '';
-        form.longitude.value                  = d.longitude || '';
-        form.contact_person.value             = d.contact_person || '';
-        form.contact_phone.value              = d.contact_phone || '';
-        form.contact_email.value              = d.contact_email || '';
-        form.phone_number.value               = d.phone_number || '';
-        form.email.value                      = d.email || '';
-        form.website.value                    = d.website || '';
-        form.description.value                = d.description || '';
+        var f = form;
+        f.name.value                    = d.name || '';
+        f.industry_classification.value = d.industry_classification || '';
+        if (f.department_id)            f.department_id.value = d.department_id || '';
+        f.available_slots.value         = d.available_slots || 0;
+        f.geofence_radius_meters.value  = d.geofence_radius_meters || 300;
+        f.address.value                 = d.address || '';
+        f.city.value                    = d.city || '';
+        f.latitude.value                = d.latitude || '';
+        f.longitude.value               = d.longitude || '';
+        f.contact_person.value          = d.contact_person || '';
+        f.contact_phone.value           = d.contact_phone || '';
+        f.contact_email.value           = d.contact_email || '';
+        f.phone_number.value            = d.phone_number || '';
+        f.email.value                   = d.email || '';
+        f.website.value                 = d.website || '';
+        f.description.value             = d.description || '';
         document.getElementById('isActiveChk').checked = !!d.is_active;
       })
       .catch(function(e){ console.error(e); });
   } else {
-    title.innerHTML = '<i class="fas fa-building"></i> Add Company';
-    btn.textContent = 'Save Company';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-building"></i> Add Company';
+    document.getElementById('saveLbl').textContent  = 'Save Company';
   }
 
   bg.classList.add('open');
@@ -422,8 +434,8 @@ document.getElementById('coForm').addEventListener('submit', function() {
 });
 
 /* ── Delete ── */
-function deleteCompany(id, name) {
-  if (!confirm('Delete "' + name + '"?\n\nThis will remove the company from your department.')) return;
+function doDelete(id, name) {
+  if (!confirm('Delete "' + name + '"?\nThis cannot be undone.')) return;
   var f = document.createElement('form');
   f.method = 'POST';
   f.action = '/dept-admin/companies/' + id + '/delete';
