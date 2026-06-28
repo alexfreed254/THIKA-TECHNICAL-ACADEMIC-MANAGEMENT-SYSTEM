@@ -1,69 +1,435 @@
 {% extends "liaison_officer/base.html" %}
 {% block title %}Attachment Periods{% endblock %}
-{% block page_title %}Attachment Application Periods{% endblock %}
+{% block page_title %}Attachment Periods{% endblock %}
+
 {% block content %}
-<div class="bg-gray-50 min-h-screen p-6 max-w-6xl mx-auto space-y-6">
-  <div class="bg-white rounded-xl border shadow-sm p-6">
-    <h2 class="text-lg font-bold mb-4"><i class="fas fa-calendar-plus text-blue-600"></i> Open Attachment Period</h2>
-    <p class="text-sm text-gray-600 mb-4">Step 1: Open the application window, publish deadlines, upload introduction letters, and approve eligible trainees.</p>
-    <form method="POST" enctype="multipart/form-data" class="grid md:grid-cols-2 gap-4">
-      <input type="hidden" name="action" value="create">
-      <input class="border rounded-lg p-2 text-sm" name="name" placeholder="Period name" required>
-      <select class="border rounded-lg p-2 text-sm" name="term" required>
-        <option value="Jan-Apr">Jan – Apr</option>
-        <option value="May-Aug">May – Aug</option>
-        <option value="Sept-Dec">Sept – Dec</option>
-      </select>
-      <input class="border rounded-lg p-2 text-sm" type="number" name="year" value="{{ current_year }}" required>
-      <input class="border rounded-lg p-2 text-sm" type="date" name="application_opens" required>
-      <input class="border rounded-lg p-2 text-sm" type="date" name="application_closes" required>
-      <input class="border rounded-lg p-2 text-sm" type="date" name="placement_deadline">
-      <input class="border rounded-lg p-2 text-sm md:col-span-2" type="file" name="introduction_letter" accept=".pdf,.jpg,.jpeg,.png">
-      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_open" value="1"> Open immediately</label>
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold md:col-span-2 w-fit">Create Period</button>
-    </form>
+<style>
+:root{--navy:#0a0f1e;--navy2:#0f1f40;--gold:#fbbf24;--gold2:#f59e0b;--surface:#fff;--muted:#f8fafc;--border:#e2e8f0;--text:#0f172a;--sub:#64748b}
+*{box-sizing:border-box}
+
+.ap-wrap{padding:28px;background:#f1f5f9;min-height:100vh}
+
+/* ── Page header ── */
+.ap-hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1e3a8a 100%);border-radius:16px;padding:28px 32px;margin-bottom:28px;color:#fff;position:relative;overflow:hidden}
+.ap-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 100% 0%,rgba(251,191,36,.12),transparent 60%);pointer-events:none}
+.ap-hero h1{font-size:22px;font-weight:800;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+.ap-hero h1 .icon-circle{width:42px;height:42px;border-radius:12px;background:rgba(251,191,36,.2);border:1.5px solid rgba(251,191,36,.35);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--gold);flex-shrink:0}
+.ap-hero p{font-size:13.5px;color:#bfdbfe;margin:0;max-width:600px;line-height:1.6}
+
+/* ── Steps strip ── */
+.steps-strip{display:flex;gap:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;margin-top:20px;overflow:hidden}
+.step-item{flex:1;display:flex;align-items:center;gap:9px;padding:10px 14px;font-size:12px;font-weight:600;color:rgba(255,255,255,.65);border-right:1px solid rgba(255,255,255,.12);transition:.15s}
+.step-item:last-child{border-right:none}
+.step-item .snum{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;font-family:monospace}
+.step-item.done{color:rgba(255,255,255,.9)}.step-item.done .snum{background:var(--gold);color:var(--navy)}
+@media(max-width:700px){.steps-strip{flex-direction:column}.step-item{border-right:none;border-bottom:1px solid rgba(255,255,255,.12)}.step-item:last-child{border-bottom:none}}
+
+/* ── Layout columns ── */
+.ap-cols{display:grid;grid-template-columns:380px 1fr;gap:24px;align-items:start}
+@media(max-width:1100px){.ap-cols{grid-template-columns:1fr}}
+
+/* ── Cards ── */
+.ap-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden}
+.ap-card-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#fafbfc 0%,#fff 100%)}
+.ap-card-head h2{font-size:15px;font-weight:800;color:var(--text);margin:0;display:flex;align-items:center;gap:9px}
+.ap-card-head h2 i{font-size:14px;color:var(--gold2)}
+.ap-card-head p{font-size:12.5px;color:var(--sub);margin:5px 0 0;line-height:1.5}
+.ap-card-body{padding:22px}
+
+/* ── Create form ── */
+.field-group{margin-bottom:18px}
+.field-group label{display:block;font-size:11.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.field-group label span.req{color:#ef4444;margin-left:2px}
+.field-row{display:grid;gap:12px}
+.field-row.cols2{grid-template-columns:1fr 1fr}
+.field-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.inp{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;color:var(--text);background:#fff;outline:none;transition:.15s}
+.inp:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.inp::placeholder{color:#94a3b8}
+select.inp{cursor:pointer}
+
+/* File upload zone */
+.file-zone{border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:.2s;position:relative}
+.file-zone:hover{border-color:#3b82f6;background:#eff6ff}
+.file-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-zone i{font-size:24px;color:#94a3b8;display:block;margin-bottom:7px}
+.file-zone .fz-text{font-size:12.5px;color:var(--sub);font-weight:600}
+.file-zone .fz-hint{font-size:11px;color:#94a3b8;margin-top:3px}
+
+/* Toggle checkbox */
+.toggle-row{display:flex;align-items:center;gap:12px;padding:13px 16px;background:#f8fafc;border-radius:10px;border:1.5px solid var(--border)}
+.toggle-row label{font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;flex:1}
+.toggle-row small{font-size:11.5px;color:var(--sub)}
+.toggle-switch{position:relative;width:42px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.25s}
+.toggle-slider::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-switch input:checked~.toggle-slider{background:#10b981}
+.toggle-switch input:checked~.toggle-slider::after{transform:translateX(18px)}
+
+.btn-create{width:100%;padding:13px;background:linear-gradient(135deg,var(--navy),#1e3a8a);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:.18s;box-shadow:0 4px 14px rgba(30,58,138,.3)}
+.btn-create:hover{background:linear-gradient(135deg,#0f172a,#1d4ed8);transform:translateY(-1px);box-shadow:0 6px 20px rgba(30,58,138,.35)}
+.btn-create i{color:var(--gold)}
+
+/* divider */
+.form-divider{display:flex;align-items:center;gap:10px;margin:20px 0;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em}
+.form-divider::before,.form-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Period cards ── */
+.period-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden;margin-bottom:20px;transition:.2s}
+.period-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.09)}
+.period-card-head{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(180deg,#fafbfc,#fff)}
+.period-title{font-size:17px;font-weight:800;color:var(--text);margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.period-sub{font-size:12.5px;color:var(--sub);display:flex;align-items:center;gap:5px}
+
+.status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.status-open{background:#dcfce7;color:#15803d;border:1.5px solid #bbf7d0}
+.status-open::before{content:'';width:7px;height:7px;border-radius:50%;background:#16a34a;animation:pulse 1.5s infinite}
+.status-closed{background:#f1f5f9;color:#64748b;border:1.5px solid #e2e8f0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.period-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.btn-sm{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s}
+.btn-open{background:#dcfce7;color:#15803d;border:1.5px solid #bbf7d0}
+.btn-open:hover{background:#bbf7d0}
+.btn-close{background:#fee2e2;color:#991b1b;border:1.5px solid #fecaca}
+.btn-close:hover{background:#fecaca}
+
+/* Timeline */
+.timeline-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 24px;border-bottom:1px solid var(--border)}
+.tl-item{display:flex;flex-direction:column;gap:3px}
+.tl-label{font-size:10.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:5px}
+.tl-label i{font-size:10px}
+.tl-val{font-size:13.5px;font-weight:700;color:var(--text)}
+.tl-val.em{color:#ef4444}
+
+/* Letter link */
+.letter-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:999px;font-size:12px;font-weight:700;color:#1d4ed8;text-decoration:none;transition:.15s}
+.letter-pill:hover{background:#dbeafe;color:#1e40af}
+
+/* Eligibility section */
+.elig-section{padding:20px 24px}
+.elig-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.elig-head h4{font-size:13.5px;font-weight:700;color:var(--text);margin:0;display:flex;align-items:center;gap:8px}
+.elig-head h4 i{color:#8b5cf6}
+.elig-search{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;outline:none;width:200px;color:var(--text)}
+.elig-search:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+
+.elig-table-wrap{border:1.5px solid var(--border);border-radius:12px;overflow:hidden;max-height:340px;overflow-y:auto}
+.elig-table{width:100%;border-collapse:collapse}
+.elig-table thead th{background:#f8fafc;padding:10px 14px;font-size:10.5px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;text-align:left;border-bottom:1.5px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:1}
+.elig-table thead th.center{text-align:center}
+.elig-table tbody td{padding:11px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:middle}
+.elig-table tbody tr:last-child td{border-bottom:none}
+.elig-table tbody tr:hover td{background:#fafbfc}
+
+.avatar-sm{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.student-cell{display:flex;align-items:center;gap:10px}
+.student-name{font-weight:600;color:var(--text);font-size:13px;line-height:1.2}
+.student-adm{font-size:11px;color:var(--sub);font-family:monospace}
+
+/* Custom checkboxes */
+.chk-wrap{display:flex;justify-content:center}
+.chk-elig, .chk-intro{width:18px;height:18px;accent-color:#8b5cf6;cursor:pointer;border-radius:4px}
+.chk-intro{accent-color:#10b981}
+
+.btn-save-elig{margin-top:16px;padding:10px 24px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.18s;box-shadow:0 4px 12px rgba(139,92,246,.3)}
+.btn-save-elig:hover{background:linear-gradient(135deg,#7c3aed,#6d28d9);transform:translateY(-1px)}
+
+/* Empty state */
+.empty-periods{text-align:center;padding:56px 24px;background:#fff;border-radius:16px;border:1.5px dashed var(--border)}
+.empty-periods .ei{width:72px;height:72px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px;color:#94a3b8}
+.empty-periods h3{font-size:17px;font-weight:800;color:var(--text);margin:0 0 8px}
+.empty-periods p{font-size:13.5px;color:var(--sub);margin:0}
+.empty-periods code{background:#f1f5f9;color:#1e3a8a;padding:2px 8px;border-radius:5px;font-size:12px}
+
+/* Flash messages */
+.flash-success{background:#f0fdf4;color:#15803d;border-left:4px solid #16a34a;padding:13px 18px;border-radius:0 10px 10px 0;font-size:13.5px;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.flash-error{background:#fef2f2;color:#991b1b;border-left:4px solid #dc2626;padding:13px 18px;border-radius:0 10px 10px 0;font-size:13.5px;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+
+@media(max-width:640px){.timeline-row{grid-template-columns:1fr 1fr}.field-row.cols3{grid-template-columns:1fr}.elig-search{width:100%}.period-actions{width:100%}.field-row.cols2{grid-template-columns:1fr}}
+</style>
+
+<div class="ap-wrap">
+
+  <!-- ── Page Hero ── -->
+  <div class="ap-hero">
+    <h1>
+      <div class="icon-circle"><i class="fas fa-calendar-plus"></i></div>
+      Attachment Periods
+    </h1>
+    <p>Manage industrial attachment windows — open application periods, set deadlines, upload introduction letters, and approve eligible trainees.</p>
+    <div class="steps-strip">
+      <div class="step-item done"><span class="snum">1</span> Open Period</div>
+      <div class="step-item done"><span class="snum">2</span> Approve Trainees</div>
+      <div class="step-item done"><span class="snum">3</span> Issue Intro Letters</div>
+      <div class="step-item done"><span class="snum">4</span> Monitor Placement</div>
+    </div>
   </div>
 
-  {% for p in periods %}
-  <div class="bg-white rounded-xl border shadow-sm p-6">
-    <div class="flex justify-between items-start flex-wrap gap-3 mb-4">
-      <div>
-        <h3 class="font-bold text-lg">{{ p.name }} ({{ p.term }} {{ p.year }})</h3>
-        <p class="text-sm text-gray-600">{{ p.application_opens }} → {{ p.application_closes }}</p>
-        {% if p.introduction_letter_url %}
-        <a href="{{ p.introduction_letter_url }}" target="_blank" class="text-blue-700 text-sm font-semibold">Introduction letter</a>
-        {% endif %}
+  <!-- Flash messages -->
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+    <div class="flash-{{ 'success' if cat == 'success' else 'error' }}">
+      <i class="fas fa-{{ 'check-circle' if cat == 'success' else 'exclamation-circle' }}"></i> {{ msg }}
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="ap-cols">
+
+    <!-- ── LEFT: Create Period Form ── -->
+    <div>
+      <div class="ap-card">
+        <div class="ap-card-head">
+          <h2><i class="fas fa-plus-circle"></i> Open New Period</h2>
+          <p>Define the application window, upload the introduction letter, and set deadlines.</p>
+        </div>
+        <div class="ap-card-body">
+          <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="create">
+
+            <!-- Basic Info -->
+            <div class="field-group">
+              <label>Period Name <span class="req">*</span></label>
+              <input class="inp" name="name" placeholder="e.g. Industrial Attachment 2026/1" required>
+            </div>
+
+            <div class="field-group">
+              <label>Term &amp; Year <span class="req">*</span></label>
+              <div class="field-row cols2">
+                <select class="inp" name="term" required>
+                  <option value="Jan-Apr">Jan – Apr</option>
+                  <option value="May-Aug">May – Aug</option>
+                  <option value="Sept-Dec">Sept – Dec</option>
+                </select>
+                <input class="inp" type="number" name="year" value="{{ current_year }}" min="2020" max="2035" required>
+              </div>
+            </div>
+
+            <div class="form-divider">Application Window</div>
+
+            <div class="field-group">
+              <label>Application Opens <span class="req">*</span></label>
+              <input class="inp" type="date" name="application_opens" required>
+            </div>
+
+            <div class="field-group">
+              <label>Application Closes <span class="req">*</span></label>
+              <input class="inp" type="date" name="application_closes" required>
+            </div>
+
+            <div class="field-group">
+              <label>Placement Deadline</label>
+              <input class="inp" type="date" name="placement_deadline" placeholder="Optional">
+            </div>
+
+            <div class="form-divider">Introduction Letter</div>
+
+            <div class="field-group">
+              <label>Upload Letter <span style="color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0">(PDF, JPG, PNG)</span></label>
+              <div class="file-zone" id="fileZone">
+                <input type="file" name="introduction_letter" accept=".pdf,.jpg,.jpeg,.png" onchange="updateFileLabel(this)">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <div class="fz-text" id="fileLabel">Click to upload or drag &amp; drop</div>
+                <div class="fz-hint">PDF, JPG or PNG · max 10 MB</div>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="toggle-row">
+                <label for="chk_open">Open immediately after creating</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" name="is_open" value="1" id="chk_open">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <small style="display:block;margin-top:7px;font-size:11.5px;color:var(--sub)">If unchecked, the period will be saved as <strong>draft</strong> and you can open it later.</small>
+            </div>
+
+            <button type="submit" class="btn-create">
+              <i class="fas fa-calendar-check"></i> Create Period
+            </button>
+          </form>
+        </div>
       </div>
-      <form method="POST">
-        <input type="hidden" name="action" value="toggle">
-        <input type="hidden" name="period_id" value="{{ p.id }}">
-        <input type="hidden" name="is_open" value="{{ 0 if p.is_open else 1 }}">
-        <button class="px-3 py-1 rounded-lg text-xs font-bold {{ 'bg-red-100 text-red-700' if p.is_open else 'bg-green-100 text-green-700' }}">
-          {{ 'Close Period' if p.is_open else 'Open Period' }}
-        </button>
-      </form>
     </div>
 
-    <form method="POST">
-      <input type="hidden" name="action" value="eligibility">
-      <input type="hidden" name="period_id" value="{{ p.id }}">
-      <p class="text-sm font-bold mb-2">Approve eligible trainees &amp; issue introduction letters</p>
-      <div class="max-h-64 overflow-y-auto border rounded-lg p-2 text-sm space-y-1">
-        {% for s in students %}
-        {% set el = eligibility.get(p.id, {}).get(s.id) %}
-        <label class="flex items-center gap-2 py-1 border-b border-gray-50">
-          <input type="checkbox" name="student_ids" value="{{ s.id }}" {% if el and el.is_eligible %}checked{% endif %}>
-          <span class="flex-1">{{ s.full_name }} ({{ s.admission_no }})</span>
-          <input type="checkbox" name="intro_{{ s.id }}" value="1" title="Intro letter issued" {% if el and el.introduction_letter_issued %}checked{% endif %}>
-          <span class="text-xs text-gray-500">Intro</span>
-        </label>
+    <!-- ── RIGHT: Existing Periods ── -->
+    <div>
+
+      {% if periods %}
+        {% for p in periods %}
+        <div class="period-card">
+
+          <!-- Card header -->
+          <div class="period-card-head">
+            <div style="flex:1;min-width:0">
+              <h3 class="period-title">
+                <span>{{ p.name }}</span>
+                <span class="status-badge {{ 'status-open' if p.is_open else 'status-closed' }}">
+                  {{ 'Open' if p.is_open else 'Closed' }}
+                </span>
+              </h3>
+              <p class="period-sub">
+                <i class="fas fa-tag"></i> {{ p.term }} {{ p.year }}
+                &nbsp;·&nbsp;
+                <i class="fas fa-users"></i>
+                {{ eligibility.get(p.id, {})|length }} student{{ 's' if eligibility.get(p.id, {})|length != 1 else '' }} configured
+              </p>
+            </div>
+            <div class="period-actions">
+              {% if p.introduction_letter_url %}
+              <a href="{{ p.introduction_letter_url }}" target="_blank" class="letter-pill">
+                <i class="fas fa-file-pdf"></i> Intro Letter
+              </a>
+              {% endif %}
+              <form method="POST" style="display:inline">
+                <input type="hidden" name="action" value="toggle">
+                <input type="hidden" name="period_id" value="{{ p.id }}">
+                <input type="hidden" name="is_open" value="{{ 0 if p.is_open else 1 }}">
+                <button type="submit" class="btn-sm {{ 'btn-close' if p.is_open else 'btn-open' }}"
+                  onclick="return confirm('{{ 'Close this period? Students will no longer be able to apply.' if p.is_open else 'Open this period for student applications?' }}')">
+                  <i class="fas fa-{{ 'lock' if p.is_open else 'lock-open' }}"></i>
+                  {{ 'Close Period' if p.is_open else 'Open Period' }}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Timeline row -->
+          <div class="timeline-row">
+            <div class="tl-item">
+              <span class="tl-label"><i class="fas fa-calendar-plus" style="color:#10b981"></i> Applications Open</span>
+              <span class="tl-val">{{ p.application_opens or '—' }}</span>
+            </div>
+            <div class="tl-item">
+              <span class="tl-label"><i class="fas fa-calendar-times" style="color:#ef4444"></i> Applications Close</span>
+              <span class="tl-val {% if p.application_closes and p.application_closes < today %}em{% endif %}">{{ p.application_closes or '—' }}</span>
+            </div>
+            <div class="tl-item">
+              <span class="tl-label"><i class="fas fa-flag-checkered" style="color:#f59e0b"></i> Placement Deadline</span>
+              <span class="tl-val">{{ p.placement_deadline or '—' }}</span>
+            </div>
+          </div>
+
+          <!-- Eligibility table -->
+          <div class="elig-section">
+            <form method="POST">
+              <input type="hidden" name="action" value="eligibility">
+              <input type="hidden" name="period_id" value="{{ p.id }}">
+
+              <div class="elig-head">
+                <h4><i class="fas fa-user-check"></i> Trainee Eligibility &amp; Intro Letters</h4>
+                <input class="elig-search" type="text" placeholder="Search trainee…"
+                       oninput="filterStudents(this, 'tbl-{{ p.id }}')" autocomplete="off">
+              </div>
+
+              {% if students %}
+              <div class="elig-table-wrap">
+                <table class="elig-table" id="tbl-{{ p.id }}">
+                  <thead>
+                    <tr>
+                      <th>Trainee</th>
+                      <th class="center" style="width:90px">Eligible</th>
+                      <th class="center" style="width:100px">Intro Letter</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for s in students %}
+                    {% set el = eligibility.get(p.id, {}).get(s.id) %}
+                    {% set initials = ((s.full_name.split()[0][:1] ~ (s.full_name.split()[1][:1] if s.full_name.split()|length > 1 else ''))|upper) if s.full_name else '?' %}
+                    <tr data-name="{{ s.full_name|lower }}">
+                      <td>
+                        <div class="student-cell">
+                          <div class="avatar-sm">{{ initials }}</div>
+                          <div>
+                            <div class="student-name">{{ s.full_name }}</div>
+                            <div class="student-adm">{{ s.admission_no or '—' }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="chk-wrap">
+                          <input class="chk-elig" type="checkbox" name="student_ids" value="{{ s.id }}"
+                                 {% if el and el.is_eligible %}checked{% endif %}
+                                 title="Mark as eligible for this period">
+                        </div>
+                      </td>
+                      <td>
+                        <div class="chk-wrap">
+                          <input class="chk-intro" type="checkbox" name="intro_{{ s.id }}" value="1"
+                                 {% if el and el.introduction_letter_issued %}checked{% endif %}
+                                 title="Introduction letter issued">
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Stats row -->
+              {% set elig_map = eligibility.get(p.id, {}) %}
+              {% set elig_count = elig_map.values()|selectattr('is_eligible')|list|length %}
+              {% set intro_count = elig_map.values()|selectattr('introduction_letter_issued')|list|length %}
+              <div style="display:flex;gap:12px;margin-top:14px;align-items:center;flex-wrap:wrap">
+                <span style="font-size:12px;color:var(--sub)">
+                  <i class="fas fa-user-check" style="color:#8b5cf6"></i>
+                  <strong style="color:var(--text)">{{ elig_count }}</strong> eligible
+                </span>
+                <span style="font-size:12px;color:var(--sub)">
+                  <i class="fas fa-envelope-open" style="color:#10b981"></i>
+                  <strong style="color:var(--text)">{{ intro_count }}</strong> intro letters issued
+                </span>
+                <button type="submit" class="btn-save-elig" style="margin-top:0;margin-left:auto">
+                  <i class="fas fa-save"></i> Save Eligibility
+                </button>
+              </div>
+
+              {% else %}
+              <div style="text-align:center;padding:32px;color:var(--sub);font-size:13.5px">
+                <i class="fas fa-user-slash" style="font-size:28px;display:block;margin-bottom:10px;opacity:.4"></i>
+                No students found in the system.
+              </div>
+              {% endif %}
+
+            </form>
+          </div>
+
+        </div>
         {% endfor %}
+
+      {% else %}
+      <div class="empty-periods">
+        <div class="ei"><i class="fas fa-calendar-plus"></i></div>
+        <h3>No periods yet</h3>
+        <p>Create your first attachment period using the form on the left.<br>
+        If you haven't run the migration yet, execute<br>
+        <code>attachment_workflow_migration.sql</code> in Supabase first.</p>
       </div>
-      <button type="submit" class="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Save Eligibility</button>
-    </form>
+      {% endif %}
+
+    </div>
   </div>
-  {% else %}
-  <p class="text-gray-500 text-sm">No periods yet. Create one above, or run <code>attachment_workflow_migration.sql</code> in Supabase.</p>
-  {% endfor %}
 </div>
+
+<script>
+function updateFileLabel(input){
+  var label = document.getElementById('fileLabel');
+  if(input.files && input.files[0]){
+    label.textContent = input.files[0].name;
+    document.getElementById('fileZone').style.borderColor = '#10b981';
+    document.getElementById('fileZone').style.background = '#f0fdf4';
+  }
+}
+
+function filterStudents(input, tableId){
+  var q = input.value.toLowerCase();
+  var rows = document.querySelectorAll('#'+tableId+' tbody tr');
+  rows.forEach(function(row){
+    row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

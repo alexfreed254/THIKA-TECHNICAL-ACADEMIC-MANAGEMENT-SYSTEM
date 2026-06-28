@@ -566,6 +566,7 @@ def attachment_periods():
         students=students,
         eligibility=eligibility,
         current_year=datetime.now().year,
+        today=datetime.now().strftime("%Y-%m-%d"),
     )
 
 
