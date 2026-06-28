@@ -2491,12 +2491,21 @@ def download_result_slip():
         # ════════════════════════════════════════════════════════════════════
         # 1.  CENTRED HEADER  ─  Logo · Institute · Examination Department
         # ════════════════════════════════════════════════════════════════════
-        logo_path = _os.path.join(_os.path.dirname(__file__),
-                                  '..', 'static', 'assets', 'THIKATTILOGO.jpg')
-        logo_cell = Paragraph("", lft9)
-        if _os.path.exists(logo_path):
+        assets_dir = _os.path.join(_os.path.dirname(__file__), '..', 'static', 'assets')
+        coat_path  = _os.path.join(assets_dir, 'KENYACOATOFARMS.png')
+        ttti_path  = _os.path.join(assets_dir, 'THIKATTILOGO.jpg')
+
+        coat_cell = Paragraph("", lft9)
+        if _os.path.exists(coat_path):
             try:
-                logo_cell = RLImage(logo_path, width=22*mm, height=22*mm)
+                coat_cell = RLImage(coat_path, width=22*mm, height=22*mm)
+            except Exception:
+                pass
+
+        ttti_cell = Paragraph("", lft9)
+        if _os.path.exists(ttti_path):
+            try:
+                ttti_cell = RLImage(ttti_path, width=22*mm, height=22*mm)
             except Exception:
                 pass
 
@@ -2507,7 +2516,7 @@ def download_result_slip():
             Paragraph(f"Year: {year}" + (f"  |  Term: {term}" if term else ""), ctr9),
         ]
 
-        hdr_tbl = Table([[logo_cell, header_content, logo_cell]],
+        hdr_tbl = Table([[coat_cell, header_content, ttti_cell]],
                         colWidths=[25*mm, W - 50*mm, 25*mm])
         hdr_tbl.setStyle(TableStyle([
             ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
