@@ -209,12 +209,14 @@ def departments():
     if request.args.get("delete"):
         try:
             dept_id = request.args["delete"]
+            # Nullify FK references that don't cascade automatically
+            db.table("course_applications").update({"department_id": None}).eq("department_id", dept_id).execute()
             db.table("departments").delete().eq("id", dept_id).execute()
             write_audit_log("delete_department", target=dept_id)
             flash("Department deleted.", "success")
             return redirect(url_for("super_admin.departments"))
         except Exception as exc:
-            error = f"Error deleting: {exc}"
+            error = f"Error deleting department: {exc}"
 
     depts = db.table("departments").select("*").order("name").execute().data or []
     return render_template("super_admin/departments.html", departments=depts, error=error)

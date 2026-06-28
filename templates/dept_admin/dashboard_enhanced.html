@@ -3,264 +3,452 @@
 {% block page_title %}Department Dashboard{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  .stat-card { 
-    transition: transform 0.2s ease, box-shadow 0.2s ease; 
-  }
-  .stat-card:hover { 
-    transform: translateY(-4px); 
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12); 
-  }
+:root{--brand:#1e3a8a;--brand-light:#3b82f6;--gold:#fbbf24;--surface:#fff;--muted:#f8fafc;--border:#e2e8f0;--text:#0f172a;--sub:#64748b}
+*{box-sizing:border-box}
+body{background:#f1f5f9}
+.dash{padding:28px 28px 40px}
+
+/* ── Header ── */
+.dash-header{background:linear-gradient(135deg,#0a0f1e 0%,#1e3a8a 60%,#1d4ed8 100%);border-radius:16px;padding:28px 32px;margin-bottom:28px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;box-shadow:0 8px 32px rgba(30,58,138,.35)}
+.dash-header h1{font-size:24px;font-weight:800;margin:0 0 4px}
+.dash-header p{font-size:13.5px;color:#bfdbfe;margin:0}
+.dash-header .dept-badge{background:rgba(251,191,36,.18);border:1.5px solid rgba(251,191,36,.4);color:#fde68a;font-weight:700;font-size:13px;padding:6px 16px;border-radius:30px;white-space:nowrap}
+.header-time{text-align:right;color:#93c5fd;font-size:12px;line-height:1.7}
+
+/* ── KPI cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.kpi{background:#fff;border-radius:14px;padding:20px 20px 16px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);display:flex;flex-direction:column;gap:10px;transition:transform .18s,box-shadow .18s;position:relative;overflow:hidden}
+.kpi:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.kpi.blue::before{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.kpi.purple::before{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.kpi.green::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.kpi.orange::before{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.kpi.cyan::before{background:linear-gradient(90deg,#06b6d4,#22d3ee)}
+.kpi.red::before{background:linear-gradient(90deg,#ef4444,#f87171)}
+.kpi.indigo::before{background:linear-gradient(90deg,#6366f1,#818cf8)}
+.kpi-top{display:flex;align-items:center;justify-content:space-between}
+.kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.kpi.blue .kpi-icon{background:#eff6ff;color:#3b82f6}
+.kpi.purple .kpi-icon{background:#f5f3ff;color:#8b5cf6}
+.kpi.green .kpi-icon{background:#ecfdf5;color:#10b981}
+.kpi.orange .kpi-icon{background:#fffbeb;color:#f59e0b}
+.kpi.cyan .kpi-icon{background:#ecfeff;color:#06b6d4}
+.kpi.red .kpi-icon{background:#fef2f2;color:#ef4444}
+.kpi.indigo .kpi-icon{background:#eef2ff;color:#6366f1}
+.kpi-val{font-size:28px;font-weight:800;color:var(--text);line-height:1}
+.kpi-label{font-size:12px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+.kpi-badge{position:absolute;top:10px;right:10px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px}
+
+/* ── Section label ── */
+.section-label{font-size:11px;font-weight:800;color:var(--sub);letter-spacing:.12em;text-transform:uppercase;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Chart cards ── */
+.chart-row{display:grid;gap:20px;margin-bottom:24px}
+.chart-row.col3{grid-template-columns:repeat(3,1fr)}
+.chart-row.col2{grid-template-columns:2fr 1fr}
+.chart-row.col21{grid-template-columns:1.4fr 1fr}
+.chart-row.col1{grid-template-columns:1fr}
+.chart-card{background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);overflow:hidden}
+.chart-card-head{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chart-card-head h3{font-size:14px;font-weight:700;color:var(--text);margin:0;display:flex;align-items:center;gap:8px}
+.chart-card-head .sub{font-size:11px;color:var(--sub)}
+.chart-body{padding:18px 20px 20px}
+.chart-body canvas{max-height:220px}
+
+/* Donut center label */
+.donut-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+.donut-center{position:absolute;text-align:center;pointer-events:none}
+.donut-center strong{display:block;font-size:22px;font-weight:800;color:var(--text)}
+.donut-center span{font-size:11px;color:var(--sub)}
+
+/* Legend pills */
+.legend-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.legend-pill{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--sub)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* Stat mini row inside chart card */
+.mini-stats{display:flex;gap:0;border-top:1px solid var(--border);margin-top:16px}
+.mini-stat{flex:1;text-align:center;padding:12px 6px;border-right:1px solid var(--border)}
+.mini-stat:last-child{border-right:none}
+.mini-stat strong{display:block;font-size:18px;font-weight:800;color:var(--text)}
+.mini-stat span{font-size:10.5px;color:var(--sub);font-weight:600;text-transform:uppercase}
+
+/* ── Table card ── */
+.table-card{background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);overflow:hidden;margin-bottom:24px}
+.table-card-head{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-card-head h3{font-size:15px;font-weight:700;color:var(--text);margin:0;display:flex;align-items:center;gap:8px}
+.table-card-head a{font-size:12px;font-weight:700;color:var(--brand-light);text-decoration:none}
+.table-card-head a:hover{text-decoration:underline}
+table.dash-table{width:100%;border-collapse:collapse}
+table.dash-table thead tr{background:#f8fafc}
+table.dash-table th{padding:11px 16px;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;text-align:left;border-bottom:1px solid var(--border)}
+table.dash-table td{padding:12px 16px;font-size:13px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+table.dash-table tr:last-child td{border-bottom:none}
+table.dash-table tr:hover td{background:#f8fafc}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.pending{background:#fef3c7;color:#92400e}
+.badge.approved{background:#d1fae5;color:#065f46}
+.badge.rejected{background:#fee2e2;color:#991b1b}
+.badge.active{background:#dbeafe;color:#1e40af}
+.badge.type{background:#ede9fe;color:#5b21b6}
+
+/* ── Notifications ── */
+.notif-card{background:#fff;border-radius:14px;border:1px solid #bfdbfe;box-shadow:0 2px 8px rgba(59,130,246,.08);margin-bottom:24px;overflow:hidden}
+.notif-card-head{background:#eff6ff;padding:14px 22px;border-bottom:1px solid #bfdbfe;display:flex;align-items:center;justify-content:space-between}
+.notif-card-head h3{font-size:15px;font-weight:700;color:#1e3a8a;margin:0}
+.notif-row{display:flex;align-items:flex-start;gap:14px;padding:14px 22px;border-bottom:1px solid #f0f9ff}
+.notif-row:last-child{border-bottom:none}
+.notif-row:hover{background:#f8fafc}
+.notif-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.notif-body p{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--text)}
+.notif-body small{font-size:11.5px;color:var(--sub)}
+
+/* Attendance rate bar */
+.att-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.att-bar-label{font-size:12px;font-weight:600;color:var(--text);min-width:140px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-bar-track{flex:1;background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden}
+.att-bar-fill{height:8px;border-radius:6px;background:linear-gradient(90deg,#10b981,#34d399)}
+.att-bar-pct{font-size:12px;font-weight:700;color:var(--sub);min-width:38px;text-align:right}
+
+@media(max-width:900px){.chart-row.col3{grid-template-columns:1fr 1fr}.chart-row.col2,.chart-row.col21{grid-template-columns:1fr}}
+@media(max-width:600px){.chart-row.col3{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.dash{padding:16px}}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="bg-gray-50 min-h-screen p-6">
-  
-  <!-- Header Section with Gradient -->
-  <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg p-6 mb-8 text-white">
-    <div class="flex items-center justify-between flex-wrap gap-4">
-      <div>
-        <h1 class="text-3xl font-bold mb-2">Welcome, {{ current_user.full_name }}!</h1>
-        <p class="text-blue-100 flex items-center gap-2">
-          <i class="fas fa-sitemap"></i> 
-          Department: <strong class="text-yellow-300">{{ department_name | upper if department_name else 'ACADEMIC' }}</strong>
-        </p>
-      </div>
-      <div class="bg-white bg-opacity-20 backdrop-blur-sm px-4 py-2 rounded-lg text-sm font-semibold border border-white border-opacity-30">
-        <i class="far fa-calendar-alt mr-2"></i>Portal Dashboard
-      </div>
+<div class="dash">
+
+  <!-- ── Header ── -->
+  <div class="dash-header">
+    <div>
+      <h1><i class="fas fa-tachometer-alt" style="color:#fbbf24;margin-right:10px"></i>Department Analytics</h1>
+      <p>Welcome back, <strong>{{ current_user.full_name }}</strong> &nbsp;·&nbsp; Full operational overview for your department</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <div class="dept-badge"><i class="fas fa-sitemap" style="margin-right:6px"></i>{{ department_name | upper if department_name else 'DEPARTMENT' }}</div>
+      <div class="header-time" id="dash-clock"></div>
     </div>
   </div>
 
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-    
-    <!-- Classes -->
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-door-open text-blue-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-blue-600">{{ stats.classes or 0 }}</span>
+  <!-- ── KPI Cards ── -->
+  <div class="section-label"><i class="fas fa-chart-bar"></i> Key Performance Indicators</div>
+  <div class="kpi-grid">
+
+    <div class="kpi blue">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-door-open"></i></div>
+        <div class="kpi-val">{{ stats.classes or 0 }}</div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium">Classes</h3>
+      <div class="kpi-label">Classes</div>
     </div>
 
-    <!-- Trainers -->
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-chalkboard-teacher text-purple-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-purple-600">{{ stats.trainers or 0 }}</span>
+    <div class="kpi purple">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="kpi-val">{{ stats.trainers or 0 }}</div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium">Trainers</h3>
+      <div class="kpi-label">Trainers</div>
     </div>
 
-    <!-- Students -->
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-user-graduate text-green-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-green-600">{{ stats.students or 0 }}</span>
+    <div class="kpi green">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-user-graduate"></i></div>
+        <div class="kpi-val">{{ stats.students or 0 }}</div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium">Students</h3>
+      <div class="kpi-label">Students</div>
     </div>
 
-    <!-- Units -->
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-book text-orange-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-orange-600">{{ stats.units or 0 }}</span>
+    <div class="kpi orange">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-book"></i></div>
+        <div class="kpi-val">{{ stats.units or 0 }}</div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium">Units</h3>
+      <div class="kpi-label">Units</div>
     </div>
 
-    <!-- Assessments -->
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-file-alt text-cyan-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-cyan-600">{{ stats.assessments or 0 }}</span>
+    <div class="kpi cyan">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-file-alt"></i></div>
+        <div class="kpi-val">{{ stats.assessments or 0 }}</div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium">Assessments</h3>
+      <div class="kpi-label">Assessments</div>
     </div>
 
-    <!-- Applications -->
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 cursor-pointer relative" onclick="location.href='/dept-admin/applications'">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-file-signature text-red-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-red-600">{{ stats.applications or 0 }}</span>
-      </div>
-      <h3 class="text-gray-600 text-sm font-medium">Applications</h3>
+    <div class="kpi red" style="cursor:pointer" onclick="location.href='/dept-admin/applications'">
       {% if stats.pending_applications and stats.pending_applications > 0 %}
-      <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center">
-        {{ stats.pending_applications }}
-      </span>
+      <span class="kpi-badge">{{ stats.pending_applications }}</span>
       {% endif %}
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-file-signature"></i></div>
+        <div class="kpi-val">{{ stats.applications or 0 }}</div>
+      </div>
+      <div class="kpi-label">Applications</div>
+    </div>
+
+    <div class="kpi indigo">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-certificate"></i></div>
+        <div class="kpi-val">{{ (clearance_stats.pending or 0) + (clearance_stats.approved or 0) + (clearance_stats.rejected or 0) }}</div>
+      </div>
+      <div class="kpi-label">Clearance Reqs</div>
+    </div>
+
+    <div class="kpi green">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-industry"></i></div>
+        <div class="kpi-val">{{ (attachment_stats.active or 0) + (attachment_stats.completed or 0) + (attachment_stats.pending or 0) + (attachment_stats.approved or 0) }}</div>
+      </div>
+      <div class="kpi-label">Attachments</div>
     </div>
 
   </div>
 
-  <!-- Notifications Panel -->
+  <!-- ── Row 1: Assessment + Applications + Clearance donuts ── -->
+  <div class="section-label"><i class="fas fa-chart-pie"></i> Status Breakdown</div>
+  <div class="chart-row col3">
+
+    <!-- Assessment status donut -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-file-alt" style="color:#06b6d4"></i> Assessments</h3>
+        <span class="sub">{{ stats.assessments or 0 }} total</span>
+      </div>
+      <div class="chart-body">
+        <div class="donut-wrap" style="height:180px">
+          <canvas id="chartAssessment"></canvas>
+          <div class="donut-center">
+            <strong>{{ stats.assessments or 0 }}</strong>
+            <span>Total</span>
+          </div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px">{{ stats.pending or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px">{{ stats.approved or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px">{{ stats.rejected or 0 }}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Applications donut -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-file-signature" style="color:#ef4444"></i> Applications</h3>
+        <span class="sub">{{ stats.applications or 0 }} total</span>
+      </div>
+      <div class="chart-body">
+        <div class="donut-wrap" style="height:180px">
+          <canvas id="chartApplications"></canvas>
+          <div class="donut-center">
+            <strong>{{ stats.applications or 0 }}</strong>
+            <span>Total</span>
+          </div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px">{{ app_status.pending or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px">{{ app_status.approved or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px">{{ app_status.rejected or 0 }}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clearance donut -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-certificate" style="color:#6366f1"></i> Clearance</h3>
+        <span class="sub">{{ (clearance_stats.pending or 0)+(clearance_stats.approved or 0)+(clearance_stats.rejected or 0) }} total</span>
+      </div>
+      <div class="chart-body">
+        <div class="donut-wrap" style="height:180px">
+          <canvas id="chartClearance"></canvas>
+          <div class="donut-center">
+            <strong>{{ (clearance_stats.pending or 0)+(clearance_stats.approved or 0)+(clearance_stats.rejected or 0) }}</strong>
+            <span>Total</span>
+          </div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px">{{ clearance_stats.pending or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px">{{ clearance_stats.approved or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px">{{ clearance_stats.rejected or 0 }}</strong></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Row 2: 7-Day Trend + Industrial Attachments ── -->
+  <div class="section-label"><i class="fas fa-chart-line"></i> Attendance Trend & Industrial Attachments</div>
+  <div class="chart-row col21">
+
+    <!-- 7-day attendance trend -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-calendar-check" style="color:#10b981"></i> 7-Day Attendance Trend</h3>
+        <span class="sub">Last 7 days · all units</span>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartTrend" style="max-height:200px"></canvas>
+      </div>
+    </div>
+
+    <!-- Industrial attachment status -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-industry" style="color:#10b981"></i> Industrial Attachments</h3>
+        <span class="sub">Status distribution</span>
+      </div>
+      <div class="chart-body">
+        <div class="donut-wrap" style="height:160px">
+          <canvas id="chartAttachments"></canvas>
+          <div class="donut-center">
+            <strong>{{ (attachment_stats.active or 0)+(attachment_stats.completed or 0)+(attachment_stats.pending or 0)+(attachment_stats.approved or 0)+(attachment_stats.rejected or 0) }}</strong>
+            <span>Total</span>
+          </div>
+        </div>
+        <div class="mini-stats" style="margin-top:14px">
+          <div class="mini-stat"><strong style="color:#3b82f6">{{ attachment_stats.active or 0 }}</strong><span>Active</span></div>
+          <div class="mini-stat"><strong style="color:#10b981">{{ attachment_stats.completed or 0 }}</strong><span>Done</span></div>
+          <div class="mini-stat"><strong style="color:#f59e0b">{{ attachment_stats.pending or 0 }}</strong><span>Pending</span></div>
+          <div class="mini-stat"><strong style="color:#ef4444">{{ attachment_stats.rejected or 0 }}</strong><span>Rejected</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Row 3: Attendance per Unit + Assessment Types ── -->
+  <div class="section-label"><i class="fas fa-chart-bar"></i> Unit-Level Analysis</div>
+  <div class="chart-row col2">
+
+    <!-- Attendance per unit -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-users" style="color:#3b82f6"></i> Attendance by Unit</h3>
+        <span class="sub">Present vs Absent</span>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartAttUnit" style="max-height:240px"></canvas>
+      </div>
+    </div>
+
+    <!-- Assessment types + Class enrollment -->
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-layer-group" style="color:#8b5cf6"></i> Assessment Types</h3>
+        <span class="sub">Distribution</span>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartAtype" style="max-height:240px"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Row 4: Class Enrolment Bar ── -->
+  <div class="section-label"><i class="fas fa-door-open"></i> Class Enrolment</div>
+  <div class="chart-row col1">
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3><i class="fas fa-graduation-cap" style="color:#f59e0b"></i> Students per Class</h3>
+        <span class="sub">Enrolment count</span>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartClasses" style="max-height:200px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Notifications ── -->
   {% if unread_notifications %}
-  <div class="bg-white rounded-xl shadow-sm mb-8 border border-blue-100">
-    <div class="px-6 py-4 border-b border-blue-50 flex items-center justify-between bg-blue-50 rounded-t-xl">
-      <h2 class="text-lg font-bold text-blue-900">
-        <i class="fas fa-bell text-blue-500 mr-2"></i>Unread Notifications
-        <span class="ml-2 bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ unread_notifications | length }}</span>
-      </h2>
-      <div class="flex gap-2">
-        <a href="/notifications" class="text-blue-600 hover:text-blue-700 text-sm font-semibold">View All <i class="fas fa-arrow-right ml-1"></i></a>
-        <form method="POST" action="/notifications/mark-all-read" class="inline">
-          <button type="submit" class="text-gray-500 hover:text-gray-700 text-sm font-medium ml-3">Mark all read</button>
+  <div class="section-label"><i class="fas fa-bell"></i> Notifications</div>
+  <div class="notif-card">
+    <div class="notif-card-head">
+      <h3><i class="fas fa-bell" style="color:#3b82f6;margin-right:8px"></i>Unread Notifications
+        <span style="background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px;margin-left:8px">{{ unread_notifications|length }}</span>
+      </h3>
+      <div style="display:flex;gap:12px;align-items:center">
+        <a href="/notifications" style="font-size:12px;font-weight:700;color:#3b82f6;text-decoration:none">View All <i class="fas fa-arrow-right"></i></a>
+        <form method="POST" action="/notifications/mark-all-read">
+          <button type="submit" style="background:none;border:none;font-size:12px;color:#64748b;cursor:pointer;font-weight:600">Mark all read</button>
         </form>
       </div>
     </div>
-    <div class="divide-y divide-gray-50">
-      {% for n in unread_notifications %}
-      <div class="px-6 py-4 flex items-start gap-4 hover:bg-blue-50 transition
-        {% if n.type == 'warning' %}border-l-4 border-orange-400{% elif n.type == 'error' %}border-l-4 border-red-400{% elif n.type == 'success' %}border-l-4 border-green-400{% else %}border-l-4 border-blue-400{% endif %}">
-        <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
-          {% if n.type == 'warning' %}bg-orange-100{% elif n.type == 'error' %}bg-red-100{% elif n.type == 'success' %}bg-green-100{% else %}bg-blue-100{% endif %}">
-          <i class="fas fa-{% if n.type == 'warning' %}exclamation-triangle text-orange-600{% elif n.type == 'error' %}exclamation-circle text-red-600{% elif n.type == 'success' %}check-circle text-green-600{% else %}info-circle text-blue-600{% endif %} text-sm"></i>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="font-semibold text-gray-900 text-sm mb-0.5">{{ n.title }}</p>
-          <p class="text-sm text-gray-600">{{ n.message }}</p>
-          <p class="text-xs text-gray-400 mt-1">{{ n.created_at | to_eat if n.created_at else '' }}</p>
-        </div>
-        {% if n.action_url %}
-        <a href="{{ n.action_url }}" class="flex-shrink-0 text-blue-600 hover:text-blue-700 text-sm font-semibold whitespace-nowrap">
-          View <i class="fas fa-arrow-right ml-1"></i>
-        </a>
-        {% endif %}
+    {% for n in unread_notifications %}
+    <div class="notif-row" style="border-left:4px solid {% if n.type=='warning' %}#f59e0b{% elif n.type=='error' %}#ef4444{% elif n.type=='success' %}#10b981{% else %}#3b82f6{% endif %}">
+      <div class="notif-icon" style="background:{% if n.type=='warning' %}#fffbeb{% elif n.type=='error' %}#fef2f2{% elif n.type=='success' %}#ecfdf5{% else %}#eff6ff{% endif %};color:{% if n.type=='warning' %}#f59e0b{% elif n.type=='error' %}#ef4444{% elif n.type=='success' %}#10b981{% else %}#3b82f6{% endif %}">
+        <i class="fas fa-{% if n.type=='warning' %}exclamation-triangle{% elif n.type=='error' %}exclamation-circle{% elif n.type=='success' %}check-circle{% else %}info-circle{% endif %}"></i>
       </div>
-      {% endfor %}
+      <div class="notif-body" style="flex:1">
+        <p>{{ n.title }}</p>
+        <small>{{ n.message }}&nbsp;·&nbsp;{{ n.created_at | to_eat if n.created_at else '' }}</small>
+      </div>
+      {% if n.action_url %}<a href="{{ n.action_url }}" style="font-size:12px;font-weight:700;color:#3b82f6;text-decoration:none;white-space:nowrap">View <i class="fas fa-arrow-right"></i></a>{% endif %}
     </div>
+    {% endfor %}
   </div>
   {% endif %}
 
-  <!-- Recent Assessments -->
-  <div class="bg-white rounded-xl shadow-sm mb-8 border border-gray-100">
-    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-gray-900">
-        <i class="fas fa-clock text-blue-600 mr-2"></i>Recent Assessments
-      </h2>
-      <a href="/dept-admin/assessments" class="text-blue-600 hover:text-blue-700 text-sm font-semibold">
-        View All <i class="fas fa-arrow-right ml-1"></i>
-      </a>
+  <!-- ── Recent Assessments ── -->
+  <div class="section-label"><i class="fas fa-clock"></i> Recent Activity</div>
+  <div class="table-card">
+    <div class="table-card-head">
+      <h3><i class="fas fa-file-alt" style="color:#06b6d4"></i> Recent Assessments</h3>
+      <a href="/dept-admin/assessments">View All <i class="fas fa-arrow-right"></i></a>
     </div>
     {% if recent_assessments %}
-    <div class="overflow-x-auto">
-      <table class="w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Unit</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
-            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
+    <div style="overflow-x:auto">
+      <table class="dash-table">
+        <thead><tr>
+          <th>Student</th><th>Unit</th><th>Class</th><th>Type</th><th>Status</th><th>Date</th>
+        </tr></thead>
+        <tbody>
           {% for a in recent_assessments %}
-          <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4">
-              <div>
-                <p class="text-sm font-medium text-gray-900">{{ a.get('user_profiles',{}).get('full_name','—') }}</p>
-                <p class="text-xs text-gray-500">{{ a.get('user_profiles',{}).get('admission_no','') }}</p>
-              </div>
+          <tr>
+            <td>
+              <div style="font-weight:600">{{ a.get('user_profiles',{}).get('full_name','—') }}</div>
+              <div style="font-size:11.5px;color:#64748b">{{ a.get('user_profiles',{}).get('admission_no','') }}</div>
             </td>
-            <td class="px-6 py-4">
-              <span class="text-sm text-gray-900">{{ a.get('units',{}).get('name','—') }}</span>
-            </td>
-            <td class="px-6 py-4">
-              <span class="text-sm text-gray-900">{{ a.get('classes',{}).get('name','—') }}</span>
-            </td>
-            <td class="px-6 py-4">
-              <span class="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">{{ a.get('assessment_type','—') }}</span>
-            </td>
-            <td class="px-6 py-4 text-center">
-              <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold
-                {% if a.get('status','pending') == 'approved' %}bg-green-100 text-green-700
-                {% elif a.get('status','pending') == 'rejected' %}bg-red-100 text-red-700
-                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                {{ a.get('status','pending')|title }}
-              </span>
-            </td>
-            <td class="px-6 py-4">
-              <span class="text-sm text-gray-600">{{ a.get('uploaded_at','—')[:10] if a.get('uploaded_at') else '—' }}</span>
-            </td>
+            <td style="font-weight:500">{{ a.get('units',{}).get('name','—') }}</td>
+            <td style="color:#64748b">{{ a.get('classes',{}).get('name','—') }}</td>
+            <td><span class="badge type">{{ a.get('assessment_type','—') }}</span></td>
+            <td><span class="badge {{ a.get('status','pending') }}">{{ a.get('status','pending')|title }}</span></td>
+            <td style="color:#64748b;font-size:12px">{{ a.get('uploaded_at','')[:10] if a.get('uploaded_at') else '—' }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-    <div class="px-6 py-12 text-center">
-      <i class="fas fa-file-alt text-gray-300 text-5xl mb-4"></i>
-      <p class="text-gray-500">No assessments yet</p>
-    </div>
+    <div style="padding:40px;text-align:center;color:#94a3b8"><i class="fas fa-file-alt" style="font-size:36px;display:block;margin-bottom:10px"></i>No assessments yet</div>
     {% endif %}
   </div>
 
-  <!-- Recent Attendance (Optional) -->
+  <!-- ── Recent Attendance ── -->
   {% if recent_attendance %}
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-gray-900">
-        <i class="fas fa-calendar-check text-green-600 mr-2"></i>Recent Attendance
-      </h2>
-      <a href="/dept-admin/attendance" class="text-green-600 hover:text-green-700 text-sm font-semibold">
-        View All <i class="fas fa-arrow-right ml-1"></i>
-      </a>
+  <div class="table-card">
+    <div class="table-card-head">
+      <h3><i class="fas fa-calendar-check" style="color:#10b981"></i> Recent Attendance</h3>
+      <a href="/dept-admin/attendance">View All <i class="fas fa-arrow-right"></i></a>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Unit</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class</th>
-            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
+    <div style="overflow-x:auto">
+      <table class="dash-table">
+        <thead><tr>
+          <th>Student</th><th>Unit</th><th>Class</th><th>Status</th><th>Date</th>
+        </tr></thead>
+        <tbody>
           {% for att in recent_attendance[:10] %}
-          <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4">
-              <div>
-                <p class="text-sm font-medium text-gray-900">{{ att.get('user_profiles',{}).get('full_name','—') }}</p>
-                <p class="text-xs text-gray-500">{{ att.get('user_profiles',{}).get('admission_no','') }}</p>
-              </div>
+          <tr>
+            <td>
+              <div style="font-weight:600">{{ att.get('user_profiles',{}).get('full_name','—') }}</div>
+              <div style="font-size:11.5px;color:#64748b">{{ att.get('user_profiles',{}).get('admission_no','') }}</div>
             </td>
-            <td class="px-6 py-4">
-              <span class="text-sm text-gray-900">{{ att.get('units',{}).get('name','—') }}</span>
-            </td>
-            <td class="px-6 py-4">
-              <span class="text-sm text-gray-900">{{ att.get('classes',{}).get('name','—') }}</span>
-            </td>
-            <td class="px-6 py-4 text-center">
-              <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold
-                {% if att.get('status') == 'present' %}bg-green-100 text-green-700
-                {% else %}bg-red-100 text-red-700{% endif %}">
-                {{ att.get('status','absent')|title }}
-              </span>
-            </td>
-            <td class="px-6 py-4">
-              <span class="text-sm text-gray-600">{{ att.get('attendance_date','—')[:10] if att.get('attendance_date') else '—' }}</span>
-            </td>
+            <td style="font-weight:500">{{ att.get('units',{}).get('name','—') }}</td>
+            <td style="color:#64748b">{{ att.get('classes',{}).get('name','—') }}</td>
+            <td><span class="badge {{ att.get('status','absent') }}">{{ att.get('status','absent')|title }}</span></td>
+            <td style="color:#64748b;font-size:12px">{{ att.get('attendance_date','')[:10] if att.get('attendance_date') else '—' }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -270,4 +458,89 @@
   {% endif %}
 
 </div>
+
+<!-- ── Chart.js Scripts ── -->
+<script>
+(function(){
+  // ── Live clock ──
+  const cl=document.getElementById('dash-clock');
+  if(cl){const tick=()=>{const n=new Date();cl.innerHTML=n.toLocaleDateString('en-KE',{weekday:'long',year:'numeric',month:'short',day:'numeric'})+'<br>'+n.toLocaleTimeString('en-KE')};tick();setInterval(tick,1000)}
+
+  const ease='easeInOutQuart';
+  const gridColor='rgba(0,0,0,0.04)';
+
+  // ── Donut helper ──
+  function donut(id,labels,data,colors){
+    const ctx=document.getElementById(id);if(!ctx)return;
+    new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:3,borderColor:'#fff',hoverBorderWidth:4}]},options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw}}},animation:{duration:800,easing:ease}}});
+  }
+
+  // ── Assessment status ──
+  donut('chartAssessment',
+    ['Pending','Approved','Rejected'],
+    [{{ stats.pending or 0 }},{{ stats.approved or 0 }},{{ stats.rejected or 0 }}],
+    ['#f59e0b','#10b981','#ef4444']);
+
+  // ── Applications ──
+  donut('chartApplications',
+    ['Pending','Approved','Rejected'],
+    [{{ app_status.pending or 0 }},{{ app_status.approved or 0 }},{{ app_status.rejected or 0 }}],
+    ['#f59e0b','#10b981','#ef4444']);
+
+  // ── Clearance ──
+  donut('chartClearance',
+    ['Pending','Approved','Rejected'],
+    [{{ clearance_stats.pending or 0 }},{{ clearance_stats.approved or 0 }},{{ clearance_stats.rejected or 0 }}],
+    ['#f59e0b','#10b981','#ef4444']);
+
+  // ── Industrial Attachments donut ──
+  donut('chartAttachments',
+    ['Active','Completed','Pending','Approved','Rejected'],
+    [{{ attachment_stats.active or 0 }},{{ attachment_stats.completed or 0 }},{{ attachment_stats.pending or 0 }},{{ attachment_stats.approved or 0 }},{{ attachment_stats.rejected or 0 }}],
+    ['#3b82f6','#10b981','#f59e0b','#06b6d4','#ef4444']);
+
+  // ── 7-Day Trend (line) ──
+  (function(){
+    const ctx=document.getElementById('chartTrend');if(!ctx)return;
+    const labels={{ trend_labels|safe }};
+    const present={{ trend_present|safe }};
+    const absent={{ trend_absent|safe }};
+    new Chart(ctx,{type:'line',data:{labels,datasets:[
+      {label:'Present',data:present,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.10)',fill:true,tension:.4,pointBackgroundColor:'#10b981',pointRadius:4,borderWidth:2.5},
+      {label:'Absent', data:absent, borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.07)', fill:true,tension:.4,pointBackgroundColor:'#ef4444',pointRadius:4,borderWidth:2.5}
+    ]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{color:gridColor},ticks:{font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,font:{size:11}},beginAtZero:true}},animation:{duration:900,easing:ease}}});
+  })();
+
+  // ── Attendance per Unit (horizontal bar) ──
+  (function(){
+    const ctx=document.getElementById('chartAttUnit');if(!ctx)return;
+    const labels={{ att_unit_labels|safe }};
+    const present={{ att_unit_present|safe }};
+    const absent={{ att_unit_absent|safe }};
+    new Chart(ctx,{type:'bar',data:{labels,datasets:[
+      {label:'Present',data:present,backgroundColor:'rgba(16,185,129,.80)',borderRadius:4,borderSkipped:false},
+      {label:'Absent', data:absent, backgroundColor:'rgba(239,68,68,.65)',borderRadius:4,borderSkipped:false}
+    ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},usePointStyle:true}},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:false,grid:{color:gridColor},ticks:{font:{size:10}}},y:{stacked:false,grid:{display:false},ticks:{font:{size:11}}}},animation:{duration:900,easing:ease}}});
+  })();
+
+  // ── Assessment Types (polar area) ──
+  (function(){
+    const ctx=document.getElementById('chartAtype');if(!ctx)return;
+    const labels={{ atype_labels|safe }};
+    const data={{ atype_counts|safe }};
+    const palette=['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#ec4899'];
+    new Chart(ctx,{type:'polarArea',data:{labels,datasets:[{data,backgroundColor:palette.map(c=>c+'cc'),borderColor:palette,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12}}},animation:{duration:800,easing:ease}}});
+  })();
+
+  // ── Class Enrolment (bar) ──
+  (function(){
+    const ctx=document.getElementById('chartClasses');if(!ctx)return;
+    const labels={{ class_labels|safe }};
+    const data={{ class_counts|safe }};
+    const palette=['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#6366f1','#14b8a6','#f97316'];
+    new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Students Enrolled',data,backgroundColor:palette.slice(0,labels.length).map(c=>c+'cc'),borderColor:palette.slice(0,labels.length),borderWidth:1.5,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw+' students'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,font:{size:11}},beginAtZero:true}},animation:{duration:900,easing:ease}}});
+  })();
+
+})();
+</script>
 {% endblock %}

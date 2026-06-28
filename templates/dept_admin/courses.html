@@ -1,0 +1,174 @@
+{% extends "dept_admin/base.html" %}
+{% block title %}Courses{% endblock %}
+{% block page_title %}Manage Courses{% endblock %}
+
+{% block extra_head %}
+<style>
+.page-wrap{padding:26px}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden;border:1px solid #e2e8f0}
+.card-header{background:linear-gradient(135deg,#0a0f1e,#1e3a8a);color:#fff;padding:15px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:9px}
+.card-header .count{margin-left:auto;background:rgba(255,255,255,.18);padding:2px 12px;border-radius:20px;font-size:12px}
+.card-body{padding:22px}
+.form-row{display:grid;grid-template-columns:2fr 1fr auto;gap:14px;align-items:flex-end}
+@media(max-width:640px){.form-row{grid-template-columns:1fr}}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:11.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
+.fg input{padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13.5px;outline:none;width:100%}
+.fg input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.btn{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+.btn-primary{background:#fbbf24;color:#0a0f1e}
+.btn-primary:hover{background:#f59e0b}
+.btn-danger{background:#ef4444;color:#fff;padding:7px 15px;font-size:12px}
+.btn-danger:hover{background:#dc2626}
+.btn-edit{background:#3b82f6;color:#fff;padding:7px 15px;font-size:12px}
+.btn-edit:hover{background:#2563eb}
+.err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:18px;display:flex;align-items:center;gap:9px}
+table{width:100%;border-collapse:collapse}
+th{background:#f8fafc;padding:12px 18px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0}
+td{padding:13px 18px;border-bottom:1px solid #f1f5f9;font-size:13.5px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+code{background:#f1f5f9;color:#1e3a8a;padding:3px 9px;border-radius:6px;font-size:12.5px;font-weight:700}
+.cls-badge{background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700}
+.act-row{display:flex;gap:7px}
+
+/* Edit modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:28px 30px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{margin:0 0 20px;font-size:16px;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:9px}
+.modal .form-col{display:flex;flex-direction:column;gap:14px}
+.modal-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+.btn-cancel{background:#f1f5f9;color:#64748b;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-cancel:hover{background:#e2e8f0}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+
+  <!-- Add Course Card -->
+  <div class="card">
+    <div class="card-header"><i class="fas fa-plus-circle"></i> Add New Course</div>
+    <div class="card-body">
+      {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in msgs %}
+        <div style="background:{% if cat=='success' %}#ecfdf5{% else %}#fef2f2{% endif %};color:{% if cat=='success' %}#065f46{% else %}#991b1b{% endif %};border:1px solid {% if cat=='success' %}#a7f3d0{% else %}#fecaca{% endif %};border-radius:8px;padding:11px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:9px">
+          <i class="fas fa-{% if cat=='success' %}check-circle{% else %}exclamation-circle{% endif %}"></i> {{ msg }}
+        </div>
+        {% endfor %}
+      {% endwith %}
+      <form method="post">
+        <input type="hidden" name="action" value="add">
+        <div class="form-row">
+          <div class="fg">
+            <label>Course Name <span style="color:#ef4444">*</span></label>
+            <input type="text" name="name" placeholder="e.g. Diploma in Information Technology" required>
+          </div>
+          <div class="fg">
+            <label>Code <span style="color:#ef4444">*</span></label>
+            <input type="text" name="code" placeholder="e.g. DICT" required>
+          </div>
+          <div class="fg">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Course</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Courses List -->
+  <div class="card">
+    <div class="card-header">
+      <i class="fas fa-graduation-cap"></i> Courses in Your Department
+      <span class="count">{{ courses|length }}</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>Code</th>
+          <th>Course Name</th>
+          <th>Classes</th>
+          <th style="width:160px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in courses %}
+        <tr>
+          <td style="color:#94a3b8">{{ loop.index }}</td>
+          <td><code>{{ c.code }}</code></td>
+          <td><strong>{{ c.name }}</strong></td>
+          <td>
+            <span class="cls-badge"><i class="fas fa-door-open" style="margin-right:4px"></i>{{ c._class_count }} class{{ 'es' if c._class_count != 1 else '' }}</span>
+          </td>
+          <td>
+            <div class="act-row">
+              <button class="btn btn-edit"
+                onclick="openEdit('{{ c.id }}','{{ c.name|e }}','{{ c.code }}')"
+                title="Edit">
+                <i class="fas fa-pen"></i> Edit
+              </button>
+              <a href="?delete={{ c.id }}" class="btn btn-danger"
+                 onclick="return confirm('Delete course \'{{ c.name|e }}\'?\nThis will also remove all linked classes and units.')">
+                <i class="fas fa-trash"></i> Delete
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align:center;padding:48px;color:#94a3b8">
+            <i class="fas fa-graduation-cap" style="font-size:32px;display:block;margin-bottom:10px"></i>
+            No courses yet. Add one above.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3><i class="fas fa-pen" style="color:#3b82f6"></i> Edit Course</h3>
+    <form method="post" id="editForm">
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="course_id" id="editCourseId">
+      <div class="form-col">
+        <div class="fg">
+          <label>Course Name <span style="color:#ef4444">*</span></label>
+          <input type="text" name="name" id="editName" required>
+        </div>
+        <div class="fg">
+          <label>Code <span style="color:#ef4444">*</span></label>
+          <input type="text" name="code" id="editCode" required>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeEdit()">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEdit(id, name, code){
+  document.getElementById('editCourseId').value = id;
+  document.getElementById('editName').value = name;
+  document.getElementById('editCode').value = code;
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEdit(){
+  document.getElementById('editModal').classList.remove('open');
+}
+document.getElementById('editModal').addEventListener('click', function(e){
+  if(e.target === this) closeEdit();
+});
+</script>
+{% endblock %}

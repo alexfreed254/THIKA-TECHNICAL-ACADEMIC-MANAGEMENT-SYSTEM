@@ -9,8 +9,8 @@ from auth_utils import (dept_admin_required, write_audit_log,
                         current_user, dept_isolation_check)
 from db import get_service_client
 from notifications import get_user_notifications, notify_dept_notice, create_notification
-from datetime import datetime
-import secrets, string
+from datetime import datetime, date, timedelta
+import secrets, string, json
 
 dept_admin_bp = Blueprint("dept_admin", __name__)
 
@@ -98,14 +98,136 @@ def dashboard():
             att["classes"] = cls
             
         units_list = db.table("units").select("id, name, code").eq("department_id", dept_id).order("name").execute().data or []
+
+        # ── Analytics: Attendance per unit ───────────────────────
+        all_att = (db.table("attendance")
+                   .select("status, units!inner(name, department_id)")
+                   .eq("units.department_id", dept_id)
+                   .execute().data or [])
+        att_per_unit = {}
+        for row in all_att:
+            uname = (row.get("units") or {}).get("name", "Unknown")
+            bucket = att_per_unit.setdefault(uname, {"present": 0, "absent": 0})
+            if row.get("status") == "present":
+                bucket["present"] += 1
+            else:
+                bucket["absent"] += 1
+        att_unit_labels = list(att_per_unit.keys())
+        att_unit_present = [att_per_unit[u]["present"] for u in att_unit_labels]
+        att_unit_absent  = [att_per_unit[u]["absent"]  for u in att_unit_labels]
+
+        # ── Analytics: 7-day attendance trend ────────────────────
+        trend_labels, trend_present, trend_absent = [], [], []
+        for i in range(6, -1, -1):
+            day = (date.today() - timedelta(days=i)).isoformat()
+            trend_labels.append(day[5:])  # MM-DD
+            day_rows = (db.table("attendance")
+                        .select("status, units!inner(department_id)")
+                        .eq("units.department_id", dept_id)
+                        .eq("attendance_date", day)
+                        .execute().data or [])
+            trend_present.append(sum(1 for r in day_rows if r.get("status") == "present"))
+            trend_absent.append(sum(1 for r in day_rows if r.get("status") != "present"))
+
+        # ── Analytics: Application status breakdown ───────────────
+        app_rows = (db.table("course_applications")
+                    .select("status")
+                    .eq("department_id", dept_id)
+                    .execute().data or [])
+        app_status = {"pending": 0, "approved": 0, "rejected": 0}
+        for a in app_rows:
+            s = a.get("status", "pending")
+            app_status[s] = app_status.get(s, 0) + 1
+
+        # ── Analytics: Clearance requests ────────────────────────
+        clearance_stats = {"pending": 0, "approved": 0, "rejected": 0}
+        try:
+            cl_rows = (db.table("clearance_requests")
+                       .select("status")
+                       .eq("department_id", dept_id)
+                       .execute().data or [])
+            for c in cl_rows:
+                s = c.get("status", "pending")
+                clearance_stats[s] = clearance_stats.get(s, 0) + 1
+        except Exception:
+            pass
+
+        # ── Analytics: Industrial attachments ────────────────────
+        attachment_stats = {"pending": 0, "active": 0, "approved": 0, "completed": 0, "rejected": 0}
+        try:
+            att_student_ids = [u["id"] for u in
+                               (db.table("user_profiles").select("id")
+                                .eq("role", "student").eq("department_id", dept_id)
+                                .execute().data or [])]
+            if att_student_ids:
+                ia_rows = (db.table("industrial_attachments")
+                           .select("status")
+                           .in_("student_id", att_student_ids[:200])
+                           .execute().data or [])
+                for a in ia_rows:
+                    s = a.get("status", "pending")
+                    attachment_stats[s] = attachment_stats.get(s, 0) + 1
+        except Exception:
+            pass
+
+        # ── Analytics: Classes with student counts ────────────────
+        classes_data = (db.table("classes")
+                        .select("id, name, courses(name)")
+                        .eq("department_id", dept_id)
+                        .order("name")
+                        .execute().data or [])
+        class_labels, class_counts = [], []
+        for cls in classes_data[:10]:
+            enroll_count = (db.table("enrollments")
+                            .select("id", count="exact")
+                            .eq("class_id", cls["id"])
+                            .execute().count or 0)
+            class_labels.append(cls["name"])
+            class_counts.append(enroll_count)
+
+        # ── Analytics: Assessment types breakdown ─────────────────
+        typed_assessments = (db.table("assessments")
+                             .select("assessment_type, units!inner(department_id)")
+                             .eq("units.department_id", dept_id)
+                             .execute().data or [])
+        atype_map = {}
+        for a in typed_assessments:
+            t = a.get("assessment_type") or "Other"
+            atype_map[t] = atype_map.get(t, 0) + 1
+        atype_labels = list(atype_map.keys())
+        atype_counts = [atype_map[t] for t in atype_labels]
+
     except Exception as e:
         flash(f"Error loading dashboard: {e}", "danger")
+        att_unit_labels = att_unit_present = att_unit_absent = []
+        trend_labels = trend_present = trend_absent = []
+        app_status = {"pending": 0, "approved": 0, "rejected": 0}
+        clearance_stats = {"pending": 0, "approved": 0, "rejected": 0}
+        attachment_stats = {"pending": 0, "active": 0, "approved": 0, "completed": 0, "rejected": 0}
+        class_labels = class_counts = []
+        atype_labels = atype_counts = []
+
     return render_template("dept_admin/dashboard_enhanced.html",
                            dept=dept, stats=stats,
                            recent_assessments=recent_assessments,
                            recent_attendance=recent_attendance,
                            units_list=units_list,
-                           unread_notifications=unread_notifications)
+                           unread_notifications=unread_notifications,
+                           # analytics
+                           att_unit_labels=json.dumps(att_unit_labels),
+                           att_unit_present=json.dumps(att_unit_present),
+                           att_unit_absent=json.dumps(att_unit_absent),
+                           trend_labels=json.dumps(trend_labels),
+                           trend_present=json.dumps(trend_present),
+                           trend_absent=json.dumps(trend_absent),
+                           app_status=app_status,
+                           clearance_stats=clearance_stats,
+                           attachment_stats=attachment_stats,
+                           class_labels=json.dumps(class_labels),
+                           class_counts=json.dumps(class_counts),
+                           atype_labels=json.dumps(atype_labels),
+                           atype_counts=json.dumps(atype_counts),
+                           department_name=dept.get("name",""))
 
 
 # ── Welcome alias ─────────────────────────────────────────────────────────────
@@ -114,6 +236,89 @@ def dashboard():
 @dept_admin_required
 def welcome():
     return redirect(url_for("dept_admin.dashboard"))
+
+
+# ── Courses ───────────────────────────────────────────────────────────────────
+
+@dept_admin_bp.route("/courses", methods=["GET", "POST"])
+@dept_admin_required
+def courses():
+    db = get_service_client()
+    dept_id = _dept_id()
+    error = None
+
+    # Delete
+    if request.args.get("delete"):
+        try:
+            course_id = request.args["delete"]
+            # Verify course belongs to this department
+            row = db.table("courses").select("department_id").eq("id", course_id).single().execute().data
+            if not row or row.get("department_id") != dept_id:
+                flash("Course not found or not in your department.", "danger")
+            else:
+                db.table("courses").delete().eq("id", course_id).execute()
+                write_audit_log("delete_course", target=course_id)
+                flash("Course deleted.", "success")
+        except Exception as exc:
+            error = f"Error deleting course: {exc}"
+        return redirect(url_for("dept_admin.courses"))
+
+    if request.method == "POST":
+        action = request.form.get("action", "add")
+
+        if action == "add":
+            name = request.form.get("name", "").strip()
+            code = request.form.get("code", "").strip().upper()
+            if not name or not code:
+                error = "Course name and code are required."
+            else:
+                try:
+                    existing = db.table("courses").select("id").eq("code", code).eq("department_id", dept_id).execute()
+                    if existing.data:
+                        error = f"A course with code '{code}' already exists in this department."
+                    else:
+                        db.table("courses").insert({
+                            "name": name,
+                            "code": code,
+                            "department_id": dept_id
+                        }).execute()
+                        write_audit_log("create_course", target=code)
+                        flash(f"Course '{name}' added successfully.", "success")
+                        return redirect(url_for("dept_admin.courses"))
+                except Exception as exc:
+                    error = f"Error adding course: {exc}"
+
+        elif action == "edit":
+            course_id = request.form.get("course_id", "").strip()
+            name      = request.form.get("name", "").strip()
+            code      = request.form.get("code", "").strip().upper()
+            if not course_id or not name or not code:
+                error = "All fields are required to update a course."
+            else:
+                try:
+                    row = db.table("courses").select("department_id").eq("id", course_id).single().execute().data
+                    if not row or row.get("department_id") != dept_id:
+                        error = "Course not found in your department."
+                    else:
+                        db.table("courses").update({"name": name, "code": code}).eq("id", course_id).execute()
+                        write_audit_log("edit_course", target=course_id)
+                        flash(f"Course updated to '{name}'.", "success")
+                        return redirect(url_for("dept_admin.courses"))
+                except Exception as exc:
+                    error = f"Error updating course: {exc}"
+
+    courses_list = (db.table("courses")
+                    .select("*, classes(id)")
+                    .eq("department_id", dept_id)
+                    .order("name")
+                    .execute().data or [])
+    # Annotate with class count
+    for c in courses_list:
+        c["_class_count"] = len(c.get("classes") or [])
+
+    return render_template("dept_admin/courses.html",
+                           courses=courses_list,
+                           error=error)
 
 
 # ── Classes ───────────────────────────────────────────────────────────────────
