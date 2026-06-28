@@ -1,245 +1,434 @@
 {% extends "dept_admin/base.html" %}
-
 {% block title %}Industry Partners{% endblock %}
-{% block page_title %}Industry Partners Management{% endblock %}
+{% block page_title %}Industry Partners{% endblock %}
 
 {% block extra_style %}
 <style>
-  .filters { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
-  .filters select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
-  .btn-add { background: #4caf50; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
-  .btn-add:hover { background: #45a049; }
-  .companies-table { width: 100%; border-collapse: collapse; }
-  .companies-table th, .companies-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-  .companies-table th { background: #f5f5f5; }
-  .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; }
-  .status-active { background: #e8f5e9; color: #2e7d32; }
-  .status-inactive { background: #ffebee; color: #c62828; }
-  .btn-edit { background: #2196f3; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-  .btn-delete { background: #f44336; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; }
-  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-  .modal.active { display: flex; align-items: center; justify-content: center; }
-  .modal-content { background: white; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
-  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-  .form-group textarea { height: 80px; resize: vertical; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-  .btn-submit { background: #4caf50; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
-  .btn-submit:hover { background: #45a049; }
+:root{--navy:#0f2c54;--navy2:#1a3d6e;--gold:#f59e0b;--surface:#fff;--border:#e2e8f0;--text:#0f172a;--sub:#64748b;--muted:#f8fafc}
+*{box-sizing:border-box}
+
+.ip-wrap{padding:28px;background:#f1f5f9;min-height:100vh}
+
+/* ── Hero ── */
+.ip-hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1e40af 100%);border-radius:16px;padding:26px 32px 22px;margin-bottom:26px;color:#fff;position:relative;overflow:hidden}
+.ip-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 100% 0%,rgba(245,158,11,.13),transparent 60%);pointer-events:none}
+.ip-hero h1{font-size:20px;font-weight:800;margin:0 0 5px;display:flex;align-items:center;gap:10px}
+.ip-hero h1 i{font-size:18px;color:var(--gold)}
+.ip-hero p{font-size:13px;color:#bfdbfe;margin:0 0 18px}
+.ip-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:700px){.ip-kpis{grid-template-columns:repeat(2,1fr)}}
+.ip-kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px 16px}
+.ip-kpi-num{font-size:26px;font-weight:900;color:#fff;line-height:1}
+.ip-kpi-lbl{font-size:11px;color:rgba(255,255,255,.65);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Toolbar ── */
+.ip-toolbar{background:var(--surface);border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ip-search{flex:1;min-width:180px;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;outline:none;color:var(--text)}
+.ip-search:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.ip-filter{padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;outline:none;color:var(--text);background:#fff;cursor:pointer;min-width:180px}
+.ip-filter:focus{border-color:#3b82f6}
+.btn-add-co{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:linear-gradient(135deg,var(--navy),#1e40af);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer;transition:.18s;box-shadow:0 4px 12px rgba(15,44,84,.25);white-space:nowrap}
+.btn-add-co:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(15,44,84,.32)}
+.btn-add-co i{color:var(--gold)}
+
+/* ── Table card ── */
+.ip-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);overflow:hidden}
+.ip-card-head{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:14px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:9px}
+.ip-card-head i{color:var(--gold)}
+.ip-card-head .co-count{margin-left:auto;font-size:12px;font-weight:600;opacity:.8;background:rgba(255,255,255,.12);border-radius:20px;padding:3px 12px}
+
+.co-table-wrap{overflow-x:auto}
+.co-table{width:100%;border-collapse:collapse}
+.co-table thead th{background:#f8fafc;padding:11px 14px;text-align:left;font-size:10.5px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.co-table thead th.center{text-align:center}
+.co-table tbody td{padding:13px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;color:var(--text);vertical-align:middle}
+.co-table tbody tr:last-child td{border-bottom:none}
+.co-table tbody tr:hover td{background:#fafbfc}
+
+.co-name{font-weight:700;color:var(--text)}
+.co-industry{font-size:12px;color:var(--sub);margin-top:2px}
+.co-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--navy),#1e40af);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.co-cell{display:flex;align-items:center;gap:11px}
+
+.badge-active{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:9999px;font-size:11.5px;font-weight:700;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.badge-active::before{content:'';width:6px;height:6px;border-radius:50%;background:#16a34a}
+.badge-inactive{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:9999px;font-size:11.5px;font-weight:700;background:#f1f5f9;color:#64748b;border:1px solid var(--border)}
+
+.slots-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:9999px;font-size:12px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+
+.btn-edit-co{padding:6px 13px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-edit-co:hover{background:#dbeafe;border-color:#93c5fd}
+.btn-del-co{padding:6px 13px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-del-co:hover{background:#fee2e2;border-color:#fca5a5}
+.act-wrap{display:flex;gap:7px;align-items:center}
+
+.empty-co{text-align:center;padding:56px 24px}
+.empty-co i{font-size:48px;color:#cbd5e1;display:block;margin-bottom:14px}
+.empty-co h3{font-size:16px;font-weight:700;color:var(--sub);margin:0 0 6px}
+.empty-co p{font-size:13px;color:#94a3b8;margin:0}
+
+/* ── Modal ── */
+.ip-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,28,54,.5);z-index:2000;align-items:center;justify-content:center;padding:20px}
+.ip-modal-bg.open{display:flex}
+.ip-modal{background:#fff;border-radius:18px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.ip-modal-head{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:18px 24px;border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:space-between}
+.ip-modal-head h3{font-size:16px;font-weight:800;margin:0;display:flex;align-items:center;gap:9px}
+.ip-modal-head h3 i{color:var(--gold)}
+.ip-modal-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.ip-modal-close:hover{background:rgba(255,255,255,.25)}
+.ip-modal-body{padding:24px}
+.fm-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:500px){.fm-row{grid-template-columns:1fr}}
+.fm-group{margin-bottom:15px}
+.fm-group label{display:block;font-size:11.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.fm-group label .req{color:#ef4444;margin-left:2px}
+.fm-inp{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;color:var(--text);outline:none;transition:.15s}
+.fm-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.fm-inp::placeholder{color:#94a3b8}
+textarea.fm-inp{resize:vertical;min-height:76px}
+.fm-divider{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;display:flex;align-items:center;gap:10px}
+.fm-divider::before,.fm-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.fm-toggle{display:flex;align-items:center;gap:10px;padding:12px 15px;background:var(--muted);border-radius:10px;border:1.5px solid var(--border)}
+.fm-toggle label{font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;flex:1}
+.ip-toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.ip-toggle input{opacity:0;width:0;height:0;position:absolute}
+.ip-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.25s}
+.ip-slider::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.ip-toggle input:checked~.ip-slider{background:#10b981}
+.ip-toggle input:checked~.ip-slider::after{transform:translateX(18px)}
+.btn-modal-save{width:100%;padding:13px;background:linear-gradient(135deg,var(--navy),#1e40af);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:.18s;box-shadow:0 4px 14px rgba(15,44,84,.3);margin-top:4px}
+.btn-modal-save:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(15,44,84,.35)}
+.btn-modal-save i{color:var(--gold)}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="filters">
-  <select name="industry" onchange="location.href='/dept-admin/companies?industry='+this.value">
-    <option value="">All Industries</option>
-    {% for ind in industries %}
-    <option value="{{ ind }}" {% if industry == ind %}selected{% endif %}>{{ ind }}</option>
-    {% endfor %}
-  </select>
-  <button class="btn-add" onclick="openModal('add')">+ Add Company</button>
+<div class="ip-wrap">
+
+  <!-- ── Hero ── -->
+  <div class="ip-hero">
+    <h1><i class="fas fa-industry"></i> Industry Partners</h1>
+    <p>Manage companies partnered with your department for industrial attachment placements.</p>
+    <div class="ip-kpis">
+      <div class="ip-kpi">
+        <div class="ip-kpi-num">{{ companies|length }}</div>
+        <div class="ip-kpi-lbl">Total Partners</div>
+      </div>
+      <div class="ip-kpi">
+        <div class="ip-kpi-num">{{ companies|selectattr('is_active')|list|length }}</div>
+        <div class="ip-kpi-lbl">Active</div>
+      </div>
+      <div class="ip-kpi">
+        <div class="ip-kpi-num">{{ companies|sum(attribute='available_slots') }}</div>
+        <div class="ip-kpi-lbl">Total Slots</div>
+      </div>
+      <div class="ip-kpi">
+        {% set classified = companies|selectattr('industry_classification')|map(attribute='industry_classification')|list|unique|list %}
+        <div class="ip-kpi-num">{{ classified|length }}</div>
+        <div class="ip-kpi-lbl">Industries</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toolbar ── -->
+  <div class="ip-toolbar">
+    <input class="ip-search" type="text" id="coSearch" placeholder="Search company name or city…"
+           oninput="searchTable(this.value)" autocomplete="off">
+    <select class="ip-filter" onchange="location.href='/dept-admin/companies?industry='+this.value">
+      <option value="">All Industries</option>
+      {% for ind in industries %}
+      <option value="{{ ind }}" {% if industry == ind %}selected{% endif %}>{{ ind }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn-add-co" onclick="openModal('add')">
+      <i class="fas fa-plus"></i> Add Company
+    </button>
+  </div>
+
+  <!-- ── Table card ── -->
+  <div class="ip-card">
+    <div class="ip-card-head">
+      <i class="fas fa-building"></i> Companies
+      <span class="co-count">{{ companies|length }} partner{{ 's' if companies|length != 1 }}</span>
+    </div>
+    <div class="co-table-wrap">
+      <table class="co-table" id="coTable">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Industry</th>
+            <th>Location</th>
+            <th>Contact</th>
+            <th class="center">Slots</th>
+            <th class="center">Status</th>
+            <th class="center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in companies %}
+          {% set initials = (c.name[:1]|upper) if c.name else '?' %}
+          <tr data-search="{{ (c.name ~ ' ' ~ (c.city or '') ~ ' ' ~ (c.industry_classification or ''))|lower }}">
+            <td>
+              <div class="co-cell">
+                <div class="co-avatar">{{ initials }}</div>
+                <div>
+                  <div class="co-name">{{ c.name }}</div>
+                  <div class="co-industry">{{ c.industry_classification or '—' }}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size:12.5px">
+              {{ c.industry_classification or '—' }}
+            </td>
+            <td style="font-size:12.5px">
+              {% if c.city or c.address %}
+              <span style="font-weight:600">{{ c.city or '' }}</span>
+              {% if c.address %}<br><span style="font-size:11px;color:var(--sub)">{{ c.address[:40] }}{% if (c.address|length) > 40 %}…{% endif %}</span>{% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td style="font-size:12.5px">
+              {% if c.contact_person %}
+              <span style="font-weight:600">{{ c.contact_person }}</span>
+              {% endif %}
+              {% if c.contact_phone %}<br><span style="font-size:11px;color:var(--sub)"><i class="fas fa-phone" style="font-size:10px;margin-right:3px"></i>{{ c.contact_phone }}</span>{% endif %}
+              {% if not c.contact_person and not c.contact_phone %}—{% endif %}
+            </td>
+            <td class="center">
+              <span class="slots-pill">
+                <i class="fas fa-chair" style="font-size:10px"></i>
+                {{ c.available_slots or 0 }}
+              </span>
+            </td>
+            <td class="center">
+              <span class="{{ 'badge-active' if c.is_active else 'badge-inactive' }}">
+                {{ 'Active' if c.is_active else 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <div class="act-wrap">
+                <button class="btn-edit-co" onclick="openModal('edit','{{ c.id }}')">
+                  <i class="fas fa-pen"></i> Edit
+                </button>
+                <button class="btn-del-co" onclick="deleteCompany('{{ c.id }}','{{ c.name|replace("'","\\'")|e }}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7">
+              <div class="empty-co">
+                <i class="fas fa-industry"></i>
+                <h3>No industry partners yet</h3>
+                <p>Click <strong>Add Company</strong> above to register your first industry partner.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
-<table class="companies-table">
-  <thead>
-    <tr>
-      <th>Company Name</th>
-      <th>Industry</th>
-      <th>Location</th>
-      <th>Slots</th>
-      <th>Contact</th>
-      <th>Status</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for company in companies %}
-    <tr>
-      <td><strong>{{ company.name }}</strong></td>
-      <td>{{ company.industry_classification }}</td>
-      <td>{{ company.city or 'N/A' }}</td>
-      <td>{{ company.available_slots }}</td>
-      <td>{{ company.contact_person or 'N/A' }}</td>
-      <td>
-        <span class="status-badge {% if company.is_active %}status-active{% else %}status-inactive{% endif %}">
-          {% if company.is_active %}Active{% else %}Inactive{% endif %}
-        </span>
-      </td>
-      <td>
-        <button class="btn-edit" onclick="openModal('edit', '{{ company.id }}')">Edit</button>
-        <button class="btn-delete" onclick="deleteCompany('{{ company.id }}')">Delete</button>
-      </td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="7" style="text-align: center; padding: 30px;">No companies found</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<!-- Add/Edit Modal -->
-<div class="modal" id="companyModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 id="modalTitle">Add Company</h2>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+<!-- ── Add / Edit Modal ── -->
+<div class="ip-modal-bg" id="coModalBg" onclick="bgClose(event)">
+  <div class="ip-modal" id="coModal">
+    <div class="ip-modal-head">
+      <h3 id="modalTitle"><i class="fas fa-building"></i> Add Company</h3>
+      <button class="ip-modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
     </div>
-    <form id="companyForm" method="POST">
-      <input type="hidden" id="companyId" name="company_id">
-      <div class="form-group">
-        <label>Company Name *</label>
-        <input type="text" name="name" required>
-      </div>
-      <div class="form-group">
-        <label>Industry Classification *</label>
-        <select name="industry_classification" required>
-          <option value="">Select Industry</option>
-          {% for ind in industries %}
-          <option value="{{ ind }}">{{ ind }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Address</label>
-        <input type="text" name="address">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>City</label>
-          <input type="text" name="city">
+    <div class="ip-modal-body">
+      <form id="coForm" method="POST">
+        <input type="hidden" id="coId" name="company_id">
+
+        <div class="fm-group">
+          <label>Company Name <span class="req">*</span></label>
+          <input class="fm-inp" type="text" name="name" placeholder="e.g. Safaricom PLC" required>
         </div>
-        <div class="form-group">
-          <label>Phone Number</label>
-          <input type="text" name="phone_number">
+
+        <div class="fm-row">
+          <div class="fm-group">
+            <label>Industry Classification <span class="req">*</span></label>
+            <select class="fm-inp" name="industry_classification" required>
+              <option value="">Select industry…</option>
+              {% for ind in industries %}
+              <option value="{{ ind }}">{{ ind }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="fm-group">
+            <label>Available Slots</label>
+            <input class="fm-inp" type="number" name="available_slots" value="0" min="0">
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" name="email">
+
+        <div class="fm-divider">Location</div>
+
+        <div class="fm-group">
+          <label>Address</label>
+          <input class="fm-inp" type="text" name="address" placeholder="Street / P.O. Box">
         </div>
-        <div class="form-group">
-          <label>Website</label>
-          <input type="url" name="website">
+        <div class="fm-row">
+          <div class="fm-group">
+            <label>City / Town</label>
+            <input class="fm-inp" type="text" name="city" placeholder="e.g. Thika">
+          </div>
+          <div class="fm-group">
+            <label>Geofence Radius (m)</label>
+            <input class="fm-inp" type="number" name="geofence_radius_meters" value="300" min="50">
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Latitude</label>
-          <input type="number" step="any" name="latitude" placeholder="e.g., -1.0333">
+        <div class="fm-row">
+          <div class="fm-group">
+            <label>Latitude</label>
+            <input class="fm-inp" type="number" step="any" name="latitude" placeholder="-1.0333">
+          </div>
+          <div class="fm-group">
+            <label>Longitude</label>
+            <input class="fm-inp" type="number" step="any" name="longitude" placeholder="37.0667">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Longitude</label>
-          <input type="number" step="any" name="longitude" placeholder="e.g., 37.0667">
+
+        <div class="fm-divider">Contact Details</div>
+
+        <div class="fm-row">
+          <div class="fm-group">
+            <label>Contact Person</label>
+            <input class="fm-inp" type="text" name="contact_person" placeholder="Full name">
+          </div>
+          <div class="fm-group">
+            <label>Contact Phone</label>
+            <input class="fm-inp" type="tel" name="contact_phone" placeholder="+254…">
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Geofence Radius (meters)</label>
-          <input type="number" name="geofence_radius_meters" value="300">
+        <div class="fm-row">
+          <div class="fm-group">
+            <label>Contact Email</label>
+            <input class="fm-inp" type="email" name="contact_email" placeholder="hr@company.com">
+          </div>
+          <div class="fm-group">
+            <label>Phone Number</label>
+            <input class="fm-inp" type="tel" name="phone_number" placeholder="Main line">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Available Slots</label>
-          <input type="number" name="available_slots" value="0">
+        <div class="fm-row">
+          <div class="fm-group">
+            <label>Email</label>
+            <input class="fm-inp" type="email" name="email" placeholder="info@company.com">
+          </div>
+          <div class="fm-group">
+            <label>Website</label>
+            <input class="fm-inp" type="url" name="website" placeholder="https://…">
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Contact Person</label>
-          <input type="text" name="contact_person">
+
+        <div class="fm-divider">About</div>
+
+        <div class="fm-group">
+          <label>Description</label>
+          <textarea class="fm-inp" name="description" placeholder="Brief description of the company and what trainees will do…"></textarea>
         </div>
-        <div class="form-group">
-          <label>Contact Phone</label>
-          <input type="text" name="contact_phone">
+
+        <div class="fm-toggle" style="margin-bottom:18px">
+          <label for="isActiveChk">Company is active and accepting trainees</label>
+          <label class="ip-toggle">
+            <input type="checkbox" name="is_active" id="isActiveChk" checked>
+            <span class="ip-slider"></span>
+          </label>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Contact Email</label>
-        <input type="email" name="contact_email">
-      </div>
-      <div class="form-group">
-        <label>Description</label>
-        <textarea name="description"></textarea>
-      </div>
-      <div class="form-group">
-        <label>
-          <input type="checkbox" name="is_active" checked> Active
-        </label>
-      </div>
-      <button type="submit" class="btn-submit">Save Company</button>
-    </form>
+
+        <button type="submit" class="btn-modal-save">
+          <i class="fas fa-save"></i> <span id="saveBtnText">Save Company</span>
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function openModal(mode, companyId = null) {
-  const modal = document.getElementById('companyModal');
-  const form = document.getElementById('companyForm');
-  const title = document.getElementById('modalTitle');
-  const idField = document.getElementById('companyId');
-  
+/* ── Search ── */
+function searchTable(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#coTable tbody tr[data-search]').forEach(function(r) {
+    r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+  });
+}
+
+/* ── Modal ── */
+function openModal(mode, companyId) {
+  var bg    = document.getElementById('coModalBg');
+  var form  = document.getElementById('coForm');
+  var title = document.getElementById('modalTitle');
+  var idFld = document.getElementById('coId');
+  var btn   = document.getElementById('saveBtnText');
+
   form.reset();
-  idField.value = '';
-  
+  idFld.value = '';
+  document.getElementById('isActiveChk').checked = true;
+
   if (mode === 'edit' && companyId) {
-    title.textContent = 'Edit Company';
-    idField.value = companyId;
-    // Fetch company data and populate form
-    fetch(`/dept-admin/companies/${companyId}`)
-      .then(response => response.json())
-      .then(data => {
-        form.name.value = data.name;
-        form.industry_classification.value = data.industry_classification;
-        form.address.value = data.address || '';
-        form.city.value = data.city || '';
-        form.phone_number.value = data.phone_number || '';
-        form.email.value = data.email || '';
-        form.website.value = data.website || '';
-        form.latitude.value = data.latitude || '';
-        form.longitude.value = data.longitude || '';
-        form.geofence_radius_meters.value = data.geofence_radius_meters || 300;
-        form.available_slots.value = data.available_slots || 0;
-        form.contact_person.value = data.contact_person || '';
-        form.contact_phone.value = data.contact_phone || '';
-        form.contact_email.value = data.contact_email || '';
-        form.description.value = data.description || '';
-        form.is_active.checked = data.is_active;
+    title.innerHTML = '<i class="fas fa-pen"></i> Edit Company';
+    btn.textContent = 'Save Changes';
+    idFld.value     = companyId;
+
+    fetch('/dept-admin/companies/' + companyId)
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        form.name.value                       = d.name || '';
+        form.industry_classification.value    = d.industry_classification || '';
+        form.available_slots.value            = d.available_slots || 0;
+        form.address.value                    = d.address || '';
+        form.city.value                       = d.city || '';
+        form.geofence_radius_meters.value     = d.geofence_radius_meters || 300;
+        form.latitude.value                   = d.latitude || '';
+        form.longitude.value                  = d.longitude || '';
+        form.contact_person.value             = d.contact_person || '';
+        form.contact_phone.value              = d.contact_phone || '';
+        form.contact_email.value              = d.contact_email || '';
+        form.phone_number.value               = d.phone_number || '';
+        form.email.value                      = d.email || '';
+        form.website.value                    = d.website || '';
+        form.description.value                = d.description || '';
+        document.getElementById('isActiveChk').checked = !!d.is_active;
       })
-      .catch(err => console.error(err));
+      .catch(function(e){ console.error(e); });
   } else {
-    title.textContent = 'Add Company';
+    title.innerHTML = '<i class="fas fa-building"></i> Add Company';
+    btn.textContent = 'Save Company';
   }
-  
-  modal.classList.add('active');
+
+  bg.classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
-  document.getElementById('companyModal').classList.remove('active');
+  document.getElementById('coModalBg').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
-document.getElementById('companyForm').addEventListener('submit', function(e) {
-  const companyId = document.getElementById('companyId').value;
-  if (companyId) {
-    this.action = `/dept-admin/companies/${companyId}/edit`;
-  } else {
-    this.action = '/dept-admin/companies/add';
-  }
+function bgClose(e) {
+  if (e.target === document.getElementById('coModalBg')) closeModal();
+}
+
+document.getElementById('coForm').addEventListener('submit', function() {
+  var cid = document.getElementById('coId').value;
+  this.action = cid ? '/dept-admin/companies/' + cid + '/edit' : '/dept-admin/companies/add';
 });
 
-function deleteCompany(companyId) {
-  if (confirm('Are you sure you want to delete this company?')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/dept-admin/companies/${companyId}/delete`;
-    document.body.appendChild(form);
-    form.submit();
-  }
+/* ── Delete ── */
+function deleteCompany(id, name) {
+  if (!confirm('Delete "' + name + '"?\n\nThis will remove the company from your department.')) return;
+  var f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/dept-admin/companies/' + id + '/delete';
+  document.body.appendChild(f);
+  f.submit();
 }
 </script>
 {% endblock %}
