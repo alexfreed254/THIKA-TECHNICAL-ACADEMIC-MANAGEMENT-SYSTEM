@@ -10,15 +10,120 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   {% block extra_head %}{% endblock %}
   <style>
-    .sidebar { background: linear-gradient(180deg, #0a0f1e 0%, #0f1f40 35%, #111827 100%); }
-    .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,.13); border-left-color: #fbbf24; color: #fff; }
+    /* ── Sidebar shell ───────────────────────────────────────── */
+    .sidebar {
+      background: linear-gradient(180deg, #060d1f 0%, #0b1735 45%, #0d1b33 100%);
+      border-right: 1px solid rgba(255,255,255,.04);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Scrollable menu area ────────────────────────────────── */
+    .sidebar-menu {
+      padding: 8px 10px 24px;
+      gap: 2px;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,.08) transparent;
+    }
+    .sidebar-menu::-webkit-scrollbar { width: 4px; }
+    .sidebar-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+    /* ── Section labels — amber, uppercase, trailing rule ─────── */
+    .menu-label {
+      padding: 16px 10px 6px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: #fbbf24;
+      opacity: .9;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .menu-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(251,191,36,.35), rgba(255,255,255,.04));
+    }
+
+    /* ── Menu items ───────────────────────────────────────────── */
+    .sidebar-menu a {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,.82);
+      border-radius: 10px;
+      letter-spacing: .01em;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: background .16s, color .16s, border-color .16s;
+      margin-bottom: 1px;
+    }
+
+    /* ── Icon badge ───────────────────────────────────────────── */
+    .sidebar-menu a i.fa-fw {
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      font-size: 12.5px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.09);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .16s, border-color .16s, color .16s;
+      flex-shrink: 0;
+    }
+
+    /* ── Hover / active ───────────────────────────────────────── */
+    .sidebar-menu a:hover,
+    .sidebar-menu a.active {
+      background: rgba(251,191,36,.12);
+      border-left-color: #fbbf24;
+      color: #fff;
+    }
+    .sidebar-menu a:hover i.fa-fw,
+    .sidebar-menu a.active i.fa-fw {
+      background: rgba(251,191,36,.22);
+      border-color: rgba(251,191,36,.38);
+      color: #fbbf24;
+    }
+
+    /* ── Nav label text ───────────────────────────────────────── */
+    .nav-label { flex: 1; line-height: 1.25; }
+
+    /* ── Notification badge inline ────────────────────────────── */
+    .nav-badge {
+      background: #dc2626;
+      color: #fff;
+      border-radius: 9999px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Topbar ───────────────────────────────────────────────── */
     .topbar { border-bottom: 2px solid #fef3c7; }
-    .topbar-title { color: #111827; }
+    .topbar-title { color: #111827; font-size: 15px; font-weight: 700; }
+
+    /* ── Flash messages ───────────────────────────────────────── */
     .flash-success,.flash-error,.flash-warning,.flash-info{display:flex;align-items:center;gap:12px;padding:13px 22px;font-size:13.5px;font-weight:500;border-left:4px solid;}
     .flash-success{background:#f0fdf4;color:#15803d;border-left-color:#16a34a;}
     .flash-error{background:#fef2f2;color:#991b1b;border-left-color:#dc2626;}
     .flash-warning{background:#fffbeb;color:#92400e;border-left-color:#d97706;}
     .flash-info{background:#f0f9ff;color:#0e7490;border-left-color:#0891b2;}
+
+    /* ── Notification dropdown ────────────────────────────────── */
     .notif-wrapper{position:relative}.notif-panel{position:absolute;right:0;top:calc(100% + 10px);width:340px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:9999;overflow:hidden}.notif-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid #f3f4f6}.notif-panel-ttl{font-weight:700;color:#111827;font-size:14px}.notif-mark-all-btn{font-size:12px;color:#fbbf24;background:none;border:none;cursor:pointer;font-weight:600;padding:0}.notif-mark-all-btn:hover{text-decoration:underline}.notif-list{max-height:360px;overflow-y:auto}.notif-item{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid #f9fafb;cursor:pointer;transition:background .15s;text-decoration:none;color:inherit}.notif-item:hover{background:#f9fafb}.notif-item.unread{background:#fefce8;border-left:3px solid #fbbf24}.notif-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}.notif-icon.info{background:#dbeafe;color:#1d4ed8}.notif-icon.success{background:#dcfce7;color:#15803d}.notif-icon.warning{background:#fef3c7;color:#b45309}.notif-icon.error{background:#fee2e2;color:#b91c1c}.notif-body{flex:1;min-width:0}.notif-title{font-size:13px;font-weight:600;color:#111827;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notif-msg{font-size:12px;color:#6b7280;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notif-time{font-size:11px;color:#9ca3af;margin-top:3px}.notif-dot{width:8px;height:8px;background:#fbbf24;border-radius:50%;flex-shrink:0;margin-top:4px}.notif-view-all-link{display:block;text-align:center;padding:11px;font-size:13px;font-weight:600;color:#fbbf24;border-top:1px solid #f3f4f6;text-decoration:none}.notif-view-all-link:hover{background:#fefce8}.notif-empty{padding:28px 16px;text-align:center;color:#9ca3af;font-size:13px}.notif-loading{padding:20px;text-align:center;color:#9ca3af;font-size:13px}
     {% block extra_style %}{% endblock %}
   </style>
@@ -36,25 +141,60 @@
       <div class="role-badge"><i class="fas fa-certificate"></i>&nbsp; CDACC Verifier</div>
     </div>
     <div class="sidebar-menu">
-      <a href="/cdacc-verifier/dashboard"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
-      <div class="menu-section">Trainer Documents</div>
-      <a href="/cdacc-verifier/trainer-documents"><i class="fas fa-file-alt fa-fw"></i> Trainer Documents</a>
 
-      <div class="menu-section">Marks &amp; POE</div>
-      <a href="/cdacc-verifier/marks"><i class="fas fa-chart-bar fa-fw"></i> Formative Marks (List)</a>
-      <a href="/cdacc-verifier/trainees"><i class="fas fa-users fa-fw"></i> Trainee Profiles</a>
-      <a href="/cdacc-verifier/trainee-poe"><i class="fas fa-archive fa-fw"></i> Trainee Assessment POE</a>
-
-      <div class="menu-section">Industrial Attachment</div>
-      <a href="/cdacc-verifier/attachment-marks"><i class="fas fa-star-half-alt fa-fw"></i> Attachment Marks</a>
-      <a href="/cdacc-verifier/mentoring-tools"><i class="fas fa-file-pdf fa-fw"></i> Mentoring Tool / Logbooks</a>
-      <a href="/cdacc-verifier/digital-logbook"><i class="fas fa-book-open fa-fw"></i> Digital Logbook</a>
-
-      <div class="menu-section">Profile</div>
-      <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
-      <a href="/notifications"><i class="fas fa-bell fa-fw"></i> Notifications
-        {% if unread_notification_count > 0 %}<span style="margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;padding:1px 7px;font-size:10px;font-weight:700">{{ unread_notification_count }}</span>{% endif %}
+      <div class="menu-label">Overview</div>
+      <a href="/cdacc-verifier/dashboard">
+        <i class="fas fa-tachometer-alt fa-fw"></i>
+        <span class="nav-label">Dashboard</span>
       </a>
+
+      <div class="menu-label">Trainer POE</div>
+      <a href="/cdacc-verifier/trainer-documents">
+        <i class="fas fa-folder-open fa-fw"></i>
+        <span class="nav-label">Trainer Documents</span>
+      </a>
+
+      <div class="menu-label">Marks &amp; Assessment</div>
+      <a href="/cdacc-verifier/marks">
+        <i class="fas fa-chart-bar fa-fw"></i>
+        <span class="nav-label">Formative Marks List</span>
+      </a>
+      <a href="/cdacc-verifier/trainees">
+        <i class="fas fa-users fa-fw"></i>
+        <span class="nav-label">Trainee Profiles</span>
+      </a>
+      <a href="/cdacc-verifier/trainee-poe">
+        <i class="fas fa-archive fa-fw"></i>
+        <span class="nav-label">Trainee Assessment POE</span>
+      </a>
+
+      <div class="menu-label">Industrial Attachment</div>
+      <a href="/cdacc-verifier/attachment-marks">
+        <i class="fas fa-star-half-alt fa-fw"></i>
+        <span class="nav-label">Attachment Marks</span>
+      </a>
+      <a href="/cdacc-verifier/mentoring-tools">
+        <i class="fas fa-file-pdf fa-fw"></i>
+        <span class="nav-label">Mentoring Tool / Logbooks</span>
+      </a>
+      <a href="/cdacc-verifier/digital-logbook">
+        <i class="fas fa-book-open fa-fw"></i>
+        <span class="nav-label">Digital Logbook</span>
+      </a>
+
+      <div class="menu-label">Account</div>
+      <a href="/auth/profile">
+        <i class="fas fa-user-circle fa-fw"></i>
+        <span class="nav-label">My Profile</span>
+      </a>
+      <a href="/notifications">
+        <i class="fas fa-bell fa-fw"></i>
+        <span class="nav-label">Notifications</span>
+        {% if unread_notification_count > 0 %}
+        <span class="nav-badge">{{ unread_notification_count }}</span>
+        {% endif %}
+      </a>
+
     </div>
     <div class="sidebar-footer">
       <div style="padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px">
@@ -114,7 +254,17 @@
   toggle.addEventListener('click',()=>sidebar.classList.contains('open')?closeSidebar():openSidebar());
   overlay.addEventListener('click',closeSidebar);
   const path=window.location.pathname;
-  document.querySelectorAll('.sidebar-menu a').forEach(a=>{a.addEventListener('click',()=>{if(window.innerWidth<=768)closeSidebar();});if(a.getAttribute('href')===path)a.classList.add('active');});
+  let activeLink=null;
+  document.querySelectorAll('.sidebar-menu a').forEach(a=>{
+    a.addEventListener('click',()=>{if(window.innerWidth<=768)closeSidebar();});
+    const href=a.getAttribute('href');
+    if(!href||href==='#')return;
+    const linkPath=new URL(href,window.location.origin).pathname;
+    const exact=path===linkPath;
+    const prefix=linkPath.length>1&&path.startsWith(linkPath+'/');
+    if(exact||prefix){a.classList.add('active');activeLink=activeLink||a;}
+  });
+  if(activeLink)activeLink.scrollIntoView({block:'nearest'});
   window.showToast=function(msg,type,duration){var tc=document.getElementById('toast-container');if(!tc)return;var icons={success:'check-circle',error:'exclamation-circle',warning:'exclamation-triangle',info:'info-circle'};var t=document.createElement('div');t.className='toast toast-'+(type||'info');t.innerHTML='<i class="fas fa-'+(icons[type]||icons.info)+'"></i><span class="toast-msg">'+msg+'</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';tc.appendChild(t);setTimeout(function(){t.classList.add('toast-out');setTimeout(function(){t.remove();},300);},(duration||4000));};
   (function(){var bell=document.getElementById('notifBell'),panel=document.getElementById('notifPanel'),badge=document.getElementById('notifBadge'),list=document.getElementById('notifList'),markAllBtn=document.getElementById('notifMarkAll');if(!bell)return;var ICONS={info:'info-circle',success:'check-circle',warning:'exclamation-triangle',error:'exclamation-circle'};function timeAgo(iso){if(!iso)return '';var diff=Math.floor((Date.now()-new Date(iso))/1000);if(diff<60)return 'just now';if(diff<3600)return Math.floor(diff/60)+'m ago';if(diff<86400)return Math.floor(diff/3600)+'h ago';return Math.floor(diff/86400)+'d ago';}function setBadge(n){badge.textContent=n>99?'99+':n;badge.style.display=n>0?'':'none';}function renderList(items){if(!items||!items.length){list.innerHTML='<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:22px;margin-bottom:6px;display:block;"></i>No notifications yet</div>';return;}list.innerHTML=items.map(function(n){var icon=ICONS[n.type]||'info-circle',url=n.action_url||'/notifications',uc=n.is_read?'':'unread',dot=n.is_read?'':'<div class="notif-dot"></div>',title=(n.title||'').replace(/</g,'&lt;'),msg=(n.message||'').replace(/</g,'&lt;');return '<a href="'+url+'" class="notif-item '+uc+'" data-id="'+n.id+'"><div class="notif-icon '+(n.type||'info')+'"><i class="fas fa-'+icon+'"></i></div><div class="notif-body"><div class="notif-title">'+title+'</div><div class="notif-msg">'+msg+'</div><div class="notif-time">'+timeAgo(n.created_at)+'</div></div>'+dot+'</a>';}).join('');list.querySelectorAll('.notif-item').forEach(function(item){item.addEventListener('click',function(){if(!this.classList.contains('unread'))return;var self=this;fetch('/notifications/'+this.dataset.id+'/read',{method:'POST',headers:{'Content-Type':'application/json'}}).then(function(r){return r.json();}).then(function(d){if(d.success){self.classList.remove('unread');var dot=self.querySelector('.notif-dot');if(dot)dot.remove();setBadge(Math.max(0,(parseInt(badge.textContent)||0)-1));}}).catch(function(){});});});}function loadRecent(){list.innerHTML='<div class="notif-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';fetch('/notifications/recent').then(function(r){return r.json();}).then(function(data){renderList(data.notifications);setBadge(data.unread_count);}).catch(function(){list.innerHTML='<div class="notif-empty">Could not load.</div>';});}bell.addEventListener('click',function(e){e.stopPropagation();var nowOpen=panel.hidden;panel.hidden=!nowOpen;bell.setAttribute('aria-expanded',nowOpen);if(nowOpen)loadRecent();});markAllBtn.addEventListener('click',function(){fetch('/notifications/mark-all-read',{method:'POST',headers:{'Content-Type':'application/json'}}).then(function(r){return r.json();}).then(function(){setBadge(0);loadRecent();}).catch(function(){});});document.addEventListener('click',function(e){if(!panel.hidden&&!document.getElementById('notifWrapper').contains(e.target)){panel.hidden=true;bell.setAttribute('aria-expanded','false');}});var lastCount=parseInt(badge.textContent)||0;setInterval(function(){fetch('/notifications/count').then(function(r){return r.json();}).then(function(d){var nc=d.count||0;if(nc>lastCount)window.showToast('You have '+nc+' unread notification'+(nc>1?'s':'')+'.','info',5000);lastCount=nc;setBadge(nc);if(!panel.hidden)loadRecent();}).catch(function(){});},30000);})();
 </script>
