@@ -533,8 +533,14 @@ function fileRow(f) {
 
   var actionBtns = '';
   if (status === 'pending') {
+    var marksObtained = f.marks_obtained || 0;
+    var maxMarks = f.max_marks || 100;
+    var percentage = maxMarks > 0 ? ((marksObtained / maxMarks) * 100).toFixed(1) : 0;
+    var marksBadge = '<span class="inline-flex items-center gap-1.5 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold" style="white-space:nowrap"><i class="fas fa-star"></i> ' + marksObtained + '/' + maxMarks + ' (' + percentage + '%)</span>';
+    
     actionBtns =
       '<button onclick="reviewAssessment(\'' + f.id + '\',\'approve\')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors">Approve</button>' +
+      marksBadge +
       '<button onclick="showRejectNote(\'' + f.id + '\')" class="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors">Reject</button>';
   }
   actionBtns +=
@@ -580,8 +586,14 @@ function fileCard(f) {
 
   var actionBtns = '';
   if (status === 'pending') {
+    var marksObtained = f.marks_obtained || 0;
+    var maxMarks = f.max_marks || 100;
+    var percentage = maxMarks > 0 ? ((marksObtained / maxMarks) * 100).toFixed(1) : 0;
+    var marksBadge = '<span class="inline-flex items-center gap-1.5 bg-purple-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold" style="white-space:nowrap"><i class="fas fa-star"></i> ' + marksObtained + '/' + maxMarks + ' (' + percentage + '%)</span>';
+    
     actionBtns =
       '<button onclick="reviewAssessment(\'' + f.id + '\',\'approve\')" class="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors">Approve</button>' +
+      marksBadge +
       '<button onclick="showRejectNote(\'' + f.id + '\')" class="bg-rose-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors">Reject</button>';
   }
   actionBtns += '<button onclick="deleteAssessment(\'' + f.id + '\')" class="bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-900 transition-colors"><i class="fas fa-trash-alt"></i></button>';
