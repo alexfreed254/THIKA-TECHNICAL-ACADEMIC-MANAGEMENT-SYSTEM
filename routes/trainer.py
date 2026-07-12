@@ -519,6 +519,31 @@ def assessments():
     if assigned_unit_ids:
         q = q.in_("unit_id", assigned_unit_ids)
     assessments_list = q.execute().data or []
+    
+    # Fetch marks for these assessments from marks table
+    if assessments_list:
+        # Build a map to lookup marks by student, unit, year, term
+        for a in assessments_list:
+            try:
+                # Try to find matching marks entry
+                marks_rows = (db.table("marks")
+                             .select("marks_obtained, max_marks")
+                             .eq("student_id", a["student_id"])
+                             .eq("unit_id", a["unit_id"])
+                             .eq("year", a["year"])
+                             .eq("term", str(a["term"]))
+                             .execute().data or [])
+                
+                # Use first match if found
+                if marks_rows:
+                    a['marks_obtained'] = marks_rows[0].get('marks_obtained', 0)
+                    a['max_marks'] = marks_rows[0].get('max_marks', 100)
+                else:
+                    a['marks_obtained'] = 0
+                    a['max_marks'] = 100
+            except:
+                a['marks_obtained'] = 0
+                a['max_marks'] = 100
 
     # Build class/unit hierarchy for drill-down
     classes_map = {}
