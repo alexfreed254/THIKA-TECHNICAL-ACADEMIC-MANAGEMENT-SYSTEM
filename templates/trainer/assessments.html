@@ -299,6 +299,17 @@ function allAssessments() {
         a._classId   = c.id;
         a._unitName  = u.name;
         a._unitCode  = u.code;
+        // Debug: log marks data with more detail
+        console.log('=== Assessment Debug ===');
+        console.log('ID:', a.id);
+        console.log('Student:', a.student_id);
+        console.log('Student Name:', a.user_profiles ? a.user_profiles.full_name : 'N/A');
+        console.log('Unit:', a.unit_id, u.name);
+        console.log('Year/Term/Cycle:', a.year, '/', a.term, '/', a.cycle);
+        console.log('Assessment Type/No:', a.assessment_type, '#', a.assessment_no);
+        console.log('Marks Data:', a.marks_obtained, '/', a.max_marks);
+        console.log('Has marks?', a.marks_obtained !== undefined && a.marks_obtained !== null);
+        console.log('========================');
         out.push(a);
       });
     });
@@ -536,6 +547,10 @@ function fileRow(f) {
     var marksObtained = f.marks_obtained || 0;
     var maxMarks = f.max_marks || 100;
     var percentage = maxMarks > 0 ? ((marksObtained / maxMarks) * 100).toFixed(1) : 0;
+    
+    // Debug: Log what we're rendering
+    console.log('Rendering marks badge for assessment:', f.id, 'Marks:', marksObtained, '/', maxMarks, 'Percentage:', percentage + '%');
+    
     var marksBadge = '<span class="inline-flex items-center gap-1.5 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold" style="white-space:nowrap"><i class="fas fa-star"></i> ' + marksObtained + '/' + maxMarks + ' (' + percentage + '%)</span>';
     
     actionBtns =
@@ -589,6 +604,10 @@ function fileCard(f) {
     var marksObtained = f.marks_obtained || 0;
     var maxMarks = f.max_marks || 100;
     var percentage = maxMarks > 0 ? ((marksObtained / maxMarks) * 100).toFixed(1) : 0;
+    
+    // Debug: Log what we're rendering for search results
+    console.log('Rendering marks badge (search) for:', f.id, 'Marks:', marksObtained, '/', maxMarks);
+    
     var marksBadge = '<span class="inline-flex items-center gap-1.5 bg-purple-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold" style="white-space:nowrap"><i class="fas fa-star"></i> ' + marksObtained + '/' + maxMarks + ' (' + percentage + '%)</span>';
     
     actionBtns =

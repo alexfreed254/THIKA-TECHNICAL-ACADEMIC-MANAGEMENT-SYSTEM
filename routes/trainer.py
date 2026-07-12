@@ -525,23 +525,47 @@ def assessments():
         # Build a map to lookup marks by student, unit, year, term
         for a in assessments_list:
             try:
+                # Debug logging
+                print(f"\n=== Looking for marks ===")
+                print(f"Assessment ID: {a.get('id')}")
+                print(f"Student ID: {a.get('student_id')}")
+                print(f"Unit ID: {a.get('unit_id')}")
+                print(f"Year: {a.get('year')}")
+                print(f"Term: {a.get('term')} (type: {type(a.get('term'))})")
+                print(f"Assessment Type: {a.get('assessment_type')}")
+                print(f"Assessment No: {a.get('assessment_no')}")
+                print(f"Cycle: {a.get('cycle')}")
+                
                 # Try to find matching marks entry
-                marks_rows = (db.table("marks")
-                             .select("marks_obtained, max_marks")
-                             .eq("student_id", a["student_id"])
-                             .eq("unit_id", a["unit_id"])
-                             .eq("year", a["year"])
-                             .eq("term", str(a["term"]))
-                             .execute().data or [])
+                # Note: term in marks table is TEXT, in assessments it's INTEGER
+                # First try exact match with term as string
+                term_value = str(a["term"])
+                marks_query = db.table("marks").select("marks_obtained, max_marks, assessment_name, assessment_type, cycle, term")
+                marks_query = marks_query.eq("student_id", a["student_id"])
+                marks_query = marks_query.eq("unit_id", a["unit_id"])
+                marks_query = marks_query.eq("year", a["year"])
+                marks_query = marks_query.eq("term", term_value)
+                
+                marks_rows = marks_query.execute().data or []
+                
+                print(f"Query executed - Found {len(marks_rows)} marks rows")
+                if marks_rows:
+                    print(f"Marks data: {marks_rows}")
                 
                 # Use first match if found
                 if marks_rows:
-                    a['marks_obtained'] = marks_rows[0].get('marks_obtained', 0)
-                    a['max_marks'] = marks_rows[0].get('max_marks', 100)
+                    a['marks_obtained'] = float(marks_rows[0].get('marks_obtained', 0))
+                    a['max_marks'] = float(marks_rows[0].get('max_marks', 100))
+                    print(f"✓ Attached marks: {a['marks_obtained']}/{a['max_marks']}")
                 else:
+                    # Default to 0 if no marks entry found
                     a['marks_obtained'] = 0
                     a['max_marks'] = 100
-            except:
+                    print(f"✗ No marks found, defaulting to 0/100")
+            except Exception as e:
+                print(f"✗ Error fetching marks: {e}")
+                import traceback
+                traceback.print_exc()
                 a['marks_obtained'] = 0
                 a['max_marks'] = 100
 
@@ -611,6 +635,35 @@ def review_assessment(assessment_id):
     
     if not _check_unit_access(db, assessment["unit_id"]):
         abort(403)
+    
+    # Fetch marks for this assessment from marks table
+    try:
+        print(f"\n=== Fetching marks for review page ===")
+        print(f"Assessment ID: {assessment_id}")
+        print(f"Student ID: {assessment.get('student_id')}")
+        print(f"Unit ID: {assessment.get('unit_id')}")
+        print(f"Year: {assessment.get('year')}, Term: {assessment.get('term')}")
+        
+        marks_rows = (db.table("marks")
+                     .select("marks_obtained, max_marks, assessment_name")
+                     .eq("student_id", assessment["student_id"])
+                     .eq("unit_id", assessment["unit_id"])
+                     .eq("year", assessment["year"])
+                     .eq("term", str(assessment["term"]))
+                     .execute().data or [])
+        
+        if marks_rows:
+            assessment['marks_obtained'] = float(marks_rows[0].get('marks_obtained', 0))
+            assessment['max_marks'] = float(marks_rows[0].get('max_marks', 100))
+            print(f"✓ Found marks: {assessment['marks_obtained']}/{assessment['max_marks']}")
+        else:
+            assessment['marks_obtained'] = 0
+            assessment['max_marks'] = 100
+            print(f"✗ No marks found, defaulting to 0/100")
+    except Exception as e:
+        print(f"✗ Error fetching marks: {e}")
+        assessment['marks_obtained'] = 0
+        assessment['max_marks'] = 100
     
     # Get evidence
     evidence = db.table("evidence").select("*").eq("assessment_id", assessment_id).execute().data or []
