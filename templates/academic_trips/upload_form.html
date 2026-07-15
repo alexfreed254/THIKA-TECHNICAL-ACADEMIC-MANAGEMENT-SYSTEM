@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Upload Trip Report{% endblock %}
+{% block page_title %}Upload New Trip Report{% endblock %}
+
+{% block extra_style %}
+<style>
+.page-wrap{max-width:900px;margin:0 auto;padding:24px}
+.form-card{background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.form-section{margin-bottom:32px}
+.form-section:last-child{margin-bottom:0}
+.section-title{font-size:16px;font-weight:700;color:#1e293b;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e9d5ff}
+.section-title i{color:#7b1fa2;margin-right:8px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px}
+.form-group label .required{color:#dc2626;margin-left:2px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#7b1fa2;box-shadow:0 0 0 3px rgba(123,31,162,.1)}
+.form-group textarea{resize:vertical;min-height:100px}
+.form-group .hint{font-size:11px;color:#94a3b8;margin-top:4px}
+.btn{padding:12px 24px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .2s}
+.btn-primary{background:#7b1fa2;color:#fff}
+.btn-primary:hover{background:#6a1b9a}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
+.form-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:24px;border-top:1px solid #e2e8f0}
+.uppercase-input{text-transform:uppercase}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:20px;display:flex;align-items:start;gap:12px}
+.alert-info{background:#dbeafe;color:#1e40af;border-left:4px solid #3b82f6}
+.alert i{margin-top:2px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <!-- Header -->
+  <div style="margin-bottom:24px">
+    <a href="{{ url_for('academic_trips.index') }}" style="color:#7b1fa2;text-decoration:none;font-size:13px;font-weight:600">
+      <i class="fas fa-arrow-left"></i> Back to Trips
+    </a>
+    <h1 style="font-size:24px;font-weight:800;color:#1e293b;margin:12px 0 8px 0">Upload New Trip Report</h1>
+    <p style="color:#64748b;margin:0">Fill in the trip details and upload supporting media</p>
+  </div>
+
+  <div class="alert alert-info">
+    <i class="fas fa-info-circle"></i>
+    <div>
+      <strong>Important:</strong> Trip title and destination will be automatically converted to CAPITAL LETTERS. Please ensure all information is accurate before submitting.
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form method="post" action="{{ url_for('academic_trips.upload_trip') }}" class="form-card">
+    <!-- Basic Information -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="fas fa-info-circle"></i> Basic Information
+      </h3>
+      
+      <div class="form-group">
+        <label for="trip_title">Trip Title <span class="required">*</span></label>
+        <input 
+          type="text" 
+          id="trip_title" 
+          name="trip_title" 
+          class="uppercase-input" 
+          required 
+          placeholder="e.g., INDUSTRIAL VISIT TO KENYA POWER">
+        <div class="hint">Enter the trip title (will be converted to uppercase)</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="destination">Destination/Location <span class="required">*</span></label>
+        <input 
+          type="text" 
+          id="destination" 
+          name="destination" 
+          class="uppercase-input" 
+          required 
+          placeholder="e.g., KENYA POWER TRAINING SCHOOL, NAIROBI">
+        <div class="hint">Enter the destination or location (will be converted to uppercase)</div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="trip_date">Trip Date <span class="required">*</span></label>
+          <input type="date" id="trip_date" name="trip_date" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- Academic Details -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="fas fa-graduation-cap"></i> Academic Details
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="class_id">Class <span class="required">*</span></label>
+          <select id="class_id" name="class_id" required>
+            <option value="">-- Select Class --</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="term">Term <span class="required">*</span></label>
+          <select id="term" name="term" required>
+            <option value="">-- Select Term --</option>
+            <option value="1">Term 1</option>
+            <option value="2">Term 2</option>
+            <option value="3">Term 3</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="year">Year <span class="required">*</span></label>
+          <input type="number" id="year" name="year" min="2020" max="2050" value="{{ now().year }}" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="fas fa-users"></i> Participants
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="number_of_trainees">Number of Trainees <span class="required">*</span></label>
+          <input 
+            type="number" 
+            id="number_of_trainees" 
+            name="number_of_trainees" 
+            min="1" 
+            required 
+            placeholder="e.g., 25">
+        </div>
+        
+        <div class="form-group">
+          <label for="number_of_trainers">Number of Trainers <span class="required">*</span></label>
+          <input 
+            type="number" 
+            id="number_of_trainers" 
+            name="number_of_trainers" 
+            min="1" 
+            required 
+            placeholder="e.g., 3">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="accompanying_trainers">Accompanying Trainers</label>
+        <input 
+          type="text" 
+          id="accompanying_trainers" 
+          name="accompanying_trainers" 
+          class="uppercase-input" 
+          placeholder="e.g., MR. JOHN DOE, MS. JANE SMITH">
+        <div class="hint">Enter names of trainers who accompanied the trainees (will be converted to uppercase)</div>
+      </div>
+    </div>
+
+    <!-- Report Details -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="fas fa-file-alt"></i> Report Details
+      </h3>
+      
+      <div class="form-group">
+        <label for="report_description">Trip Description/Report</label>
+        <textarea 
+          id="report_description" 
+          name="report_description" 
+          placeholder="Provide a detailed description of the trip, activities undertaken, and overall experience..."></textarea>
+        <div class="hint">Describe what happened during the trip</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="objectives">Trip Objectives</label>
+        <textarea 
+          id="objectives" 
+          name="objectives" 
+          placeholder="List the objectives of the trip..."></textarea>
+        <div class="hint">What were the goals and learning outcomes?</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="outcomes">Trip Outcomes/Achievements</label>
+        <textarea 
+          id="outcomes" 
+          name="outcomes" 
+          placeholder="Describe the outcomes, achievements, or lessons learned..."></textarea>
+        <div class="hint">What was accomplished or learned?</div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <a href="{{ url_for('academic_trips.index') }}" class="btn btn-secondary">
+        <i class="fas fa-times"></i> Cancel
+      </a>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-upload"></i> Upload Trip Report
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-uppercase inputs
+document.querySelectorAll('.uppercase-input').forEach(function(input) {
+  input.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+  });
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+  const requiredFields = ['trip_title', 'destination', 'trip_date', 'class_id', 'term', 'year', 'number_of_trainees', 'number_of_trainers'];
+  let valid = true;
+  
+  requiredFields.forEach(function(field) {
+    const input = document.getElementById(field);
+    if (!input.value.trim()) {
+      valid = false;
+      input.style.borderColor = '#dc2626';
+    } else {
+      input.style.borderColor = '#e2e8f0';
+    }
+  });
+  
+  if (!valid) {
+    e.preventDefault();
+    alert('Please fill in all required fields.');
+  }
+});
+</script>
+{% endblock %}

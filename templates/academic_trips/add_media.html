@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}Add Media - {{ trip.trip_title }}{% endblock %}
+{% block page_title %}Add Photos & Videos{% endblock %}
+
+{% block extra_style %}
+<style>
+.page-wrap{max-width:1000px;margin:0 auto;padding:24px}
+.card{background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px}
+.card-title{font-size:18px;font-weight:700;color:#1e293b;margin:0 0 20px 0;padding-bottom:12px;border-bottom:2px solid #e9d5ff}
+.card-title i{color:#7b1fa2;margin-right:8px}
+.upload-area{border:2px dashed #cbd5e1;border-radius:12px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#f8fafc}
+.upload-area:hover{border-color:#7b1fa2;background:#faf5ff}
+.upload-area.dragover{border-color:#7b1fa2;background:#f3e8ff}
+.upload-icon{font-size:48px;color:#cbd5e1;margin-bottom:16px}
+.upload-area:hover .upload-icon{color:#7b1fa2}
+.preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-top:20px}
+.preview-item{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/9;background:#f1f5f9}
+.preview-item img,.preview-item video{width:100%;height:100%;object-fit:cover}
+.preview-remove{position:absolute;top:8px;right:8px;background:rgba(220,38,38,.9);color:#fff;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
+.preview-remove:hover{background:#dc2626}
+.preview-caption{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);padding:8px;color:#fff;font-size:11px}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .2s}
+.btn-primary{background:#7b1fa2;color:#fff}
+.btn-primary:hover{background:#6a1b9a}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-success{background:#16a34a;color:#fff}
+.btn-success:hover{background:#15803d}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px}
+.form-group input{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}
+.existing-media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:16px}
+.existing-media-item{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/9;background:#f1f5f9}
+.existing-media-item img,.existing-media-item video{width:100%;height:100%;object-fit:cover}
+.media-type-badge{position:absolute;top:8px;left:8px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase}
+.badge-photo{background:rgba(16,185,129,.9);color:#fff}
+.badge-video{background:rgba(239,68,68,.9);color:#fff}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:20px;display:flex;align-items:start;gap:12px}
+.alert-info{background:#dbeafe;color:#1e40af;border-left:4px solid#3b82f6}
+.alert-success{background:#dcfce7;color:#15803d;border-left:4px solid #16a34a}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <!-- Header -->
+  <div style="margin-bottom:24px">
+    <a href="{{ url_for('academic_trips.view_trip', trip_id=trip.id) }}" style="color:#7b1fa2;text-decoration:none;font-size:13px;font-weight:600">
+      <i class="fas fa-arrow-left"></i> Back to Trip Details
+    </a>
+    <h1 style="font-size:24px;font-weight:800;color:#1e293b;margin:12px 0 8px 0">Add Photos & Videos</h1>
+    <p style="color:#64748b;margin:0">{{ trip.trip_title }}</p>
+  </div>
+
+  {% if media %}
+  <div class="alert alert-success">
+    <i class="fas fa-check-circle"></i>
+    <div>
+      <strong>Media uploaded!</strong> You have {{ media|length }} file(s) for this trip. You can add more below or return to view the trip.
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="alert alert-info">
+    <i class="fas fa-info-circle"></i>
+    <div>
+      <strong>Supported formats:</strong> Photos (JPG, PNG, GIF) and Videos (MP4, MOV, AVI). Maximum file size: 50MB per file.
+    </div>
+  </div>
+
+  <!-- Upload Section -->
+  <div class="card">
+    <h3 class="card-title"><i class="fas fa-cloud-upload-alt"></i> Upload New Media</h3>
+    
+    <div class="upload-area" id="uploadArea">
+      <i class="fas fa-cloud-upload-alt upload-icon"></i>
+      <h3 style="margin:0 0 8px 0;font-size:16px;font-weight:700;color:#1e293b">Drop files here or click to browse</h3>
+      <p style="margin:0;color:#64748b;font-size:13px">Upload photos and videos from the trip</p>
+      <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none">
+    </div>
+
+    <!-- Preview Area -->
+    <div id="previewArea" style="display:none">
+      <h4 style="margin:20px 0 12px 0;font-size:14px;font-weight:700;color:#1e293b">Files to Upload ({{ '{' }}{{ '{' }}fileCount{{ '}' }}{{ '}' }})</h4>
+      <div class="preview-grid" id="previewGrid"></div>
+      
+      <div style="margin-top:24px;padding-top:24px;border-top:1px solid #e2e8f0;display:flex;gap:12px;justify-content:flex-end">
+        <button onclick="clearFiles()" class="btn btn-secondary">
+          <i class="fas fa-times"></i> Clear All
+        </button>
+        <button onclick="uploadFiles()" class="btn btn-success" id="uploadBtn">
+          <i class="fas fa-upload"></i> Upload Files
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing Media -->
+  {% if media %}
+  <div class="card">
+    <h3 class="card-title"><i class="fas fa-images"></i> Uploaded Media ({{ media|length }})</h3>
+    <div class="existing-media-grid">
+      {% for m in media %}
+      <div class="existing-media-item">
+        {% if m.file_type == 'photo' %}
+        <img src="/storage/trip-media/{{ m.file_path }}" alt="{{ m.caption or 'Trip photo' }}">
+        <span class="media-type-badge badge-photo"><i class="fas fa-image"></i> Photo</span>
+        {% else %}
+        <video src="/storage/trip-media/{{ m.file_path }}"></video>
+        <span class="media-type-badge badge-video"><i class="fas fa-video"></i> Video</span>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.6);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center">
+          <i class="fas fa-play" style="color:#fff;font-size:16px;margin-left:3px"></i>
+        </div>
+        {% endif %}
+        {% if m.caption %}
+        <div class="preview-caption">{{ m.caption }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Actions -->
+  <div style="display:flex;gap:12px;justify-content:flex-end">
+    <a href="{{ url_for('academic_trips.view_trip', trip_id=trip.id) }}" class="btn btn-primary">
+      <i class="fas fa-check"></i> Done - View Trip
+    </a>
+  </div>
+</div>
+
+<!-- Caption Modal -->
+<div id="captionModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:12px;max-width:400px;width:100%;padding:24px">
+    <h3 style="margin:0 0 16px 0;font-size:16px;font-weight:700">Add Caption</h3>
+    <div class="form-group">
+      <label for="captionInput">Caption (Optional)</label>
+      <input type="text" id="captionInput" placeholder="Describe this photo or video...">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeCaptionModal(false)" class="btn btn-secondary" style="font-size:13px">Skip</button>
+      <button onclick="closeCaptionModal(true)" class="btn btn-primary" style="font-size:13px">Save</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedFiles = [];
+let currentFileIndex = 0;
+
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+const previewArea = document.getElementById('previewArea');
+const previewGrid = document.getElementById('previewGrid');
+
+// Click to browse
+uploadArea.addEventListener('click', () => fileInput.click());
+
+// File input change
+fileInput.addEventListener('change', (e) => {
+  handleFiles(Array.from(e.target.files));
+});
+
+// Drag and drop
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+  uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  handleFiles(Array.from(e.dataTransfer.files));
+});
+
+function handleFiles(files) {
+  // Filter valid files
+  const validFiles = files.filter(f => {
+    const isImage = f.type.startsWith('image/');
+    const isVideo = f.type.startsWith('video/');
+    const isValidSize = f.size <= 50 * 1024 * 1024; // 50MB
+    return (isImage || isVideo) && isValidSize;
+  });
+
+  if (validFiles.length === 0) {
+    alert('Please select valid image or video files (max 50MB each)');
+    return;
+  }
+
+  selectedFiles = [...selectedFiles, ...validFiles];
+  renderPreviews();
+  previewArea.style.display = 'block';
+}
+
+function renderPreviews() {
+  previewGrid.innerHTML = '';
+  
+  selectedFiles.forEach((file, index) => {
+    const preview = document.createElement('div');
+    preview.className = 'preview-item';
+    
+    const isVideo = file.type.startsWith('video/');
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      if (isVideo) {
+        preview.innerHTML = `
+          <video src="${e.target.result}"></video>
+          <button class="preview-remove" onclick="removeFile(${index})">
+            <i class="fas fa-times"></i>
+          </button>
+          <div class="preview-caption">${file.caption || 'No caption'}</div>
+        `;
+      } else {
+        preview.innerHTML = `
+          <img src="${e.target.result}" alt="Preview">
+          <button class="preview-remove" onclick="removeFile(${index})">
+            <i class="fas fa-times"></i>
+          </button>
+          <div class="preview-caption">${file.caption || 'No caption'}</div>
+        `;
+      }
+    };
+    
+    reader.readAsDataURL(file);
+    previewGrid.appendChild(preview);
+  });
+}
+
+function removeFile(index) {
+  selectedFiles.splice(index, 1);
+  if (selectedFiles.length === 0) {
+    previewArea.style.display = 'none';
+  }
+  renderPreviews();
+}
+
+function clearFiles() {
+  selectedFiles = [];
+  previewArea.style.display = 'none';
+  fileInput.value = '';
+}
+
+function uploadFiles() {
+  if (selectedFiles.length === 0) return;
+  
+  const uploadBtn = document.getElementById('uploadBtn');
+  uploadBtn.disabled = true;
+  uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+  
+  // In production, implement actual file upload to Supabase Storage
+  // For now, simulate upload
+  setTimeout(() => {
+    alert('Upload functionality will be connected to Supabase Storage. Files ready: ' + selectedFiles.length);
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Files';
+    
+    // In production: redirect after successful upload
+    // window.location.href = '/academic-trips/{{ trip.id }}';
+  }, 2000);
+}
+
+// Caption modal functions
+function showCaptionModal(index) {
+  currentFileIndex = index;
+  document.getElementById('captionInput').value = selectedFiles[index].caption || '';
+  document.getElementById('captionModal').style.display = 'flex';
+}
+
+function closeCaptionModal(save) {
+  if (save) {
+    const caption = document.getElementById('captionInput').value;
+    selectedFiles[currentFileIndex].caption = caption;
+    renderPreviews();
+  }
+  document.getElementById('captionModal').style.display = 'none';
+}
+</script>
+{% endblock %}

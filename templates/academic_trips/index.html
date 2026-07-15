@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Academic Trips{% endblock %}
+{% block page_title %}Academic Trips{% endblock %}
+
+{% block extra_style %}
+<style>
+.page-wrap{max-width:1400px;margin:0 auto;padding:24px}
+.header-section{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:16px}
+.filter-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px}
+.filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.filter-group label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:6px}
+.filter-group select,.filter-group input{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}
+.filter-group select:focus,.filter-group input:focus{outline:none;border-color:#7b1fa2;box-shadow:0 0 0 3px rgba(123,31,162,.1)}
+.filter-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .2s}
+.btn-primary{background:#7b1fa2;color:#fff}
+.btn-primary:hover{background:#6a1b9a}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-success{background:#16a34a;color:#fff}
+.btn-success:hover{background:#15803d}
+.trips-grid{display:grid;gap:20px}
+.trip-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:box-shadow .2s}
+.trip-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.trip-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;gap:16px}
+.trip-title{font-size:18px;font-weight:800;color:#1e293b;margin:0;flex:1}
+.trip-status{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
+.status-submitted{background:#fef3c7;color:#92400e}
+.status-reviewed{background:#d1fae5;color:#065f46}
+.trip-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+.meta-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b}
+.meta-item i{color:#7b1fa2;width:18px;text-align:center}
+.trip-description{font-size:14px;color:#475569;line-height:1.6;margin:12px 0;border-left:3px solid #e9d5ff;padding-left:12px}
+.trip-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.btn-sm{padding:6px 14px;font-size:12px}
+.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}
+.empty-state i{font-size:48px;margin-bottom:16px;color:#cbd5e1}
+.empty-state h3{font-size:18px;font-weight:700;color:#475569;margin:12px 0}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(123,31,162,.2)}
+.stat-value{font-size:32px;font-weight:800;margin-bottom:4px}
+.stat-label{font-size:12px;opacity:.9;text-transform:uppercase;letter-spacing:.5px}
+@media(max-width:768px){
+  .header-section{flex-direction:column;align-items:stretch}
+  .filter-grid{grid-template-columns:1fr}
+  .trip-meta{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <!-- Header -->
+  <div class="header-section">
+    <div>
+      <h1 style="font-size:28px;font-weight:800;color:#1e293b;margin:0 0 8px 0">
+        <i class="fas fa-bus-alt" style="color:#7b1fa2;margin-right:8px"></i>
+        Academic Trips
+      </h1>
+      <p style="color:#64748b;margin:0">View and manage educational trips and field visits</p>
+    </div>
+    {% if current_user().role in ['trainer', 'trip_coordinator', 'super_admin'] %}
+    <a href="{{ url_for('academic_trips.upload_trip') }}" class="btn btn-success">
+      <i class="fas fa-plus"></i> Upload New Trip
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Statistics -->
+  {% if trips %}
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ trips|length }}</div>
+      <div class="stat-label">Total Trips</div>
+    </div>
+    <div class="stat-card" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+      <div class="stat-value">{{ trips|selectattr('status','equalto','reviewed')|list|length }}</div>
+      <div class="stat-label">Reviewed</div>
+    </div>
+    <div class="stat-card" style="background:linear-gradient(135deg,#ea580c,#f97316)">
+      <div class="stat-value">{{ trips|selectattr('status','equalto','submitted')|list|length }}</div>
+      <div class="stat-label">Pending Review</div>
+    </div>
+    <div class="stat-card" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)">
+      <div class="stat-value">{{ trips|map(attribute='number_of_trainees')|sum }}</div>
+      <div class="stat-label">Total Participants</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filters -->
+  <div class="filter-card">
+    <form method="get" action="{{ url_for('academic_trips.index') }}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#1e293b">
+          <i class="fas fa-filter"></i> Filter Trips
+        </h3>
+        {% if filters.day or filters.term or filters.year or filters.class_id or filters.department_id %}
+        <a href="{{ url_for('academic_trips.index') }}" class="btn-secondary btn-sm" style="text-decoration:none">
+          <i class="fas fa-times"></i> Clear Filters
+        </a>
+        {% endif %}
+      </div>
+      
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label for="day"><i class="fas fa-calendar-day"></i> Day</label>
+          <input type="date" id="day" name="day" value="{{ filters.day or '' }}">
+        </div>
+        
+        <div class="filter-group">
+          <label for="term"><i class="fas fa-calendar-alt"></i> Term</label>
+          <select id="term" name="term">
+            <option value="">All Terms</option>
+            <option value="1" {% if filters.term == '1' %}selected{% endif %}>Term 1</option>
+            <option value="2" {% if filters.term == '2' %}selected{% endif %}>Term 2</option>
+            <option value="3" {% if filters.term == '3' %}selected{% endif %}>Term 3</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="year"><i class="fas fa-calendar"></i> Year</label>
+          <select id="year" name="year">
+            <option value="">All Years</option>
+            {% for y in years %}
+            <option value="{{ y }}" {% if filters.year == y|string %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="class_id"><i class="fas fa-users-class"></i> Class</label>
+          <select id="class_id" name="class_id">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}" {% if filters.class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        {% if current_user().role == 'super_admin' and departments %}
+        <div class="filter-group">
+          <label for="department_id"><i class="fas fa-building"></i> Department</label>
+          <select id="department_id" name="department_id">
+            <option value="">All Departments</option>
+            {% for d in departments %}
+            <option value="{{ d.id }}" {% if filters.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fas fa-search"></i> Apply Filters
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Trips List -->
+  {% if trips %}
+  <div class="trips-grid">
+    {% for trip in trips %}
+    <div class="trip-card">
+      <div class="trip-header">
+        <h2 class="trip-title">{{ trip.trip_title }}</h2>
+        <span class="trip-status status-{{ trip.status }}">{{ trip.status }}</span>
+      </div>
+      
+      <div class="trip-meta">
+        <div class="meta-item">
+          <i class="fas fa-map-marker-alt"></i>
+          <span><strong>{{ trip.destination }}</strong></span>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-calendar"></i>
+          <span>{{ trip.trip_date }}</span>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-users-class"></i>
+          <span>{{ trip.classes.name if trip.classes else 'N/A' }}</span>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-building"></i>
+          <span>{{ trip.departments.name if trip.departments else 'N/A' }}</span>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-user-graduate"></i>
+          <span>{{ trip.number_of_trainees }} Trainees</span>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span>{{ trip.number_of_trainers }} Trainers</span>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-clock"></i>
+          <span>Term {{ trip.term }}, {{ trip.year }}</span>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-user"></i>
+          <span>By {{ trip.uploader.full_name if trip.uploader else 'Unknown' }}</span>
+        </div>
+      </div>
+      
+      {% if trip.report_description %}
+      <div class="trip-description">{{ trip.report_description[:150] }}{% if trip.report_description|length > 150 %}...{% endif %}</div>
+      {% endif %}
+      
+      <div class="trip-actions">
+        <a href="{{ url_for('academic_trips.view_trip', trip_id=trip.id) }}" class="btn btn-primary btn-sm">
+          <i class="fas fa-eye"></i> View Details
+        </a>
+        {% if current_user().role in ['dept_admin', 'super_admin'] and trip.status == 'submitted' %}
+        <button onclick="showReviewModal('{{ trip.id }}')" class="btn btn-secondary btn-sm">
+          <i class="fas fa-check-circle"></i> Mark as Reviewed
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-bus-alt"></i>
+    <h3>No Trips Found</h3>
+    <p>{% if filters.day or filters.term or filters.year or filters.class_id or filters.department_id %}Try adjusting your filters{% else %}No academic trips have been uploaded yet{% endif %}</p>
+    {% if current_user().role in ['trainer', 'trip_coordinator', 'super_admin'] %}
+    <a href="{{ url_for('academic_trips.upload_trip') }}" class="btn btn-success" style="margin-top:16px">
+      <i class="fas fa-plus"></i> Upload First Trip
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Review Modal -->
+<div id="reviewModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:12px;max-width:500px;width:100%;padding:24px">
+    <h3 style="margin:0 0 16px 0;font-size:18px;font-weight:700">Review Trip Report</h3>
+    <form id="reviewForm" method="post">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Review Notes (Optional)</label>
+        <textarea name="review_notes" rows="4" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical" placeholder="Add any comments or notes about this trip..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" onclick="closeReviewModal()" class="btn btn-secondary btn-sm">Cancel</button>
+        <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Mark as Reviewed</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showReviewModal(tripId) {
+  document.getElementById('reviewForm').action = '/academic-trips/' + tripId + '/review';
+  document.getElementById('reviewModal').style.display = 'flex';
+}
+
+function closeReviewModal() {
+  document.getElementById('reviewModal').style.display = 'none';
+}
+
+// Close modal on background click
+document.getElementById('reviewModal').addEventListener('click', function(e) {
+  if (e.target === this) closeReviewModal();
+});
+</script>
+{% endblock %}
