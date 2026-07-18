@@ -77,6 +77,10 @@ CREATE INDEX IF NOT EXISTS idx_academic_trips_year_term ON academic_trips(year D
 CREATE INDEX IF NOT EXISTS idx_academic_trips_uploader ON academic_trips(uploaded_by);
 CREATE INDEX IF NOT EXISTS idx_academic_trip_media_trip ON academic_trip_media(trip_id);
 
+-- NOTE: Create a public Storage bucket named "trip-media" in Supabase Dashboard
+-- (Storage → New Bucket → name: trip-media → Public).
+-- Photos/videos are stored at: {trip_id}/{uuid}_{filename}
+
 -- Row Level Security (Optional)
 ALTER TABLE academic_trips ENABLE ROW LEVEL SECURITY;
 ALTER TABLE academic_trip_media ENABLE ROW LEVEL SECURITY;

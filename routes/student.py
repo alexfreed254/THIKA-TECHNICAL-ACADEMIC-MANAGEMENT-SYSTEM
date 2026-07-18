@@ -3909,7 +3909,7 @@ def ai_ask():
     if any(x in kw for x in ("clear", "clearance", "library", "finance", "games", "store")):
         cl = _clearance()
         if not cl:
-            return jsonify({"reply": "You haven't applied for clearance yet. Go to Course Clearance in the sidebar. The 7-stage process: Trainer → HOD → Library → Store → Games → Finance → Deputy Principal. All fees must be cleared first."})
+            return jsonify({"reply": "You haven't applied for clearance yet. Go to Course Clearance in the sidebar. Stage 1 runs in parallel (trainers, workshop technicians, library, ICT, games, kitchen, store, and other HODs). When Stage 1 is complete, your home HOD does the final Stage 2 clearance and a certificate with serial number is issued."})
         st = cl.get("status", "")
         sg = cl.get("stage", "")
         return jsonify({"reply": f"Your clearance is currently at stage: {sg}, status: {st}. Check the Clearance page for updates from each approver."})

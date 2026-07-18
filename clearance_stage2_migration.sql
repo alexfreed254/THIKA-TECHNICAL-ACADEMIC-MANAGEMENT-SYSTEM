@@ -34,6 +34,17 @@ CREATE INDEX IF NOT EXISTS idx_clearance_approvals_category
 CREATE INDEX IF NOT EXISTS idx_clearance_approvals_stage
   ON clearance_approvals (clearance_stage);
 
+-- 6. Allow status = 'returned' on clearance_requests (return-for-correction)
+DO $$
+BEGIN
+  ALTER TABLE clearance_requests DROP CONSTRAINT IF EXISTS clearance_requests_status_check;
+  ALTER TABLE clearance_requests
+    ADD CONSTRAINT clearance_requests_status_check
+    CHECK (status IN ('pending', 'in_progress', 'completed', 'rejected', 'returned'));
+EXCEPTION WHEN others THEN
+  RAISE NOTICE 'clearance_requests status check update skipped: %', SQLERRM;
+END $$;
+
 -- ============================================================
 -- Optional backfill: populate approver_category from stage names
 -- Uncomment and run only if you have existing records.

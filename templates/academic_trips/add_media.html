@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends portal_base %}
 {% block title %}Add Media - {{ trip.trip_title }}{% endblock %}
 {% block page_title %}Add Photos & Videos{% endblock %}
 
@@ -102,17 +102,22 @@
     <h3 class="card-title"><i class="fas fa-images"></i> Uploaded Media ({{ media|length }})</h3>
     <div class="existing-media-grid">
       {% for m in media %}
-      <div class="existing-media-item">
+      <div class="existing-media-item" data-media-id="{{ m.id }}">
         {% if m.file_type == 'photo' %}
-        <img src="/storage/trip-media/{{ m.file_path }}" alt="{{ m.caption or 'Trip photo' }}">
+        <img src="{{ m.public_url or m.file_path }}" alt="{{ m.caption or 'Trip photo' }}">
         <span class="media-type-badge badge-photo"><i class="fas fa-image"></i> Photo</span>
         {% else %}
-        <video src="/storage/trip-media/{{ m.file_path }}"></video>
+        <video src="{{ m.public_url or m.file_path }}"></video>
         <span class="media-type-badge badge-video"><i class="fas fa-video"></i> Video</span>
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.6);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center">
           <i class="fas fa-play" style="color:#fff;font-size:16px;margin-left:3px"></i>
         </div>
         {% endif %}
+        <button type="button" class="preview-remove" title="Delete"
+                onclick="deleteMedia('{{ m.id }}', this)"
+                style="position:absolute;top:8px;right:8px">
+          <i class="fas fa-trash"></i>
+        </button>
         {% if m.caption %}
         <div class="preview-caption">{{ m.caption }}</div>
         {% endif %}
@@ -251,21 +256,61 @@ function clearFiles() {
 
 function uploadFiles() {
   if (selectedFiles.length === 0) return;
-  
+
   const uploadBtn = document.getElementById('uploadBtn');
   uploadBtn.disabled = true;
   uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-  
-  // In production, implement actual file upload to Supabase Storage
-  // For now, simulate upload
-  setTimeout(() => {
-    alert('Upload functionality will be connected to Supabase Storage. Files ready: ' + selectedFiles.length);
+
+  const formData = new FormData();
+  selectedFiles.forEach((file, i) => {
+    formData.append('files', file);
+    formData.append('captions', file.caption || '');
+  });
+
+  fetch('{{ url_for("academic_trips.add_media", trip_id=trip.id) }}?format=json', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: formData
+  })
+  .then(r => r.json().then(d => ({ ok: r.ok, d })))
+  .then(({ ok, d }) => {
+    if (ok && d.success) {
+      if (typeof showToast === 'function') showToast(d.message || 'Uploaded', 'success');
+      else alert(d.message || 'Uploaded successfully');
+      window.location.reload();
+    } else {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Files';
+      const msg = (d && d.message) || 'Upload failed';
+      if (typeof showToast === 'function') showToast(msg, 'error');
+      else alert(msg);
+    }
+  })
+  .catch(err => {
     uploadBtn.disabled = false;
     uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Files';
-    
-    // In production: redirect after successful upload
-    // window.location.href = '/academic-trips/{{ trip.id }}';
-  }, 2000);
+    if (typeof showToast === 'function') showToast('Network error during upload', 'error');
+    else alert('Network error during upload');
+  });
+}
+
+function deleteMedia(mediaId, btn) {
+  if (!confirm('Delete this media file?')) return;
+  fetch('/academic-trips/{{ trip.id }}/media/' + mediaId + '/delete', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      const el = btn.closest('.existing-media-item');
+      if (el) el.remove();
+      if (typeof showToast === 'function') showToast('Media deleted', 'success');
+    } else {
+      alert(d.message || 'Delete failed');
+    }
+  })
+  .catch(() => alert('Network error'));
 }
 
 // Caption modal functions

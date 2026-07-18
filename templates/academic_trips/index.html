@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends portal_base %}
 {% block title %}Academic Trips{% endblock %}
 {% block page_title %}Academic Trips{% endblock %}
 
@@ -59,7 +59,7 @@
       </h1>
       <p style="color:#64748b;margin:0">View and manage educational trips and field visits</p>
     </div>
-    {% if current_user().role in ['trainer', 'trip_coordinator', 'super_admin'] %}
+    {% if current_user and current_user.role in ['trainer', 'trip_coordinator', 'super_admin'] %}
     <a href="{{ url_for('academic_trips.upload_trip') }}" class="btn btn-success">
       <i class="fas fa-plus"></i> Upload New Trip
     </a>
@@ -138,7 +138,7 @@
           </select>
         </div>
         
-        {% if current_user().role == 'super_admin' and departments %}
+        {% if current_user and current_user.role == 'super_admin' and departments %}
         <div class="filter-group">
           <label for="department_id"><i class="fas fa-building"></i> Department</label>
           <select id="department_id" name="department_id">
@@ -212,7 +212,7 @@
         <a href="{{ url_for('academic_trips.view_trip', trip_id=trip.id) }}" class="btn btn-primary btn-sm">
           <i class="fas fa-eye"></i> View Details
         </a>
-        {% if current_user().role in ['dept_admin', 'super_admin'] and trip.status == 'submitted' %}
+        {% if current_user and current_user.role in ['dept_admin', 'super_admin'] and trip.status == 'submitted' %}
         <button onclick="showReviewModal('{{ trip.id }}')" class="btn btn-secondary btn-sm">
           <i class="fas fa-check-circle"></i> Mark as Reviewed
         </button>
@@ -226,7 +226,7 @@
     <i class="fas fa-bus-alt"></i>
     <h3>No Trips Found</h3>
     <p>{% if filters.day or filters.term or filters.year or filters.class_id or filters.department_id %}Try adjusting your filters{% else %}No academic trips have been uploaded yet{% endif %}</p>
-    {% if current_user().role in ['trainer', 'trip_coordinator', 'super_admin'] %}
+    {% if current_user and current_user.role in ['trainer', 'trip_coordinator', 'super_admin'] %}
     <a href="{{ url_for('academic_trips.upload_trip') }}" class="btn btn-success" style="margin-top:16px">
       <i class="fas fa-plus"></i> Upload First Trip
     </a>

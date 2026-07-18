@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends portal_base %}
 {% block title %}{{ trip.trip_title }}{% endblock %}
 {% block page_title %}Trip Details{% endblock %}
 
@@ -158,11 +158,11 @@
         {% if media %}
         <div class="media-grid">
           {% for m in media %}
-          <div class="media-item" onclick="openMedia('{{ m.file_path }}', '{{ m.file_type }}')">
+          <div class="media-item" onclick="openMedia('{{ m.public_url or m.file_path }}', '{{ m.file_type }}')">
             {% if m.file_type == 'photo' %}
-            <img src="/storage/trip-media/{{ m.file_path }}" alt="{{ m.caption or 'Trip photo' }}">
+            <img src="{{ m.public_url or m.file_path }}" alt="{{ m.caption or 'Trip photo' }}">
             {% else %}
-            <video src="/storage/trip-media/{{ m.file_path }}"></video>
+            <video src="{{ m.public_url or m.file_path }}"></video>
             <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.6);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center">
               <i class="fas fa-play" style="color:#fff;font-size:20px;margin-left:4px"></i>
             </div>
@@ -179,7 +179,7 @@
         <div class="empty-media">
           <i class="fas fa-images"></i>
           <p>No photos or videos uploaded yet</p>
-          {% if trip.uploaded_by == current_user().id %}
+          {% if current_user and trip.uploaded_by == current_user.id %}
           <a href="{{ url_for('academic_trips.add_media', trip_id=trip.id) }}" class="btn btn-primary" style="margin-top:12px">
             <i class="fas fa-plus"></i> Add Media
           </a>
@@ -232,19 +232,19 @@
       <div class="card">
         <h3 class="card-title"><i class="fas fa-cog"></i> Actions</h3>
         <div style="display:flex;flex-direction:column;gap:8px">
-          {% if trip.uploaded_by == current_user().id %}
+          {% if current_user and trip.uploaded_by == current_user.id %}
           <a href="{{ url_for('academic_trips.add_media', trip_id=trip.id) }}" class="btn btn-primary" style="justify-content:center">
             <i class="fas fa-plus"></i> Add Media
           </a>
           {% endif %}
           
-          {% if current_user().role in ['dept_admin', 'super_admin'] and trip.status == 'submitted' %}
+          {% if current_user and current_user.role in ['dept_admin', 'super_admin'] and trip.status == 'submitted' %}
           <button onclick="showReviewModal()" class="btn btn-success" style="justify-content:center">
             <i class="fas fa-check-circle"></i> Mark as Reviewed
           </button>
           {% endif %}
           
-          {% if trip.uploaded_by == current_user().id or current_user().role == 'super_admin' %}
+          {% if current_user and (trip.uploaded_by == current_user.id or current_user.role == 'super_admin') %}
           <button onclick="deleteTrip('{{ trip.id }}')" class="btn btn-danger" style="justify-content:center">
             <i class="fas fa-trash"></i> Delete Trip
           </button>

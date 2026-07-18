@@ -8,9 +8,46 @@ from functools import wraps
 from datetime import datetime
 from db import get_service_client
 from auth_utils import current_user, login_required
+import os
 import uuid
+import re
 
 academic_trips_bp = Blueprint("academic_trips", __name__, url_prefix="/academic-trips")
+
+TRIP_MEDIA_BUCKET = "trip-media"
+MAX_MEDIA_BYTES = 50 * 1024 * 1024
+
+TRIP_PORTAL_BASE = {
+    "trainer":     "trainer/base.html",
+    "dept_admin":  "dept_admin/base.html",
+    "super_admin": "super_admin/base.html",
+}
+
+
+def _portal_base(role: str) -> str:
+    return TRIP_PORTAL_BASE.get(role, "trainer/base.html")
+
+
+def _supabase_public_url(path: str) -> str:
+    base = (os.getenv("SUPABASE_URL") or "").rstrip("/")
+    if not base or not path:
+        return path or ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    return f"{base}/storage/v1/object/public/{TRIP_MEDIA_BUCKET}/{path.lstrip('/')}"
+
+
+def _annotate_media(media_rows):
+    for m in media_rows or []:
+        m["public_url"] = _supabase_public_url(m.get("file_path") or "")
+    return media_rows
+
+
+def _safe_filename(name: str) -> str:
+    name = (name or "file").strip()
+    name = re.sub(r"[^\w.\-]+", "_", name)
+    return name[:120] or "file"
+
 
 # ============================================================================
 # ACCESS CONTROL DECORATORS
@@ -150,6 +187,7 @@ def index():
     
     return render_template(
         "academic_trips/index.html",
+        portal_base=_portal_base(user.get("role")),
         trips=trips,
         departments=departments,
         classes=classes,
@@ -205,9 +243,11 @@ def view_trip(trip_id):
             .eq("trip_id", trip_id)
             .order("sequence_order")
             .execute().data or [])
-    
+    _annotate_media(media)
+
     return render_template(
         "academic_trips/view_trip.html",
+        portal_base=_portal_base(user.get("role")),
         trip=trip,
         media=media
     )
@@ -225,17 +265,27 @@ def upload_trip():
     user = current_user()
     
     if request.method == "GET":
-        # Get user's department classes
-        dept_id = get_user_department(db, user["id"])
+        # Get user's department classes (super_admin: all classes)
         classes = []
-        if dept_id:
+        if user.get("role") == "super_admin":
             classes = (db.table("classes")
                       .select("id, name, department_id")
-                      .eq("department_id", dept_id)
                       .order("name")
                       .execute().data or [])
-        
-        return render_template("academic_trips/upload_form.html", classes=classes)
+        else:
+            dept_id = get_user_department(db, user["id"])
+            if dept_id:
+                classes = (db.table("classes")
+                          .select("id, name, department_id")
+                          .eq("department_id", dept_id)
+                          .order("name")
+                          .execute().data or [])
+
+        return render_template(
+            "academic_trips/upload_form.html",
+            portal_base=_portal_base(user.get("role")),
+            classes=classes,
+        )
     
     # POST: Handle form submission
     try:
@@ -282,7 +332,12 @@ def upload_trip():
             "objectives": objectives,
             "outcomes": outcomes,
             "uploaded_by": user["id"],
-            "uploader_role": user.get("role", "trainer"),
+            # DB CHECK allows trainer | trip_coordinator only
+            "uploader_role": (
+                "trip_coordinator"
+                if user.get("role") == "trip_coordinator"
+                else "trainer"
+            ),
             "status": "submitted"
         }
         
@@ -303,29 +358,175 @@ def add_media(trip_id):
     """Add photos/videos to trip"""
     db = get_service_client()
     user = current_user()
-    
-    # Verify trip ownership
-    trip = db.table("academic_trips").select("*").eq("id", trip_id).single().execute().data
-    if not trip or trip["uploaded_by"] != user["id"]:
+
+    trip = (db.table("academic_trips")
+              .select("*")
+              .eq("id", trip_id)
+              .limit(1)
+              .execute().data or [None])[0]
+    if not trip:
+        abort(404)
+
+    # Owner or super_admin may manage media
+    if trip["uploaded_by"] != user["id"] and user.get("role") != "super_admin":
         abort(403)
-    
+
     if request.method == "GET":
-        # Show existing media
         media = (db.table("academic_trip_media")
                 .select("*")
                 .eq("trip_id", trip_id)
                 .order("sequence_order")
                 .execute().data or [])
-        
+        _annotate_media(media)
         return render_template(
             "academic_trips/add_media.html",
+            portal_base=_portal_base(user.get("role")),
             trip=trip,
             media=media
         )
-    
-    # POST: Handle media upload (via JavaScript/AJAX in real implementation)
-    flash("Media upload functionality ready. Use the upload form.", "info")
-    return redirect(url_for("academic_trips.view_trip", trip_id=trip_id))
+
+    # POST: multipart upload (AJAX or form)
+    files = request.files.getlist("files") or request.files.getlist("file")
+    if not files:
+        single = request.files.get("file")
+        if single:
+            files = [single]
+
+    if not files:
+        if request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": "No files uploaded"}), 400
+        flash("No files selected.", "error")
+        return redirect(url_for("academic_trips.add_media", trip_id=trip_id))
+
+    captions = request.form.getlist("captions") or []
+    existing = (db.table("academic_trip_media")
+                  .select("sequence_order")
+                  .eq("trip_id", trip_id)
+                  .order("sequence_order", desc=True)
+                  .limit(1)
+                  .execute().data or [])
+    next_seq = (existing[0]["sequence_order"] + 1) if existing else 0
+
+    uploaded = []
+    errors = []
+
+    for idx, f in enumerate(files):
+        if not f or not f.filename:
+            continue
+        try:
+            raw = f.read()
+            if not raw:
+                errors.append(f"{f.filename}: empty file")
+                continue
+            if len(raw) > MAX_MEDIA_BYTES:
+                errors.append(f"{f.filename}: exceeds 50MB limit")
+                continue
+
+            ctype = (f.content_type or "").lower()
+            if ctype.startswith("image/"):
+                file_type = "photo"
+            elif ctype.startswith("video/"):
+                file_type = "video"
+            else:
+                # Fallback by extension
+                ext = (f.filename.rsplit(".", 1)[-1] if "." in f.filename else "").lower()
+                if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp"):
+                    file_type = "photo"
+                    ctype = ctype or f"image/{ext}"
+                elif ext in ("mp4", "mov", "avi", "webm", "mkv"):
+                    file_type = "video"
+                    ctype = ctype or f"video/{ext}"
+                else:
+                    errors.append(f"{f.filename}: unsupported type")
+                    continue
+
+            safe = _safe_filename(f.filename)
+            storage_path = f"{trip_id}/{uuid.uuid4().hex}_{safe}"
+            db.storage.from_(TRIP_MEDIA_BUCKET).upload(
+                path=storage_path,
+                file=raw,
+                file_options={
+                    "content-type": ctype or "application/octet-stream",
+                    "content-disposition": "inline",
+                },
+            )
+
+            caption = captions[idx] if idx < len(captions) else request.form.get("caption", "")
+            caption = (caption or "").strip() or None
+
+            row = {
+                "trip_id": trip_id,
+                "file_path": storage_path,
+                "file_name": f.filename,
+                "file_size": len(raw),
+                "file_type": file_type,
+                "caption": caption,
+                "sequence_order": next_seq,
+            }
+            next_seq += 1
+            inserted = db.table("academic_trip_media").insert(row).execute().data or []
+            if inserted:
+                inserted[0]["public_url"] = _supabase_public_url(storage_path)
+                uploaded.append(inserted[0])
+            else:
+                uploaded.append({**row, "public_url": _supabase_public_url(storage_path)})
+        except Exception as e:
+            errors.append(f"{f.filename}: {e}")
+
+    wants_json = (
+        request.accept_mimetypes.best == "application/json"
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or request.args.get("format") == "json"
+    )
+    if wants_json:
+        ok = len(uploaded) > 0
+        return jsonify({
+            "success": ok,
+            "uploaded": len(uploaded),
+            "media": uploaded,
+            "errors": errors,
+            "message": (
+                f"Uploaded {len(uploaded)} file(s)."
+                + (f" Some failed: {'; '.join(errors)}" if errors else "")
+            ),
+        }), (200 if ok else 400)
+
+    if uploaded:
+        flash(f"Uploaded {len(uploaded)} file(s) successfully.", "success")
+    if errors:
+        flash("Some uploads failed: " + "; ".join(errors[:3]), "error")
+    return redirect(url_for("academic_trips.add_media", trip_id=trip_id))
+
+
+@academic_trips_bp.route("/<trip_id>/media/<media_id>/delete", methods=["POST"])
+@trainer_or_coordinator_required
+def delete_media(trip_id, media_id):
+    db = get_service_client()
+    user = current_user()
+    trip = (db.table("academic_trips").select("id, uploaded_by")
+              .eq("id", trip_id).limit(1).execute().data or [None])[0]
+    if not trip:
+        return jsonify({"success": False, "message": "Trip not found"}), 404
+    if trip["uploaded_by"] != user["id"] and user.get("role") != "super_admin":
+        return jsonify({"success": False, "message": "Access denied"}), 403
+
+    media = (db.table("academic_trip_media").select("*")
+               .eq("id", media_id).eq("trip_id", trip_id)
+               .limit(1).execute().data or [None])[0]
+    if not media:
+        return jsonify({"success": False, "message": "Media not found"}), 404
+
+    try:
+        path = media.get("file_path")
+        if path and not path.startswith("http"):
+            try:
+                db.storage.from_(TRIP_MEDIA_BUCKET).remove([path])
+            except Exception:
+                pass
+        db.table("academic_trip_media").delete().eq("id", media_id).execute()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 # ============================================================================
@@ -338,9 +539,9 @@ def review_trip(trip_id):
     """Mark trip as reviewed"""
     db = get_service_client()
     user = current_user()
-    
+
     review_notes = request.form.get("review_notes", "").strip()
-    
+
     try:
         db.table("academic_trips").update({
             "status": "reviewed",
@@ -348,11 +549,11 @@ def review_trip(trip_id):
             "reviewed_at": datetime.now().isoformat(),
             "review_notes": review_notes
         }).eq("id", trip_id).execute()
-        
+
         flash("Trip report reviewed successfully.", "success")
     except Exception as e:
         flash(f"Error reviewing trip: {str(e)}", "error")
-    
+
     return redirect(url_for("academic_trips.view_trip", trip_id=trip_id))
 
 
@@ -362,23 +563,24 @@ def delete_trip(trip_id):
     """Delete trip (only by uploader or super admin)"""
     db = get_service_client()
     user = current_user()
-    
+
     trip = db.table("academic_trips").select("*").eq("id", trip_id).single().execute().data
     if not trip:
         return jsonify({"success": False, "message": "Trip not found"}), 404
-    
-    # Check permission
+
     if user["id"] != trip["uploaded_by"] and user.get("role") != "super_admin":
         return jsonify({"success": False, "message": "Access denied"}), 403
-    
+
     try:
-        # Delete media files from storage (implement based on your storage solution)
         media = db.table("academic_trip_media").select("*").eq("trip_id", trip_id).execute().data or []
-        # TODO: Delete files from Supabase storage
-        
-        # Delete trip (cascade will delete media records)
+        paths = [m["file_path"] for m in media if m.get("file_path") and not str(m["file_path"]).startswith("http")]
+        if paths:
+            try:
+                db.storage.from_(TRIP_MEDIA_BUCKET).remove(paths)
+            except Exception:
+                pass
+
         db.table("academic_trips").delete().eq("id", trip_id).execute()
-        
         return jsonify({"success": True, "message": "Trip deleted successfully"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
