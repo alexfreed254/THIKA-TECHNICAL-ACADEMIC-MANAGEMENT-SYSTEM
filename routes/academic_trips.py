@@ -49,6 +49,94 @@ def _safe_filename(name: str) -> str:
     return name[:120] or "file"
 
 
+def _classify_media_file(f):
+    """Return (file_type, content_type) or (None, error_message)."""
+    ctype = (f.content_type or "").lower()
+    if ctype.startswith("image/"):
+        return "photo", ctype
+    if ctype.startswith("video/"):
+        return "video", ctype
+    ext = (f.filename.rsplit(".", 1)[-1] if f.filename and "." in f.filename else "").lower()
+    if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp"):
+        return "photo", ctype or f"image/{ext}"
+    if ext in ("mp4", "mov", "avi", "webm", "mkv"):
+        return "video", ctype or f"video/{ext}"
+    return None, f"{f.filename}: unsupported type (use photo or video)"
+
+
+def _store_trip_media_files(db, trip_id, files, captions=None):
+    """
+    Upload photo/video files to Supabase Storage and insert academic_trip_media rows.
+    Returns (uploaded_list, errors_list).
+    """
+    captions = captions or []
+    existing = (
+        db.table("academic_trip_media")
+        .select("sequence_order")
+        .eq("trip_id", trip_id)
+        .order("sequence_order", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    next_seq = (existing[0]["sequence_order"] + 1) if existing else 0
+
+    uploaded, errors = [], []
+    for idx, f in enumerate(files):
+        if not f or not getattr(f, "filename", None):
+            continue
+        try:
+            raw = f.read()
+            if not raw:
+                errors.append(f"{f.filename}: empty file")
+                continue
+            if len(raw) > MAX_MEDIA_BYTES:
+                errors.append(f"{f.filename}: exceeds 50MB limit")
+                continue
+
+            file_type, ctype_or_err = _classify_media_file(f)
+            if not file_type:
+                errors.append(ctype_or_err)
+                continue
+            ctype = ctype_or_err
+
+            safe = _safe_filename(f.filename)
+            storage_path = f"{trip_id}/{uuid.uuid4().hex}_{safe}"
+            db.storage.from_(TRIP_MEDIA_BUCKET).upload(
+                path=storage_path,
+                file=raw,
+                file_options={
+                    "content-type": ctype or "application/octet-stream",
+                    "content-disposition": "inline",
+                },
+            )
+
+            caption = captions[idx] if idx < len(captions) else ""
+            caption = (caption or "").strip() or None
+
+            row = {
+                "trip_id": trip_id,
+                "file_path": storage_path,
+                "file_name": f.filename,
+                "file_size": len(raw),
+                "file_type": file_type,
+                "caption": caption,
+                "sequence_order": next_seq,
+            }
+            next_seq += 1
+            inserted = db.table("academic_trip_media").insert(row).execute().data or []
+            if inserted:
+                inserted[0]["public_url"] = _supabase_public_url(storage_path)
+                uploaded.append(inserted[0])
+            else:
+                uploaded.append({**row, "public_url": _supabase_public_url(storage_path)})
+        except Exception as e:
+            errors.append(f"{f.filename}: {e}")
+
+    return uploaded, errors
+
+
 # ============================================================================
 # ACCESS CONTROL DECORATORS
 # ============================================================================
@@ -285,9 +373,10 @@ def upload_trip():
             "academic_trips/upload_form.html",
             portal_base=_portal_base(user.get("role")),
             classes=classes,
+            current_year=datetime.now().year,
         )
     
-    # POST: Handle form submission
+    # POST: Handle form submission (+ optional photos/videos)
     try:
         # Get form data - convert to uppercase
         trip_title = request.form.get("trip_title", "").strip().upper()
@@ -343,8 +432,38 @@ def upload_trip():
         
         result = db.table("academic_trips").insert(trip_data).execute()
         trip_id = result.data[0]["id"]
-        
-        flash("Trip report uploaded successfully! You can now add photos/videos.", "success")
+
+        # Optional media uploaded with the report
+        media_files = request.files.getlist("media_files") or []
+        media_files = [f for f in media_files if f and f.filename]
+        uploaded_media, media_errors = [], []
+        if media_files:
+            uploaded_media, media_errors = _store_trip_media_files(db, trip_id, media_files)
+
+        if uploaded_media and not media_errors:
+            flash(
+                f"Trip report uploaded with {len(uploaded_media)} photo/video file(s).",
+                "success",
+            )
+            return redirect(url_for("academic_trips.view_trip", trip_id=trip_id))
+
+        if uploaded_media and media_errors:
+            flash(
+                f"Trip saved with {len(uploaded_media)} media file(s). "
+                f"Some failed: {'; '.join(media_errors[:2])}",
+                "warning",
+            )
+            return redirect(url_for("academic_trips.add_media", trip_id=trip_id))
+
+        if media_errors and not uploaded_media:
+            flash(
+                f"Trip report saved, but media upload failed: {'; '.join(media_errors[:2])}. "
+                "You can retry adding photos/videos below.",
+                "warning",
+            )
+            return redirect(url_for("academic_trips.add_media", trip_id=trip_id))
+
+        flash("Trip report uploaded successfully! You can add photos/videos now.", "success")
         return redirect(url_for("academic_trips.add_media", trip_id=trip_id))
         
     except Exception as e:
@@ -399,79 +518,7 @@ def add_media(trip_id):
         return redirect(url_for("academic_trips.add_media", trip_id=trip_id))
 
     captions = request.form.getlist("captions") or []
-    existing = (db.table("academic_trip_media")
-                  .select("sequence_order")
-                  .eq("trip_id", trip_id)
-                  .order("sequence_order", desc=True)
-                  .limit(1)
-                  .execute().data or [])
-    next_seq = (existing[0]["sequence_order"] + 1) if existing else 0
-
-    uploaded = []
-    errors = []
-
-    for idx, f in enumerate(files):
-        if not f or not f.filename:
-            continue
-        try:
-            raw = f.read()
-            if not raw:
-                errors.append(f"{f.filename}: empty file")
-                continue
-            if len(raw) > MAX_MEDIA_BYTES:
-                errors.append(f"{f.filename}: exceeds 50MB limit")
-                continue
-
-            ctype = (f.content_type or "").lower()
-            if ctype.startswith("image/"):
-                file_type = "photo"
-            elif ctype.startswith("video/"):
-                file_type = "video"
-            else:
-                # Fallback by extension
-                ext = (f.filename.rsplit(".", 1)[-1] if "." in f.filename else "").lower()
-                if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp"):
-                    file_type = "photo"
-                    ctype = ctype or f"image/{ext}"
-                elif ext in ("mp4", "mov", "avi", "webm", "mkv"):
-                    file_type = "video"
-                    ctype = ctype or f"video/{ext}"
-                else:
-                    errors.append(f"{f.filename}: unsupported type")
-                    continue
-
-            safe = _safe_filename(f.filename)
-            storage_path = f"{trip_id}/{uuid.uuid4().hex}_{safe}"
-            db.storage.from_(TRIP_MEDIA_BUCKET).upload(
-                path=storage_path,
-                file=raw,
-                file_options={
-                    "content-type": ctype or "application/octet-stream",
-                    "content-disposition": "inline",
-                },
-            )
-
-            caption = captions[idx] if idx < len(captions) else request.form.get("caption", "")
-            caption = (caption or "").strip() or None
-
-            row = {
-                "trip_id": trip_id,
-                "file_path": storage_path,
-                "file_name": f.filename,
-                "file_size": len(raw),
-                "file_type": file_type,
-                "caption": caption,
-                "sequence_order": next_seq,
-            }
-            next_seq += 1
-            inserted = db.table("academic_trip_media").insert(row).execute().data or []
-            if inserted:
-                inserted[0]["public_url"] = _supabase_public_url(storage_path)
-                uploaded.append(inserted[0])
-            else:
-                uploaded.append({**row, "public_url": _supabase_public_url(storage_path)})
-        except Exception as e:
-            errors.append(f"{f.filename}: {e}")
+    uploaded, errors = _store_trip_media_files(db, trip_id, files, captions)
 
     wants_json = (
         request.accept_mimetypes.best == "application/json"

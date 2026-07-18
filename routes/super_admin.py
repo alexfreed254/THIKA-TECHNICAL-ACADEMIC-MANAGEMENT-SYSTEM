@@ -100,6 +100,8 @@ def setup_profile():
 @super_admin_bp.route("/dashboard")
 @super_admin_required
 def dashboard():
+    from stats_utils import count_table, clearance_kpi, exact_count, count_status_map
+
     db = _svc()
     stats = {}
     recent_assessments = []
@@ -108,31 +110,40 @@ def dashboard():
     dept_stats = []
 
     try:
-        # ── Core counts ──────────────────────────────────────────────────────
-        stats['departments']  = db.table("departments").select("id", count="exact").execute().count or 0
-        stats['classes']      = db.table("classes").select("id", count="exact").execute().count or 0
-        stats['units']        = db.table("units").select("id", count="exact").execute().count or 0
-        stats['attendance']   = db.table("attendance").select("id", count="exact").execute().count or 0
-        stats['assessments']  = db.table("assessments").select("id", count="exact").execute().count or 0
-
-        # ── Role breakdown ────────────────────────────────────────────────────
-        all_users = db.table("user_profiles").select("role").execute().data or []
-        stats['users']       = len(all_users)
-        stats['dept_admins'] = sum(1 for u in all_users if u['role'] == 'dept_admin')
-        stats['trainers']    = sum(1 for u in all_users if u['role'] == 'trainer')
-        stats['students']    = sum(1 for u in all_users if u['role'] == 'student')
+        # ── Core counts (exact) ───────────────────────────────────────────────
+        stats['departments']  = count_table(db, "departments")
+        stats['classes']      = count_table(db, "classes")
+        stats['units']        = count_table(db, "units")
+        stats['attendance']   = count_table(db, "attendance")
+        stats['assessments']  = count_table(db, "assessments")
+        stats['users']        = count_table(db, "user_profiles")
+        stats['dept_admins']  = count_table(db, "user_profiles", role="dept_admin")
+        stats['trainers']     = count_table(db, "user_profiles", role="trainer")
+        stats['students']     = count_table(db, "user_profiles", role="student")
 
         # ── Assessment status breakdown ───────────────────────────────────────
-        all_assess = db.table("assessments").select("status").execute().data or []
-        stats['pending']  = sum(1 for a in all_assess if a['status'] == 'pending')
-        stats['approved'] = sum(1 for a in all_assess if a['status'] == 'approved')
-        stats['rejected'] = sum(1 for a in all_assess if a['status'] == 'rejected')
+        stats['pending']  = count_table(db, "assessments", status="pending")
+        stats['approved'] = count_table(db, "assessments", status="approved")
+        stats['rejected'] = count_table(db, "assessments", status="rejected")
 
         # ── Clearance counts ──────────────────────────────────────────────────
-        all_cl = db.table("clearance_requests").select("status").execute().data or []
-        stats['clearances']           = len(all_cl)
-        stats['clearances_pending']   = sum(1 for c in all_cl if c['status'] in ('pending','in_progress'))
-        stats['clearances_completed'] = sum(1 for c in all_cl if c['status'] == 'completed')
+        cl = clearance_kpi(db)
+        stats['clearances']           = cl['total']
+        stats['clearances_pending']   = cl['pending']
+        stats['clearances_completed'] = cl['completed']
+        stats['clearances_returned']  = cl['returned']
+
+        # ── Academic trips / summative ────────────────────────────────────────
+        try:
+            stats['trips_total']   = count_table(db, "academic_trips")
+            stats['trips_pending'] = count_table(db, "academic_trips", status="submitted")
+        except Exception:
+            stats['trips_total'] = stats['trips_pending'] = 0
+        try:
+            stats['summative_nyc'] = count_table(db, "summative_competences", competence="not_yet_competent")
+            stats['summative_total'] = count_table(db, "summative_competences")
+        except Exception:
+            stats['summative_nyc'] = stats['summative_total'] = 0
 
         # ── Recent assessments ────────────────────────────────────────────────
         recent_assessments = (
@@ -152,10 +163,10 @@ def dashboard():
         depts = db.table("departments").select("id, name").order("name").execute().data or []
         for d in depts:
             did = d["id"]
-            cc = db.table("classes").select("id", count="exact").eq("department_id", did).execute().count or 0
-            sc = db.table("user_profiles").select("id", count="exact").eq("department_id", did).eq("role", "student").execute().count or 0
-            tc = db.table("user_profiles").select("id", count="exact").eq("department_id", did).eq("role", "trainer").execute().count or 0
-            uc = db.table("units").select("id", count="exact").eq("department_id", did).execute().count or 0
+            cc = count_table(db, "classes", department_id=did)
+            sc = count_table(db, "user_profiles", department_id=did, role="student")
+            tc = count_table(db, "user_profiles", department_id=did, role="trainer")
+            uc = count_table(db, "units", department_id=did)
             dept_stats.append({"id": did, "name": d["name"],
                                "class_count": cc, "student_count": sc,
                                "trainer_count": tc, "unit_count": uc})
@@ -167,35 +178,45 @@ def dashboard():
             .order("created_at", desc=True).limit(10).execute().data or []
         )
 
-        # ── Analytics: 7-day attendance trend (system-wide) ───────────────────
+        # ── Analytics: 7-day attendance trend (exact per day) ─────────────────
         trend_labels, trend_present, trend_absent = [], [], []
         for i in range(6, -1, -1):
             day = (date.today() - timedelta(days=i)).isoformat()
             trend_labels.append(day[5:])
-            day_rows = db.table("attendance").select("status").eq("attendance_date", day).execute().data or []
-            trend_present.append(sum(1 for r in day_rows if r.get("status") == "present"))
-            trend_absent.append(sum(1 for r in day_rows if r.get("status") != "present"))
+            present_n = exact_count(
+                db.table("attendance").select("id", count="exact")
+                .eq("attendance_date", day).eq("status", "present")
+            )
+            total_n = exact_count(
+                db.table("attendance").select("id", count="exact")
+                .eq("attendance_date", day)
+            )
+            trend_present.append(present_n)
+            trend_absent.append(max(0, total_n - present_n))
 
-        # ── Analytics: Industrial attachments system-wide ─────────────────────
-        ia_rows = db.table("industrial_attachments").select("status").execute().data or []
-        ia_stats = {"pending": 0, "approved": 0, "active": 0, "completed": 0, "rejected": 0, "terminated": 0}
-        for r in ia_rows:
-            s = r.get("status", "pending")
-            ia_stats[s] = ia_stats.get(s, 0) + 1
+        # ── Analytics: Industrial attachments ─────────────────────────────────
+        ia_stats = count_status_map(
+            db, "industrial_attachments",
+            ("pending", "approved", "active", "completed", "rejected", "terminated"),
+        )
+        for k in ("pending", "approved", "active", "completed", "rejected", "terminated"):
+            ia_stats.setdefault(k, 0)
 
-        # ── Analytics: Course applications system-wide ────────────────────────
-        ca_rows = db.table("course_applications").select("status").execute().data or []
-        ca_stats = {"pending": 0, "approved": 0, "rejected": 0}
-        for r in ca_rows:
-            s = r.get("status", "pending")
-            ca_stats[s] = ca_stats.get(s, 0) + 1
+        # ── Analytics: Course applications ────────────────────────────────────
+        ca_stats = count_status_map(
+            db, "course_applications", ("pending", "approved", "rejected"),
+        )
+        for k in ("pending", "approved", "rejected"):
+            ca_stats.setdefault(k, 0)
 
-        # ── Analytics: Assessment types breakdown ─────────────────────────────
-        typed_rows = db.table("assessments").select("assessment_type").execute().data or []
+        # ── Analytics: Assessment types (sample via limited scan is OK for chart;
+        #    prefer distinct if available — fall back to capped select for labels) ─
+        typed_rows = db.table("assessments").select("assessment_type").limit(5000).execute().data or []
         atype_map = {}
         for r in typed_rows:
             t = r.get("assessment_type") or "Other"
             atype_map[t] = atype_map.get(t, 0) + 1
+        # Scale note: if assessments > 5000, type chart is approximate; KPIs above are exact
         atype_labels = list(atype_map.keys())
         atype_counts = [atype_map[t] for t in atype_labels]
 
@@ -205,11 +226,22 @@ def dashboard():
         dept_chart_trainers = [d["trainer_count"] for d in dept_stats]
         dept_chart_classes  = [d["class_count"] for d in dept_stats]
 
-        # ── Analytics: User role breakdown ────────────────────────────────────
+        # ── Analytics: User role breakdown (exact per known role) ─────────────
+        known_roles = [
+            "super_admin", "dept_admin", "trainer", "student", "workshop_technician",
+            "examination_officer", "registrar", "deputy_principal",
+            "quality_assurance_officer", "liaison_officer", "cdacc_verifier",
+            "library_hod", "sports_hod", "service_clearance_officer",
+        ]
         role_map = {}
-        for u in all_users:
-            r = u.get("role", "other")
-            role_map[r] = role_map.get(r, 0) + 1
+        for role in known_roles:
+            n = count_table(db, "user_profiles", role=role)
+            if n:
+                role_map[role] = n
+        # Catch any other roles not listed
+        other = stats['users'] - sum(role_map.values())
+        if other > 0:
+            role_map["other"] = other
 
     except Exception as e:
         flash(f'Error loading dashboard: {e}', 'danger')

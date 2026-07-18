@@ -174,17 +174,36 @@ def dashboard():
     try:
         assigned_unit_ids = _trainer_assigned_unit_ids(db)
 
-        # ── Assessment stats ───────────────────────────────────────────────────
-        if assigned_unit_ids:
-            all_a = (db.table("assessments").select("status")
-                     .in_("unit_id", assigned_unit_ids).execute().data or [])
-        else:
-            all_a = []  # No units assigned — nothing to show (avoids UUID "none" error)
+        # ── Assessment stats (exact counts) ────────────────────────────────────
+        from stats_utils import count_in, count_table, exact_count
 
-        stats["total"]    = len(all_a)
-        stats["pending"]  = sum(1 for a in all_a if a["status"] == "pending")
-        stats["approved"] = sum(1 for a in all_a if a["status"] == "approved")
-        stats["rejected"] = sum(1 for a in all_a if a["status"] == "rejected")
+        if assigned_unit_ids:
+            stats["total"]    = count_in(db, "assessments", "unit_id", assigned_unit_ids)
+            stats["pending"]  = count_in(db, "assessments", "unit_id", assigned_unit_ids, status="pending")
+            stats["approved"] = count_in(db, "assessments", "unit_id", assigned_unit_ids, status="approved")
+            stats["rejected"] = count_in(db, "assessments", "unit_id", assigned_unit_ids, status="rejected")
+        else:
+            stats["total"] = stats["pending"] = stats["approved"] = stats["rejected"] = 0
+
+        # Trips uploaded by this trainer + pending clearance approvals
+        try:
+            stats["trips_uploaded"] = count_table(db, "academic_trips", uploaded_by=user["id"])
+        except Exception:
+            stats["trips_uploaded"] = 0
+        try:
+            stats["clearance_pending"] = exact_count(
+                db.table("clearance_approvals").select("id", count="exact")
+                .eq("approver_id", user["id"]).eq("status", "pending")
+            )
+        except Exception:
+            stats["clearance_pending"] = 0
+        try:
+            stats["summative_nyc"] = count_in(
+                db, "summative_competences", "unit_id", assigned_unit_ids or [],
+                competence="not_yet_competent",
+            ) if assigned_unit_ids else 0
+        except Exception:
+            stats["summative_nyc"] = 0
 
         # ── Pending assessments (for table) ───────────────────────────────────
         if assigned_unit_ids:
@@ -218,18 +237,24 @@ def dashboard():
             att_unit_present  = [att_map[u]["present"] for u in att_unit_labels]
             att_unit_absent   = [att_map[u]["absent"]  for u in att_unit_labels]
 
-        # ── Analytics: 7-day attendance trend ─────────────────────────────────
+        # ── Analytics: 7-day attendance trend (exact) ─────────────────────────
         for i in range(6, -1, -1):
             day = (date.today() - timedelta(days=i)).isoformat()
             trend_labels.append(day[5:])
             if assigned_unit_ids:
-                day_rows = (db.table("attendance")
-                            .select("status")
-                            .in_("unit_id", assigned_unit_ids)
-                            .eq("attendance_date", day)
-                            .execute().data or [])
-                trend_present.append(sum(1 for r in day_rows if r.get("status") == "present"))
-                trend_absent.append(sum(1 for r in day_rows if r.get("status") != "present"))
+                present_n = total_n = 0
+                for ci in range(0, len(assigned_unit_ids), 100):
+                    chunk = assigned_unit_ids[ci:ci + 100]
+                    present_n += exact_count(
+                        db.table("attendance").select("id", count="exact")
+                        .in_("unit_id", chunk).eq("attendance_date", day).eq("status", "present")
+                    )
+                    total_n += exact_count(
+                        db.table("attendance").select("id", count="exact")
+                        .in_("unit_id", chunk).eq("attendance_date", day)
+                    )
+                trend_present.append(present_n)
+                trend_absent.append(max(0, total_n - present_n))
             else:
                 trend_present.append(0)
                 trend_absent.append(0)

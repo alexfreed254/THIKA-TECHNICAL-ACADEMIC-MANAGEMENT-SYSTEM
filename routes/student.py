@@ -196,15 +196,18 @@ def dashboard():
                 unit_map[uid]["last_update"] = dt
         attendance_data = list(unit_map.values())
         
-        # Calculate attendance stats
-        all_attendance = (db.table("attendance")
-                         .select("status")
+        # Calculate attendance stats with exact counts
+        total_records = (db.table("attendance")
+                         .select("id", count="exact")
                          .eq("student_id", student_id)
-                         .execute().data or [])
-        total_attended = sum(1 for a in all_attendance if a.get('status') == 'present')
-        total_records = len(all_attendance)
+                         .execute().count or 0)
+        total_attended = (db.table("attendance")
+                          .select("id", count="exact")
+                          .eq("student_id", student_id)
+                          .eq("status", "present")
+                          .execute().count or 0)
         overall_pct = round((total_attended / total_records * 100), 1) if total_records > 0 else 0
-        
+
         stats['attendance_total'] = total_records
         stats['attendance_percent'] = overall_pct
 
@@ -306,8 +309,7 @@ def dashboard():
             elif status == 'pending':
                 attachment_stats['pending'] += 1
         
-        # Get recent logbook entries (last 5)
-        # digital_logbook has no FK to units, so we only select its own columns
+        # Get recent logbook entries (last 5 for display) + exact total count
         if current_attachment:
             recent_logbook_entries = (db.table("digital_logbook")
                                      .select("*")
@@ -316,18 +318,56 @@ def dashboard():
                                      .order("log_date", desc=True)
                                      .limit(5)
                                      .execute().data or [])
-        
+            logbook_total = (db.table("digital_logbook")
+                             .select("id", count="exact")
+                             .eq("student_id", student_id)
+                             .eq("attachment_id", current_attachment["id"])
+                             .execute().count or 0)
+        else:
+            logbook_total = (db.table("digital_logbook")
+                             .select("id", count="exact")
+                             .eq("student_id", student_id)
+                             .execute().count or 0)
+
         # Get pending competencies count
         pending_competencies = (db.table("competency_tracking")
                                .select("id", count="exact")
                                .eq("student_id", student_id)
                                .eq("competency_status", "NYC")
                                .execute().count or 0)
-        
+
+        # Summative NYC (if table exists)
+        try:
+            stats['summative_nyc'] = (db.table("summative_competences")
+                                      .select("id", count="exact")
+                                      .eq("student_id", student_id)
+                                      .eq("competence", "not_yet_competent")
+                                      .execute().count or 0)
+        except Exception:
+            stats['summative_nyc'] = 0
+
+        # Active clearance status
+        try:
+            cl = (db.table("clearance_requests")
+                    .select("id, status, stage")
+                    .eq("student_id", student_id)
+                    .order("created_at", desc=True)
+                    .limit(1)
+                    .execute().data or [])
+            if cl:
+                stats['clearance_status'] = cl[0].get("status", "")
+                stats['clearance_stage'] = cl[0].get("stage", 1)
+            else:
+                stats['clearance_status'] = ""
+                stats['clearance_stage'] = 0
+        except Exception:
+            stats['clearance_status'] = ""
+            stats['clearance_stage'] = 0
+
         # Add attachment stats to main stats
         stats['attachment_active'] = attachment_stats['active']
         stats['attachment_total'] = attachment_stats['total']
-        stats['logbook_entries'] = len(recent_logbook_entries)
+        stats['logbook_entries'] = logbook_total
         stats['pending_competencies'] = pending_competencies
         
     except Exception as e:

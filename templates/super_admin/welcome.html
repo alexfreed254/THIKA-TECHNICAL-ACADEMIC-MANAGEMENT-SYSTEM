@@ -186,6 +186,16 @@
       <div class="s-info"><h3>Clearances</h3><p>{{ stats.get('clearances',0) }}</p></div>
     </div>
 
+    <div class="s-card" style="--accent:linear-gradient(90deg,#0f766e,#2dd4bf);cursor:pointer" onclick="location.href='/academic-trips'">
+      <div class="s-icon" style="background:linear-gradient(135deg,#0f766e,#115e59)"><i class="fas fa-bus"></i></div>
+      <div class="s-info"><h3>Trip Reports</h3><p>{{ stats.get('trips_total',0) }}</p></div>
+    </div>
+
+    <div class="s-card" style="--accent:linear-gradient(90deg,#b45309,#fbbf24);cursor:pointer" onclick="location.href='/summative/'">
+      <div class="s-icon" style="background:linear-gradient(135deg,#b45309,#92400e)"><i class="fas fa-award"></i></div>
+      <div class="s-info"><h3>Summative NYC</h3><p>{{ stats.get('summative_nyc',0) }}</p></div>
+    </div>
+
   </div>
 
   <!-- ── Quick Actions ─── -->

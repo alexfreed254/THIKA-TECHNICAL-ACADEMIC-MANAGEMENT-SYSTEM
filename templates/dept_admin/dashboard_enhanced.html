@@ -205,6 +205,25 @@ table.dash-table tr:hover td{background:#f8fafc}
       <div class="kpi-label">Attachments</div>
     </div>
 
+    <div class="kpi cyan" style="cursor:pointer" onclick="location.href='/academic-trips'">
+      {% if stats.trips_pending and stats.trips_pending > 0 %}
+      <span class="kpi-badge">{{ stats.trips_pending }}</span>
+      {% endif %}
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-bus"></i></div>
+        <div class="kpi-val">{{ stats.trips_total or 0 }}</div>
+      </div>
+      <div class="kpi-label">Trip Reports</div>
+    </div>
+
+    <div class="kpi indigo" style="cursor:pointer" onclick="location.href='/summative/'">
+      <div class="kpi-top">
+        <div class="kpi-icon"><i class="fas fa-award"></i></div>
+        <div class="kpi-val">{{ stats.summative_nyc or 0 }}</div>
+      </div>
+      <div class="kpi-label">Summative NYC</div>
+    </div>
+
   </div>
 
   <!-- ── Row 1: Assessment + Applications + Clearance donuts ── -->

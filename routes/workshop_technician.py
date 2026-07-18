@@ -58,15 +58,55 @@ def dashboard():
 
     pending_clearances = 0
     try:
-        pending_clearances = len(
-            db.table("clearance_approvals")
-            .select("id")
-            .eq("approver_id", user["id"])
-            .eq("status", "pending")
-            .execute().data or []
+        from stats_utils import exact_count
+        # Assigned to this technician
+        assigned_pending = exact_count(
+            db.table("clearance_approvals").select("id", count="exact")
+            .eq("approver_id", user["id"]).eq("status", "pending")
         )
+        # Unassigned tech_1 / tech_2 claimable for home-dept students
+        unassigned = 0
+        try:
+            null_rows = (
+                db.table("clearance_approvals")
+                .select(
+                    "id, approver_category, "
+                    "clearance_requests!inner(status, department_id)"
+                )
+                .is_("approver_id", "null")
+                .eq("status", "pending")
+                .in_("approver_category", ["tech_1", "tech_2"])
+                .execute()
+                .data
+                or []
+            )
+            for row in null_rows:
+                req = row.get("clearance_requests") or {}
+                if req.get("status") in ("completed", "rejected", "returned"):
+                    continue
+                if dept_id and req.get("department_id") and req.get("department_id") != dept_id:
+                    continue
+                unassigned += 1
+        except Exception:
+            unassigned = 0
+        pending_clearances = assigned_pending + unassigned
     except Exception:
         pass
+
+    # Prefer exact inventory counts when possible
+    if dept_id:
+        try:
+            from stats_utils import exact_count, count_table
+            inv_total = count_table(db, "workshop_inventory", department_id=dept_id)
+            # low / damaged still need row scan (quantity/condition filters)
+            inv_rows = (db.table("workshop_inventory")
+                        .select("id, condition, quantity")
+                        .eq("department_id", dept_id)
+                        .execute().data or [])
+            inv_low     = sum(1 for i in inv_rows if (i.get("quantity") or 0) < 3)
+            inv_damaged = sum(1 for i in inv_rows if i.get("condition") in ("poor", "damaged"))
+        except Exception:
+            pass
 
     return render_template(
         "workshop_technician/dashboard.html",

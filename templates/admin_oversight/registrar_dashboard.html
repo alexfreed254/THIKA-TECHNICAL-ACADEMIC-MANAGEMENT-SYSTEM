@@ -71,14 +71,14 @@
   <div class="request-card">
     <div class="request-header">
       <div class="request-info">
-        <h4>{{ req.user_profiles.full_name }} ({{ req.user_profiles.admission_no }})</h4>
-        <p>{{ req.courses.name }} - {{ req.departments.name }}</p>
+        <h4>{{ req.full_name or 'Applicant' }}{% if req.phone %} ({{ req.phone }}){% endif %}</h4>
+        <p>{{ req.course_name or '—' }}{% if req.departments %} — {{ req.departments.name }}{% endif %}</p>
       </div>
       <span class="status-badge status-pending">Pending</span>
     </div>
     <div style="font-size: 12px; color: #666;">
-      <p>Email: {{ req.user_profiles.email }}</p>
-      <p>Submitted: {{ req.submitted_at | to_eat }}</p>
+      <p>Email: {{ req.email or '—' }}</p>
+      <p>Submitted: {{ (req.created_at or '')[:10] }}</p>
     </div>
   </div>
   {% else %}

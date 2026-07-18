@@ -6,8 +6,107 @@ Provides read-only access to all departmental activities with filtering capabili
 from flask import Blueprint, render_template, request
 from auth_utils import login_required, registrar_required, deputy_principal_required, quality_assurance_officer_required, current_user
 from db import get_service_client
+from stats_utils import count_table, exact_count, clearance_kpi
 
 admin_oversight_bp = Blueprint('admin_oversight', __name__)
+
+
+def _oversight_core_stats(db, department_filter="", *, include_trainers=False, include_certs=False):
+    """Realtime exact KPI counts shared by oversight dashboards."""
+    dept_kw = {"department_id": department_filter} if department_filter else {}
+    stats = {
+        "total_students": count_table(db, "user_profiles", role="student", **dept_kw),
+        "total_courses": count_table(db, "courses", **dept_kw),
+        "pending_admissions": 0,
+        "pending_clearances": 0,
+        "completed_clearances": 0,
+    }
+    if include_trainers:
+        stats["total_trainers"] = count_table(db, "user_profiles", role="trainer", **dept_kw)
+
+    cl = clearance_kpi(db, department_id=department_filter or None)
+    stats["pending_clearances"] = cl["pending"]
+    stats["completed_clearances"] = cl["completed"]
+
+    try:
+        q = db.table("course_applications").select("id", count="exact").eq("status", "pending")
+        if department_filter:
+            q = q.eq("department_id", department_filter)
+        stats["pending_admissions"] = exact_count(q)
+    except Exception:
+        stats["pending_admissions"] = 0
+
+    if include_certs:
+        q = db.table("clearance_requests").select("id", count="exact").eq("certificate_issued", True)
+        if department_filter:
+            q = q.eq("department_id", department_filter)
+        stats["certificates_issued"] = exact_count(q)
+
+    return stats
+
+
+def _pending_admissions_list(db, department_filter="", limit=20):
+    try:
+        q = (
+            db.table("course_applications")
+            .select("*, departments(name)")
+            .eq("status", "pending")
+            .order("created_at", desc=True)
+            .limit(limit)
+        )
+        if department_filter:
+            q = q.eq("department_id", department_filter)
+        return q.execute().data or []
+    except Exception:
+        return []
+
+
+def _clearance_lists(db, department_filter=""):
+    pending_q = (
+        db.table("clearance_requests")
+        .select(
+            "*, departments(name), courses(name), "
+            "user_profiles:user_profiles!clearance_requests_student_id_fkey(full_name, admission_no)"
+        )
+        .in_("status", ["pending", "in_progress", "returned"])
+        .order("created_at", desc=True)
+        .limit(50)
+    )
+    completed_q = (
+        db.table("clearance_requests")
+        .select(
+            "*, departments(name), courses(name), "
+            "user_profiles:user_profiles!clearance_requests_student_id_fkey(full_name, admission_no)"
+        )
+        .eq("status", "completed")
+        .order("created_at", desc=True)
+        .limit(50)
+    )
+    if department_filter:
+        pending_q = pending_q.eq("department_id", department_filter)
+        completed_q = completed_q.eq("department_id", department_filter)
+    try:
+        return pending_q.execute().data or [], completed_q.execute().data or []
+    except Exception:
+        # Fallback without FK alias
+        pending_q = (
+            db.table("clearance_requests")
+            .select("*, departments(name)")
+            .in_("status", ["pending", "in_progress", "returned"])
+            .order("created_at", desc=True)
+            .limit(50)
+        )
+        completed_q = (
+            db.table("clearance_requests")
+            .select("*, departments(name)")
+            .eq("status", "completed")
+            .order("created_at", desc=True)
+            .limit(50)
+        )
+        if department_filter:
+            pending_q = pending_q.eq("department_id", department_filter)
+            completed_q = completed_q.eq("department_id", department_filter)
+        return pending_q.execute().data or [], completed_q.execute().data or []
 
 
 # ── Registrar Dashboard ─────────────────────────────────────────────────────
@@ -18,61 +117,20 @@ admin_oversight_bp = Blueprint('admin_oversight', __name__)
 def registrar_dashboard():
     """Registrar dashboard with read-only access to all departments."""
     db = get_service_client()
-    
-    # Get filter parameters
     department_filter = request.args.get('department', '')
-    
-    # Get all departments
-    departments = (db.table("departments")
-                  .select("*")
-                  .execute().data or [])
-    
-    # Get statistics across all departments
-    stats = {
-        'total_students': 0,
-        'total_courses': 0,
-        'pending_clearances': 0,
-        'completed_clearances': 0
-    }
-    
-    # Build query for students
-    students_query = db.table("user_profiles").select("*").eq("role", "student")
-    if department_filter:
-        students_query = students_query.eq("department_id", department_filter)
-    students = students_query.execute().data or []
-    stats['total_students'] = len(students)
-    
-    # Build query for courses
-    courses_query = db.table("courses").select("*")
-    if department_filter:
-        courses_query = courses_query.eq("department_id", department_filter)
-    courses = courses_query.execute().data or []
-    stats['total_courses'] = len(courses)
 
-    # Build query for pending clearances
-    clearances_query = (db.table("clearance_requests")
-                       .select("*, departments(name)")
-                       .in_("status", ["pending", "in_progress"]))
-    if department_filter:
-        clearances_query = clearances_query.eq("department_id", department_filter)
-    pending_clearances = clearances_query.execute().data or []
-    stats['pending_clearances'] = len(pending_clearances)
-    
-    # Build query for completed clearances
-    completed_clearances_query = (db.table("clearance_requests")
-                                  .select("*, departments(name)")
-                                  .eq("status", "completed"))
-    if department_filter:
-        completed_clearances_query = completed_clearances_query.eq("department_id", department_filter)
-    completed_clearances = completed_clearances_query.execute().data or []
-    stats['completed_clearances'] = len(completed_clearances)
-    
+    departments = db.table("departments").select("*").order("name").execute().data or []
+    stats = _oversight_core_stats(db, department_filter)
+    pending_clearances, completed_clearances = _clearance_lists(db, department_filter)
+    pending_admissions = _pending_admissions_list(db, department_filter)
+
     return render_template("admin_oversight/registrar_dashboard.html",
                           stats=stats,
                           departments=departments,
                           department_filter=department_filter,
                           pending_clearances=pending_clearances,
-                          completed_clearances=completed_clearances)
+                          completed_clearances=completed_clearances,
+                          pending_admissions=pending_admissions)
 
 
 @admin_oversight_bp.route("/registrar/clearances")
@@ -116,73 +174,14 @@ def registrar_clearances():
 def deputy_principal_dashboard():
     """Deputy Principal dashboard with read-only access to all departments."""
     db = get_service_client()
-    
-    # Get filter parameters
     department_filter = request.args.get('department', '')
-    
-    # Get all departments
-    departments = (db.table("departments")
-                  .select("*")
-                  .execute().data or [])
-    
-    # Get statistics across all departments
-    stats = {
-        'total_students': 0,
-        'total_courses': 0,
-        'total_trainers': 0,
-        'pending_clearances': 0,
-        'completed_clearances': 0,
-        'certificates_issued': 0
-    }
-    
-    # Build query for students
-    students_query = db.table("user_profiles").select("*").eq("role", "student")
-    if department_filter:
-        students_query = students_query.eq("department_id", department_filter)
-    students = students_query.execute().data or []
-    stats['total_students'] = len(students)
-    
-    # Build query for courses
-    courses_query = db.table("courses").select("*")
-    if department_filter:
-        courses_query = courses_query.eq("department_id", department_filter)
-    courses = courses_query.execute().data or []
-    stats['total_courses'] = len(courses)
-    
-    # Build query for trainers
-    trainers_query = db.table("user_profiles").select("*").eq("role", "trainer")
-    if department_filter:
-        trainers_query = trainers_query.eq("department_id", department_filter)
-    trainers = trainers_query.execute().data or []
-    stats['total_trainers'] = len(trainers)
-    
-    # Build query for pending clearances
-    clearances_query = (db.table("clearance_requests")
-                       .select("*, departments(name)")
-                       .in_("status", ["pending", "in_progress"]))
-    if department_filter:
-        clearances_query = clearances_query.eq("department_id", department_filter)
-    pending_clearances = clearances_query.execute().data or []
-    stats['pending_clearances'] = len(pending_clearances)
-    
-    # Build query for completed clearances
-    completed_clearances_query = (db.table("clearance_requests")
-                                  .select("*, departments(name)")
-                                  .eq("status", "completed"))
-    if department_filter:
-        completed_clearances_query = completed_clearances_query.eq("department_id", department_filter)
-    completed_clearances = completed_clearances_query.execute().data or []
-    stats['completed_clearances'] = len(completed_clearances)
-    
-    # Count certificates issued
-    certificates_query = (db.table("clearance_requests")
-                         .select("*")
-                         .eq("certificate_issued", True))
-    if department_filter:
-        certificates_query = certificates_query.eq("department_id", department_filter)
-    certificates = certificates_query.execute().data or []
-    stats['certificates_issued'] = len(certificates)
-    
+
+    departments = db.table("departments").select("*").order("name").execute().data or []
+    stats = _oversight_core_stats(
+        db, department_filter, include_trainers=True, include_certs=True
+    )
+    pending_clearances, completed_clearances = _clearance_lists(db, department_filter)
+
     return render_template("admin_oversight/deputy_principal_dashboard.html",
                           stats=stats,
                           departments=departments,
@@ -279,90 +278,44 @@ def deputy_principal_clearances():
 def quality_assurance_dashboard():
     """Quality Assurance Officer dashboard with read-only access and approval rights."""
     db = get_service_client()
-    
-    # Get filter parameters
     department_filter = request.args.get('department', '')
-    
-    # Get all departments
-    departments = (db.table("departments")
-                  .select("*")
-                  .execute().data or [])
-    
-    # Get statistics across all departments
-    stats = {
-        'total_students': 0,
-        'total_courses': 0,
-        'total_trainers': 0,
-        'pending_admissions': 0,
-        'pending_clearances': 0,
-        'completed_clearances': 0,
-        'certificates_issued': 0,
-        'total_assessments': 0,
-        'approved_assessments': 0
-    }
-    
-    # Build query for students
-    students_query = db.table("user_profiles").select("*").eq("role", "student")
-    if department_filter:
-        students_query = students_query.eq("department_id", department_filter)
-    students = students_query.execute().data or []
-    stats['total_students'] = len(students)
-    
-    # Build query for courses
-    courses_query = db.table("courses").select("*")
-    if department_filter:
-        courses_query = courses_query.eq("department_id", department_filter)
-    courses = courses_query.execute().data or []
-    stats['total_courses'] = len(courses)
-    
-    # Build query for trainers
-    trainers_query = db.table("user_profiles").select("*").eq("role", "trainer")
-    if department_filter:
-        trainers_query = trainers_query.eq("department_id", department_filter)
-    trainers = trainers_query.execute().data or []
-    stats['total_trainers'] = len(trainers)
 
-    # Build query for pending clearances
-    clearances_query = (db.table("clearance_requests")
-                       .select("*, departments(name)")
-                       .in_("status", ["pending", "in_progress"]))
-    if department_filter:
-        clearances_query = clearances_query.eq("department_id", department_filter)
-    pending_clearances = clearances_query.execute().data or []
-    stats['pending_clearances'] = len(pending_clearances)
-    
-    # Build query for completed clearances
-    completed_clearances_query = (db.table("clearance_requests")
-                                  .select("*, departments(name)")
-                                  .eq("status", "completed"))
-    if department_filter:
-        completed_clearances_query = completed_clearances_query.eq("department_id", department_filter)
-    completed_clearances = completed_clearances_query.execute().data or []
-    stats['completed_clearances'] = len(completed_clearances)
-    
-    # Count certificates issued
-    certificates_query = (db.table("clearance_requests")
-                         .select("*")
-                         .eq("certificate_issued", True))
-    if department_filter:
-        certificates_query = certificates_query.eq("department_id", department_filter)
-    certificates = certificates_query.execute().data or []
-    stats['certificates_issued'] = len(certificates)
-    
-    # Build query for assessments
-    assessments_query = db.table("assessments").select("*")
-    if department_filter:
-        assessments_query = assessments_query.eq("department_id", department_filter)
-    assessments = assessments_query.execute().data or []
-    stats['total_assessments'] = len(assessments)
-    stats['approved_assessments'] = sum(1 for a in assessments if a['status'] == 'approved')
-    
+    departments = db.table("departments").select("*").order("name").execute().data or []
+    stats = _oversight_core_stats(
+        db, department_filter, include_trainers=True, include_certs=True
+    )
+
+    # Assessments via units.department_id (no assessments.department_id column)
+    try:
+        if department_filter:
+            stats["total_assessments"] = exact_count(
+                db.table("assessments")
+                .select("id, units!inner(department_id)", count="exact")
+                .eq("units.department_id", department_filter)
+            )
+            stats["approved_assessments"] = exact_count(
+                db.table("assessments")
+                .select("id, units!inner(department_id)", count="exact")
+                .eq("units.department_id", department_filter)
+                .eq("status", "approved")
+            )
+        else:
+            stats["total_assessments"] = count_table(db, "assessments")
+            stats["approved_assessments"] = count_table(db, "assessments", status="approved")
+    except Exception:
+        stats["total_assessments"] = 0
+        stats["approved_assessments"] = 0
+
+    pending_clearances, completed_clearances = _clearance_lists(db, department_filter)
+    pending_admissions = _pending_admissions_list(db, department_filter)
+
     return render_template("admin_oversight/quality_assurance_dashboard.html",
                           stats=stats,
                           departments=departments,
                           department_filter=department_filter,
                           pending_clearances=pending_clearances,
-                          completed_clearances=completed_clearances)
+                          completed_clearances=completed_clearances,
+                          pending_admissions=pending_admissions)
 
 
 @admin_oversight_bp.route("/quality-assurance/reports")

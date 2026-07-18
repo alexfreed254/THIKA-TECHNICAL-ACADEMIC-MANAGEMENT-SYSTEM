@@ -8,79 +8,89 @@
 .form-card{background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .form-section{margin-bottom:32px}
 .form-section:last-child{margin-bottom:0}
-.section-title{font-size:16px;font-weight:700;color:#1e293b;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e9d5ff}
-.section-title i{color:#7b1fa2;margin-right:8px}
+.section-title{font-size:16px;font-weight:700;color:#1e293b;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+.section-title i{color:#0f2744;margin-right:8px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
 .form-group{margin-bottom:16px}
 .form-group label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px}
 .form-group label .required{color:#dc2626;margin-left:2px}
 .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#7b1fa2;box-shadow:0 0 0 3px rgba(123,31,162,.1)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.12)}
 .form-group textarea{resize:vertical;min-height:100px}
 .form-group .hint{font-size:11px;color:#94a3b8;margin-top:4px}
 .btn{padding:12px 24px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .2s}
-.btn-primary{background:#7b1fa2;color:#fff}
-.btn-primary:hover{background:#6a1b9a}
+.btn-primary{background:#0f2744;color:#fff}
+.btn-primary:hover{background:#1565c0}
 .btn-secondary{background:#f1f5f9;color:#475569}
 .btn-secondary:hover{background:#e2e8f0}
-.form-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:24px;border-top:1px solid #e2e8f0}
+.form-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:24px;border-top:1px solid #e2e8f0;flex-wrap:wrap}
 .uppercase-input{text-transform:uppercase}
 .alert{padding:12px 16px;border-radius:8px;margin-bottom:20px;display:flex;align-items:start;gap:12px}
 .alert-info{background:#dbeafe;color:#1e40af;border-left:4px solid #3b82f6}
 .alert i{margin-top:2px}
+
+/* Media picker */
+.upload-area{
+  border:2px dashed #cbd5e1;border-radius:12px;padding:36px 20px;text-align:center;
+  cursor:pointer;transition:all .2s;background:#f8fafc;
+}
+.upload-area:hover,.upload-area.dragover{border-color:#1565c0;background:#eff6ff}
+.upload-icon{font-size:40px;color:#94a3b8;margin-bottom:12px}
+.upload-area:hover .upload-icon{color:#1565c0}
+.preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:16px}
+.preview-item{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:16/9;background:#e2e8f0;border:1px solid #e2e8f0}
+.preview-item img,.preview-item video{width:100%;height:100%;object-fit:cover}
+.preview-remove{
+  position:absolute;top:6px;right:6px;background:rgba(220,38,38,.92);color:#fff;border:none;
+  width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;
+}
+.preview-name{
+  position:absolute;bottom:0;left:0;right:0;background:rgba(15,39,68,.75);color:#fff;
+  font-size:10px;padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.preview-badge{
+  position:absolute;top:6px;left:6px;padding:2px 7px;border-radius:6px;font-size:9px;font-weight:800;text-transform:uppercase;color:#fff;
+}
+.badge-photo{background:rgba(22,163,74,.9)}
+.badge-video{background:rgba(220,38,38,.9)}
+.media-count{font-size:12px;font-weight:600;color:#475569;margin-top:10px}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-wrap">
-  <!-- Header -->
   <div style="margin-bottom:24px">
-    <a href="{{ url_for('academic_trips.index') }}" style="color:#7b1fa2;text-decoration:none;font-size:13px;font-weight:600">
+    <a href="{{ url_for('academic_trips.index') }}" style="color:#1565c0;text-decoration:none;font-size:13px;font-weight:600">
       <i class="fas fa-arrow-left"></i> Back to Trips
     </a>
     <h1 style="font-size:24px;font-weight:800;color:#1e293b;margin:12px 0 8px 0">Upload New Trip Report</h1>
-    <p style="color:#64748b;margin:0">Fill in the trip details and upload supporting media</p>
+    <p style="color:#64748b;margin:0">Fill in the trip details and attach photos or videos from the trip</p>
   </div>
 
   <div class="alert alert-info">
     <i class="fas fa-info-circle"></i>
     <div>
-      <strong>Important:</strong> Trip title and destination will be automatically converted to CAPITAL LETTERS. Please ensure all information is accurate before submitting.
+      <strong>Important:</strong> Trip title and destination are saved in CAPITAL LETTERS.
+      You can attach photos and videos below (optional) — JPG, PNG, GIF, MP4, MOV, AVI up to 50MB each.
     </div>
   </div>
 
-  <!-- Form -->
-  <form method="post" action="{{ url_for('academic_trips.upload_trip') }}" class="form-card">
-    <!-- Basic Information -->
+  <form method="post" action="{{ url_for('academic_trips.upload_trip') }}"
+        class="form-card" enctype="multipart/form-data" id="tripUploadForm">
+
     <div class="form-section">
-      <h3 class="section-title">
-        <i class="fas fa-info-circle"></i> Basic Information
-      </h3>
-      
+      <h3 class="section-title"><i class="fas fa-info-circle"></i> Basic Information</h3>
       <div class="form-group">
         <label for="trip_title">Trip Title <span class="required">*</span></label>
-        <input 
-          type="text" 
-          id="trip_title" 
-          name="trip_title" 
-          class="uppercase-input" 
-          required 
-          placeholder="e.g., INDUSTRIAL VISIT TO KENYA POWER">
-        <div class="hint">Enter the trip title (will be converted to uppercase)</div>
+        <input type="text" id="trip_title" name="trip_title" class="uppercase-input" required
+               placeholder="e.g., INDUSTRIAL VISIT TO KENYA POWER">
+        <div class="hint">Enter the trip title (converted to uppercase)</div>
       </div>
-      
       <div class="form-group">
         <label for="destination">Destination/Location <span class="required">*</span></label>
-        <input 
-          type="text" 
-          id="destination" 
-          name="destination" 
-          class="uppercase-input" 
-          required 
-          placeholder="e.g., KENYA POWER TRAINING SCHOOL, NAIROBI">
-        <div class="hint">Enter the destination or location (will be converted to uppercase)</div>
+        <input type="text" id="destination" name="destination" class="uppercase-input" required
+               placeholder="e.g., KENYA POWER TRAINING SCHOOL, NAIROBI">
       </div>
-      
       <div class="form-grid">
         <div class="form-group">
           <label for="trip_date">Trip Date <span class="required">*</span></label>
@@ -89,12 +99,8 @@
       </div>
     </div>
 
-    <!-- Academic Details -->
     <div class="form-section">
-      <h3 class="section-title">
-        <i class="fas fa-graduation-cap"></i> Academic Details
-      </h3>
-      
+      <h3 class="section-title"><i class="fas fa-graduation-cap"></i> Academic Details</h3>
       <div class="form-grid">
         <div class="form-group">
           <label for="class_id">Class <span class="required">*</span></label>
@@ -105,7 +111,6 @@
             {% endfor %}
           </select>
         </div>
-        
         <div class="form-group">
           <label for="term">Term <span class="required">*</span></label>
           <select id="term" name="term" required>
@@ -115,96 +120,87 @@
             <option value="3">Term 3</option>
           </select>
         </div>
-        
         <div class="form-group">
           <label for="year">Year <span class="required">*</span></label>
-          <input type="number" id="year" name="year" min="2020" max="2050" value="{{ now().year }}" required>
+          <input type="number" id="year" name="year" min="2020" max="2050"
+                 value="{{ current_year }}" required>
         </div>
       </div>
     </div>
 
-    <!-- Participants -->
     <div class="form-section">
-      <h3 class="section-title">
-        <i class="fas fa-users"></i> Participants
-      </h3>
-      
+      <h3 class="section-title"><i class="fas fa-users"></i> Participants</h3>
       <div class="form-grid">
         <div class="form-group">
           <label for="number_of_trainees">Number of Trainees <span class="required">*</span></label>
-          <input 
-            type="number" 
-            id="number_of_trainees" 
-            name="number_of_trainees" 
-            min="1" 
-            required 
-            placeholder="e.g., 25">
+          <input type="number" id="number_of_trainees" name="number_of_trainees" min="1" required placeholder="e.g., 25">
         </div>
-        
         <div class="form-group">
           <label for="number_of_trainers">Number of Trainers <span class="required">*</span></label>
-          <input 
-            type="number" 
-            id="number_of_trainers" 
-            name="number_of_trainers" 
-            min="1" 
-            required 
-            placeholder="e.g., 3">
+          <input type="number" id="number_of_trainers" name="number_of_trainers" min="1" required placeholder="e.g., 3">
         </div>
       </div>
-      
       <div class="form-group">
         <label for="accompanying_trainers">Accompanying Trainers</label>
-        <input 
-          type="text" 
-          id="accompanying_trainers" 
-          name="accompanying_trainers" 
-          class="uppercase-input" 
-          placeholder="e.g., MR. JOHN DOE, MS. JANE SMITH">
-        <div class="hint">Enter names of trainers who accompanied the trainees (will be converted to uppercase)</div>
+        <input type="text" id="accompanying_trainers" name="accompanying_trainers" class="uppercase-input"
+               placeholder="e.g., MR. JOHN DOE, MS. JANE SMITH">
       </div>
     </div>
 
-    <!-- Report Details -->
     <div class="form-section">
-      <h3 class="section-title">
-        <i class="fas fa-file-alt"></i> Report Details
-      </h3>
-      
+      <h3 class="section-title"><i class="fas fa-file-alt"></i> Report Details</h3>
       <div class="form-group">
         <label for="report_description">Trip Description/Report</label>
-        <textarea 
-          id="report_description" 
-          name="report_description" 
-          placeholder="Provide a detailed description of the trip, activities undertaken, and overall experience..."></textarea>
-        <div class="hint">Describe what happened during the trip</div>
+        <textarea id="report_description" name="report_description"
+                  placeholder="Provide a detailed description of the trip..."></textarea>
       </div>
-      
       <div class="form-group">
         <label for="objectives">Trip Objectives</label>
-        <textarea 
-          id="objectives" 
-          name="objectives" 
-          placeholder="List the objectives of the trip..."></textarea>
-        <div class="hint">What were the goals and learning outcomes?</div>
+        <textarea id="objectives" name="objectives" placeholder="List the objectives of the trip..."></textarea>
       </div>
-      
       <div class="form-group">
         <label for="outcomes">Trip Outcomes/Achievements</label>
-        <textarea 
-          id="outcomes" 
-          name="outcomes" 
-          placeholder="Describe the outcomes, achievements, or lessons learned..."></textarea>
-        <div class="hint">What was accomplished or learned?</div>
+        <textarea id="outcomes" name="outcomes" placeholder="Describe outcomes or lessons learned..."></textarea>
       </div>
     </div>
 
-    <!-- Form Actions -->
+    <!-- Photos & Videos -->
+    <div class="form-section">
+      <h3 class="section-title"><i class="fas fa-camera"></i> Photos &amp; Videos</h3>
+      <p style="font-size:13px;color:#64748b;margin:0 0 14px">
+        Select or drop photographic images and/or video clips from the trip.
+        You can also add more later from the trip details page.
+      </p>
+
+      <div class="upload-area" id="uploadArea" role="button" tabindex="0"
+           aria-label="Select photos or videos to upload">
+        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+        <h3 style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e293b">
+          Drop photos or videos here, or click to browse
+        </h3>
+        <p style="margin:0;color:#64748b;font-size:12px">
+          Photos: JPG, PNG, GIF, WEBP &nbsp;·&nbsp; Videos: MP4, MOV, AVI, WEBM &nbsp;·&nbsp; Max 50MB each
+        </p>
+        <input type="file" id="mediaInput" name="media_files" multiple
+               accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.webm,.mkv"
+               style="display:none">
+      </div>
+
+      <div id="previewWrap" style="display:none">
+        <div class="media-count" id="mediaCount">0 file(s) selected</div>
+        <div class="preview-grid" id="previewGrid"></div>
+        <button type="button" class="btn btn-secondary" style="margin-top:12px;padding:8px 14px;font-size:12px"
+                onclick="clearMedia()">
+          <i class="fas fa-times"></i> Clear selected media
+        </button>
+      </div>
+    </div>
+
     <div class="form-actions">
       <a href="{{ url_for('academic_trips.index') }}" class="btn btn-secondary">
         <i class="fas fa-times"></i> Cancel
       </a>
-      <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" id="submitBtn">
         <i class="fas fa-upload"></i> Upload Trip Report
       </button>
     </div>
@@ -214,18 +210,116 @@
 
 {% block scripts %}
 <script>
-// Auto-uppercase inputs
 document.querySelectorAll('.uppercase-input').forEach(function(input) {
-  input.addEventListener('input', function() {
-    this.value = this.value.toUpperCase();
-  });
+  input.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
 });
 
-// Form validation
-document.querySelector('form').addEventListener('submit', function(e) {
-  const requiredFields = ['trip_title', 'destination', 'trip_date', 'class_id', 'term', 'year', 'number_of_trainees', 'number_of_trainers'];
+const uploadArea = document.getElementById('uploadArea');
+const mediaInput = document.getElementById('mediaInput');
+const previewWrap = document.getElementById('previewWrap');
+const previewGrid = document.getElementById('previewGrid');
+const mediaCount = document.getElementById('mediaCount');
+const MAX_BYTES = 50 * 1024 * 1024;
+
+let selectedFiles = [];
+
+function isValidMedia(file) {
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const okExt = ['jpg','jpeg','png','gif','webp','bmp','mp4','mov','avi','webm','mkv'].includes(ext);
+  return (isImage || isVideo || okExt) && file.size <= MAX_BYTES;
+}
+
+function syncInputFiles() {
+  const dt = new DataTransfer();
+  selectedFiles.forEach(f => dt.items.add(f));
+  mediaInput.files = dt.files;
+}
+
+function renderPreviews() {
+  previewGrid.innerHTML = '';
+  if (!selectedFiles.length) {
+    previewWrap.style.display = 'none';
+    mediaCount.textContent = '0 file(s) selected';
+    return;
+  }
+  previewWrap.style.display = 'block';
+  mediaCount.textContent = selectedFiles.length + ' file(s) selected';
+
+  selectedFiles.forEach(function(file, index) {
+    const item = document.createElement('div');
+    item.className = 'preview-item';
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|avi|webm|mkv)$/i.test(file.name);
+    const badge = isVideo
+      ? '<span class="preview-badge badge-video">Video</span>'
+      : '<span class="preview-badge badge-photo">Photo</span>';
+    const removeBtn = '<button type="button" class="preview-remove" data-idx="' + index + '" title="Remove"><i class="fas fa-times"></i></button>';
+    const name = '<div class="preview-name">' + file.name.replace(/</g,'&lt;') + '</div>';
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      if (isVideo) {
+        item.innerHTML = badge + removeBtn + '<video src="' + e.target.result + '" muted></video>' + name;
+      } else {
+        item.innerHTML = badge + removeBtn + '<img src="' + e.target.result + '" alt="preview">' + name;
+      }
+      item.querySelector('.preview-remove').addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        selectedFiles.splice(parseInt(this.dataset.idx, 10), 1);
+        syncInputFiles();
+        renderPreviews();
+      });
+    };
+    reader.readAsDataURL(file);
+    previewGrid.appendChild(item);
+  });
+}
+
+function addFiles(fileList) {
+  const incoming = Array.from(fileList || []).filter(isValidMedia);
+  if (!incoming.length) {
+    alert('Please select valid photo or video files (max 50MB each).');
+    return;
+  }
+  // Avoid exact duplicates by name+size
+  incoming.forEach(function(f) {
+    const exists = selectedFiles.some(s => s.name === f.name && s.size === f.size);
+    if (!exists) selectedFiles.push(f);
+  });
+  syncInputFiles();
+  renderPreviews();
+}
+
+function clearMedia() {
+  selectedFiles = [];
+  mediaInput.value = '';
+  syncInputFiles();
+  renderPreviews();
+}
+
+uploadArea.addEventListener('click', function() { mediaInput.click(); });
+uploadArea.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); mediaInput.click(); }
+});
+mediaInput.addEventListener('change', function() { addFiles(this.files); });
+
+uploadArea.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  uploadArea.classList.add('dragover');
+});
+uploadArea.addEventListener('dragleave', function() {
+  uploadArea.classList.remove('dragover');
+});
+uploadArea.addEventListener('drop', function(e) {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  addFiles(e.dataTransfer.files);
+});
+
+document.getElementById('tripUploadForm').addEventListener('submit', function(e) {
+  const requiredFields = ['trip_title','destination','trip_date','class_id','term','year','number_of_trainees','number_of_trainers'];
   let valid = true;
-  
   requiredFields.forEach(function(field) {
     const input = document.getElementById(field);
     if (!input.value.trim()) {
@@ -235,11 +329,16 @@ document.querySelector('form').addEventListener('submit', function(e) {
       input.style.borderColor = '#e2e8f0';
     }
   });
-  
   if (!valid) {
     e.preventDefault();
     alert('Please fill in all required fields.');
+    return;
   }
+  // Ensure DataTransfer files are bound before submit
+  syncInputFiles();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';
 });
 </script>
 {% endblock %}

@@ -62,12 +62,25 @@ def dashboard():
         # Fetch unread notifications
         unread_notifications = get_user_notifications(current_user()["id"], unread_only=True, limit=3)
 
-        # Assessments stats filtered by department units at DB level
-        dept_assessments = db.table("assessments").select("status, units!inner(department_id)").eq("units.department_id", dept_id).execute().data or []
-        stats["assessments"] = len(dept_assessments)
-        stats["pending"]     = sum(1 for a in dept_assessments if a["status"] == "pending")
-        stats["approved"]    = sum(1 for a in dept_assessments if a["status"] == "approved")
-        stats["rejected"]    = sum(1 for a in dept_assessments if a["status"] == "rejected")
+        # Assessments stats — exact counts via unit join filters
+        from stats_utils import exact_count, clearance_kpi, attachment_status_counts, count_table
+
+        stats["assessments"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id)
+        )
+        stats["pending"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id).eq("status", "pending")
+        )
+        stats["approved"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id).eq("status", "approved")
+        )
+        stats["rejected"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id).eq("status", "rejected")
+        )
 
         # Course applications
         try:
@@ -130,45 +143,63 @@ def dashboard():
             trend_absent.append(sum(1 for r in day_rows if r.get("status") != "present"))
 
         # ── Analytics: Application status breakdown ───────────────
-        app_rows = (db.table("course_applications")
-                    .select("status")
-                    .eq("department_id", dept_id)
-                    .execute().data or [])
-        app_status = {"pending": 0, "approved": 0, "rejected": 0}
-        for a in app_rows:
-            s = a.get("status", "pending")
-            app_status[s] = app_status.get(s, 0) + 1
+        from stats_utils import count_status_map
+        app_status = count_status_map(
+            db, "course_applications", ("pending", "approved", "rejected"),
+            department_id=dept_id,
+        )
+        for k in ("pending", "approved", "rejected"):
+            app_status.setdefault(k, 0)
 
-        # ── Analytics: Clearance requests ────────────────────────
+        # ── Analytics: Clearance requests (map DB statuses → UI labels) ───
         clearance_stats = {"pending": 0, "approved": 0, "rejected": 0}
         try:
-            cl_rows = (db.table("clearance_requests")
-                       .select("status")
-                       .eq("department_id", dept_id)
-                       .execute().data or [])
-            for c in cl_rows:
-                s = c.get("status", "pending")
-                clearance_stats[s] = clearance_stats.get(s, 0) + 1
+            cl = clearance_kpi(db, department_id=dept_id)
+            clearance_stats = {
+                "pending": cl["pending"],
+                "approved": cl["completed"],
+                "rejected": cl["rejected"],
+            }
         except Exception:
             pass
 
-        # ── Analytics: Industrial attachments ────────────────────
+        # ── Analytics: Industrial attachments (all dept students, no 200 cap) ─
         attachment_stats = {"pending": 0, "active": 0, "approved": 0, "completed": 0, "rejected": 0}
         try:
-            att_student_ids = [u["id"] for u in
-                               (db.table("user_profiles").select("id")
-                                .eq("role", "student").eq("department_id", dept_id)
-                                .execute().data or [])]
-            if att_student_ids:
-                ia_rows = (db.table("industrial_attachments")
-                           .select("status")
-                           .in_("student_id", att_student_ids[:200])
-                           .execute().data or [])
-                for a in ia_rows:
-                    s = a.get("status", "pending")
-                    attachment_stats[s] = attachment_stats.get(s, 0) + 1
+            att_student_ids = [
+                u["id"]
+                for u in (
+                    db.table("user_profiles")
+                    .select("id")
+                    .eq("role", "student")
+                    .eq("department_id", dept_id)
+                    .execute()
+                    .data
+                    or []
+                )
+            ]
+            attachment_stats = attachment_status_counts(db, att_student_ids)
         except Exception:
             pass
+
+        # Trips + summative for this department
+        try:
+            stats["trips_total"] = exact_count(
+                db.table("academic_trips").select("id", count="exact").eq("department_id", dept_id)
+            )
+            stats["trips_pending"] = exact_count(
+                db.table("academic_trips").select("id", count="exact")
+                .eq("department_id", dept_id).eq("status", "submitted")
+            )
+        except Exception:
+            stats["trips_total"] = stats["trips_pending"] = 0
+        try:
+            stats["summative_nyc"] = exact_count(
+                db.table("summative_competences").select("id", count="exact")
+                .eq("department_id", dept_id).eq("competence", "not_yet_competent")
+            )
+        except Exception:
+            stats["summative_nyc"] = 0
 
         # ── Analytics: Classes with student counts ────────────────
         classes_data = (db.table("classes")
@@ -178,10 +209,7 @@ def dashboard():
                         .execute().data or [])
         class_labels, class_counts = [], []
         for cls in classes_data[:10]:
-            enroll_count = (db.table("enrollments")
-                            .select("id", count="exact")
-                            .eq("class_id", cls["id"])
-                            .execute().count or 0)
+            enroll_count = count_table(db, "enrollments", class_id=cls["id"])
             class_labels.append(cls["name"])
             class_counts.append(enroll_count)
 

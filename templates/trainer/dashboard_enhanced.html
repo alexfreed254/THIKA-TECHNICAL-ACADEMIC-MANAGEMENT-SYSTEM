@@ -109,6 +109,28 @@
       <p class="text-gray-900 text-lg font-semibold">Needs Revision</p>
     </div>
 
+    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 cursor-pointer" onclick="location.href='/academic-trips'">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+          <i class="fas fa-bus text-teal-700 text-xl"></i>
+        </div>
+        <span class="text-2xl font-bold text-teal-700">{{ stats.trips_uploaded or 0 }}</span>
+      </div>
+      <h3 class="text-gray-600 text-sm font-medium mb-1">My Trip Reports</h3>
+      <p class="text-gray-900 text-lg font-semibold">Uploaded</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 cursor-pointer" onclick="location.href='/clearance/approver'">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+          <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
+        </div>
+        <span class="text-2xl font-bold text-blue-600">{{ stats.clearance_pending or 0 }}</span>
+      </div>
+      <h3 class="text-gray-600 text-sm font-medium mb-1">Clearance Pending</h3>
+      <p class="text-gray-900 text-lg font-semibold">Awaiting You</p>
+    </div>
+
   </div>
 
   <!-- ═══════════════════════════════════════════════
