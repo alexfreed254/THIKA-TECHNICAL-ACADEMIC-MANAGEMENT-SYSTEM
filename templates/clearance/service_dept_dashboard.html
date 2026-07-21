@@ -214,7 +214,7 @@
       <form method="POST" action="/clearance/approve/{{ row.id }}" style="display:inline">
         <input type="hidden" name="comments" value="">
         <button type="submit" class="btn-clr"
-                onclick="return confirm('Clear {{ row._student.get(\'full_name\',\'this trainee\') }} for {{ meta.label }}?')">
+                onclick='return confirm({{ ("Clear " ~ row._student.get("full_name", "this trainee") ~ " for " ~ meta.label ~ "?")|tojson }})'>
           <i class="fas fa-check"></i> Clear Trainee
         </button>
       </form>

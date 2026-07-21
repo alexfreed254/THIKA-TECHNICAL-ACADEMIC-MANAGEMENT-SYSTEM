@@ -1030,23 +1030,25 @@
       </div>
       <div>
         <div class="d-stat-value" style="font-size: 1.75rem;">
-          {% if clearance_status == 'completed' %}Cleared
-          {% elif clearance_status == 'in_progress' %}In Progress
-          {% elif clearance_status == 'returned' %}Returned
-          {% elif clearance_status == 'rejected' %}Rejected
+          {% set cl_status = stats.get('clearance_status', '') %}
+          {% set cl_stage = stats.get('clearance_stage', 0) %}
+          {% if cl_status == 'completed' %}Cleared
+          {% elif cl_status in ('in_progress', 'pending') %}In Progress
+          {% elif cl_status == 'returned' %}Returned
+          {% elif cl_status == 'rejected' %}Rejected
           {% elif clearance_eligible %}Eligible
           {% else %}Pending{% endif %}
         </div>
         <div class="d-stat-sub">
-          {% if clearance_status == 'completed' %}Certificate ready for download
-          {% elif clearance_status == 'in_progress' %}Stage {{ clearance_stage or 1 }} of 2 underway
-          {% elif clearance_status == 'returned' %}Correction required — see details
-          {% elif clearance_status == 'rejected' %}Contact your HOD for guidance
+          {% if cl_status == 'completed' %}Certificate ready for download
+          {% elif cl_status in ('in_progress', 'pending') %}Stage {{ cl_stage or 1 }} of 2 underway
+          {% elif cl_status == 'returned' %}Correction required — see details
+          {% elif cl_status == 'rejected' %}Contact your HOD for guidance
           {% elif clearance_eligible %}All requirements satisfied
           {% else %}Requirements incomplete{% endif %}
         </div>
       </div>
-      {% if clearance_status %}
+      {% if cl_status %}
       <div class="d-stat-footer-btn">
         <a href="/clearance/" class="d-stat-action-link">
           View Clearance Progress <i class="fas fa-arrow-right"></i>

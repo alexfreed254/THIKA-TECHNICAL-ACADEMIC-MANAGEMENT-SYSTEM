@@ -112,7 +112,7 @@
       <div class="px-6 py-3 flex items-center gap-4 hover:bg-gray-50">
         <div class="flex-1 min-w-0">
           <p class="font-medium text-sm text-gray-900">{{ l.get('user_profiles',{}).get('full_name','—') }}</p>
-          <p class="text-xs text-gray-500">{{ l.task_title or '—' }} &bull; {{ l.log_date }}</p>
+          <p class="text-xs text-gray-500">{{ l.tasks_performed or '—' }} &bull; {{ l.log_date }}</p>
         </div>
         <span class="px-2 py-1 rounded-full text-xs font-bold
           {% if l.mentor_approval_status == 'approved' %}bg-green-100 text-green-700

@@ -289,6 +289,7 @@ def dashboard():
                           pending_assessments=pending_assessments,
                           units_list=units_list,
                           unread_notifications=unread_notifications,
+                          current_month=datetime.now().strftime("%B %Y"),
                           # analytics
                           att_unit_labels=json.dumps(att_unit_labels),
                           att_unit_present=json.dumps(att_unit_present),

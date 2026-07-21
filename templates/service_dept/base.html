@@ -168,12 +168,12 @@
   });
 
   function loadNotifs() {
-    fetch('/notifications/api/recent').then(r => r.json()).then(data => {
+    fetch('/notifications/recent').then(r => r.json()).then(data => {
       const items = data.notifications || [];
       if (!items.length) { list.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:24px;display:block;margin-bottom:8px"></i>No notifications</div>'; return; }
       list.innerHTML = items.map(n => `
         <a class="notif-item ${n.is_read ? '' : 'unread'}" href="${n.action_url || '/notifications'}"
-           onclick="markRead(${n.id})">
+           onclick="markRead('${n.id}')">
           <div class="notif-icon ${n.notification_type||'info'}">
             <i class="fas fa-${n.notification_type==='success'?'check':n.notification_type==='warning'?'exclamation':'info'}"></i>
           </div>
@@ -184,16 +184,27 @@
           </div>
           ${n.is_read ? '' : '<div class="notif-dot"></div>'}
         </a>`).join('');
+      if (badge) {
+        const count = data.unread_count || 0;
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = count > 0 ? '' : 'none';
+      }
     }).catch(() => { list.innerHTML = '<div class="notif-empty">Could not load notifications.</div>'; });
   }
 
   function markRead(id) {
-    fetch('/notifications/api/mark-read/' + id, {method:'POST'}).catch(() => {});
+    fetch('/notifications/' + id + '/read', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'}
+    }).catch(() => {});
   }
 
   if (markAll) {
     markAll.addEventListener('click', () => {
-      fetch('/notifications/api/mark-all-read', {method:'POST'})
+      fetch('/notifications/mark-all-read', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'}
+      })
         .then(() => { if(badge) badge.style.display='none'; loadNotifs(); }).catch(() => {});
     });
   }

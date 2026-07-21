@@ -142,7 +142,7 @@ def dashboard():
     req_map = {}
     if req_ids:
         req_rows = (db.table("clearance_requests")
-                      .select("id, student_id, status, stage, created_at, department_id")
+                      .select("id, student_id, status, stage, created_at, department_id, course_id, courses(name, code)")
                       .in_("id", req_ids)
                       .execute().data or [])
         req_map = {r["id"]: r for r in req_rows}
@@ -209,7 +209,7 @@ def dashboard():
 
         row["_student"]    = sp
         row["_dept"]       = {"name": dept_map.get(did, "—")} if did else {}
-        row["_course"]     = {}
+        row["_course"]     = req.get("courses") or {}
         row["_req_status"] = req.get("status", "")
         row["_stage_name"] = stg.get("stage_name", "")
         row["_cat_label"]  = CATEGORY_LABELS.get(row.get("approver_category") or "", "")

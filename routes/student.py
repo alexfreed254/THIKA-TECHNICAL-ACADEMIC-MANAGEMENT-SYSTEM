@@ -3578,9 +3578,9 @@ def add_logbook():
     challenges_encountered= request.form.get("challenges_encountered", "").strip()
     achievements          = request.form.get("achievements", "").strip()
 
-    # Map time slot to hours_worked (start hour of 3-hr block)
-    slot_hours = {"08:00-11:00": 8, "11:00-14:00": 11, "14:00-17:00": 14, "17:00-20:00": 17}
-    hours_worked = slot_hours.get(entry_time)
+    # Each logbook slot is a fixed 3-hour block (not the start clock hour).
+    known_slots = {"08:00-11:00", "11:00-14:00", "14:00-17:00", "17:00-20:00"}
+    hours_worked = 3 if entry_time in known_slots else None
 
     if not all([attachment_id, log_date, entry_time, tasks_performed]):
         flash("Date, time slot, and activity description are required.", "error")
