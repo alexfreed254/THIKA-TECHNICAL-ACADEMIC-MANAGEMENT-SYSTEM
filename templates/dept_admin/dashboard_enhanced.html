@@ -114,6 +114,7 @@ table.dash-table tr:hover td{background:#f8fafc}
 .att-bar-fill{height:8px;border-radius:6px;background:linear-gradient(90deg,#10b981,#34d399)}
 .att-bar-pct{font-size:12px;font-weight:700;color:var(--sub);min-width:38px;text-align:right}
 
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}70%{box-shadow:0 0 0 7px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
 @media(max-width:900px){.chart-row.col3{grid-template-columns:1fr 1fr}.chart-row.col2,.chart-row.col21{grid-template-columns:1fr}}
 @media(max-width:600px){.chart-row.col3{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.dash{padding:16px}}
 </style>
@@ -130,6 +131,10 @@ table.dash-table tr:hover td{background:#f8fafc}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div class="dept-badge"><i class="fas fa-sitemap" style="margin-right:6px"></i>{{ department_name | upper if department_name else 'DEPARTMENT' }}</div>
+      <div id="live-badge" style="display:inline-flex;align-items:center;gap:7px;background:rgba(16,185,129,.15);border:1.5px solid rgba(16,185,129,.45);color:#6ee7b7;font-weight:700;font-size:11.5px;padding:5px 12px;border-radius:30px">
+        <span id="live-dot" style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.7);animation:livePulse 1.8s infinite"></span>
+        <span id="live-text">Live</span>
+      </div>
       <div class="header-time" id="dash-clock"></div>
     </div>
   </div>
@@ -141,7 +146,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi blue">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-door-open"></i></div>
-        <div class="kpi-val">{{ stats.classes or 0 }}</div>
+        <div class="kpi-val" data-live="stats.classes">{{ stats.classes or 0 }}</div>
       </div>
       <div class="kpi-label">Classes</div>
     </div>
@@ -149,7 +154,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi purple">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-chalkboard-teacher"></i></div>
-        <div class="kpi-val">{{ stats.trainers or 0 }}</div>
+        <div class="kpi-val" data-live="stats.trainers">{{ stats.trainers or 0 }}</div>
       </div>
       <div class="kpi-label">Trainers</div>
     </div>
@@ -157,7 +162,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi green">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-user-graduate"></i></div>
-        <div class="kpi-val">{{ stats.students or 0 }}</div>
+        <div class="kpi-val" data-live="stats.students">{{ stats.students or 0 }}</div>
       </div>
       <div class="kpi-label">Students</div>
     </div>
@@ -165,7 +170,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi orange">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-book"></i></div>
-        <div class="kpi-val">{{ stats.units or 0 }}</div>
+        <div class="kpi-val" data-live="stats.units">{{ stats.units or 0 }}</div>
       </div>
       <div class="kpi-label">Units</div>
     </div>
@@ -173,7 +178,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi cyan">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-file-alt"></i></div>
-        <div class="kpi-val">{{ stats.assessments or 0 }}</div>
+        <div class="kpi-val" data-live="stats.assessments">{{ stats.assessments or 0 }}</div>
       </div>
       <div class="kpi-label">Assessments</div>
     </div>
@@ -184,7 +189,7 @@ table.dash-table tr:hover td{background:#f8fafc}
       {% endif %}
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-file-signature"></i></div>
-        <div class="kpi-val">{{ stats.applications or 0 }}</div>
+        <div class="kpi-val" data-live="stats.applications">{{ stats.applications or 0 }}</div>
       </div>
       <div class="kpi-label">Applications</div>
     </div>
@@ -192,7 +197,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi indigo">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-certificate"></i></div>
-        <div class="kpi-val">{{ (clearance_stats.pending or 0) + (clearance_stats.approved or 0) + (clearance_stats.rejected or 0) }}</div>
+        <div class="kpi-val" data-live-sum="clearance_stats.pending,clearance_stats.approved,clearance_stats.rejected">{{ (clearance_stats.pending or 0) + (clearance_stats.approved or 0) + (clearance_stats.rejected or 0) }}</div>
       </div>
       <div class="kpi-label">Clearance Reqs</div>
     </div>
@@ -200,7 +205,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi green">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-industry"></i></div>
-        <div class="kpi-val">{{ (attachment_stats.active or 0) + (attachment_stats.completed or 0) + (attachment_stats.pending or 0) + (attachment_stats.approved or 0) }}</div>
+        <div class="kpi-val" data-live-sum="attachment_stats.active,attachment_stats.completed,attachment_stats.pending,attachment_stats.approved">{{ (attachment_stats.active or 0) + (attachment_stats.completed or 0) + (attachment_stats.pending or 0) + (attachment_stats.approved or 0) }}</div>
       </div>
       <div class="kpi-label">Attachments</div>
     </div>
@@ -211,7 +216,7 @@ table.dash-table tr:hover td{background:#f8fafc}
       {% endif %}
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-bus"></i></div>
-        <div class="kpi-val">{{ stats.trips_total or 0 }}</div>
+        <div class="kpi-val" data-live="stats.trips_total">{{ stats.trips_total or 0 }}</div>
       </div>
       <div class="kpi-label">Trip Reports</div>
     </div>
@@ -219,7 +224,7 @@ table.dash-table tr:hover td{background:#f8fafc}
     <div class="kpi indigo" style="cursor:pointer" onclick="location.href='/summative/'">
       <div class="kpi-top">
         <div class="kpi-icon"><i class="fas fa-award"></i></div>
-        <div class="kpi-val">{{ stats.summative_nyc or 0 }}</div>
+        <div class="kpi-val" data-live="stats.summative_nyc">{{ stats.summative_nyc or 0 }}</div>
       </div>
       <div class="kpi-label">Summative NYC</div>
     </div>
@@ -270,14 +275,14 @@ table.dash-table tr:hover td{background:#f8fafc}
         <div class="donut-wrap" style="height:180px">
           <canvas id="chartAssessment"></canvas>
           <div class="donut-center">
-            <strong>{{ stats.assessments or 0 }}</strong>
+            <strong data-live="stats.assessments">{{ stats.assessments or 0 }}</strong>
             <span>Total</span>
           </div>
         </div>
         <div class="legend-row">
-          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px">{{ stats.pending or 0 }}</strong></div>
-          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px">{{ stats.approved or 0 }}</strong></div>
-          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px">{{ stats.rejected or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px" data-live="stats.pending">{{ stats.pending or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px" data-live="stats.approved">{{ stats.approved or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px" data-live="stats.rejected">{{ stats.rejected or 0 }}</strong></div>
         </div>
       </div>
     </div>
@@ -292,14 +297,14 @@ table.dash-table tr:hover td{background:#f8fafc}
         <div class="donut-wrap" style="height:180px">
           <canvas id="chartApplications"></canvas>
           <div class="donut-center">
-            <strong>{{ stats.applications or 0 }}</strong>
+            <strong data-live="stats.applications">{{ stats.applications or 0 }}</strong>
             <span>Total</span>
           </div>
         </div>
         <div class="legend-row">
-          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px">{{ app_status.pending or 0 }}</strong></div>
-          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px">{{ app_status.approved or 0 }}</strong></div>
-          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px">{{ app_status.rejected or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px" data-live="app_status.pending">{{ app_status.pending or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px" data-live="app_status.approved">{{ app_status.approved or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px" data-live="app_status.rejected">{{ app_status.rejected or 0 }}</strong></div>
         </div>
       </div>
     </div>
@@ -314,14 +319,14 @@ table.dash-table tr:hover td{background:#f8fafc}
         <div class="donut-wrap" style="height:180px">
           <canvas id="chartClearance"></canvas>
           <div class="donut-center">
-            <strong>{{ (clearance_stats.pending or 0)+(clearance_stats.approved or 0)+(clearance_stats.rejected or 0) }}</strong>
+            <strong data-live-sum="clearance_stats.pending,clearance_stats.approved,clearance_stats.rejected">{{ (clearance_stats.pending or 0)+(clearance_stats.approved or 0)+(clearance_stats.rejected or 0) }}</strong>
             <span>Total</span>
           </div>
         </div>
         <div class="legend-row">
-          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px">{{ clearance_stats.pending or 0 }}</strong></div>
-          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px">{{ clearance_stats.approved or 0 }}</strong></div>
-          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px">{{ clearance_stats.rejected or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:4px" data-live="clearance_stats.pending">{{ clearance_stats.pending or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#10b981"></div>Approved <strong style="color:#0f172a;margin-left:4px" data-live="clearance_stats.approved">{{ clearance_stats.approved or 0 }}</strong></div>
+          <div class="legend-pill"><div class="legend-dot" style="background:#ef4444"></div>Rejected <strong style="color:#0f172a;margin-left:4px" data-live="clearance_stats.rejected">{{ clearance_stats.rejected or 0 }}</strong></div>
         </div>
       </div>
     </div>
@@ -353,15 +358,15 @@ table.dash-table tr:hover td{background:#f8fafc}
         <div class="donut-wrap" style="height:160px">
           <canvas id="chartAttachments"></canvas>
           <div class="donut-center">
-            <strong>{{ (attachment_stats.active or 0)+(attachment_stats.completed or 0)+(attachment_stats.pending or 0)+(attachment_stats.approved or 0)+(attachment_stats.rejected or 0) }}</strong>
+            <strong data-live-sum="attachment_stats.active,attachment_stats.completed,attachment_stats.pending,attachment_stats.approved,attachment_stats.rejected">{{ (attachment_stats.active or 0)+(attachment_stats.completed or 0)+(attachment_stats.pending or 0)+(attachment_stats.approved or 0)+(attachment_stats.rejected or 0) }}</strong>
             <span>Total</span>
           </div>
         </div>
         <div class="mini-stats" style="margin-top:14px">
-          <div class="mini-stat"><strong style="color:#3b82f6">{{ attachment_stats.active or 0 }}</strong><span>Active</span></div>
-          <div class="mini-stat"><strong style="color:#10b981">{{ attachment_stats.completed or 0 }}</strong><span>Done</span></div>
-          <div class="mini-stat"><strong style="color:#f59e0b">{{ attachment_stats.pending or 0 }}</strong><span>Pending</span></div>
-          <div class="mini-stat"><strong style="color:#ef4444">{{ attachment_stats.rejected or 0 }}</strong><span>Rejected</span></div>
+          <div class="mini-stat"><strong style="color:#3b82f6" data-live="attachment_stats.active">{{ attachment_stats.active or 0 }}</strong><span>Active</span></div>
+          <div class="mini-stat"><strong style="color:#10b981" data-live="attachment_stats.completed">{{ attachment_stats.completed or 0 }}</strong><span>Done</span></div>
+          <div class="mini-stat"><strong style="color:#f59e0b" data-live="attachment_stats.pending">{{ attachment_stats.pending or 0 }}</strong><span>Pending</span></div>
+          <div class="mini-stat"><strong style="color:#ef4444" data-live="attachment_stats.rejected">{{ attachment_stats.rejected or 0 }}</strong><span>Rejected</span></div>
         </div>
       </div>
     </div>
@@ -517,79 +522,94 @@ table.dash-table tr:hover td{background:#f8fafc}
 
   const ease='easeInOutQuart';
   const gridColor='rgba(0,0,0,0.04)';
+  const CHARTS={};
 
-  // ── Donut helper ──
   function donut(id,labels,data,colors){
-    const ctx=document.getElementById(id);if(!ctx)return;
-    new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:3,borderColor:'#fff',hoverBorderWidth:4}]},options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw}}},animation:{duration:800,easing:ease}}});
+    const ctx=document.getElementById(id);if(!ctx)return null;
+    const c=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:3,borderColor:'#fff',hoverBorderWidth:4}]},options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw}}},animation:{duration:800,easing:ease}}});
+    CHARTS[id]=c;return c;
   }
 
-  // ── Assessment status ──
-  donut('chartAssessment',
-    ['Pending','Approved','Rejected'],
-    [{{ stats.pending or 0 }},{{ stats.approved or 0 }},{{ stats.rejected or 0 }}],
-    ['#f59e0b','#10b981','#ef4444']);
-
-  // ── Applications ──
-  donut('chartApplications',
-    ['Pending','Approved','Rejected'],
-    [{{ app_status.pending or 0 }},{{ app_status.approved or 0 }},{{ app_status.rejected or 0 }}],
-    ['#f59e0b','#10b981','#ef4444']);
-
-  // ── Clearance ──
-  donut('chartClearance',
-    ['Pending','Approved','Rejected'],
-    [{{ clearance_stats.pending or 0 }},{{ clearance_stats.approved or 0 }},{{ clearance_stats.rejected or 0 }}],
-    ['#f59e0b','#10b981','#ef4444']);
-
-  // ── Industrial Attachments donut ──
-  donut('chartAttachments',
-    ['Active','Completed','Pending','Approved','Rejected'],
+  donut('chartAssessment',['Pending','Approved','Rejected'],
+    [{{ stats.pending or 0 }},{{ stats.approved or 0 }},{{ stats.rejected or 0 }}],['#f59e0b','#10b981','#ef4444']);
+  donut('chartApplications',['Pending','Approved','Rejected'],
+    [{{ app_status.pending or 0 }},{{ app_status.approved or 0 }},{{ app_status.rejected or 0 }}],['#f59e0b','#10b981','#ef4444']);
+  donut('chartClearance',['Pending','Approved','Rejected'],
+    [{{ clearance_stats.pending or 0 }},{{ clearance_stats.approved or 0 }},{{ clearance_stats.rejected or 0 }}],['#f59e0b','#10b981','#ef4444']);
+  donut('chartAttachments',['Active','Completed','Pending','Approved','Rejected'],
     [{{ attachment_stats.active or 0 }},{{ attachment_stats.completed or 0 }},{{ attachment_stats.pending or 0 }},{{ attachment_stats.approved or 0 }},{{ attachment_stats.rejected or 0 }}],
     ['#3b82f6','#10b981','#f59e0b','#06b6d4','#ef4444']);
 
-  // ── 7-Day Trend (line) ──
   (function(){
     const ctx=document.getElementById('chartTrend');if(!ctx)return;
-    const labels={{ trend_labels|safe }};
-    const present={{ trend_present|safe }};
-    const absent={{ trend_absent|safe }};
-    new Chart(ctx,{type:'line',data:{labels,datasets:[
-      {label:'Present',data:present,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.10)',fill:true,tension:.4,pointBackgroundColor:'#10b981',pointRadius:4,borderWidth:2.5},
-      {label:'Absent', data:absent, borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.07)', fill:true,tension:.4,pointBackgroundColor:'#ef4444',pointRadius:4,borderWidth:2.5}
+    CHARTS.chartTrend=new Chart(ctx,{type:'line',data:{labels:{{ trend_labels|safe }},datasets:[
+      {label:'Present',data:{{ trend_present|safe }},borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.10)',fill:true,tension:.4,pointBackgroundColor:'#10b981',pointRadius:4,borderWidth:2.5},
+      {label:'Absent', data:{{ trend_absent|safe }}, borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.07)', fill:true,tension:.4,pointBackgroundColor:'#ef4444',pointRadius:4,borderWidth:2.5}
     ]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{color:gridColor},ticks:{font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,font:{size:11}},beginAtZero:true}},animation:{duration:900,easing:ease}}});
   })();
 
-  // ── Attendance per Unit (horizontal bar) ──
   (function(){
     const ctx=document.getElementById('chartAttUnit');if(!ctx)return;
-    const labels={{ att_unit_labels|safe }};
-    const present={{ att_unit_present|safe }};
-    const absent={{ att_unit_absent|safe }};
-    new Chart(ctx,{type:'bar',data:{labels,datasets:[
-      {label:'Present',data:present,backgroundColor:'rgba(16,185,129,.80)',borderRadius:4,borderSkipped:false},
-      {label:'Absent', data:absent, backgroundColor:'rgba(239,68,68,.65)',borderRadius:4,borderSkipped:false}
+    CHARTS.chartAttUnit=new Chart(ctx,{type:'bar',data:{labels:{{ att_unit_labels|safe }},datasets:[
+      {label:'Present',data:{{ att_unit_present|safe }},backgroundColor:'rgba(16,185,129,.80)',borderRadius:4,borderSkipped:false},
+      {label:'Absent', data:{{ att_unit_absent|safe }}, backgroundColor:'rgba(239,68,68,.65)',borderRadius:4,borderSkipped:false}
     ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},usePointStyle:true}},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:false,grid:{color:gridColor},ticks:{font:{size:10}}},y:{stacked:false,grid:{display:false},ticks:{font:{size:11}}}},animation:{duration:900,easing:ease}}});
   })();
 
-  // ── Assessment Types (polar area) ──
   (function(){
     const ctx=document.getElementById('chartAtype');if(!ctx)return;
-    const labels={{ atype_labels|safe }};
-    const data={{ atype_counts|safe }};
     const palette=['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#ec4899'];
-    new Chart(ctx,{type:'polarArea',data:{labels,datasets:[{data,backgroundColor:palette.map(c=>c+'cc'),borderColor:palette,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12}}},animation:{duration:800,easing:ease}}});
+    CHARTS.chartAtype=new Chart(ctx,{type:'polarArea',data:{labels:{{ atype_labels|safe }},datasets:[{data:{{ atype_counts|safe }},backgroundColor:palette.map(c=>c+'cc'),borderColor:palette,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12}}},animation:{duration:800,easing:ease}}});
   })();
 
-  // ── Class Enrolment (bar) ──
   (function(){
     const ctx=document.getElementById('chartClasses');if(!ctx)return;
-    const labels={{ class_labels|safe }};
-    const data={{ class_counts|safe }};
     const palette=['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#6366f1','#14b8a6','#f97316'];
-    new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Students Enrolled',data,backgroundColor:palette.slice(0,labels.length).map(c=>c+'cc'),borderColor:palette.slice(0,labels.length),borderWidth:1.5,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw+' students'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,font:{size:11}},beginAtZero:true}},animation:{duration:900,easing:ease}}});
+    const labels={{ class_labels|safe }};
+    CHARTS.chartClasses=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Students Enrolled',data:{{ class_counts|safe }},backgroundColor:palette.slice(0,labels.length).map(c=>c+'cc'),borderColor:palette.slice(0,labels.length),borderWidth:1.5,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw+' students'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,font:{size:11}},beginAtZero:true}},animation:{duration:900,easing:ease}}});
   })();
 
+  // ── Realtime polling ──
+  function path(obj,p){return p.split('.').reduce((o,k)=>(o&&o[k]!=null)?o[k]:undefined,obj);}
+  function setChart(name,data){const c=CHARTS[name];if(!c||!data)return;c.data.datasets[0].data=data;c.update('none');}
+  function setBars(name,arrays){const c=CHARTS[name];if(!c)return;arrays.forEach((a,i)=>{if(c.data.datasets[i]&&a)c.data.datasets[i].data=a;});c.update('none');}
+
+  function applyLive(d){
+    document.querySelectorAll('[data-live]').forEach(el=>{
+      const v=path(d,el.getAttribute('data-live'));
+      if(v!==undefined) el.textContent=v;
+    });
+    document.querySelectorAll('[data-live-sum]').forEach(el=>{
+      const sum=el.getAttribute('data-live-sum').split(',').reduce((t,k)=>t+(Number(path(d,k.trim()))||0),0);
+      el.textContent=sum;
+    });
+    setChart('chartAssessment',[path(d,'stats.pending'),path(d,'stats.approved'),path(d,'stats.rejected')]);
+    setChart('chartApplications',[path(d,'app_status.pending'),path(d,'app_status.approved'),path(d,'app_status.rejected')]);
+    setChart('chartClearance',[path(d,'clearance_stats.pending'),path(d,'clearance_stats.approved'),path(d,'clearance_stats.rejected')]);
+    setChart('chartAttachments',[path(d,'attachment_stats.active'),path(d,'attachment_stats.completed'),path(d,'attachment_stats.pending'),path(d,'attachment_stats.approved'),path(d,'attachment_stats.rejected')]);
+    if(CHARTS.chartTrend){CHARTS.chartTrend.data.labels=d.trend_labels;setBars('chartTrend',[d.trend_present,d.trend_absent]);}
+    if(CHARTS.chartAttUnit){CHARTS.chartAttUnit.data.labels=d.att_unit_labels;setBars('chartAttUnit',[d.att_unit_present,d.att_unit_absent]);}
+    if(CHARTS.chartAtype){CHARTS.chartAtype.data.labels=d.atype_labels;setChart('chartAtype',d.atype_counts);}
+    if(CHARTS.chartClasses){CHARTS.chartClasses.data.labels=d.class_labels;setChart('chartClasses',d.class_counts);}
+  }
+
+  function markLive(ok,t){
+    const dot=document.getElementById('live-dot'),txt=document.getElementById('live-text');
+    if(!dot||!txt)return;
+    if(ok){dot.style.background='#10b981';txt.textContent='Live · '+(t||'');}
+    else{dot.style.background='#f59e0b';txt.textContent='Reconnecting…';}
+  }
+
+  async function poll(){
+    try{
+      const r=await fetch('/dept-admin/dashboard/live',{headers:{'X-Requested-With':'fetch'}});
+      if(!r.ok)throw 0;
+      const d=await r.json();
+      applyLive(d);
+      markLive(true,d.server_time);
+    }catch(e){ markLive(false); }
+  }
+  setInterval(poll,20000);
 })();
 </script>
 

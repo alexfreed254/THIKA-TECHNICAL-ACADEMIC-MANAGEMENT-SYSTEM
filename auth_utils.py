@@ -278,6 +278,57 @@ def create_staff_auth_user(email: str, password: str, full_name: str, role: str,
     return user_id
 
 
+# ── Password management (admin credential tools) ───────────────────────────────
+
+def generate_temp_password(length: int = 8) -> str:
+    """Generate a readable temporary password (no ambiguous chars)."""
+    import secrets
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def reset_user_password(user_id: str, new_password: str) -> tuple[bool, str]:
+    """
+    Reset/set a user's password, choosing the correct backend by role:
+      - Students → Werkzeug hash in user_profiles.password_hash
+      - Staff    → Supabase Auth (auth.admin.update_user_by_id)
+    Also flags must_change_password so the user is prompted to change it.
+    Returns (success, message). Never raises.
+    """
+    if not user_id or not new_password:
+        return False, "Missing user or password."
+    try:
+        svc = get_service_client()
+        profile = load_user_profile(user_id)
+        if not profile:
+            return False, "User not found."
+        role = profile.get("role")
+
+        if role == "student":
+            svc.table("user_profiles").update({
+                "password_hash": generate_password_hash(new_password),
+                "must_change_password": True,
+            }).eq("id", user_id).execute()
+        else:
+            # Staff live in Supabase Auth — update the auth password there.
+            try:
+                svc.auth.admin.update_user_by_id(user_id, {"password": new_password})
+            except Exception as exc:
+                return False, f"Could not update staff password: {exc}"
+            # Best-effort flag; column exists on user_profiles.
+            try:
+                svc.table("user_profiles").update(
+                    {"must_change_password": True}
+                ).eq("id", user_id).execute()
+            except Exception:
+                pass
+
+        write_audit_log("password_reset", target=f"{role}:{user_id}")
+        return True, "Password updated successfully."
+    except Exception as exc:
+        return False, f"Error updating password: {exc}"
+
+
 # ── RBAC Decorators ───────────────────────────────────────────────────────────
 
 def login_required(f):

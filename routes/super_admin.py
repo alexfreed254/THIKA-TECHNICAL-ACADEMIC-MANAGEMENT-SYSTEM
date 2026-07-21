@@ -99,6 +99,123 @@ def setup_profile():
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+def _super_dashboard_payload(db):
+    """Compute super-admin KPIs and chart datasets as native Python values."""
+    from stats_utils import count_table, clearance_kpi, exact_count, count_status_map
+    stats = {}
+    payload = {
+        "stats": stats, "dept_stats": [],
+        "trend_labels": [], "trend_present": [], "trend_absent": [],
+        "ia_stats": {"pending": 0, "approved": 0, "active": 0, "completed": 0, "rejected": 0, "terminated": 0},
+        "ca_stats": {"pending": 0, "approved": 0, "rejected": 0},
+        "atype_labels": [], "atype_counts": [],
+        "dept_chart_labels": [], "dept_chart_students": [], "dept_chart_trainers": [], "dept_chart_classes": [],
+        "role_map": {},
+    }
+    try:
+        stats['departments'] = count_table(db, "departments")
+        stats['classes']     = count_table(db, "classes")
+        stats['units']       = count_table(db, "units")
+        stats['attendance']  = count_table(db, "attendance")
+        stats['assessments'] = count_table(db, "assessments")
+        stats['users']       = count_table(db, "user_profiles")
+        stats['dept_admins'] = count_table(db, "user_profiles", role="dept_admin")
+        stats['trainers']    = count_table(db, "user_profiles", role="trainer")
+        stats['students']    = count_table(db, "user_profiles", role="student")
+        stats['pending']  = count_table(db, "assessments", status="pending")
+        stats['approved'] = count_table(db, "assessments", status="approved")
+        stats['rejected'] = count_table(db, "assessments", status="rejected")
+
+        cl = clearance_kpi(db)
+        stats['clearances']           = cl['total']
+        stats['clearances_pending']   = cl['pending']
+        stats['clearances_completed'] = cl['completed']
+        stats['clearances_returned']  = cl['returned']
+
+        try:
+            stats['trips_total']   = count_table(db, "academic_trips")
+            stats['trips_pending'] = count_table(db, "academic_trips", status="submitted")
+        except Exception:
+            stats['trips_total'] = stats['trips_pending'] = 0
+        try:
+            stats['summative_nyc']   = count_table(db, "summative_competences", competence="not_yet_competent")
+            stats['summative_total'] = count_table(db, "summative_competences")
+        except Exception:
+            stats['summative_nyc'] = stats['summative_total'] = 0
+
+        depts = db.table("departments").select("id, name").order("name").execute().data or []
+        for d in depts:
+            did = d["id"]
+            payload["dept_stats"].append({
+                "id": did, "name": d["name"],
+                "class_count": count_table(db, "classes", department_id=did),
+                "student_count": count_table(db, "user_profiles", department_id=did, role="student"),
+                "trainer_count": count_table(db, "user_profiles", department_id=did, role="trainer"),
+                "unit_count": count_table(db, "units", department_id=did)})
+
+        for i in range(6, -1, -1):
+            day = (date.today() - timedelta(days=i)).isoformat()
+            payload["trend_labels"].append(day[5:])
+            present_n = exact_count(db.table("attendance").select("id", count="exact").eq("attendance_date", day).eq("status", "present"))
+            total_n = exact_count(db.table("attendance").select("id", count="exact").eq("attendance_date", day))
+            payload["trend_present"].append(present_n)
+            payload["trend_absent"].append(max(0, total_n - present_n))
+
+        ia_stats = count_status_map(db, "industrial_attachments",
+                                    ("pending", "approved", "active", "completed", "rejected", "terminated"))
+        for k in ("pending", "approved", "active", "completed", "rejected", "terminated"):
+            ia_stats.setdefault(k, 0)
+        payload["ia_stats"] = ia_stats
+
+        ca_stats = count_status_map(db, "course_applications", ("pending", "approved", "rejected"))
+        for k in ("pending", "approved", "rejected"):
+            ca_stats.setdefault(k, 0)
+        payload["ca_stats"] = ca_stats
+
+        typed_rows = db.table("assessments").select("assessment_type").limit(5000).execute().data or []
+        atype_map = {}
+        for r in typed_rows:
+            t = r.get("assessment_type") or "Other"
+            atype_map[t] = atype_map.get(t, 0) + 1
+        payload["atype_labels"] = list(atype_map.keys())
+        payload["atype_counts"] = [atype_map[t] for t in payload["atype_labels"]]
+
+        payload["dept_chart_labels"]  = [d["name"] for d in payload["dept_stats"]]
+        payload["dept_chart_students"] = [d["student_count"] for d in payload["dept_stats"]]
+        payload["dept_chart_trainers"] = [d["trainer_count"] for d in payload["dept_stats"]]
+        payload["dept_chart_classes"]  = [d["class_count"] for d in payload["dept_stats"]]
+
+        known_roles = [
+            "super_admin", "dept_admin", "trainer", "student", "workshop_technician",
+            "examination_officer", "registrar", "deputy_principal",
+            "quality_assurance_officer", "liaison_officer", "cdacc_verifier",
+            "library_hod", "sports_hod", "service_clearance_officer",
+        ]
+        role_map = {}
+        for role in known_roles:
+            n = count_table(db, "user_profiles", role=role)
+            if n:
+                role_map[role] = n
+        other = stats['users'] - sum(role_map.values())
+        if other > 0:
+            role_map["other"] = other
+        payload["role_map"] = role_map
+    except Exception as e:
+        print(f"[super_admin] dashboard payload error: {e}")
+    return payload
+
+
+@super_admin_bp.route("/dashboard/live")
+@super_admin_required
+def dashboard_live():
+    """Realtime JSON feed for the super-admin dashboard (polled by the client)."""
+    from flask import jsonify
+    from datetime import datetime as _dt
+    payload = _super_dashboard_payload(_svc())
+    payload["server_time"] = _dt.now().strftime("%H:%M:%S")
+    return jsonify(payload)
+
+
 @super_admin_bp.route("/")
 @super_admin_bp.route("/dashboard")
 @super_admin_required
@@ -467,6 +584,64 @@ def delete_user(user_id):
     except Exception as exc:
         flash(f"Error deleting user: {exc}", "danger")
     return redirect(url_for("super_admin.users"))
+
+
+# ── Manage Credentials (institute-wide password reset) ─────────────────────────
+
+@super_admin_bp.route("/credentials", methods=["GET", "POST"])
+@super_admin_required
+def credentials():
+    """Institute-wide credential manager: search any user and set/reset password."""
+    from auth_utils import reset_user_password, generate_temp_password
+    db = _svc()
+    search = request.args.get("search", "").strip()
+    role = request.args.get("role", "").strip()
+    dept = request.args.get("dept", "").strip()
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        uid = request.form.get("user_id")
+        res = (db.table("user_profiles")
+               .select("id, full_name, role")
+               .eq("id", uid).limit(1).execute().data or [])
+        target = res[0] if res else None
+        if not target:
+            flash("User not found.", "error")
+        elif action == "set_password":
+            new_pw = request.form.get("password", "").strip()
+            if len(new_pw) < 6:
+                flash("Password must be at least 6 characters.", "error")
+            else:
+                ok, m = reset_user_password(uid, new_pw)
+                flash(f"Password for {target['full_name']} set to: {new_pw}" if ok else m,
+                      "success" if ok else "error")
+        elif action == "reset_password":
+            new_pw = generate_temp_password()
+            ok, m = reset_user_password(uid, new_pw)
+            flash(f"New temporary password for {target['full_name']}: {new_pw}" if ok else m,
+                  "success" if ok else "error")
+        return redirect(url_for("super_admin.credentials", search=search, role=role, dept=dept))
+
+    q = db.table("user_profiles").select(
+        "id, full_name, email, admission_no, staff_no, role, is_active, "
+        "must_change_password, departments(name)")
+    if role:
+        q = q.eq("role", role)
+    if dept:
+        q = q.eq("department_id", dept)
+    if search:
+        q = q.or_(
+            f"full_name.ilike.%{search}%,email.ilike.%{search}%,"
+            f"admission_no.ilike.%{search}%,staff_no.ilike.%{search}%"
+        )
+    users_list = q.order("full_name").limit(300).execute().data or []
+
+    departments = db.table("departments").select("id, name").order("name").execute().data or []
+    roles = sorted({(u.get("role") or "") for u in
+                    (db.table("user_profiles").select("role").execute().data or [])} - {""})
+    return render_template("super_admin/credentials.html",
+                           users_list=users_list, departments=departments,
+                           roles=roles, search=search, role=role, dept=dept)
 
 
 # ── Classes Management ─────────────────────────────────────────────────────────

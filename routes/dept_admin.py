@@ -44,6 +44,144 @@ def _gen_password(length=10):
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+def _dept_dashboard_payload(db, dept_id):
+    """Compute all dept-admin dashboard KPIs and chart datasets.
+
+    Returns a dict of native Python values (no json.dumps) so it can be
+    reused by both the HTML view and the realtime JSON endpoint.
+    """
+    stats = {}
+    payload = {
+        "stats": stats,
+        "att_unit_labels": [], "att_unit_present": [], "att_unit_absent": [],
+        "trend_labels": [], "trend_present": [], "trend_absent": [],
+        "app_status": {"pending": 0, "approved": 0, "rejected": 0},
+        "clearance_stats": {"pending": 0, "approved": 0, "rejected": 0},
+        "attachment_stats": {"pending": 0, "active": 0, "approved": 0, "completed": 0, "rejected": 0},
+        "class_labels": [], "class_counts": [],
+        "atype_labels": [], "atype_counts": [],
+    }
+    try:
+        from stats_utils import (exact_count, clearance_kpi, attachment_status_counts,
+                                  count_table, count_status_map)
+
+        stats["classes"]  = db.table("classes").select("id", count="exact").eq("department_id", dept_id).execute().count or 0
+        stats["trainers"] = db.table("user_profiles").select("id", count="exact").eq("role", "trainer").eq("department_id", dept_id).execute().count or 0
+        stats["students"] = db.table("user_profiles").select("id", count="exact").eq("role", "student").eq("department_id", dept_id).execute().count or 0
+        stats["units"]    = db.table("units").select("id", count="exact").eq("department_id", dept_id).execute().count or 0
+
+        stats["assessments"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id))
+        stats["pending"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id).eq("status", "pending"))
+        stats["approved"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id).eq("status", "approved"))
+        stats["rejected"] = exact_count(
+            db.table("assessments").select("id, units!inner(department_id)", count="exact")
+            .eq("units.department_id", dept_id).eq("status", "rejected"))
+
+        try:
+            stats["applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).execute().count or 0
+            stats["pending_applications"] = db.table("course_applications").select("id", count="exact").eq("department_id", dept_id).eq("status", "pending").execute().count or 0
+        except Exception:
+            stats["applications"] = 0
+            stats["pending_applications"] = 0
+
+        # Attendance per unit
+        all_att = (db.table("attendance")
+                   .select("status, units!inner(name, department_id)")
+                   .eq("units.department_id", dept_id).execute().data or [])
+        att_per_unit = {}
+        for row in all_att:
+            uname = (row.get("units") or {}).get("name", "Unknown")
+            bucket = att_per_unit.setdefault(uname, {"present": 0, "absent": 0})
+            if row.get("status") == "present":
+                bucket["present"] += 1
+            else:
+                bucket["absent"] += 1
+        payload["att_unit_labels"] = list(att_per_unit.keys())
+        payload["att_unit_present"] = [att_per_unit[u]["present"] for u in payload["att_unit_labels"]]
+        payload["att_unit_absent"] = [att_per_unit[u]["absent"] for u in payload["att_unit_labels"]]
+
+        # 7-day attendance trend
+        for i in range(6, -1, -1):
+            day = (date.today() - timedelta(days=i)).isoformat()
+            payload["trend_labels"].append(day[5:])
+            day_rows = (db.table("attendance")
+                        .select("status, units!inner(department_id)")
+                        .eq("units.department_id", dept_id)
+                        .eq("attendance_date", day).execute().data or [])
+            payload["trend_present"].append(sum(1 for r in day_rows if r.get("status") == "present"))
+            payload["trend_absent"].append(sum(1 for r in day_rows if r.get("status") != "present"))
+
+        # Application status breakdown
+        app_status = count_status_map(db, "course_applications",
+                                      ("pending", "approved", "rejected"), department_id=dept_id)
+        for k in ("pending", "approved", "rejected"):
+            app_status.setdefault(k, 0)
+        payload["app_status"] = app_status
+
+        # Clearance requests
+        try:
+            cl = clearance_kpi(db, department_id=dept_id)
+            payload["clearance_stats"] = {"pending": cl["pending"], "approved": cl["completed"], "rejected": cl["rejected"]}
+        except Exception:
+            pass
+
+        # Industrial attachments
+        try:
+            att_student_ids = [u["id"] for u in (db.table("user_profiles").select("id")
+                               .eq("role", "student").eq("department_id", dept_id).execute().data or [])]
+            payload["attachment_stats"] = attachment_status_counts(db, att_student_ids)
+        except Exception:
+            pass
+
+        try:
+            stats["trips_total"] = exact_count(db.table("academic_trips").select("id", count="exact").eq("department_id", dept_id))
+            stats["trips_pending"] = exact_count(db.table("academic_trips").select("id", count="exact").eq("department_id", dept_id).eq("status", "submitted"))
+        except Exception:
+            stats["trips_total"] = stats["trips_pending"] = 0
+        try:
+            stats["summative_nyc"] = exact_count(db.table("summative_competences").select("id", count="exact").eq("department_id", dept_id).eq("competence", "not_yet_competent"))
+        except Exception:
+            stats["summative_nyc"] = 0
+
+        # Classes with student counts
+        classes_data = (db.table("classes").select("id, name, courses(name)")
+                        .eq("department_id", dept_id).order("name").execute().data or [])
+        for cls in classes_data[:10]:
+            payload["class_labels"].append(cls["name"])
+            payload["class_counts"].append(count_table(db, "enrollments", class_id=cls["id"]))
+
+        # Assessment types breakdown
+        typed_assessments = (db.table("assessments")
+                             .select("assessment_type, units!inner(department_id)")
+                             .eq("units.department_id", dept_id).execute().data or [])
+        atype_map = {}
+        for a in typed_assessments:
+            t = a.get("assessment_type") or "Other"
+            atype_map[t] = atype_map.get(t, 0) + 1
+        payload["atype_labels"] = list(atype_map.keys())
+        payload["atype_counts"] = [atype_map[t] for t in payload["atype_labels"]]
+    except Exception as e:
+        print(f"[dept_admin] dashboard payload error: {e}")
+    return payload
+
+
+@dept_admin_bp.route("/dashboard/live")
+@dept_admin_required
+def dashboard_live():
+    """Realtime JSON feed for the dept-admin dashboard (polled by the client)."""
+    from flask import jsonify
+    db = get_service_client()
+    payload = _dept_dashboard_payload(db, _dept_id())
+    payload["server_time"] = datetime.now().strftime("%H:%M:%S")
+    return jsonify(payload)
+
+
 @dept_admin_bp.route("/")
 @dept_admin_bp.route("/dashboard")
 @dept_admin_required
@@ -2415,9 +2553,9 @@ def assessment_sheet_pdf():
 @dept_admin_bp.route("/credentials", methods=["GET", "POST"])
 @dept_admin_required
 def credentials():
+    from auth_utils import reset_user_password, generate_temp_password
     db = get_service_client()
     dept_id = _dept_id()
-    msg = None
     tab = request.args.get("tab", "trainers")
     search_t = request.args.get("search_t", "")
     search_s = request.args.get("search_s", "")
@@ -2425,52 +2563,67 @@ def credentials():
 
     if request.method == "POST":
         action = request.form.get("action")
-        if action == "update_trainer":
-            tid = request.form.get("trainer_id")
-            username = request.form.get("username", "").strip()
-            password = request.form.get("password", "").strip()
-            if username:
-                db.table("auth_users").update({"username": username}).eq("user_id", tid).execute()
-            if password:
-                from auth_utils import hash_password
-                db.table("auth_users").update({"password_hash": hash_password(password)}).eq("user_id", tid).execute()
-            msg = f"Trainer credentials updated."
-        elif action == "update_student":
-            sid = request.form.get("student_id")
-            password = request.form.get("password", "").strip()
-            if password:
-                from auth_utils import hash_password
-                db.table("auth_users").update({"password_hash": hash_password(password)}).eq("user_id", sid).execute()
-            msg = "Student password updated."
-        elif action == "reset_student":
-            sid = request.form.get("student_id")
-            from auth_utils import hash_password
-            db.table("auth_users").update({"password_hash": hash_password("123456")}).eq("user_id", sid).execute()
-            msg = "Student password reset to 123456."
+        uid = request.form.get("user_id")
+        # Verify the target belongs to this department (dept isolation)
+        target = None
+        if uid:
+            res = (db.table("user_profiles")
+                   .select("id, full_name, role, department_id, admission_no, staff_no, email")
+                   .eq("id", uid).limit(1).execute().data or [])
+            target = res[0] if res else None
+
+        if not target or target.get("department_id") != dept_id:
+            flash("User not found in your department.", "error")
+        elif action == "set_password":
+            new_pw = request.form.get("password", "").strip()
+            if len(new_pw) < 6:
+                flash("Password must be at least 6 characters.", "error")
+            else:
+                ok, m = reset_user_password(uid, new_pw)
+                if ok:
+                    flash(f"Password for {target['full_name']} set to: {new_pw}", "success")
+                else:
+                    flash(m, "error")
+        elif action == "reset_password":
+            new_pw = generate_temp_password()
+            ok, m = reset_user_password(uid, new_pw)
+            if ok:
+                flash(f"New temporary password for {target['full_name']}: {new_pw}", "success")
+            else:
+                flash(m, "error")
         return redirect(url_for("dept_admin.credentials", tab=tab, search_t=search_t,
                                 search_s=search_s, filter_class=filter_class))
 
-    tq = db.table("user_profiles").select("id, full_name, email, staff_no, is_active, departments(name)")
+    tq = db.table("user_profiles").select("id, full_name, email, staff_no, is_active, must_change_password, departments(name)")
     tq = tq.eq("role", "trainer").eq("department_id", dept_id)
     if search_t:
-        tq = tq.or_(f"full_name.ilike.%{search_t}%,staff_no.ilike.%{search_t}%")
+        tq = tq.or_(f"full_name.ilike.%{search_t}%,staff_no.ilike.%{search_t}%,email.ilike.%{search_t}%")
     trainers_list = tq.order("full_name").execute().data or []
 
-    sq = db.table("user_profiles").select("id, full_name, admission_no, email, is_active, classes!enrollments(name)")
+    sq = db.table("user_profiles").select("id, full_name, admission_no, email, is_active, must_change_password, classes!enrollments(id, name)")
     sq = sq.eq("role", "student").eq("department_id", dept_id)
     if search_s:
         sq = sq.or_(f"full_name.ilike.%{search_s}%,admission_no.ilike.%{search_s}%")
-    if filter_class:
-        sq = sq.eq("enrollments.class_id", filter_class)
     students_list = sq.order("full_name").execute().data or []
+
+    # Flatten class + apply class filter (enrollments returns list)
+    filtered_students = []
     for s in students_list:
-        if not s.get("admission_number"):
-            s["admission_number"] = s.get("admission_no", "")
+        cls = s.get("classes")
+        if isinstance(cls, list):
+            cls = cls[0] if cls else None
+        s["class_obj"] = cls
+        s["admission_number"] = s.get("admission_no", "")
+        if filter_class:
+            if not cls or str(cls.get("id")) != str(filter_class):
+                continue
+        filtered_students.append(s)
+    students_list = filtered_students
 
     classes_list = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
     return render_template("dept_admin/credentials.html",
                            tab=tab, search_t=search_t, search_s=search_s,
-                           filter_class=filter_class, msg=msg,
+                           filter_class=filter_class,
                            trainers_list=trainers_list, students_list=students_list,
                            classes_list=classes_list)
 

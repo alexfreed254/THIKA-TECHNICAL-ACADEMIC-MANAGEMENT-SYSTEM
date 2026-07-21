@@ -137,63 +137,70 @@
 .a-mini-stat:last-child { border-right:none; }
 .a-mini-stat strong { display:block; font-size:17px; font-weight:900; color:#0f172a; font-family:'Poppins',sans-serif; }
 .a-mini-stat span   { font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}70%{box-shadow:0 0 0 7px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
 {% endblock %}
 
 {% block content %}
 <div class="page-wrap">
 
   <!-- ── System Overview Stats ─── -->
-  <p class="section-title"><i class="fas fa-chart-bar"></i> System Overview</p>
+  <p class="section-title" style="justify-content:space-between">
+    <span><i class="fas fa-chart-bar"></i> System Overview</span>
+    <span id="live-badge" style="display:inline-flex;align-items:center;gap:7px;background:#ecfdf5;border:1.5px solid #a7f3d0;color:#047857;font-weight:700;font-size:11px;padding:4px 11px;border-radius:30px;text-transform:none;letter-spacing:0">
+      <span id="live-dot" style="width:8px;height:8px;border-radius:50%;background:#10b981;animation:livePulse 1.8s infinite"></span>
+      <span id="live-text">Live</span>
+    </span>
+  </p>
   <div class="stats-grid">
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#1565c0,#42a5f5)">
       <div class="s-icon" style="background:linear-gradient(135deg,#1565c0,#0d47a1)"><i class="fas fa-sitemap"></i></div>
-      <div class="s-info"><h3>Departments</h3><p>{{ stats.get('departments',0) }}</p></div>
+      <div class="s-info"><h3>Departments</h3><p data-live="stats.departments">{{ stats.get('departments',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#6d28d9,#a78bfa)">
       <div class="s-icon" style="background:linear-gradient(135deg,#6d28d9,#4c1d95)"><i class="fas fa-chalkboard-teacher"></i></div>
-      <div class="s-info"><h3>Trainers</h3><p>{{ stats.get('trainers',0) }}</p></div>
+      <div class="s-info"><h3>Trainers</h3><p data-live="stats.trainers">{{ stats.get('trainers',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#16a34a,#4ade80)">
       <div class="s-icon" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="fas fa-user-graduate"></i></div>
-      <div class="s-info"><h3>Students</h3><p>{{ stats.get('students',0) }}</p></div>
+      <div class="s-info"><h3>Students</h3><p data-live="stats.students">{{ stats.get('students',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#ea580c,#fb923c)">
       <div class="s-icon" style="background:linear-gradient(135deg,#ea580c,#c2410c)"><i class="fas fa-door-open"></i></div>
-      <div class="s-info"><h3>Classes</h3><p>{{ stats.get('classes',0) }}</p></div>
+      <div class="s-info"><h3>Classes</h3><p data-live="stats.classes">{{ stats.get('classes',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#0891b2,#22d3ee)">
       <div class="s-icon" style="background:linear-gradient(135deg,#0891b2,#0e7490)"><i class="fas fa-book"></i></div>
-      <div class="s-info"><h3>Units</h3><p>{{ stats.get('units',0) }}</p></div>
+      <div class="s-info"><h3>Units</h3><p data-live="stats.units">{{ stats.get('units',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#d97706,#fbbf24)">
       <div class="s-icon" style="background:linear-gradient(135deg,#d97706,#b45309)"><i class="fas fa-calendar-check"></i></div>
-      <div class="s-info"><h3>Attendance</h3><p>{{ stats.get('attendance',0) }}</p></div>
+      <div class="s-info"><h3>Attendance</h3><p data-live="stats.attendance">{{ stats.get('attendance',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#dc2626,#f87171)">
       <div class="s-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fas fa-file-alt"></i></div>
-      <div class="s-info"><h3>Assessments</h3><p>{{ stats.get('assessments',0) }}</p></div>
+      <div class="s-info"><h3>Assessments</h3><p data-live="stats.assessments">{{ stats.get('assessments',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#1d4ed8,#60a5fa)">
       <div class="s-icon" style="background:linear-gradient(135deg,#1d4ed8,#1e5a9f)"><i class="fas fa-clipboard-check"></i></div>
-      <div class="s-info"><h3>Clearances</h3><p>{{ stats.get('clearances',0) }}</p></div>
+      <div class="s-info"><h3>Clearances</h3><p data-live="stats.clearances">{{ stats.get('clearances',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#0f766e,#2dd4bf);cursor:pointer" onclick="location.href='/academic-trips'">
       <div class="s-icon" style="background:linear-gradient(135deg,#0f766e,#115e59)"><i class="fas fa-bus"></i></div>
-      <div class="s-info"><h3>Trip Reports</h3><p>{{ stats.get('trips_total',0) }}</p></div>
+      <div class="s-info"><h3>Trip Reports</h3><p data-live="stats.trips_total">{{ stats.get('trips_total',0) }}</p></div>
     </div>
 
     <div class="s-card" style="--accent:linear-gradient(90deg,#b45309,#fbbf24);cursor:pointer" onclick="location.href='/summative/'">
       <div class="s-icon" style="background:linear-gradient(135deg,#b45309,#92400e)"><i class="fas fa-award"></i></div>
-      <div class="s-info"><h3>Summative NYC</h3><p>{{ stats.get('summative_nyc',0) }}</p></div>
+      <div class="s-info"><h3>Summative NYC</h3><p data-live="stats.summative_nyc">{{ stats.get('summative_nyc',0) }}</p></div>
     </div>
 
   </div>
@@ -264,14 +271,14 @@
         <div class="donut-wrap" style="height:170px">
           <canvas id="cAssess"></canvas>
           <div class="donut-center">
-            <strong>{{ stats.get('assessments',0) }}</strong>
+            <strong data-live="stats.assessments">{{ stats.get('assessments',0) }}</strong>
             <span>Total</span>
           </div>
         </div>
         <div class="leg-row">
-          <div class="leg-pill"><div class="leg-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:3px">{{ stats.get('pending',0) }}</strong></div>
-          <div class="leg-pill"><div class="leg-dot" style="background:#16a34a"></div>Approved <strong style="color:#0f172a;margin-left:3px">{{ stats.get('approved',0) }}</strong></div>
-          <div class="leg-pill"><div class="leg-dot" style="background:#dc2626"></div>Rejected <strong style="color:#0f172a;margin-left:3px">{{ stats.get('rejected',0) }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#f59e0b"></div>Pending <strong style="color:#0f172a;margin-left:3px" data-live="stats.pending">{{ stats.get('pending',0) }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#16a34a"></div>Approved <strong style="color:#0f172a;margin-left:3px" data-live="stats.approved">{{ stats.get('approved',0) }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#dc2626"></div>Rejected <strong style="color:#0f172a;margin-left:3px" data-live="stats.rejected">{{ stats.get('rejected',0) }}</strong></div>
         </div>
       </div>
     </div>
@@ -286,14 +293,14 @@
         <div class="donut-wrap" style="height:170px">
           <canvas id="cRoles"></canvas>
           <div class="donut-center">
-            <strong>{{ stats.get('users',0) }}</strong>
+            <strong data-live="stats.users">{{ stats.get('users',0) }}</strong>
             <span>Users</span>
           </div>
         </div>
         <div class="leg-row">
-          <div class="leg-pill"><div class="leg-dot" style="background:#16a34a"></div>Students <strong style="color:#0f172a;margin-left:3px">{{ stats.get('students',0) }}</strong></div>
-          <div class="leg-pill"><div class="leg-dot" style="background:#6d28d9"></div>Trainers <strong style="color:#0f172a;margin-left:3px">{{ stats.get('trainers',0) }}</strong></div>
-          <div class="leg-pill"><div class="leg-dot" style="background:#1d4ed8"></div>Dept Admins <strong style="color:#0f172a;margin-left:3px">{{ stats.get('dept_admins',0) }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#16a34a"></div>Students <strong style="color:#0f172a;margin-left:3px" data-live="stats.students">{{ stats.get('students',0) }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#6d28d9"></div>Trainers <strong style="color:#0f172a;margin-left:3px" data-live="stats.trainers">{{ stats.get('trainers',0) }}</strong></div>
+          <div class="leg-pill"><div class="leg-dot" style="background:#1d4ed8"></div>Dept Admins <strong style="color:#0f172a;margin-left:3px" data-live="stats.dept_admins">{{ stats.get('dept_admins',0) }}</strong></div>
         </div>
       </div>
     </div>
@@ -308,15 +315,15 @@
         <div class="donut-wrap" style="height:170px">
           <canvas id="cIA"></canvas>
           <div class="donut-center">
-            <strong>{{ (ia_stats.pending or 0)+(ia_stats.active or 0)+(ia_stats.approved or 0)+(ia_stats.completed or 0)+(ia_stats.rejected or 0) }}</strong>
+            <strong data-live-sum="ia_stats.pending,ia_stats.active,ia_stats.approved,ia_stats.completed,ia_stats.rejected">{{ (ia_stats.pending or 0)+(ia_stats.active or 0)+(ia_stats.approved or 0)+(ia_stats.completed or 0)+(ia_stats.rejected or 0) }}</strong>
             <span>Total</span>
           </div>
         </div>
         <div class="a-mini-stats">
-          <div class="a-mini-stat"><strong style="color:#1d4ed8">{{ ia_stats.active or 0 }}</strong><span>Active</span></div>
-          <div class="a-mini-stat"><strong style="color:#16a34a">{{ ia_stats.completed or 0 }}</strong><span>Done</span></div>
-          <div class="a-mini-stat"><strong style="color:#f59e0b">{{ ia_stats.pending or 0 }}</strong><span>Pending</span></div>
-          <div class="a-mini-stat"><strong style="color:#dc2626">{{ ia_stats.rejected or 0 }}</strong><span>Rejected</span></div>
+          <div class="a-mini-stat"><strong style="color:#1d4ed8" data-live="ia_stats.active">{{ ia_stats.active or 0 }}</strong><span>Active</span></div>
+          <div class="a-mini-stat"><strong style="color:#16a34a" data-live="ia_stats.completed">{{ ia_stats.completed or 0 }}</strong><span>Done</span></div>
+          <div class="a-mini-stat"><strong style="color:#f59e0b" data-live="ia_stats.pending">{{ ia_stats.pending or 0 }}</strong><span>Pending</span></div>
+          <div class="a-mini-stat"><strong style="color:#dc2626" data-live="ia_stats.rejected">{{ ia_stats.rejected or 0 }}</strong><span>Rejected</span></div>
         </div>
       </div>
     </div>
@@ -348,14 +355,14 @@
         <div class="donut-wrap" style="height:160px">
           <canvas id="cCA"></canvas>
           <div class="donut-center">
-            <strong>{{ (ca_stats.pending or 0)+(ca_stats.approved or 0)+(ca_stats.rejected or 0) }}</strong>
+            <strong data-live-sum="ca_stats.pending,ca_stats.approved,ca_stats.rejected">{{ (ca_stats.pending or 0)+(ca_stats.approved or 0)+(ca_stats.rejected or 0) }}</strong>
             <span>Total</span>
           </div>
         </div>
         <div class="a-mini-stats">
-          <div class="a-mini-stat"><strong style="color:#f59e0b">{{ ca_stats.pending or 0 }}</strong><span>Pending</span></div>
-          <div class="a-mini-stat"><strong style="color:#16a34a">{{ ca_stats.approved or 0 }}</strong><span>Approved</span></div>
-          <div class="a-mini-stat"><strong style="color:#dc2626">{{ ca_stats.rejected or 0 }}</strong><span>Rejected</span></div>
+          <div class="a-mini-stat"><strong style="color:#f59e0b" data-live="ca_stats.pending">{{ ca_stats.pending or 0 }}</strong><span>Pending</span></div>
+          <div class="a-mini-stat"><strong style="color:#16a34a" data-live="ca_stats.approved">{{ ca_stats.approved or 0 }}</strong><span>Approved</span></div>
+          <div class="a-mini-stat"><strong style="color:#dc2626" data-live="ca_stats.rejected">{{ ca_stats.rejected or 0 }}</strong><span>Rejected</span></div>
         </div>
       </div>
     </div>
@@ -402,7 +409,7 @@
         <div style="position:relative;width:160px;height:160px;flex-shrink:0">
           <canvas id="cClear"></canvas>
           <div class="donut-center" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-            <strong style="font-size:26px;font-weight:900;color:#0f172a;font-family:'Poppins',sans-serif">{{ stats.get('clearances',0) }}</strong>
+            <strong style="font-size:26px;font-weight:900;color:#0f172a;font-family:'Poppins',sans-serif" data-live="stats.clearances">{{ stats.get('clearances',0) }}</strong>
             <span style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Total</span>
           </div>
         </div>
@@ -579,40 +586,36 @@
 (function(){
   const ease = 'easeInOutQuart';
   const grid = 'rgba(0,0,0,0.04)';
+  const CHARTS = {};
+  const rolePalette = ['#16a34a','#6d28d9','#1d4ed8','#0891b2','#d97706','#dc2626','#9333ea','#ea580c','#0f766e','#b45309','#475569'];
+  const roleOrder   = ['student','trainer','dept_admin','super_admin','examination_officer','internal_verifier','cdacc_verifier','service_dept','liaison_officer','industry_mentor','workshop_technician'];
 
   function donut(id, labels, data, colors, cutout){
-    const ctx = document.getElementById(id); if(!ctx) return;
-    new Chart(ctx, {type:'doughnut', data:{labels, datasets:[{data, backgroundColor:colors, borderWidth:3, borderColor:'#fff', hoverBorderWidth:4}]},
+    const ctx = document.getElementById(id); if(!ctx) return null;
+    const c = new Chart(ctx, {type:'doughnut', data:{labels, datasets:[{data, backgroundColor:colors, borderWidth:3, borderColor:'#fff', hoverBorderWidth:4}]},
       options:{cutout: cutout||'72%', plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw}}}, animation:{duration:800,easing:ease}}});
+    CHARTS[id]=c; return c;
   }
 
-  // ── Assessment status ──
-  donut('cAssess',
-    ['Pending','Approved','Rejected'],
-    [{{ stats.get('pending',0) }}, {{ stats.get('approved',0) }}, {{ stats.get('rejected',0) }}],
-    ['#f59e0b','#16a34a','#dc2626']);
+  function buildRoles(roleMap){
+    const labels=[], data=[], colors=[];
+    roleOrder.forEach((r,i)=>{ if(roleMap[r]){labels.push(r.replace(/_/g,' '));data.push(roleMap[r]);colors.push(rolePalette[i]||'#94a3b8');} });
+    Object.keys(roleMap).forEach(r=>{ if(!roleOrder.includes(r)){labels.push(r);data.push(roleMap[r]);colors.push('#94a3b8');} });
+    return {labels,data,colors};
+  }
 
-  // ── User roles ──
-  (function(){
-    const roleMap = {{ role_map | tojson }};
-    const order   = ['student','trainer','dept_admin','super_admin','examination_officer','internal_verifier','cdacc_verifier','service_dept','liaison_officer','industry_mentor','workshop_technician'];
-    const palette = ['#16a34a','#6d28d9','#1d4ed8','#0891b2','#d97706','#dc2626','#9333ea','#ea580c','#0f766e','#b45309','#475569'];
-    const labels  = [], data = [], colors = [];
-    order.forEach((r,i) => { if(roleMap[r]){labels.push(r.replace(/_/g,' '));data.push(roleMap[r]);colors.push(palette[i]||'#94a3b8');} });
-    Object.keys(roleMap).forEach(r=>{ if(!order.includes(r)){labels.push(r);data.push(roleMap[r]);colors.push('#94a3b8');} });
-    donut('cRoles', labels, data, colors);
-  })();
+  donut('cAssess',['Pending','Approved','Rejected'],
+    [{{ stats.get('pending',0) }}, {{ stats.get('approved',0) }}, {{ stats.get('rejected',0) }}],['#f59e0b','#16a34a','#dc2626']);
 
-  // ── Industrial attachments ──
-  donut('cIA',
-    ['Active','Completed','Pending','Approved','Rejected','Terminated'],
+  (function(){ const r=buildRoles({{ role_map | tojson }}); donut('cRoles', r.labels, r.data, r.colors); })();
+
+  donut('cIA',['Active','Completed','Pending','Approved','Rejected','Terminated'],
     [{{ ia_stats.active or 0 }}, {{ ia_stats.completed or 0 }}, {{ ia_stats.pending or 0 }}, {{ ia_stats.approved or 0 }}, {{ ia_stats.rejected or 0 }}, {{ ia_stats.terminated or 0 }}],
     ['#1d4ed8','#16a34a','#f59e0b','#0891b2','#dc2626','#94a3b8']);
 
-  // ── 7-day attendance trend ──
   (function(){
     const ctx = document.getElementById('cTrend'); if(!ctx) return;
-    new Chart(ctx, {type:'line',
+    CHARTS.cTrend=new Chart(ctx, {type:'line',
       data:{labels:{{ trend_labels|safe }}, datasets:[
         {label:'Present', data:{{ trend_present|safe }}, borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.10)', fill:true, tension:.4, pointBackgroundColor:'#16a34a', pointRadius:4, borderWidth:2.5},
         {label:'Absent',  data:{{ trend_absent|safe }},  borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,.07)',  fill:true, tension:.4, pointBackgroundColor:'#dc2626', pointRadius:4, borderWidth:2.5}
@@ -623,16 +626,12 @@
         animation:{duration:900,easing:ease}}});
   })();
 
-  // ── Course applications donut ──
-  donut('cCA',
-    ['Pending','Approved','Rejected'],
-    [{{ ca_stats.pending or 0 }}, {{ ca_stats.approved or 0 }}, {{ ca_stats.rejected or 0 }}],
-    ['#f59e0b','#16a34a','#dc2626']);
+  donut('cCA',['Pending','Approved','Rejected'],
+    [{{ ca_stats.pending or 0 }}, {{ ca_stats.approved or 0 }}, {{ ca_stats.rejected or 0 }}],['#f59e0b','#16a34a','#dc2626']);
 
-  // ── Department comparison grouped bar ──
   (function(){
     const ctx = document.getElementById('cDeptBar'); if(!ctx) return;
-    new Chart(ctx, {type:'bar',
+    CHARTS.cDeptBar=new Chart(ctx, {type:'bar',
       data:{labels:{{ dept_chart_labels|safe }}, datasets:[
         {label:'Students', data:{{ dept_chart_students|safe }}, backgroundColor:'rgba(22,163,74,.75)',  borderColor:'#16a34a', borderWidth:1.5, borderRadius:4},
         {label:'Trainers', data:{{ dept_chart_trainers|safe }}, backgroundColor:'rgba(109,40,217,.70)', borderColor:'#6d28d9', borderWidth:1.5, borderRadius:4},
@@ -644,11 +643,10 @@
         animation:{duration:900,easing:ease}}});
   })();
 
-  // ── Assessment types polar ──
   (function(){
     const ctx = document.getElementById('cAtype'); if(!ctx) return;
     const palette = ['#1d4ed8','#6d28d9','#f59e0b','#16a34a','#dc2626','#0891b2','#ec4899'];
-    new Chart(ctx, {type:'polarArea',
+    CHARTS.cAtype=new Chart(ctx, {type:'polarArea',
       data:{labels:{{ atype_labels|safe }}, datasets:[{data:{{ atype_counts|safe }},
         backgroundColor:palette.map(c=>c+'cc'), borderColor:palette, borderWidth:1.5}]},
       options:{responsive:true, maintainAspectRatio:true,
@@ -656,13 +654,53 @@
         animation:{duration:800,easing:ease}}});
   })();
 
-  // ── Clearance donut ──
-  donut('cClear',
-    ['Pending/In Progress','Completed','Other'],
+  donut('cClear',['Pending/In Progress','Completed','Other'],
     [{{ stats.get('clearances_pending',0) }}, {{ stats.get('clearances_completed',0) }},
      {{ stats.get('clearances',0) - stats.get('clearances_pending',0) - stats.get('clearances_completed',0) }}],
     ['#f59e0b','#16a34a','#94a3b8'], '68%');
 
+  // ── Realtime polling ──
+  function path(obj,p){return p.split('.').reduce((o,k)=>(o&&o[k]!=null)?o[k]:undefined,obj);}
+  function setChart(name,data){const c=CHARTS[name];if(!c||!data)return;c.data.datasets[0].data=data;c.update('none');}
+  function setBars(name,arrays){const c=CHARTS[name];if(!c)return;arrays.forEach((a,i)=>{if(c.data.datasets[i]&&a)c.data.datasets[i].data=a;});c.update('none');}
+
+  function applyLive(d){
+    document.querySelectorAll('[data-live]').forEach(el=>{
+      const v=path(d,el.getAttribute('data-live'));
+      if(v!==undefined) el.textContent=v;
+    });
+    document.querySelectorAll('[data-live-sum]').forEach(el=>{
+      const sum=el.getAttribute('data-live-sum').split(',').reduce((t,k)=>t+(Number(path(d,k.trim()))||0),0);
+      el.textContent=sum;
+    });
+    const s=d.stats||{};
+    setChart('cAssess',[s.pending,s.approved,s.rejected]);
+    setChart('cIA',[d.ia_stats.active,d.ia_stats.completed,d.ia_stats.pending,d.ia_stats.approved,d.ia_stats.rejected,d.ia_stats.terminated]);
+    setChart('cCA',[d.ca_stats.pending,d.ca_stats.approved,d.ca_stats.rejected]);
+    setChart('cClear',[s.clearances_pending,s.clearances_completed,(s.clearances||0)-(s.clearances_pending||0)-(s.clearances_completed||0)]);
+    if(CHARTS.cRoles&&d.role_map){const r=buildRoles(d.role_map);CHARTS.cRoles.data.labels=r.labels;CHARTS.cRoles.data.datasets[0].data=r.data;CHARTS.cRoles.data.datasets[0].backgroundColor=r.colors;CHARTS.cRoles.update('none');}
+    if(CHARTS.cTrend){CHARTS.cTrend.data.labels=d.trend_labels;setBars('cTrend',[d.trend_present,d.trend_absent]);}
+    if(CHARTS.cAtype){CHARTS.cAtype.data.labels=d.atype_labels;setChart('cAtype',d.atype_counts);}
+    if(CHARTS.cDeptBar){CHARTS.cDeptBar.data.labels=d.dept_chart_labels;setBars('cDeptBar',[d.dept_chart_students,d.dept_chart_trainers,d.dept_chart_classes]);}
+  }
+
+  function markLive(ok,t){
+    const dot=document.getElementById('live-dot'),txt=document.getElementById('live-text');
+    if(!dot||!txt)return;
+    if(ok){dot.style.background='#10b981';txt.textContent='Live · '+(t||'');}
+    else{dot.style.background='#f59e0b';txt.textContent='Reconnecting…';}
+  }
+
+  async function poll(){
+    try{
+      const r=await fetch('/super-admin/dashboard/live',{headers:{'X-Requested-With':'fetch'}});
+      if(!r.ok)throw 0;
+      const d=await r.json();
+      applyLive(d);
+      markLive(true,d.server_time);
+    }catch(e){ markLive(false); }
+  }
+  setInterval(poll,20000);
 })();
 </script>
 
