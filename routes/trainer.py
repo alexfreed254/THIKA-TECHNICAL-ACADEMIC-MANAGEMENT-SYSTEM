@@ -1508,7 +1508,17 @@ def save_mark():
 @trainer_bp.route("/marks-entry/marks-pdf")
 @trainer_required
 def marks_pdf():
-    """Print-ready formative marks report."""
+    """Official formative marks PDF (download, not webpage print)."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
     db   = get_service_client()
     user = current_user()
     class_id = request.args.get("class_id", "")
@@ -1531,29 +1541,136 @@ def marks_pdf():
              .select("student_id, user_profiles(full_name, admission_no)")
              .eq("class_id", class_id).execute().data or [])
     students_list = sorted(raw, key=lambda s: (s.get("user_profiles") or {}).get("full_name", ""))
-
     assessments, marks_map = _load_assessments_and_marks(db, unit_id, class_id, user["id"], year, term)
-    oral_list      = [a for a in assessments if a["assessment_type"] == "Oral"]
-    practical_list = [a for a in assessments if a["assessment_type"] == "Practical"]
-    theory_list    = [a for a in assessments if a["assessment_type"] == "Theory"]
 
-    return render_template("trainer/marks_pdf.html",
-                           cls=cls, unit=unit, dept=dept,
-                           students_list=students_list,
-                           assessments=assessments,
-                           oral_list=oral_list,
-                           practical_list=practical_list,
-                           theory_list=theory_list,
-                           marks_map=marks_map,
-                           year=year, term=term,
-                           trainer={"name": user.get("full_name", "")},
-                           generated=datetime.now().strftime("%d %b %Y %H:%M"))
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=landscape(A4),
+        leftMargin=12 * mm, rightMargin=12 * mm,
+        topMargin=12 * mm, bottomMargin=14 * mm,
+    )
+    styles = getSampleStyleSheet()
+    navy = colors.HexColor("#0F2744")
+    gold = colors.HexColor("#B45309")
+    title = ParagraphStyle(
+        "t", parent=styles["Heading1"], fontSize=13, textColor=navy,
+        alignment=TA_CENTER, spaceAfter=2, fontName="Helvetica-Bold",
+    )
+    subtitle = ParagraphStyle(
+        "s", parent=styles["Normal"], fontSize=10, textColor=gold,
+        alignment=TA_CENTER, spaceAfter=4, fontName="Helvetica-Bold",
+    )
+    meta_s = ParagraphStyle(
+        "m", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#475569"),
+        alignment=TA_CENTER, spaceAfter=4,
+    )
+    cell_s = ParagraphStyle("c", parent=styles["Normal"], fontSize=7, leading=9)
+    small = ParagraphStyle(
+        "sm", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#64748B"),
+        alignment=TA_LEFT, spaceBefore=8,
+    )
+
+    story = [
+        Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title),
+        Paragraph("OFFICIAL FORMATIVE ASSESSMENT MARKS SHEET", subtitle),
+        Paragraph(
+            f"Department: {dept.get('name') or '—'} &nbsp;|&nbsp; "
+            f"Class: {cls.get('name') or '—'} &nbsp;|&nbsp; "
+            f"Unit: {unit.get('code') or ''} — {unit.get('name') or '—'} &nbsp;|&nbsp; "
+            f"Year: {year} &nbsp;|&nbsp; Term: {term}",
+            meta_s,
+        ),
+        Paragraph(
+            f"Trainer: {user.get('full_name') or '—'} &nbsp;·&nbsp; "
+            f"Trainees: {len(students_list)} &nbsp;·&nbsp; "
+            f"Assessments: {len(assessments)} &nbsp;·&nbsp; "
+            f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+            meta_s,
+        ),
+        HRFlowable(width="100%", thickness=1.2, color=navy, spaceAfter=8),
+    ]
+
+    from grading_utils import cdacc_code
+
+    headers = ["#", "Adm. No.", "Trainee Name"] + [
+        Paragraph(
+            f"<b>{a['assessment_name'][:12]}</b><br/>/{int(a.get('max_marks') or 100)}",
+            cell_s,
+        )
+        for a in assessments
+    ] + ["Total", "Avg %", "Grade"]
+    data = [headers]
+
+    for i, student in enumerate(students_list, 1):
+        p = student.get("user_profiles") or {}
+        sid = student["student_id"]
+        sm = marks_map.get(sid, {})
+        total, count, max_total = 0.0, 0, 0.0
+        row = [str(i), p.get("admission_no") or "—", Paragraph(p.get("full_name") or "—", cell_s)]
+        for a in assessments:
+            m = sm.get(a["id"])
+            if m is not None:
+                total += float(m)
+                count += 1
+                max_total += float(a.get("max_marks") or 100)
+                row.append(f"{float(m):.1f}".rstrip("0").rstrip("."))
+            else:
+                row.append("—")
+        pct = round(total / max_total * 100, 1) if max_total else None
+        row.append(f"{round(total, 1)}" if count else "—")
+        row.append(f"{pct}" if count and pct is not None else "—")
+        row.append(cdacc_code(pct) if count and pct is not None else "—")
+        data.append(row)
+
+    name_w = 42 * mm
+    assess_w = max(14 * mm, min(22 * mm, (148 * mm) / max(len(assessments), 1)))
+    col_widths = [8 * mm, 22 * mm, name_w] + [assess_w] * len(assessments) + [14 * mm, 14 * mm, 14 * mm]
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), navy),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("ALIGN", (2, 1), (2, -1), "LEFT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#CBD5E1")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("FONTNAME", (-3, 1), (-1, -1), "Helvetica-Bold"),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(
+        "TVET CDACC Grading: <b>M</b> = Mastery (80–100%) &nbsp;|&nbsp; <b>P</b> = Proficient (65–79%) &nbsp;|&nbsp; "
+        "<b>C</b> = Competent (50–64%) &nbsp;|&nbsp; <b>NYC</b> = Not Yet Competent (0–49%) &nbsp;|&nbsp; "
+        "<b>CRNM</b> = Course Requirement Not Met (any marks). Avg % = total marks obtained / total maximum marks.",
+        small,
+    ))
+    story.append(Spacer(1, 14))
+    story.append(Paragraph(
+        "Prepared by (Trainer): ______________________ &nbsp;&nbsp; "
+        "Verified by (HOD): ______________________ &nbsp;&nbsp; "
+        "Date: ____________ &nbsp;&nbsp; Official stamp: __________",
+        small,
+    ))
+
+    doc.build(story)
+    buf.seek(0)
+    safe_cls = (cls.get("name") or "class").replace(" ", "_")[:36]
+    fname = f"TTTI_Formative_Marks_{safe_cls}_T{term}_{year}.pdf"
+    resp = make_response(buf.getvalue())
+    resp.headers["Content-Type"] = "application/pdf"
+    resp.headers["Content-Disposition"] = f'attachment; filename="{fname}"'
+    return resp
 
 
 @trainer_bp.route("/marks-entry/export-excel")
 @trainer_required
 def export_marks_excel():
-    """Download formative marks as Excel."""
+    """Official formative marks Excel workbook."""
     import io, openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -1571,6 +1688,10 @@ def export_marks_excel():
 
     cls  = (db.table("classes").select("name").eq("id", class_id).single().execute().data or {})
     unit = (db.table("units").select("code,name").eq("id", unit_id).single().execute().data or {})
+    dept = {}
+    if user.get("department_id"):
+        dept = (db.table("departments").select("name")
+                  .eq("id", user["department_id"]).single().execute().data or {})
 
     raw = (db.table("enrollments")
              .select("student_id, user_profiles(full_name, admission_no)")
@@ -1582,76 +1703,144 @@ def export_marks_excel():
     ws = wb.active
     ws.title = "Formative Marks"
 
-    hdr_font = Font(bold=True, color="FFFFFF", size=11)
-    hdr_fill = PatternFill("solid", fgColor="1E5A9F")
+    navy = "0F2744"
+    hdr_font = Font(bold=True, color="FFFFFF", size=10)
+    hdr_fill = PatternFill("solid", fgColor=navy)
     center   = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    thin     = Side(style="thin")
+    left     = Alignment(horizontal="left", vertical="center")
+    thin     = Side(style="thin", color="CBD5E1")
     bdr      = Border(left=thin, right=thin, top=thin, bottom=thin)
-    type_color = {"Oral": "E8F5E9", "Practical": "FFF3E0", "Theory": "EDE7F6"}
+    type_color = {"Oral": "DCFCE7", "Practical": "FFEDD5", "Theory": "E0E7FF"}
+    gold_fill = PatternFill("solid", fgColor="FEF3C7")
 
-    total_cols = 3 + len(assessments) + 2
+    total_cols = 3 + len(assessments) + 3  # Total, Avg %, CDACC Grade
     last_col   = get_column_letter(total_cols)
 
-    # Title
     ws.merge_cells(f"A1:{last_col}1")
-    ws["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE — Formative Assessment Marks"
-    ws["A1"].font = Font(bold=True, size=13)
+    ws["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE"
+    ws["A1"].font = Font(bold=True, size=14, color=navy)
+    ws["A1"].alignment = Alignment(horizontal="center")
+
     ws.merge_cells(f"A2:{last_col}2")
-    ws["A2"] = (f"Class: {cls.get('name','')}  |  Unit: {unit.get('code','')} – "
-                f"{unit.get('name','')}  |  Year: {year}  |  Term: {term}")
-    ws["A2"].font = Font(size=11)
-    ws.row_dimensions[3].height = 16
-    ws.row_dimensions[4].height = 40
+    ws["A2"] = "OFFICIAL FORMATIVE ASSESSMENT MARKS SHEET"
+    ws["A2"].font = Font(bold=True, size=11, color="B45309")
+    ws["A2"].alignment = Alignment(horizontal="center")
 
-    # Type sub-header (row 3)
+    ws.merge_cells(f"A3:{last_col}3")
+    ws["A3"] = (
+        f"Department: {dept.get('name') or '—'}  |  Class: {cls.get('name', '')}  |  "
+        f"Unit: {unit.get('code', '')} – {unit.get('name', '')}  |  "
+        f"Year: {year}  |  Term: {term}  |  Trainer: {user.get('full_name') or '—'}"
+    )
+    ws["A3"].font = Font(size=9, color="475569")
+    ws["A3"].alignment = Alignment(horizontal="center")
+
+    ws.merge_cells(f"A4:{last_col}4")
+    ws["A4"] = (
+        f"Trainees: {len(students_list)}  ·  Assessments: {len(assessments)}  ·  "
+        f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}"
+    )
+    ws["A4"].font = Font(size=8, color="64748B")
+    ws["A4"].alignment = Alignment(horizontal="center")
+
+    # Type sub-header (row 6)
     for col_idx, a in enumerate(assessments, start=4):
-        c = ws.cell(row=3, column=col_idx, value=a["assessment_type"])
-        c.fill = PatternFill("solid", fgColor=type_color.get(a["assessment_type"], "E0E0E0"))
-        c.font = Font(bold=True, size=9); c.alignment = center; c.border = bdr
+        c = ws.cell(row=6, column=col_idx, value=a["assessment_type"])
+        c.fill = PatternFill("solid", fgColor=type_color.get(a["assessment_type"], "E2E8F0"))
+        c.font = Font(bold=True, size=8)
+        c.alignment = center
+        c.border = bdr
 
-    # Column headers (row 4)
+    # Column headers (row 7)
     for col_idx, h in enumerate(
-        ["#", "Adm No", "Student Name"] +
+        ["#", "Admission No.", "Trainee Name"] +
         [f"{a['assessment_name']}\n(/{int(a['max_marks'])})" for a in assessments] +
-        ["Total", "Average"],
+        ["Total", "Avg %", "Grade"],
         start=1
     ):
-        c = ws.cell(row=4, column=col_idx, value=h)
-        c.font = hdr_font; c.fill = hdr_fill; c.alignment = center; c.border = bdr
+        c = ws.cell(row=7, column=col_idx, value=h)
+        c.font = hdr_font
+        c.fill = hdr_fill
+        c.alignment = center
+        c.border = bdr
+    ws.row_dimensions[7].height = 36
 
-    # Data
     for ri, student in enumerate(students_list, start=1):
         p   = student.get("user_profiles") or {}
         sid = student["student_id"]
-        row = ri + 4
+        row = ri + 7
         ws.cell(row=row, column=1, value=ri).alignment = center
+        ws.cell(row=row, column=1).border = bdr
         ws.cell(row=row, column=2, value=p.get("admission_no", "")).alignment = center
-        ws.cell(row=row, column=3, value=p.get("full_name", ""))
+        ws.cell(row=row, column=2).border = bdr
+        name_cell = ws.cell(row=row, column=3, value=p.get("full_name", ""))
+        name_cell.alignment = left
+        name_cell.border = bdr
         sm = marks_map.get(sid, {})
-        total, count = 0.0, 0
+        total, count, max_total = 0.0, 0, 0.0
         for ci, a in enumerate(assessments, start=4):
             m = sm.get(a["id"])
             c = ws.cell(row=row, column=ci, value=float(m) if m is not None else None)
-            c.alignment = center; c.border = bdr
+            c.alignment = center
+            c.border = bdr
             if m is not None:
-                total += float(m); count += 1
+                total += float(m)
+                count += 1
+                max_total += float(a.get("max_marks") or 100)
+        from grading_utils import cdacc_code
+        pct = round(total / max_total * 100, 1) if max_total else None
+        grade = cdacc_code(pct) if count else None
         tc = 4 + len(assessments)
-        if count:
-            ws.cell(row=row, column=tc,     value=round(total, 1)).alignment = center
-            ws.cell(row=row, column=tc + 1, value=round(total / count, 1)).alignment = center
+        tot_c = ws.cell(row=row, column=tc, value=round(total, 1) if count else None)
+        avg_c = ws.cell(row=row, column=tc + 1, value=pct if count else None)
+        grd_c = ws.cell(row=row, column=tc + 2, value=grade)
+        for c in (tot_c, avg_c, grd_c):
+            c.alignment = center
+            c.border = bdr
+            c.font = Font(bold=True, size=10)
+        grade_fills = {
+            "M": "EDE9FE", "P": "DCFCE7", "C": "DBEAFE", "NYC": "FEE2E2",
+        }
+        if grade in grade_fills:
+            grd_c.fill = PatternFill("solid", fgColor=grade_fills[grade])
+
+    legend_row = 9 + len(students_list)
+    ws.merge_cells(f"A{legend_row}:{last_col}{legend_row}")
+    ws[f"A{legend_row}"] = (
+        "TVET CDACC Grading: M = Mastery (80-100%) | P = Proficient (65-79%) | C = Competent (50-64%) | "
+        "NYC = Not Yet Competent (0-49%) | CRNM = Course Requirement Not Met. "
+        "Blank cells = not yet entered. Official formative assessment record — Thika Technical Training Institute."
+    )
+    ws[f"A{legend_row}"].font = Font(size=8, italic=True, color="64748B")
+    ws[f"A{legend_row}"].fill = gold_fill
+
+    ws2 = wb.create_sheet("Authentication")
+    ws2["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE"
+    ws2["A1"].font = Font(bold=True, size=14, color=navy)
+    ws2["A2"] = "Formative Marks Authentication"
+    ws2["A2"].font = Font(bold=True, size=11)
+    ws2["A4"] = f"Class: {cls.get('name', '')}"
+    ws2["A5"] = f"Unit: {unit.get('code', '')} – {unit.get('name', '')}"
+    ws2["A6"] = f"Year: {year}  Term: {term}"
+    ws2["A8"] = "Prepared by (Trainer): ___________________________    Date: ____________"
+    ws2["A10"] = "Verified by (HOD): ________________________________    Date: ____________"
+    ws2["A12"] = "Official stamp / seal:"
+    ws2.column_dimensions["A"].width = 90
 
     ws.column_dimensions["A"].width = 5
-    ws.column_dimensions["B"].width = 14
+    ws.column_dimensions["B"].width = 16
     ws.column_dimensions["C"].width = 28
-    for i in range(len(assessments) + 2):
+    for i in range(len(assessments) + 3):
         ws.column_dimensions[get_column_letter(4 + i)].width = 13
 
     buf = io.BytesIO()
-    wb.save(buf); buf.seek(0)
-    fname = f"formative_marks_{cls.get('name','').replace(' ','_')}_T{term}_{year}.xlsx"
+    wb.save(buf)
+    buf.seek(0)
+    safe_cls = (cls.get("name") or "class").replace(" ", "_")[:36]
+    fname = f"TTTI_Formative_Marks_{safe_cls}_T{term}_{year}.xlsx"
     resp = make_response(buf.getvalue())
     resp.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    resp.headers["Content-Disposition"] = f"attachment; filename={fname}"
+    resp.headers["Content-Disposition"] = f'attachment; filename="{fname}"'
     return resp
 
 

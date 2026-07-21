@@ -1,0 +1,184 @@
+{% extends portal_base %}
+{% block title %}Summative Reports & Downloads{% endblock %}
+{% block page_title %}Summative Reports & Downloads{% endblock %}
+
+{% block extra_style %}
+{% include "summative/_styles.html" %}
+<style>
+.report-section{background:#fff;border-radius:12px;border:1.5px solid #e8eef6;padding:22px;margin-bottom:16px}
+.report-section h4{margin:0 0 6px;font-size:15px;font-weight:700;color:#0f2744;display:flex;align-items:center;gap:8px}
+.report-section p{margin:0 0 16px;font-size:13px;color:#64748b;line-height:1.5}
+.download-btns{display:flex;flex-wrap:wrap;gap:10px}
+.hint{font-size:11px;color:#94a3b8;margin-top:10px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sa-wrap">
+  {% set active_tab = 'reports' %}
+  {% include "summative/_nav.html" %}
+
+  <div class="sa-filters">
+    <h3><i class="fas fa-download"></i> Download Filters — Class · Term · Trainer</h3>
+    <form method="get" action="{{ url_for('summative.reports') }}" id="reportFilters">
+      <div class="filter-grid">
+        <div class="form-group">
+          <label>Class <span style="color:#dc2626">*</span></label>
+          <select name="class_id" id="classSelect" class="form-control" required>
+            <option value="">-- Choose Class --</option>
+            {% for c in class_list %}
+            <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Unit (optional)</label>
+          <select name="unit_id" id="unitSelect" class="form-control" {% if not class_id %}disabled{% endif %}>
+            <option value="">All Units in Class</option>
+            {% for u in units_list %}
+            <option value="{{ u.id }}" {% if unit_id == u.id %}selected{% endif %}>
+              {{ u.code }}{% if u.code %} — {% endif %}{{ u.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if show_trainer_filter %}
+        <div class="form-group">
+          <label>Trainer</label>
+          <select name="trainer_id" class="form-control">
+            <option value="">All Trainers</option>
+            {% for t in trainer_list %}
+            <option value="{{ t.id }}" {% if trainer_id == t.id %}selected{% endif %}>{{ t.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label>Year</label>
+          <input type="number" name="year" class="form-control" value="{{ year }}" min="2020" max="2100">
+        </div>
+        <div class="form-group">
+          <label>Term</label>
+          <select name="term" class="form-control">
+            <option value="">All Terms</option>
+            <option value="1" {% if term == 1 or term == '1' %}selected{% endif %}>Term 1</option>
+            <option value="2" {% if term == 2 or term == '2' %}selected{% endif %}>Term 2</option>
+            <option value="3" {% if term == 3 or term == '3' %}selected{% endif %}>Term 3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="btn-apply"><i class="fas fa-sync"></i> Update</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% if class_id %}
+  <div class="report-section">
+    <h4><i class="fas fa-table"></i> Per Class — Full Competence Matrix</h4>
+    <p>All units and trainees for the selected class{% if term %} (Term {{ term }}){% endif %}{% if year %} — {{ year }}{% endif %}.</p>
+    <div class="download-btns">
+      <a class="btn-apply btn-xls" id="dlClassXls"
+         href="{{ url_for('summative.export_class_excel', class_id=class_id, year=year, term=term or '', trainer_id=trainer_id or '') }}">
+        <i class="fas fa-file-excel"></i> Download Excel (Class Matrix)
+      </a>
+      <a class="btn-apply btn-pdf" id="dlClassPdf"
+         href="{{ url_for('summative.export_class_pdf', class_id=class_id, year=year, term=term or '', trainer_id=trainer_id or '') }}">
+        <i class="fas fa-file-pdf"></i> Download PDF (Class Matrix)
+      </a>
+    </div>
+    <p class="hint">Includes every unit assigned to the class with P / C / NYC / F abbreviations.</p>
+  </div>
+
+  {% if unit_id %}
+  <div class="report-section">
+    <h4><i class="fas fa-book"></i> Per Unit — Single Unit Report</h4>
+    <p>Trainee list with competence level and remarks for one unit.</p>
+    <div class="download-btns">
+      <a class="btn-apply btn-xls"
+         href="{{ url_for('summative.export_unit_excel', class_id=class_id, unit_id=unit_id, year=year, term=term or '') }}">
+        <i class="fas fa-file-excel"></i> Download Excel (Unit)
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if show_trainer_filter and trainer_id %}
+  <div class="report-section">
+    <h4><i class="fas fa-chalkboard-teacher"></i> Per Trainer — All Assigned Units</h4>
+    <p>Summative competence for every unit taught by the selected trainer{% if class_id %} in this class{% endif %}.</p>
+    <div class="download-btns">
+      <a class="btn-apply btn-xls"
+         href="{{ url_for('summative.export_trainer_excel', trainer_id=trainer_id, class_id=class_id, year=year, term=term or '') }}">
+        <i class="fas fa-file-excel"></i> Download Excel (Trainer Portfolio)
+      </a>
+    </div>
+  </div>
+  {% elif not show_trainer_filter %}
+  <div class="report-section">
+    <h4><i class="fas fa-user"></i> My Trainer Portfolio</h4>
+    <p>Download all summative records for units you teach{% if class_id %} in this class{% else %} across your classes{% endif %}.</p>
+    <div class="download-btns">
+      <a class="btn-apply btn-xls"
+         href="{{ url_for('summative.export_trainer_excel', class_id=class_id or '', year=year, term=term or '') }}">
+        <i class="fas fa-file-excel"></i> Download My Summative Report
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if is_admin %}
+  <div class="report-section" style="border-color:#c4b5fd;background:linear-gradient(135deg,#faf5ff 0%,#fff 40%)">
+    <h4><i class="fas fa-user-graduate"></i> Official Graduation List</h4>
+    <p>Generate the official graduation document with eligibility status for every trainee.</p>
+    <div class="download-btns">
+      <a class="btn-apply" href="{{ url_for('summative.graduation_list', class_id=class_id, year=year, term=term or '') }}">
+        <i class="fas fa-list"></i> Open Graduation List
+      </a>
+      <a class="btn-apply btn-pdf"
+         href="{{ url_for('summative.graduation_pdf', class_id=class_id, year=year, term=term or '') }}">
+        <i class="fas fa-file-pdf"></i> Graduation PDF
+      </a>
+      <a class="btn-apply btn-xls"
+         href="{{ url_for('summative.graduation_excel', class_id=class_id, year=year, term=term or '') }}">
+        <i class="fas fa-file-excel"></i> Graduation Excel
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="card">
+    <div class="empty">
+      <i class="fas fa-download"></i>
+      <p>Select a class above to unlock download options.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('classSelect')?.addEventListener('change', function() {
+  const unitSel = document.getElementById('unitSelect');
+  if (!this.value) {
+    if (unitSel) { unitSel.innerHTML = '<option value="">All Units in Class</option>'; unitSel.disabled = true; }
+    return;
+  }
+  fetch('/summative/api/units/' + this.value)
+    .then(r => r.json())
+    .then(units => {
+      if (!unitSel) return;
+      unitSel.innerHTML = '<option value="">All Units in Class</option>';
+      units.forEach(u => {
+        const o = document.createElement('option');
+        o.value = u.id;
+        o.textContent = (u.code ? u.code + ' — ' : '') + u.name;
+        unitSel.appendChild(o);
+      });
+      unitSel.disabled = false;
+    });
+});
+</script>
+{% endblock %}

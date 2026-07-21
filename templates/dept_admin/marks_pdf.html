@@ -177,9 +177,15 @@
       text-align: center;
       min-width: 28px;
     }
-    .gb-4 { background: #dcfce7; color: #15803d; }
-    .gb-3 { background: #dbeafe; color: #1d4ed8; }
-    .gb-2 { background: #fef3c7; color: #b45309; }
+    .gb-M   { background: #ede9fe; color: #5b21b6; }
+    .gb-P   { background: #dcfce7; color: #15803d; }
+    .gb-C   { background: #dbeafe; color: #1d4ed8; }
+    .gb-NYC { background: #fee2e2; color: #b91c1c; }
+    .gb-CRNM{ background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+    /* legacy numeric codes */
+    .gb-4 { background: #ede9fe; color: #5b21b6; }
+    .gb-3 { background: #dcfce7; color: #15803d; }
+    .gb-2 { background: #dbeafe; color: #1d4ed8; }
     .gb-1 { background: #fee2e2; color: #b91c1c; }
 
     /* ── Grade scale legend ── */
@@ -196,10 +202,11 @@
     }
     .gl-item { display: flex; align-items: center; gap: 6px; }
     .gl-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .gd-4 { background: #22c55e; }
-    .gd-3 { background: #3b82f6; }
-    .gd-2 { background: #f59e0b; }
-    .gd-1 { background: #ef4444; }
+    .gd-M   { background: #7c3aed; }
+    .gd-P   { background: #22c55e; }
+    .gd-C   { background: #3b82f6; }
+    .gd-NYC { background: #ef4444; }
+    .gd-CRNM{ background: #6b7280; }
 
     /* ── Signature section ── */
     .sig-section {
@@ -477,11 +484,12 @@
 
   <!-- Grade legend -->
   <div class="grade-legend">
-    <strong style="margin-right:4px;font-size:8pt;text-transform:uppercase;letter-spacing:.05em">Proficiency Scale:</strong>
-    <div class="gl-item"><div class="gl-dot gd-4"></div> <strong>Code 4 — Mastery</strong> &nbsp;80%–100%: Executed with excellence</div>
-    <div class="gl-item"><div class="gl-dot gd-3"></div> <strong>Code 3 — Proficiency</strong> &nbsp;65%–79%: Very good, high competence</div>
-    <div class="gl-item"><div class="gl-dot gd-2"></div> <strong>Code 2 — Competent</strong> &nbsp;50%–64%: Meets minimum requirements</div>
-    <div class="gl-item"><div class="gl-dot gd-1"></div> <strong>Code 1 — Not Yet Competent</strong> &nbsp;0%–49%: Does not meet requirements</div>
+    <strong style="margin-right:4px;font-size:8pt;text-transform:uppercase;letter-spacing:.05em">TVET CDACC Competency Grading:</strong>
+    <div class="gl-item"><div class="gl-dot gd-M"></div> <strong>M — Mastery</strong> &nbsp;80–100%: High mastery, accuracy, independence, consistency, excellence</div>
+    <div class="gl-item"><div class="gl-dot gd-P"></div> <strong>P — Proficient</strong> &nbsp;65–79%: Strong competence, minor areas for improvement</div>
+    <div class="gl-item"><div class="gl-dot gd-C"></div> <strong>C — Competent</strong> &nbsp;50–64%: Minimum required standard achieved</div>
+    <div class="gl-item"><div class="gl-dot gd-NYC"></div> <strong>NYC — Not Yet Competent</strong> &nbsp;0–49%: Requires further training or reassessment</div>
+    <div class="gl-item"><div class="gl-dot gd-CRNM"></div> <strong>CRNM — Course Requirement Not Met</strong> &nbsp;A required course/assessment requirement is unfulfilled</div>
   </div>
 
   <!-- ── Signature section ── -->

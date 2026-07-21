@@ -198,12 +198,12 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
             </td>
             <td class="px-4 py-2.5 text-center font-semibold">
               {% if r.percentage is not none %}
-              <span class="{% if r.percentage >= 60 %}text-green-600{% elif r.percentage >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">{{ r.percentage }}%</span>
+              <span class="{% if r.percentage >= 65 %}text-green-600{% elif r.percentage >= 50 %}text-yellow-600{% else %}text-red-600{% endif %}">{{ r.percentage }}%</span>
               {% else %}<span class="text-gray-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-2.5 text-center">
               {% if r.grade and r.grade != 'N/A' %}
-              <span class="font-black text-xl {% if r.grade in ('4','3') %}text-green-600{% elif r.grade == '2' %}text-blue-600{% elif r.grade == '1' %}text-yellow-600{% else %}text-red-500{% endif %}">{{ r.grade }}</span>
+              <span class="font-black text-xl {% if r.grade in ('M','4') %}text-purple-600{% elif r.grade in ('P','3') %}text-green-600{% elif r.grade in ('C','2') %}text-blue-600{% else %}text-red-500{% endif %}">{{ r.grade }}</span>
               {% else %}<span class="text-gray-200">—</span>{% endif %}
             </td>
           </tr>

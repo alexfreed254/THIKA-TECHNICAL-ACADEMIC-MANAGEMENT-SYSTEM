@@ -1,0 +1,146 @@
+{% extends portal_base %}
+{% block title %}Unit Performance — Summative{% endblock %}
+{% block page_title %}Summative Unit Performance Analysis{% endblock %}
+
+{% block extra_style %}
+{% include "summative/_styles.html" %}
+<style>
+.unit-card{background:#fff;border-radius:12px;border:1.5px solid #e8eef6;overflow:hidden;margin-bottom:14px}
+.unit-card-hdr{padding:14px 18px;background:#f8fafc;border-bottom:1px solid #e8eef6;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px}
+.unit-card-hdr h4{margin:0;font-size:14px;font-weight:700;color:#0f2744}
+.unit-meta{font-size:12px;color:#64748b;margin-top:4px}
+.unit-body{padding:16px 18px}
+.bar-row{display:flex;height:22px;border-radius:6px;overflow:hidden;margin-bottom:12px;background:#f1f5f9}
+.bar-seg{height:100%;min-width:2px;transition:width .3s}
+.bar-ma{background:#7c3aed}.bar-p{background:#16a34a}.bar-c{background:#2563eb}.bar-n{background:#ea580c}.bar-f{background:#dc2626}.bar-m{background:#cbd5e1}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:12px}
+.metric{text-align:center;padding:10px;border-radius:8px;background:#f8fafc;border:1px solid #e8eef6}
+.metric .v{font-size:20px;font-weight:800;color:#0f2744}
+.metric .k{font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;margin-top:2px}
+.rate-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;font-size:13px;font-weight:800}
+.rate-high{background:#dcfce7;color:#166534}.rate-mid{background:#fef3c7;color:#92400e}.rate-low{background:#fee2e2;color:#991b1b}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sa-wrap">
+  {% set active_tab = 'analysis' %}
+  {% include "summative/_nav.html" %}
+
+  <div class="sa-filters">
+    <h3><i class="fas fa-chart-bar"></i> Performance by Unit (Trainer Scope)</h3>
+    <form method="get" action="{{ url_for('summative.analysis') }}">
+      <div class="filter-grid">
+        <div class="form-group">
+          <label>Class</label>
+          <select name="class_id" class="form-control">
+            <option value="">All Classes</option>
+            {% for c in class_list %}
+            <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if show_trainer_filter %}
+        <div class="form-group">
+          <label>Trainer</label>
+          <select name="trainer_id" class="form-control">
+            <option value="">All Trainers</option>
+            {% for t in trainer_list %}
+            <option value="{{ t.id }}" {% if trainer_id == t.id %}selected{% endif %}>{{ t.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label>Year</label>
+          <input type="number" name="year" class="form-control" value="{{ year }}" min="2020" max="2100">
+        </div>
+        <div class="form-group">
+          <label>Term</label>
+          <select name="term" class="form-control">
+            <option value="">All Terms</option>
+            <option value="1" {% if term == 1 or term == '1' %}selected{% endif %}>Term 1</option>
+            <option value="2" {% if term == 2 or term == '2' %}selected{% endif %}>Term 2</option>
+            <option value="3" {% if term == 3 or term == '3' %}selected{% endif %}>Term 3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="btn-apply"><i class="fas fa-filter"></i> Apply Filters</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% if unit_analyses %}
+  <div class="stat-grid">
+    <div class="stat-card"><div class="n">{{ unit_analyses|length }}</div><div class="l">Units Analysed</div></div>
+    <div class="stat-card ok"><div class="n">{{ totals.passing }}</div><div class="l">Passing (M+P+C)</div></div>
+    <div class="stat-card warn"><div class="n">{{ totals.nyc }}</div><div class="l">NYC</div></div>
+    <div class="stat-card no"><div class="n">{{ totals.crnm }}</div><div class="l">CRNM</div></div>
+    <div class="stat-card"><div class="n">{{ totals.avg_pass_rate }}%</div><div class="l">Avg Pass Rate</div></div>
+  </div>
+
+  {% for u in unit_analyses %}
+  <div class="unit-card">
+    <div class="unit-card-hdr">
+      <div>
+        <h4>{{ u.unit_code }}{% if u.unit_code %} — {% endif %}{{ u.unit_name }}</h4>
+        <div class="unit-meta">
+          <i class="fas fa-door-open"></i> {{ u.class_name }}
+          {% if u.trainer_name %} · <i class="fas fa-chalkboard-teacher"></i> {{ u.trainer_name }}{% endif %}
+        </div>
+      </div>
+      <div>
+        {% if u.pass_rate >= 75 %}
+        <span class="rate-badge rate-high"><i class="fas fa-check-circle"></i> {{ u.pass_rate }}% Pass</span>
+        {% elif u.pass_rate >= 50 %}
+        <span class="rate-badge rate-mid"><i class="fas fa-minus-circle"></i> {{ u.pass_rate }}% Pass</span>
+        {% else %}
+        <span class="rate-badge rate-low"><i class="fas fa-exclamation-circle"></i> {{ u.pass_rate }}% Pass</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="unit-body">
+      <div class="bar-row" title="M / P / C / NYC / CRNM / Missing">
+        {% if u.enrolled %}
+        <div class="bar-seg bar-ma" style="width:{{ (u.counts.mastery / u.enrolled * 100)|round(1) }}%"></div>
+        <div class="bar-seg bar-p" style="width:{{ (u.counts.proficient / u.enrolled * 100)|round(1) }}%"></div>
+        <div class="bar-seg bar-c" style="width:{{ (u.counts.competent / u.enrolled * 100)|round(1) }}%"></div>
+        <div class="bar-seg bar-n" style="width:{{ (u.counts.not_yet_competent / u.enrolled * 100)|round(1) }}%"></div>
+        <div class="bar-seg bar-f" style="width:{{ (u.counts.crnm / u.enrolled * 100)|round(1) }}%"></div>
+        <div class="bar-seg bar-m" style="width:{{ (u.counts.missing / u.enrolled * 100)|round(1) }}%"></div>
+        {% endif %}
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="v">{{ u.enrolled }}</div><div class="k">Trainees</div></div>
+        <div class="metric"><div class="v" style="color:#7c3aed">{{ u.counts.mastery }}</div><div class="k">Mastery</div></div>
+        <div class="metric"><div class="v" style="color:#16a34a">{{ u.counts.proficient }}</div><div class="k">Proficient</div></div>
+        <div class="metric"><div class="v" style="color:#2563eb">{{ u.counts.competent }}</div><div class="k">Competent</div></div>
+        <div class="metric"><div class="v" style="color:#ea580c">{{ u.counts.not_yet_competent }}</div><div class="k">NYC</div></div>
+        <div class="metric"><div class="v" style="color:#dc2626">{{ u.counts.crnm }}</div><div class="k">CRNM</div></div>
+        <div class="metric"><div class="v" style="color:#94a3b8">{{ u.counts.missing }}</div><div class="k">Missing</div></div>
+        <div class="metric"><div class="v">{{ u.completion_rate }}%</div><div class="k">Assessed</div></div>
+      </div>
+      <div class="export-row">
+        <a class="btn-apply btn-outline" style="padding:7px 12px;font-size:12px"
+           href="{{ url_for('summative.export_unit_excel', class_id=u.class_id, unit_id=u.unit_id, year=year, term=term or '') }}">
+          <i class="fas fa-file-excel"></i> Download Unit Report
+        </a>
+        <a href="{{ url_for('summative.entry', class_id=u.class_id, unit_id=u.unit_id, year=year, term=term or '') }}"
+           style="font-size:12px;font-weight:600;color:#1565c0;text-decoration:none">
+          <i class="fas fa-edit"></i> Enter / Edit
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="card">
+    <div class="empty">
+      <i class="fas fa-chart-bar"></i>
+      <p>No units match your filters. Adjust class, trainer, year, or term.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

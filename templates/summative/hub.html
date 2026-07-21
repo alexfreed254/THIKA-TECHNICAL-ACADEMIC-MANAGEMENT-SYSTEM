@@ -1,0 +1,100 @@
+{% extends portal_base %}
+{% block title %}Summative Assessments{% endblock %}
+{% block page_title %}Summative Assessments{% endblock %}
+
+{% block extra_style %}
+{% include "summative/_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="sa-wrap">
+  {% set active_tab = 'hub' %}
+  {% include "summative/_nav.html" %}
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="n">{{ stats.total_assessed }}</div>
+      <div class="l">Records Assessed</div>
+    </div>
+    <div class="stat-card ok">
+      <div class="n">{{ stats.passing }}</div>
+      <div class="l">Mastery / Proficient / Competent</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="n">{{ stats.nyc }}</div>
+      <div class="l">Not Yet Competent</div>
+    </div>
+    <div class="stat-card no">
+      <div class="n">{{ stats.crnm }}</div>
+      <div class="l">CRNM</div>
+    </div>
+    <div class="stat-card">
+      <div class="n">{{ stats.classes_count }}</div>
+      <div class="l">Classes in Scope</div>
+    </div>
+    <div class="stat-card">
+      <div class="n">{{ stats.units_count }}</div>
+      <div class="l">Units Assigned</div>
+    </div>
+  </div>
+
+  <div class="action-grid">
+    <a href="{{ url_for('summative.entry') }}" class="action-card">
+      <div class="ico ico-entry"><i class="fas fa-edit"></i></div>
+      <h4><i class="fas fa-chevron-right" style="font-size:11px;color:#94a3b8;margin-left:auto"></i> Competence Entry</h4>
+      <p>Enter summative outcomes on the TVET CDACC scale (Mastery, Proficient, Competent, NYC, CRNM) per trainee and unit. Auto-saves as you work.</p>
+    </a>
+    <a href="{{ url_for('summative.analysis') }}" class="action-card">
+      <div class="ico ico-analysis"><i class="fas fa-chart-bar"></i></div>
+      <h4>Unit Performance Analysis</h4>
+      <p>View pass rates and competence breakdown per unit — scoped to each trainer's assigned classes.</p>
+    </a>
+    <a href="{{ url_for('summative.reports') }}" class="action-card">
+      <div class="ico ico-reports"><i class="fas fa-download"></i></div>
+      <h4>Reports &amp; Downloads</h4>
+      <p>Download official summative reports by class, term, unit, or trainer in Excel and PDF.</p>
+    </a>
+    {% if is_admin %}
+    <a href="{{ url_for('summative.graduation_list') }}" class="action-card">
+      <div class="ico ico-grad"><i class="fas fa-user-graduate"></i></div>
+      <h4>Graduation List</h4>
+      <p>Generate the official graduation matrix. Trainees must be Mastery, Proficient, or Competent in every unit.</p>
+    </a>
+    {% endif %}
+  </div>
+
+  {% if recent_units %}
+  <div class="card">
+    <div class="card-hdr">
+      <h3><i class="fas fa-layer-group"></i> Your Assigned Units</h3>
+      <a href="{{ url_for('summative.entry') }}" style="font-size:12px;font-weight:600;color:#1565c0;text-decoration:none">
+        Enter competence <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+    <div style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      {% for u in recent_units %}
+      <a href="{{ url_for('summative.entry', class_id=u.class_id, unit_id=u.unit_id) }}"
+         style="display:block;padding:14px 16px;border:1px solid #e8eef6;border-radius:10px;text-decoration:none;color:inherit;transition:border-color .15s"
+         onmouseover="this.style.borderColor='#1565c0'" onmouseout="this.style.borderColor='#e8eef6'">
+        <div style="font-weight:700;color:#0f2744;font-size:13px">{{ u.class_name }}</div>
+        <div style="font-size:12px;color:#64748b;margin-top:4px">{{ u.unit_code }} — {{ u.unit_name }}</div>
+        {% if u.trainer_name %}
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px"><i class="fas fa-chalkboard-teacher"></i> {{ u.trainer_name }}</div>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="legend" style="margin-top:8px">
+    {% for key, label in competence_levels %}
+    <span class="leg leg-{{ key }}"><i class="fas fa-circle" style="font-size:8px"></i> {{ label }}</span>
+    {% endfor %}
+  </div>
+  <p style="font-size:12px;color:#64748b;margin:0">
+    Summative competence follows the TVET CDACC grading: <strong>M</strong> 80–100% · <strong>P</strong> 65–79% · <strong>C</strong> 50–64% · <strong>NYC</strong> 0–49% · <strong>CRNM</strong> requirement not met.
+    Every unit must be <strong>Mastery</strong>, <strong>Proficient</strong>, or <strong>Competent</strong> for a trainee to graduate.
+  </p>
+</div>
+{% endblock %}

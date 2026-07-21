@@ -886,15 +886,9 @@ def assessments():
 # ── Marks Report ───────────────────────────────────────────────────────────────
 
 def _sa_compute_grade(obtained, max_m):
-    try:
-        pct = round(float(obtained) / float(max_m) * 100, 1) if max_m else 0
-    except (TypeError, ZeroDivisionError):
-        pct = 0
-    if pct >= 80:   grade = "4"
-    elif pct >= 65: grade = "3"
-    elif pct >= 50: grade = "2"
-    else:           grade = "1"
-    return pct, grade
+    """TVET CDACC competency scale: M 80-100 · P 65-79 · C 50-64 · NYC 0-49."""
+    from grading_utils import compute_grade
+    return compute_grade(obtained, max_m)
 
 
 def _fetch_marks_all(db, dept_id, year, term, class_id, unit_id, adm_filter):
@@ -997,7 +991,7 @@ def marks():
 
     distinct_students = len({r["student"].get("admission_no")
                              for r in marks_list if r["student"].get("admission_no")})
-    pass_count = sum(1 for r in marks_list if r["grade"] in ("4", "3", "2"))
+    pass_count = sum(1 for r in marks_list if r["grade"] in ("M", "P", "C"))
     pass_rate  = round(pass_count / len(marks_list) * 100) if marks_list else 0
 
     cur_yr      = _dt.now().year

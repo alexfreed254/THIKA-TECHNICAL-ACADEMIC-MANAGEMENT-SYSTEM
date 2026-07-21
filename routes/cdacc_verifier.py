@@ -169,14 +169,11 @@ def filter_options():
 # ── Formative Marks (all departments) ────────────────────────────────────────
 
 def _grade(obtained, max_m):
+    """TVET CDACC competency scale: M 80-100 · P 65-79 · C 50-64 · NYC 0-49."""
     if obtained is None or not max_m:
         return None, "N/A"
-    pct = round(obtained / max_m * 100, 1)
-    if pct >= 70:   return pct, "4"
-    if pct >= 60:   return pct, "3"
-    if pct >= 50:   return pct, "2"
-    if pct >= 40:   return pct, "1"
-    return pct, "U"
+    from grading_utils import compute_grade
+    return compute_grade(obtained, max_m)
 
 
 @cdacc_verifier_bp.route("/marks")
@@ -282,7 +279,7 @@ def marks():
         flash(f"Error loading marks: {e}", "danger")
 
     distinct_students = len({r["student"].get("admission_no") for r in marks_list if r["student"].get("admission_no")})
-    pass_count = sum(1 for r in marks_list if r.get("grade") in ("4", "3", "2"))
+    pass_count = sum(1 for r in marks_list if r.get("grade") in ("M", "P", "C"))
     pass_rate  = round(pass_count / len(marks_list) * 100) if marks_list else 0
 
     return render_template("cdacc_verifier/marks.html",
@@ -478,8 +475,8 @@ def trainee_detail(student_id):
             mo    = m.get("marks_obtained")
             mm    = fa.get("max_marks") or 100
             pct   = round(mo / mm * 100, 1) if mo is not None and mm else None
-            grade = ("M" if pct and pct >= 70 else "P" if pct and pct >= 60 else
-                     "C" if pct and pct >= 50 else "U" if pct is not None else "N/A")
+            grade = ("M" if pct and pct >= 80 else "P" if pct and pct >= 65 else
+                     "C" if pct and pct >= 50 else "NYC" if pct is not None else "N/A")
             marks_by_type.setdefault(atype, []).append({
                 "name":           fa.get("assessment_name", ""),
                 "unit":           (fa.get("units") or {}).get("name", ""),

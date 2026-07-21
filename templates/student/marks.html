@@ -408,10 +408,10 @@
   <div style="padding:10px 22px;background:#f8fafc;border-top:1px solid #f1f5f9;
        display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:#64748b">
     <span style="font-weight:700;color:#374151">Mark grades:</span>
-    <span><span class="mk mk-M">90</span> M — Mastery ≥85%</span>
-    <span><span class="mk mk-P">75</span> P — Proficient 70–84%</span>
-    <span><span class="mk mk-C">60</span> C — Competent 50–69%</span>
-    <span><span class="mk mk-NYC">40</span> NYC — Not Yet Competent &lt;50%</span>
+    <span><span class="mk mk-M">90</span> M — Mastery 80–100%</span>
+    <span><span class="mk mk-P">75</span> P — Proficient 65–79%</span>
+    <span><span class="mk mk-C">60</span> C — Competent 50–64%</span>
+    <span><span class="mk mk-NYC">40</span> NYC — Not Yet Competent 0–49%</span>
     <span><span class="mk mk-nd">—</span> Not yet entered</span>
   </div>
 </div>
@@ -420,27 +420,32 @@
 
 {# ── GRADING SCALE ──────────────────────────────── #}
 <div class="grade-scale">
-  <div class="grade-scale-title"><i class="fas fa-info-circle" style="margin-right:6px;color:#1e5a9f"></i>CDACC Competency-Based Grading Scale</div>
+  <div class="grade-scale-title"><i class="fas fa-info-circle" style="margin-right:6px;color:#1e5a9f"></i>TVET CDACC Competency Grading Scale</div>
   <div class="gs-grid">
     <div class="gs-item gs-M">
       <div class="gs-grade">M — Mastery</div>
-      <div class="gs-name">Expert-level performance · Can train others</div>
-      <div class="gs-range">85% – 100%</div>
+      <div class="gs-name">High mastery, accuracy, independence, consistency &amp; excellence</div>
+      <div class="gs-range">80% – 100%</div>
     </div>
     <div class="gs-item gs-P">
       <div class="gs-grade">P — Proficient</div>
-      <div class="gs-name">High accuracy, works independently</div>
-      <div class="gs-range">70% – 84%</div>
+      <div class="gs-name">Strong competence · Minor areas for improvement</div>
+      <div class="gs-range">65% – 79%</div>
     </div>
     <div class="gs-item gs-C">
       <div class="gs-grade">C — Competent</div>
-      <div class="gs-name">Meets minimum standard · Limited supervision</div>
-      <div class="gs-range">50% – 69%</div>
+      <div class="gs-name">Minimum required standard achieved</div>
+      <div class="gs-range">50% – 64%</div>
     </div>
     <div class="gs-item gs-NYC">
       <div class="gs-grade">NYC — Not Yet Competent</div>
-      <div class="gs-name">Below standard · Further training needed</div>
+      <div class="gs-name">Requires further training, practice, support, or reassessment</div>
       <div class="gs-range">0% – 49%</div>
+    </div>
+    <div class="gs-item gs-NYC" style="filter:grayscale(.4)">
+      <div class="gs-grade">CRNM — Course Requirement Not Met</div>
+      <div class="gs-name">A required course/assessment requirement is unfulfilled, regardless of marks</div>
+      <div class="gs-range">Any marks</div>
     </div>
   </div>
 </div>

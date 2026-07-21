@@ -1,0 +1,25 @@
+{# Shared summative sub-navigation — include after sa-wrap opening or at top of content #}
+<nav class="sa-nav" aria-label="Summative assessment sections">
+  <a href="{{ url_for('summative.hub') }}"
+     class="sa-nav-item {% if active_tab == 'hub' %}active{% endif %}">
+    <i class="fas fa-th-large"></i> Overview
+  </a>
+  <a href="{{ url_for('summative.entry') }}"
+     class="sa-nav-item {% if active_tab == 'entry' %}active{% endif %}">
+    <i class="fas fa-edit"></i> Competence Entry
+  </a>
+  <a href="{{ url_for('summative.analysis') }}"
+     class="sa-nav-item {% if active_tab == 'analysis' %}active{% endif %}">
+    <i class="fas fa-chart-bar"></i> Unit Performance
+  </a>
+  <a href="{{ url_for('summative.reports') }}"
+     class="sa-nav-item {% if active_tab == 'reports' %}active{% endif %}">
+    <i class="fas fa-download"></i> Reports &amp; Downloads
+  </a>
+  {% if is_admin %}
+  <a href="{{ url_for('summative.graduation_list') }}"
+     class="sa-nav-item {% if active_tab == 'graduation' %}active{% endif %}">
+    <i class="fas fa-user-graduate"></i> Graduation List
+  </a>
+  {% endif %}
+</nav>

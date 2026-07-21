@@ -9,6 +9,11 @@
 /* ── Filter card ── */
 .me-filters { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:20px; margin-bottom:18px; }
 .me-filters h3 { color:var(--primary); font-size:14px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #eee; }
+.filter-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; align-items:end; }
+.me-filters .form-group label { display:block; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; margin-bottom:5px; }
+.me-filters .form-control { width:100%; padding:9px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; }
+.me-filters .form-control:focus { outline:none; border-color:#1e5a9f; box-shadow:0 0 0 3px rgba(30,90,159,.12); }
+.me-hint { margin:12px 0 0; font-size:12px; color:#64748b; line-height:1.45; }
 
 /* ── Assessment chips ── */
 .assessment-bar { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:16px 20px; margin-bottom:18px; }
@@ -28,6 +33,10 @@
 .marks-card-header { padding:14px 20px; background:#fff; border-bottom:1px solid #e8eef6; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
 .marks-card-header h3 { font-size:15px; font-weight:700; color:#1e5a9f; }
 .action-btns { display:flex; gap:8px; flex-wrap:wrap; }
+.btn-dl-pdf { background:#b91c1c; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.btn-dl-pdf:hover { background:#991b1b; color:#fff; }
+.btn-dl-xls { background:#15803d; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.btn-dl-xls:hover { background:#166534; color:#fff; }
 
 /* ── Grid table ── */
 .grid-wrap { overflow-x:auto; }
@@ -56,6 +65,11 @@
 /* ── Total / Avg cells ── */
 .td-total { font-weight:700; color:#1e5a9f; }
 .td-avg   { font-weight:700; }
+.gr-badge { display:inline-block;padding:2px 9px;border-radius:9999px;font-size:11px;font-weight:800;min-width:30px;text-align:center; }
+.gr-M   { background:#ede9fe;color:#5b21b6; }
+.gr-P   { background:#dcfce7;color:#15803d; }
+.gr-C   { background:#dbeafe;color:#1d4ed8; }
+.gr-NYC { background:#fee2e2;color:#b91c1c; }
 .avg-high { color:#2e7d32; } .avg-med { color:#f57c00; } .avg-low { color:#c62828; }
 
 /* ── Empty states ── */
@@ -130,6 +144,10 @@
         </select>
       </div>
     </div>
+    <p class="me-hint">
+      Select class, unit and term, then add Oral / Practical / Theory assessments.
+      Marks save automatically on blur. Download official PDF or Excel from the marks grid — not a webpage printout.
+    </p>
   </div>
 
   {% if class_id and unit_id %}
@@ -204,13 +222,13 @@
       </h3>
       {% if assessments and students_list %}
       <div class="action-btns">
-        <a href="/trainer/marks-entry/marks-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}"
-           target="_blank" class="btn btn-danger btn-sm">
-          <i class="fas fa-file-pdf"></i> PDF Report
+        <a href="{{ url_for('trainer.marks_pdf', class_id=class_id, unit_id=unit_id, year=year, term=term) }}"
+           class="btn-dl-pdf">
+          <i class="fas fa-file-pdf"></i> Download PDF
         </a>
-        <a href="/trainer/marks-entry/export-excel?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}"
-           class="btn btn-success btn-sm">
-          <i class="fas fa-file-excel"></i> Export Excel
+        <a href="{{ url_for('trainer.export_marks_excel', class_id=class_id, unit_id=unit_id, year=year, term=term) }}"
+           class="btn-dl-xls">
+          <i class="fas fa-file-excel"></i> Download Excel
         </a>
       </div>
       {% endif %}
@@ -251,7 +269,7 @@
               <i class="fas fa-book" style="font-size:10px;"></i> Theory / Written
             </th>
             {% endif %}
-            <th colspan="2" class="th-summary">Summary</th>
+            <th colspan="3" class="th-summary">Summary</th>
           </tr>
           <!-- Row 2: individual assessment names -->
           <tr>
@@ -277,6 +295,7 @@
             {% endfor %}
             <th class="th-summary">Total</th>
             <th class="th-summary">Avg %</th>
+            <th class="th-summary" title="TVET CDACC: M 80-100 / P 65-79 / C 50-64 / NYC 0-49">Grade</th>
           </tr>
         </thead>
         <tbody>
@@ -306,22 +325,29 @@
             </td>
             {% endfor %}
             <td class="td-total" id="tot_{{ s.student_id }}">
-              {% set tot = namespace(v=0, n=0) %}
+              {% set tot = namespace(v=0, n=0, mx=0) %}
               {% for a in oral_list + practical_list + theory_list %}
               {% set mv = sm.get(a.id) %}
               {% if mv is not none %}
               {% set tot.v = tot.v + mv %}
               {% set tot.n = tot.n + 1 %}
+              {% set tot.mx = tot.mx + (a.max_marks or 100) %}
               {% endif %}
               {% endfor %}
               {{ tot.v|round(1) if tot.n > 0 else '—' }}
             </td>
+            {% set avg = (tot.v / tot.mx * 100)|round(1) if tot.n > 0 and tot.mx > 0 else none %}
             <td id="avg_{{ s.student_id }}">
-              {% if tot.n > 0 %}
-              {% set avg = (tot.v / tot.n)|round(1) %}
-              <span class="{{ 'avg-high' if avg >= 75 else ('avg-med' if avg >= 50 else 'avg-low') }}">
+              {% if avg is not none %}
+              <span class="{{ 'avg-high' if avg >= 65 else ('avg-med' if avg >= 50 else 'avg-low') }}">
                 {{ avg }}%
               </span>
+              {% else %}—{% endif %}
+            </td>
+            <td id="grd_{{ s.student_id }}">
+              {% if avg is not none %}
+              {% set g = 'M' if avg >= 80 else ('P' if avg >= 65 else ('C' if avg >= 50 else 'NYC')) %}
+              <span class="gr-badge gr-{{ g }}">{{ g }}</span>
               {% else %}—{% endif %}
             </td>
           </tr>
@@ -465,22 +491,27 @@ function recalcRow(inp) {
   var row  = document.querySelector('tr[data-sid="' + sid + '"]');
   if (!row) return;
   var inputs = row.querySelectorAll('.mark-inp');
-  var total  = 0, count = 0;
+  var total  = 0, count = 0, maxTotal = 0;
   inputs.forEach(function(i) {
     var v = parseFloat(i.value);
-    if (!isNaN(v)) { total += v; count++; }
+    if (!isNaN(v)) { total += v; count++; maxTotal += (parseFloat(i.dataset.max) || 100); }
   });
   var totEl = document.getElementById('tot_' + sid);
   var avgEl = document.getElementById('avg_' + sid);
+  var grdEl = document.getElementById('grd_' + sid);
   if (!totEl || !avgEl) return;
-  if (count === 0) {
+  if (count === 0 || maxTotal === 0) {
     totEl.textContent = '—';
     avgEl.innerHTML   = '—';
+    if (grdEl) grdEl.innerHTML = '—';
   } else {
-    var avg = (total / count);
+    var avg = (total / maxTotal) * 100;
     totEl.textContent = total.toFixed(1);
-    var cls = avg >= 75 ? 'avg-high' : (avg >= 50 ? 'avg-med' : 'avg-low');
+    var cls = avg >= 65 ? 'avg-high' : (avg >= 50 ? 'avg-med' : 'avg-low');
     avgEl.innerHTML   = '<span class="' + cls + '">' + avg.toFixed(1) + '%</span>';
+    // TVET CDACC: M 80-100 / P 65-79 / C 50-64 / NYC 0-49
+    var g = avg >= 80 ? 'M' : (avg >= 65 ? 'P' : (avg >= 50 ? 'C' : 'NYC'));
+    if (grdEl) grdEl.innerHTML = '<span class="gr-badge gr-' + g + '">' + g + '</span>';
   }
 }
 

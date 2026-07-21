@@ -1,0 +1,43 @@
+{# Shared summative portal styles #}
+<style>
+.sa-wrap{padding:20px;max-width:1600px;margin:0 auto}
+.sa-nav{display:flex;flex-wrap:wrap;gap:6px;padding:6px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e8eef6;margin-bottom:20px}
+.sa-nav-item{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:9px;font-size:13px;font-weight:600;color:#64748b;text-decoration:none;transition:background .15s,color .15s}
+.sa-nav-item:hover{background:#f1f5f9;color:#0f2744}
+.sa-nav-item.active{background:#0f2744;color:#fff}
+.sa-filters{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:20px;margin-bottom:18px}
+.sa-filters h3{color:#0f2744;font-size:14px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px}
+.form-control{width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff}
+.form-control:focus{outline:none;border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.12)}
+.btn-apply{padding:10px 18px;background:#0f2744;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-apply:hover{background:#1565c0;color:#fff}
+.btn-pdf{background:#b91c1c}.btn-pdf:hover{background:#991b1b}
+.btn-xls{background:#15803d}.btn-xls:hover{background:#166534}
+.btn-outline{background:#fff;color:#0f2744;border:1.5px solid #cbd5e1}.btn-outline:hover{background:#f8fafc}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:10px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:4px solid #0f2744}
+.stat-card.ok{border-left-color:#16a34a}.stat-card.warn{border-left-color:#ea580c}.stat-card.no{border-left-color:#dc2626}
+.stat-card .n{font-size:28px;font-weight:800;color:#0f2744;line-height:1.1}
+.stat-card .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;font-weight:700;margin-top:4px}
+.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:20px}
+.action-card{background:#fff;border-radius:12px;padding:22px;border:1.5px solid #e8eef6;box-shadow:0 2px 8px rgba(0,0,0,.04);text-decoration:none;color:inherit;transition:border-color .18s,transform .15s,box-shadow .18s;display:block}
+.action-card:hover{border-color:#1565c0;transform:translateY(-2px);box-shadow:0 8px 24px -6px rgba(21,101,192,.15)}
+.action-card h4{margin:0 0 8px;font-size:15px;font-weight:700;color:#0f2744;display:flex;align-items:center;gap:8px}
+.action-card p{margin:0;font-size:13px;color:#64748b;line-height:1.5}
+.action-card .ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px}
+.ico-entry{background:#dbeafe;color:#1d4ed8}.ico-analysis{background:#fef3c7;color:#b45309}
+.ico-reports{background:#dcfce7;color:#15803d}.ico-grad{background:#ede9fe;color:#6d28d9}
+.card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;margin-bottom:18px}
+.card-hdr{padding:14px 20px;border-bottom:1px solid #e8eef6;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.card-hdr h3{margin:0;font-size:15px;font-weight:700;color:#0f2744}
+.empty{text-align:center;padding:48px 20px;color:#94a3b8}
+.empty i{font-size:40px;display:block;margin-bottom:12px;opacity:.35}
+.leg-mastery{background:#ede9fe;color:#5b21b6}.leg-proficient{background:#dcfce7;color:#166534}
+.leg-competent{background:#dbeafe;color:#1e40af}.leg-not_yet_competent{background:#fff7ed;color:#c2410c}
+.leg-crnm{background:#fee2e2;color:#991b1b}
+.leg{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.export-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+</style>

@@ -2338,7 +2338,7 @@ def marks():
         mx  = float(a.get("max_marks") or 100)
         if obt is not None:
             pct   = round(float(obt) / mx * 100, 1) if mx else 0
-            grade = ("M" if pct >= 85 else "P" if pct >= 70
+            grade = ("M" if pct >= 80 else "P" if pct >= 65
                      else "C" if pct >= 50 else "NYC")
         else:
             pct   = None
@@ -2363,7 +2363,7 @@ def marks():
         total_obt = round(sum(float(a["marks_obtained"]) for a in entered), 1) if entered else 0
         total_max = round(sum(a["max_marks"]              for a in entered), 1) if entered else 0
         pct       = round(total_obt / total_max * 100, 1) if total_max else 0
-        final     = ("M" if pct >= 85 else "P" if pct >= 70
+        final     = ("M" if pct >= 80 else "P" if pct >= 65
                      else "C" if pct >= 50 else "NYC") if entered else "—"
         data.update({"total_obt": total_obt, "total_max": total_max,
                      "pct": pct, "final_grade": final, "has_marks": bool(entered)})
@@ -2458,7 +2458,7 @@ def download_result_slip():
         mx  = float(a.get("max_marks") or 100)
         if obt is not None:
             pct   = round(float(obt) / mx * 100, 1) if mx else 0
-            grade = ("M" if pct >= 85 else "P" if pct >= 70
+            grade = ("M" if pct >= 80 else "P" if pct >= 65
                      else "C" if pct >= 50 else "NYC")
         else:
             pct = grade = None
@@ -2701,7 +2701,7 @@ def download_result_slip():
                 u_obt = round(sum(float(r["marks_obtained"]) for r in entered), 1) if entered else 0
                 u_mx  = round(sum(float(r.get("max_marks") or 100) for r in entered), 1) if entered else 0
                 u_pct = round(u_obt / u_mx * 100, 1) if u_mx else 0
-                final = ("M" if u_pct >= 85 else "P" if u_pct >= 70
+                final = ("M" if u_pct >= 80 else "P" if u_pct >= 65
                          else "C" if u_pct >= 50 else "NYC") if entered else "—"
                 grade_bg = GRADE_BG.get(final, colors.white)
 
@@ -2741,11 +2741,12 @@ def download_result_slip():
         # ════════════════════════════════════════════════════════════════════
         story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=4))
         scale = Table([[
-            Paragraph("<b>M — Mastery</b> 85–100%",           lft9),
-            Paragraph("<b>P — Proficient</b> 70–84%",         lft9),
-            Paragraph("<b>C — Competent</b> 50–69%",          lft9),
+            Paragraph("<b>M — Mastery</b> 80–100%",           lft9),
+            Paragraph("<b>P — Proficient</b> 65–79%",         lft9),
+            Paragraph("<b>C — Competent</b> 50–64%",          lft9),
             Paragraph("<b>NYC — Not Yet Competent</b> 0–49%", lft9),
-        ]], colWidths=[W/4]*4)
+            Paragraph("<b>CRNM</b> — Course Req. Not Met",    lft9),
+        ]], colWidths=[W/5]*5)
         scale.setStyle(TableStyle([
             ('BACKGROUND',    (0,0),(-1,-1), LIGHT_GREY),
             ('BOX',           (0,0),(-1,-1), 0.5, BORDER),

@@ -1,27 +1,10 @@
 {% extends portal_base %}
-{% block title %}Summative Assessments{% endblock %}
+{% block title %}Summative Competence Entry{% endblock %}
 {% block page_title %}Summative Competence Entry{% endblock %}
 
 {% block extra_style %}
+{% include "summative/_styles.html" %}
 <style>
-.sa-wrap{padding:20px;max-width:1400px;margin:0 auto}
-.sa-filters{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:20px;margin-bottom:18px}
-.sa-filters h3{color:#0f2744;font-size:14px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #eee}
-.filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
-.form-group label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px}
-.form-control{width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px}
-.form-control:focus{outline:none;border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.12)}
-.btn-apply{padding:10px 18px;background:#0f2744;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer}
-.btn-apply:hover{background:#1565c0}
-.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
-.leg{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px}
-.leg-proficient{background:#dcfce7;color:#166534}
-.leg-competent{background:#dbeafe;color:#1e40af}
-.leg-not_yet_competent{background:#fee2e2;color:#991b1b}
-.leg-exempt{background:#f3f4f6;color:#374151}
-.summary-bar{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
-.summary-chip{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 16px;font-size:13px}
-.summary-chip strong{font-size:18px;display:block;color:#0f2744}
 .grid-card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden}
 .grid-card-hdr{padding:14px 20px;border-bottom:1px solid #e8eef6;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .grid-card-hdr h3{margin:0;font-size:15px;font-weight:700;color:#0f2744}
@@ -31,23 +14,27 @@
 .grid-table td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 .grid-table tbody tr:hover{background:#f8fafc}
 .comp-select{width:100%;min-width:160px;padding:7px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:12px;font-weight:600}
+.comp-select.mastery{border-color:#7c3aed;background:#f5f3ff;color:#5b21b6}
 .comp-select.proficient{border-color:#16a34a;background:#f0fdf4;color:#166534}
 .comp-select.competent{border-color:#2563eb;background:#eff6ff;color:#1e40af}
-.comp-select.not_yet_competent{border-color:#dc2626;background:#fef2f2;color:#991b1b}
-.comp-select.exempt{border-color:#9ca3af;background:#f9fafb;color:#374151}
+.comp-select.not_yet_competent{border-color:#ea580c;background:#fff7ed;color:#c2410c}
+.comp-select.crnm{border-color:#dc2626;background:#fef2f2;color:#991b1b}
 .comp-select.saved{box-shadow:0 0 0 2px rgba(22,163,74,.35)}
 .remarks-inp{width:100%;min-width:120px;padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px}
-.empty-prompt{text-align:center;padding:48px 20px;color:#94a3b8}
-.empty-prompt i{font-size:40px;display:block;margin-bottom:12px;opacity:.35}
+.summary-bar{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.summary-chip{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 16px;font-size:13px}
+.summary-chip strong{font-size:18px;display:block;color:#0f2744}
 .adm{font-size:11px;color:#94a3b8}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="sa-wrap">
+  {% include "summative/_nav.html" %}
+
   <div class="sa-filters">
     <h3><i class="fas fa-award"></i> Select Class &amp; Unit — Enter Summative Competence</h3>
-    <form method="get" action="{{ url_for('summative.index') }}">
+    <form method="get" action="{{ url_for('summative.entry') }}">
       <div class="filter-grid">
         <div class="form-group">
           <label>Class</label>
@@ -85,6 +72,14 @@
         <div class="form-group">
           <button type="submit" class="btn-apply"><i class="fas fa-search"></i> Load Trainees</button>
         </div>
+        {% if class_id and unit_id %}
+        <div class="form-group">
+          <a class="btn-apply btn-xls" style="text-decoration:none"
+             href="{{ url_for('summative.export_unit_excel', class_id=class_id, unit_id=unit_id, year=year, term=term or '') }}">
+            <i class="fas fa-file-excel"></i> Download Unit
+          </a>
+        </div>
+        {% endif %}
       </div>
     </form>
   </div>
@@ -158,7 +153,7 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-prompt">
+    <div class="empty">
       <i class="fas fa-user-graduate"></i>
       No trainees enrolled in this class.
     </div>
@@ -166,10 +161,10 @@
   </div>
   {% else %}
   <div class="grid-card">
-    <div class="empty-prompt">
+    <div class="empty">
       <i class="fas fa-award"></i>
-      <p>Select a class and unit to enter summative competence outcomes.</p>
-      <p style="font-size:13px;margin-top:8px">These records feed the graduation list (all units must be Proficient, Competent, or Exempt).</p>
+      <p>Select a class and unit to enter summative competence outcomes (TVET CDACC scale).</p>
+      <p style="font-size:13px;margin-top:8px">M = Mastery (80–100%) · P = Proficient (65–79%) · C = Competent (50–64%) · NYC (0–49%) · CRNM = Course Requirement Not Met.<br>These records feed the graduation list (all units must be Mastery, Proficient, or Competent).</p>
     </div>
   </div>
   {% endif %}
