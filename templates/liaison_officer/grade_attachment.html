@@ -2,21 +2,26 @@
 {% block title %}Final Grading{% endblock %}
 {% block page_title %}Attachment Final Grading{% endblock %}
 {% block content %}
+{% set w_gps = (config.weight_gps_attendance or 10)|int %}
+{% set w_log = (config.weight_logbook or 20)|int %}
+{% set w_men = (config.weight_mentor_eval or 30)|int %}
+{% set w_tra = (config.weight_trainer_assessment or 30)|int %}
+{% set w_rep = (config.weight_final_report or 10)|int %}
 <div class="bg-gray-50 min-h-screen p-6 max-w-3xl mx-auto">
   <a href="{{ url_for('liaison_officer.placement_detail', att_id=att.id) }}" class="text-blue-700 text-sm font-semibold mb-4 inline-block"><i class="fas fa-arrow-left"></i> Back</a>
   <div class="bg-white rounded-xl border shadow-sm p-6">
     <h1 class="text-lg font-bold mb-2">{{ (att.get('user_profiles') or {}).get('full_name','Trainee') }}</h1>
-    <p class="text-sm text-gray-600 mb-6">Configurable weightings: GPS {{ config.weight_gps_attendance|default(10) }}% · Logbook {{ config.weight_logbook|default(20) }}% · Mentor {{ config.weight_mentor_eval|default(30) }}% · Trainer {{ config.weight_trainer_assessment|default(30) }}% · Report {{ config.weight_final_report|default(10) }}%</p>
+    <p class="text-sm text-gray-600 mb-6">Section max marks: GPS /{{ w_gps }} · Logbook /{{ w_log }} · Mentor /{{ w_men }} · Trainer /{{ w_tra }} · Report /{{ w_rep }} (overall /100)</p>
 
     <form method="POST" class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
-        <label class="text-sm">GPS Attendance (0–100)<input class="w-full border rounded p-2 mt-1" type="number" name="score_gps_attendance" min="0" max="100" value="{{ existing_grade.score_gps_attendance if existing_grade else '' }}"></label>
-        <label class="text-sm">Daily Logbook (0–100)<input class="w-full border rounded p-2 mt-1" type="number" name="score_logbook" min="0" max="100" value="{{ existing_grade.score_logbook if existing_grade else '' }}"></label>
-        <label class="text-sm">Trainer Assessment (0–100)<input class="w-full border rounded p-2 mt-1" type="number" name="score_trainer_assessment" min="0" max="100" value="{{ existing_grade.score_trainer_assessment if existing_grade else '' }}"></label>
-        <label class="text-sm">Final Report (0–100)<input class="w-full border rounded p-2 mt-1" type="number" name="score_final_report" min="0" max="100" value="{{ existing_grade.score_final_report if existing_grade else '' }}"></label>
+        <label class="text-sm">GPS Attendance (marks out of {{ w_gps }})<input class="w-full border rounded p-2 mt-1" type="number" name="score_gps_attendance" min="0" max="{{ w_gps }}" step="0.5" value="{{ existing_grade.score_gps_attendance if existing_grade else '' }}"></label>
+        <label class="text-sm">Daily Logbook (marks out of {{ w_log }})<input class="w-full border rounded p-2 mt-1" type="number" name="score_logbook" min="0" max="{{ w_log }}" step="0.5" value="{{ existing_grade.score_logbook if existing_grade else '' }}"></label>
+        <label class="text-sm">Trainer Assessment (marks out of {{ w_tra }})<input class="w-full border rounded p-2 mt-1" type="number" name="score_trainer_assessment" min="0" max="{{ w_tra }}" step="0.5" value="{{ existing_grade.score_trainer_assessment if existing_grade else '' }}"></label>
+        <label class="text-sm">Final Report (marks out of {{ w_rep }})<input class="w-full border rounded p-2 mt-1" type="number" name="score_final_report" min="0" max="{{ w_rep }}" step="0.5" value="{{ existing_grade.score_final_report if existing_grade else '' }}"></label>
       </div>
 
-      <h3 class="font-bold text-sm pt-2">Industry Mentor Evaluation (100 marks total)</h3>
+      <h3 class="font-bold text-sm pt-2">Industry Mentor Evaluation (criteria total 100 → scaled to {{ w_men }} marks)</h3>
       <div class="grid grid-cols-2 gap-3">
         {% for field, label, max_pts in mentor_criteria %}
         <label class="text-xs">{{ label }} (max {{ max_pts }})

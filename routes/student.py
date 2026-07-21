@@ -16,6 +16,7 @@ from auth_utils import (student_required, write_audit_log, current_user)
 from db import get_service_client
 from datetime import datetime
 from notifications import get_user_notifications
+from report_utils import pdf_header_style_cmds, pdf_signature_block
 import uuid
 
 student_bp = Blueprint("student", __name__)
@@ -1732,18 +1733,9 @@ def _build_exam_booking_pdf(student: dict, course_name: str, course_code: str,
         ('VALIGN',        (0,0),(-1,-1),'BOTTOM'),
     ]))
     story.append(cl_tbl)
-    story.append(Spacer(1, 3))
 
-    sig_row = [[
-        Paragraph("Signature: ___________________________", norm9),
-        Paragraph("Date: _______________________________", norm9),
-    ]]
-    sig_tbl = Table(sig_row, colWidths=[W/2, W/2])
-    sig_tbl.setStyle(TableStyle([
-        ('TOPPADDING',    (0,0),(-1,-1), 2),
-        ('BOTTOMPADDING', (0,0),(-1,-1), 2),
-    ]))
-    story.append(sig_tbl)
+    # Official sign-off: HOD + Chief Principal (Name/Sign/Date) + stamp box.
+    story.extend(pdf_signature_block(W, officer_title="Head of Department"))
     story.append(Spacer(1, 6))
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=4))
 
@@ -2512,7 +2504,6 @@ def download_result_slip():
                                 fontName='Helvetica', alignment=TA_LEFT)
 
         DARK_BLUE  = colors.HexColor('#0f2c54')
-        MID_BLUE   = colors.HexColor('#1e40af')
         LIGHT_GREY = colors.HexColor('#f8fafc')
         BORDER     = colors.HexColor('#e2e8f0')
 
@@ -2617,13 +2608,6 @@ def download_result_slip():
             story.append(Paragraph("No assessment records found for the selected period.", lft9))
         else:
             # ── Build header row ──────────────────────────────────────────────
-            TYPE_HDR_COLOR = {
-                'ORAL':      colors.HexColor('#c2410c'),
-                'PRACTICAL': colors.HexColor('#1d4ed8'),
-                'WRITTEN':   colors.HexColor('#6d28d9'),
-                'CA':        colors.HexColor('#15803d'),
-                'IA':        colors.HexColor('#854d0e'),
-            }
             TYPE_BG2 = {
                 'ORAL':      colors.HexColor('#fff7ed'),
                 'PRACTICAL': colors.HexColor('#eff6ff'),
@@ -2632,22 +2616,23 @@ def download_result_slip():
                 'IA':        colors.HexColor('#fef9c3'),
             }
 
-            hdr = ([Paragraph("#",     tbl_h),
-                    Paragraph("Code",  tbl_h),
-                    Paragraph("Unit Name", tbl_l)] +
-                   [Paragraph("Tm",    tbl_h)] +
-                   [Paragraph(t, ParagraphStyle(f'th_{t}', parent=tbl_h,
-                                                textColor=TYPE_HDR_COLOR.get(t, colors.white)))
-                    for t in present_types] +
-                   [Paragraph("Total", tbl_h),
-                    Paragraph("Score", tbl_h),
-                    Paragraph("Grade", tbl_h)])
+            hdr_txt = ParagraphStyle('th_light', parent=tbl_h,
+                                     textColor=colors.HexColor('#0F2744'))
+            hdr_txt_l = ParagraphStyle('th_light_l', parent=tbl_l,
+                                       fontName='Helvetica-Bold',
+                                       textColor=colors.HexColor('#0F2744'))
+            hdr = ([Paragraph("#",     hdr_txt),
+                    Paragraph("Code",  hdr_txt),
+                    Paragraph("Unit Name", hdr_txt_l)] +
+                   [Paragraph("Tm",    hdr_txt)] +
+                   [Paragraph(t, hdr_txt) for t in present_types] +
+                   [Paragraph("Total", hdr_txt),
+                    Paragraph("Score", hdr_txt),
+                    Paragraph("Grade", hdr_txt)])
 
             tbl_data  = [hdr]
             tbl_style = [
-                ('BACKGROUND',    (0,0), (-1,0),  MID_BLUE),
-                ('TEXTCOLOR',     (0,0), (-1,0),  colors.white),
-                ('FONTNAME',      (0,0), (-1,-1), 'Helvetica'),
+                ('FONTNAME',      (0,1), (-1,-1), 'Helvetica'),
                 ('FONTSIZE',      (0,0), (-1,-1), 7.5),
                 ('TOPPADDING',    (0,0), (-1,-1), 3),
                 ('BOTTOMPADDING', (0,0), (-1,-1), 3),
@@ -2659,7 +2644,7 @@ def download_result_slip():
                 ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
                 ('ROWBACKGROUNDS', (0,1),(-1,-1),
                  [colors.white, colors.HexColor('#f8fafc')]),
-            ]
+            ] + pdf_header_style_cmds(header_row=0)
 
             # ── One data row per unit ─────────────────────────────────────────
             for row_i, (uid, ud) in enumerate(by_unit.items(), start=1):
@@ -2757,51 +2742,17 @@ def download_result_slip():
         story += [scale, Spacer(1, 16)]
 
         # ════════════════════════════════════════════════════════════════════
-        # 5.  OFFICIAL SIGNATURES  (HOD left · Examinations right)
+        # 5.  OFFICIAL SIGNATURES  (HOD · Examinations · Chief Principal + stamp)
         # ════════════════════════════════════════════════════════════════════
         story.append(HRFlowable(width="100%", thickness=1.5,
                                 color=DARK_BLUE, spaceAfter=10))
         story.append(Paragraph("OFFICIAL VERIFICATION", lft10b))
-        story.append(Spacer(1, 8))
 
-        # Use a simple 2-column layout; each column is self-contained.
-        half = W / 2 - 4*mm
-        line = "_" * 38        # underline length
-
-        def _sig_block(title):
-            """Return a Table cell containing one signature block."""
-            rows = [
-                [Paragraph(f"<b>{title}</b>",
-                           ParagraphStyle('sh', parent=lft9b, fontSize=9,
-                                          textColor=DARK_BLUE))],
-                [Spacer(1, 6)],
-                [Paragraph(f"Name:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
-                [Spacer(1, 4)],
-                [Paragraph(f"Signature:&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
-                [Spacer(1, 4)],
-                [Paragraph(f"Stamp/Date: {line}", lft9)],
-            ]
-            t = Table(rows, colWidths=[half])
-            t.setStyle(TableStyle([
-                ('TOPPADDING',    (0,0),(-1,-1), 2),
-                ('BOTTOMPADDING', (0,0),(-1,-1), 2),
-                ('LEFTPADDING',   (0,0),(-1,-1), 0),
-                ('RIGHTPADDING',  (0,0),(-1,-1), 0),
-            ]))
-            return t
-
-        sig_outer = Table(
-            [[_sig_block("HEAD OF DEPARTMENT"),
-              Spacer(8*mm, 1),
-              _sig_block("EXAMINATIONS OFFICER")]],
-            colWidths=[half, 8*mm, half]
-        )
-        sig_outer.setStyle(TableStyle([
-            ('VALIGN', (0,0),(-1,-1), 'TOP'),
-            ('TOPPADDING',    (0,0),(-1,-1), 0),
-            ('BOTTOMPADDING', (0,0),(-1,-1), 0),
-        ]))
-        story.append(sig_outer)
+        story.extend(pdf_signature_block(
+            W,
+            officer_title="Head of Department",
+            extra_officers=("Examinations Officer",),
+        ))
 
         # Footer timestamp
         story.append(Spacer(1, 10))

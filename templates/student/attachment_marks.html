@@ -130,8 +130,8 @@
 
     <div class="result-band">
       <div class="result-total">
-        <div class="result-total-num">{{ total|round(1) }}%</div>
-        <div class="result-total-lbl">Weighted Total Score</div>
+        <div class="result-total-num">{{ total|round(1) }} / 100 ({{ total|round(1) }}%)</div>
+        <div class="result-total-lbl">Overall Total Score</div>
       </div>
       <div class="result-grade">
         <div class="big-grade grade-{{ grade }}">{{ grade }}</div>
@@ -170,16 +170,16 @@
       <div class="comp-row">
         <div class="comp-label">{{ label }}<small>{{ hint }}</small></div>
         <div class="comp-bar-wrap">
-          {% if score is not none %}
-          <div class="comp-bar {{ bar_cls }}" style="width:{{ [score|float, 100]|min }}%"></div>
+          {% if score is not none and wt %}
+          <div class="comp-bar {{ bar_cls }}" style="width:{{ [(score|float / wt|float * 100), 100]|min }}%"></div>
           {% endif %}
         </div>
         {% if score is not none %}
-        <div class="comp-score">{{ score|float|round(1) }}/100</div>
+        <div class="comp-score">{{ score|float|round(1) }} / {{ wt|int }}</div>
         {% else %}
         <div class="comp-nd">—</div>
         {% endif %}
-        <div class="comp-wt">{{ wt|int }}%</div>
+        <div class="comp-wt">/{{ wt|int }}</div>
       </div>
       {% endfor %}
 

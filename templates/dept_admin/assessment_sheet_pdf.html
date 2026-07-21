@@ -6,7 +6,8 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Arial', sans-serif; line-height:1.5; color:#222; }
-    @media print { .no-print { display:none !important; } @page { size:A4; margin:0.45in; } }
+    @media print { .no-print { display:none !important; } @page { size:A4; margin:0.45in; }
+      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
     .container { max-width:8.5in; margin:0 auto; padding:24px; }
     .header { text-align:center; border-bottom:3px solid #1565c0; padding-bottom:14px; margin-bottom:18px; }
     .header img { height:64px; margin-bottom:8px; }
@@ -26,8 +27,8 @@
     .box-min      { background:#e3f2fd; color:#1565c0; }
     .box-term     { background:#e8eaf6; color:#283593; }
     table { width:100%; border-collapse:collapse; font-size:11.5px; }
-    thead tr { background:#1565c0; color:#fff; }
-    th { padding:9px 10px; text-align:left; font-weight:700; border:1px solid #0d47a1; }
+    thead tr { background:#DCE6F4; color:#0F2744; }
+    th { padding:9px 10px; text-align:left; font-weight:700; border:1px solid #B9C9DE; border-bottom:2px solid #0F2744; }
     td { padding:9px 10px; border:1px solid #ddd; vertical-align:middle; }
     tbody tr:nth-child(even) { background:#f7f9ff; }
     .sig-section { margin-top:48px; padding-top:18px; border-top:1px solid #ccc; }
@@ -36,6 +37,9 @@
     .sig-line { border-bottom:1px solid #333; height:52px; margin-bottom:8px; }
     .sig-label { font-weight:700; font-size:11px; text-transform:uppercase; }
     .sig-sub { font-size:10px; color:#666; margin-top:2px; }
+    .stamp-area { margin:24px auto 0; width:120px; min-height:80px; border:2px dashed #999;
+      border-radius:6px; display:flex; align-items:center; justify-content:center;
+      text-align:center; font-size:10px; color:#777; text-transform:uppercase; letter-spacing:.05em; }
     .btn-row { margin-top:20px; text-align:right; }
     .btn { padding:9px 20px; margin-left:8px; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; }
     .btn-print { background:#1565c0; color:#fff; }
@@ -136,11 +140,12 @@
       </div>
       <div class="sig-box">
         <div class="sig-line"></div>
-        <div class="sig-label">Principal / Admin</div>
+        <div class="sig-label">Chief Principal</div>
         <div class="sig-sub">Name: _______________</div>
         <div class="sig-sub">Signature &amp; Date</div>
       </div>
     </div>
+    <div class="stamp-area">Official<br>Stamp</div>
   </div>
 
   <div class="btn-row no-print">

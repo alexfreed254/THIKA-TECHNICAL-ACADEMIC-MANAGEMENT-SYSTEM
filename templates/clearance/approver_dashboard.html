@@ -108,6 +108,35 @@
     font-size:13px; color:#15803d;
   }
   .completed-strip .sn-mono { font-family:monospace; font-weight:700; font-size:12px; color:#374151; }
+
+  .next-hint {
+    background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+    padding:12px 16px; margin-bottom:18px; font-size:13px; color:#1e3a5f;
+    display:flex; align-items:flex-start; gap:10px; line-height:1.5;
+  }
+  .next-hint i { color:#1565c0; margin-top:2px; flex-shrink:0; }
+
+  .status-pill {
+    display:inline-flex; align-items:center; gap:4px; padding:3px 10px;
+    border-radius:99px; font-size:11px; font-weight:700; white-space:nowrap;
+  }
+  .sp-approved { background:#dcfce7; color:#15803d; }
+  .sp-rejected { background:#fee2e2; color:#b91c1c; }
+  .sp-pending  { background:#fef3c7; color:#b45309; }
+
+  .btn-ok:focus-visible, .btn-no:focus-visible, .btn-ret:focus-visible,
+  .rej-inp:focus-visible, .ret-inp:focus-visible {
+    outline:2px solid #93c5fd; outline-offset:2px;
+  }
+
+  @media (max-width: 640px) {
+    .ap-wrap { padding: 14px 12px; }
+    .role-banner { padding: 14px 16px; flex-wrap: wrap; }
+    .ap-body span.lbl { display:block; width:auto; margin-bottom:2px; }
+    .reject-row { min-width: 100%; width: 100%; }
+    .ap-actions { flex-direction: column; align-items: stretch; }
+    .ap-actions form, .ap-actions .reject-row { width: 100%; }
+  }
 </style>
 {% endblock %}
 
@@ -116,7 +145,7 @@
 
   <!-- Role banner -->
   <div class="role-banner">
-    <div class="role-banner-icon"><i class="fas fa-clipboard-check"></i></div>
+    <div class="role-banner-icon" aria-hidden="true"><i class="fas fa-clipboard-check"></i></div>
     <div>
       <h2>Clearance Approvals — {{ user_role|replace('_',' ')|title }}</h2>
       <p>
@@ -126,6 +155,25 @@
       </p>
     </div>
   </div>
+
+  {% set _s1 = stage1_pending | length if stage1_pending else 0 %}
+  {% set _s2 = stage2_pending | length if stage2_pending else 0 %}
+  {% set _hod = home_stage1_requests | length if home_stage1_requests else 0 %}
+  {% if _s1 or _s2 or _hod %}
+  <div class="next-hint" role="status">
+    <i class="fas fa-lightbulb"></i>
+    <div>
+      {% if _s2 %}
+      <strong>Action needed:</strong> {{ _s2 }} Stage 2 final review{{ 's' if _s2 != 1 else '' }} awaiting your decision
+      {% if _s1 %} · {{ _s1 }} Stage 1 item{{ 's' if _s1 != 1 else '' }} also pending{% endif %}.
+      {% elif _s1 %}
+      <strong>Action needed:</strong> Review and approve or reject the {{ _s1 }} Stage 1 clearance{{ 's' if _s1 != 1 else '' }} below.
+      {% else %}
+      <strong>HOD tip:</strong> You can manage or waive trainer approvals for trainees still in Stage 1.
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 
   <!-- ══════════════════════════════════════════════
        STAGE 1 PENDING — for trainers, techs, service depts, other HODs
@@ -186,6 +234,39 @@
         <input type="text" name="comments" class="rej-inp" required placeholder="Reason for rejection (required)…">
         <button type="submit" class="btn-no"><i class="fas fa-times"></i> Reject</button>
       </form>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════
+       HOME DEPT HOD — Stage 1 trainer waiver access
+  ══════════════════════════════════════════════ -->
+  {% if user_role == 'dept_admin' and home_stage1_requests %}
+  <div class="sec-heading">
+    <span class="s1-chip"><i class="fas fa-user-shield"></i> HOD Authority</span>
+    Your Department — Trainer Approvals In Progress
+  </div>
+  {% for r in home_stage1_requests %}
+  {% set rup = r.get('user_profiles') or {} %}
+  <div class="ap-card">
+    <div class="ap-hdr">
+      <div>
+        <div class="sname">{{ rup.get('full_name','—') }}</div>
+        <div class="sadm">Adm: {{ rup.get('admission_no','—') }}</div>
+      </div>
+      <span class="cat-tag">
+        Trainers: {{ r._trainers_done }}/{{ r._trainers_required }} cleared
+      </span>
+    </div>
+    <div class="ap-actions">
+      <a href="{{ url_for('clearance.manage_trainers', request_id=r.id) }}" class="btn-ok"
+         style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+        <i class="fas fa-user-shield"></i> Manage / Waive Trainer Approvals
+      </a>
+      <span style="font-size:11px;color:#6b7280;align-self:center">
+        As home HOD, you may clear inactive or unavailable trainers on their behalf.
+      </span>
     </div>
   </div>
   {% endfor %}
@@ -285,6 +366,12 @@
           As HOD, you may clear a trainer on their behalf if they are inactive, retired, or unavailable.
           Waiving counts as an approved clearance and allows Stage 1 to proceed.
         </span>
+        {% if req_id %}
+        <a href="{{ url_for('clearance.manage_trainers', request_id=req_id) }}"
+           style="font-size:11px;font-weight:600;color:#1565c0;margin-left:8px;text-decoration:none">
+          <i class="fas fa-external-link-alt"></i> Open full trainer management page
+        </a>
+        {% endif %}
       </div>
       {% for ta in a.trainer_approvals %}
       <div class="waiver-row">
@@ -317,11 +404,13 @@
   {% endif %}
 
   <!-- Empty state when no pending approvals -->
-  {% if not stage1_pending and not stage2_pending %}
-  <div class="empty-state">
-    <i class="fas fa-check-double"></i>
-    <p style="font-size:14px;font-weight:700;margin-bottom:6px">No pending clearance approvals</p>
-    <p style="font-size:13px">You have no clearance approvals requiring action at this time.</p>
+  {% if not stage1_pending and not stage2_pending and not (user_role == 'dept_admin' and home_stage1_requests) %}
+  <div class="empty-state" role="status">
+    <i class="fas fa-check-double" aria-hidden="true"></i>
+    <p style="font-size:14px;font-weight:700;margin-bottom:6px;color:#374151">No pending clearance approvals</p>
+    <p style="font-size:13px;max-width:420px;margin:0 auto;line-height:1.5">
+      You have nothing requiring action right now. New Stage 1 requests appear here as soon as a trainee initiates clearance.
+    </p>
   </div>
   {% endif %}
 
@@ -349,7 +438,8 @@
       </div>
       <div style="font-size:11px;color:#6b7280;text-align:right">
         {{ (a.get('approved_at') or '')[:10] or '—' }}<br>
-        <span style="color:{% if a.status == 'approved' %}#15803d{% else %}#b91c1c{% endif %};font-weight:700">
+        <span class="status-pill {% if a.status == 'approved' %}sp-approved{% else %}sp-rejected{% endif %}">
+          {% if a.status == 'approved' %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
           {{ a.status | title }}
         </span>
       </div>

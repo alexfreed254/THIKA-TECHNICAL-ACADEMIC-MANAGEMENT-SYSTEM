@@ -57,8 +57,9 @@
     /* Student info table */
     .student-table { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
     .student-table th {
-      background: #1e3a5f; color: #fff; padding: 8px 12px; text-align: left;
+      background: #DCE6F4; color: #0F2744; padding: 8px 12px; text-align: left;
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      border-bottom: 2px solid #0F2744;
     }
     .student-table td { padding: 9px 12px; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
     .student-table tr:last-child td { border-bottom: none; }
@@ -66,14 +67,15 @@
 
     /* Stage approvals table */
     .stage-title {
-      font-size: 14px; font-weight: 700; color: #1e3a5f; text-transform: uppercase;
+      font-size: 14px; font-weight: 700; color: #0F2744; text-transform: uppercase;
       letter-spacing: .05em; margin: 22px 0 10px;
-      border-bottom: 2px solid #1e3a5f; padding-bottom: 6px;
+      border-bottom: 2px solid #0F2744; padding-bottom: 6px;
     }
     .stages-table { width: 100%; border-collapse: collapse; margin-bottom: 22px; font-size: 12px; }
     .stages-table th {
-      background: #1e3a5f; color: #fff; padding: 7px 10px; text-align: left;
-      font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+      background: #DCE6F4; color: #0F2744; padding: 7px 10px; text-align: left;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      border-bottom: 2px solid #0F2744;
     }
     .stages-table td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
     .stages-table tr:last-child td { border-bottom: none; }
@@ -84,12 +86,19 @@
 
     /* Signatures */
     .sig-row {
-      display: flex; gap: 24px; margin-top: 28px; flex-wrap: wrap; justify-content: space-between;
+      display: flex; gap: 18px; margin-top: 28px; flex-wrap: wrap; justify-content: space-between;
     }
-    .sig-block { flex: 1; min-width: 160px; text-align: center; }
-    .sig-line { border-top: 1.5px solid #374151; margin-bottom: 6px; padding-top: 8px; }
-    .sig-name { font-size: 12px; font-weight: 700; color: #111827; }
-    .sig-role { font-size: 11px; color: #9ca3af; }
+    .sig-block {
+      flex: 1; min-width: 180px; text-align: left;
+      border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; background: #fafafa;
+    }
+    .sig-role { font-size: 11px; font-weight: 800; color: #0F2744; text-transform: uppercase; margin-bottom: 10px; }
+    .sig-field { font-size: 11px; color: #374151; margin: 8px 0; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+    .sig-stamp {
+      margin-top: 12px; border: 1.5px dashed #94a3b8; border-radius: 6px;
+      min-height: 52px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #94a3b8; font-style: italic;
+    }
 
     /* Footer */
     .cert-footer {
@@ -261,24 +270,39 @@
     <!-- Signature blocks -->
     <div class="sig-row">
       <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-name">Head of Department</div>
-        <div class="sig-role">Academic Department</div>
+        <div class="sig-role">Head of Department</div>
+        <div class="sig-field">Name: _______________________________</div>
+        <div class="sig-field">Sign: _______________________________</div>
+        <div class="sig-field">Date: _______________________________</div>
+        <div class="sig-stamp">Official stamp</div>
       </div>
       <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-name">Finance Officer</div>
-        <div class="sig-role">Finance Office</div>
+        <div class="sig-role">Finance Officer</div>
+        <div class="sig-field">Name: _______________________________</div>
+        <div class="sig-field">Sign: _______________________________</div>
+        <div class="sig-field">Date: _______________________________</div>
+        <div class="sig-stamp">Official stamp</div>
       </div>
       <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-name">Dean of Students</div>
-        <div class="sig-role">Dean's Office</div>
+        <div class="sig-role">Dean of Students</div>
+        <div class="sig-field">Name: _______________________________</div>
+        <div class="sig-field">Sign: _______________________________</div>
+        <div class="sig-field">Date: _______________________________</div>
+        <div class="sig-stamp">Official stamp</div>
       </div>
       <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-name">Academic Registrar</div>
-        <div class="sig-role">Registrar's Office</div>
+        <div class="sig-role">Academic Registrar</div>
+        <div class="sig-field">Name: _______________________________</div>
+        <div class="sig-field">Sign: _______________________________</div>
+        <div class="sig-field">Date: _______________________________</div>
+        <div class="sig-stamp">Official stamp</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-role">Chief Principal</div>
+        <div class="sig-field">Name: _______________________________</div>
+        <div class="sig-field">Sign: _______________________________</div>
+        <div class="sig-field">Date: _______________________________</div>
+        <div class="sig-stamp">Official stamp</div>
       </div>
     </div>
 

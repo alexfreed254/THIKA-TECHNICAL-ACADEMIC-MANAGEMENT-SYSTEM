@@ -14,6 +14,9 @@ from auth_utils import super_admin_required, write_audit_log, current_user
 from db import get_service_client
 from werkzeug.security import generate_password_hash
 from notifications import create_notification
+from report_utils import (excel_letterhead, style_header_row,
+                          excel_signature_block, pdf_letterhead,
+                          pdf_header_style_cmds, pdf_signature_block)
 from datetime import date, timedelta
 import json
 
@@ -1414,49 +1417,65 @@ def _build_export_rows(db, student_ids=None, dept_filter="",
     return result
 
 
-def _export_excel(rows, title: str, period_label: str, year: int):
+def _export_excel(rows, title: str, period_label: str, year: int, dept_name: str = ""):
     import io
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Font, Alignment, Border, Side
     from flask import Response
+    from report_utils import (
+        excel_letterhead, style_header_row, excel_signature_block, HEADER_BORDER_HEX,
+    )
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Attachments"
 
-    hdr_fill = PatternFill("solid", fgColor="1565C0")
-    hdr_font = Font(color="FFFFFF", bold=True, size=11)
-    thin = Side(style="thin", color="CCCCCC")
-    border = Border(left=thin, right=thin, top=thin, bottom=thin)
-
-    # Title row
-    ws.merge_cells("A1:J1")
-    ws["A1"] = f"{title} — {period_label} {year}"
-    ws["A1"].font = Font(bold=True, size=13, color="0D2167")
-    ws["A1"].alignment = Alignment(horizontal="center")
-
     headers = ["Admission No", "Full Name", "Trainee Phone",
                "Company Attached", "Location / Address",
                "Supervisor Name", "Supervisor Phone",
                "Start Date", "End Date", "Status"]
-    ws.append([])  # blank row
-    ws.append(headers)
-    hdr_row = ws.max_row
-    for col_idx, _ in enumerate(headers, 1):
-        cell = ws.cell(row=hdr_row, column=col_idx)
-        cell.fill = hdr_fill
-        cell.font = hdr_font
-        cell.alignment = Alignment(horizontal="center")
+    total_cols = len(headers)
+    thin = Side(style="thin", color=HEADER_BORDER_HEX)
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    next_row = excel_letterhead(
+        ws,
+        doc_name=title or "Industrial Attachments Register",
+        total_cols=total_cols,
+        dept_name=dept_name or "All Departments",
+        meta_lines=(
+            f"Period: {period_label} {year}",
+            f"Total records: {len(rows)}",
+        ),
+    )
+
+    hdr_row = next_row
+    for col_idx, h in enumerate(headers, 1):
+        cell = ws.cell(row=hdr_row, column=col_idx, value=h)
         cell.border = border
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    style_header_row(ws, hdr_row, total_cols)
+    ws.row_dimensions[hdr_row].height = 28
 
     for row in rows:
-        ws.append([row.get(h, "") for h in headers])
-        for col_idx in range(1, len(headers) + 1):
-            ws.cell(row=ws.max_row, column=col_idx).border = border
+        r = ws.max_row + 1
+        for col_idx, h in enumerate(headers, 1):
+            cell = ws.cell(row=r, column=col_idx, value=row.get(h, ""))
+            cell.border = border
+            cell.alignment = Alignment(horizontal="left" if col_idx in (2, 4, 5) else "center",
+                                       vertical="center", wrap_text=True)
 
+    from openpyxl.utils import get_column_letter
     col_widths = [16, 28, 18, 28, 32, 24, 18, 14, 14, 12]
     for i, w in enumerate(col_widths, 1):
-        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    excel_signature_block(
+        ws, ws.max_row + 2,
+        officer_title="Industrial Liaison Officer",
+        officer_name="",
+        extra_officers=("Head of Department",),
+    )
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -1467,26 +1486,20 @@ def _export_excel(rows, title: str, period_label: str, year: int):
                     headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
-def _export_pdf(rows, title: str, period_label: str, year: int):
+def _export_pdf(rows, title: str, period_label: str, year: int, dept_name: str = ""):
     import io
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib import colors
     from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
     from flask import Response
+    from report_utils import pdf_letterhead, pdf_header_style_cmds, pdf_signature_block
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
                             leftMargin=15*mm, rightMargin=15*mm,
-                            topMargin=15*mm, bottomMargin=15*mm)
-    styles = getSampleStyleSheet()
-    navy = colors.HexColor("#1565C0")
-
-    title_style = ParagraphStyle("title", parent=styles["Heading1"],
-                                 textColor=navy, fontSize=14, spaceAfter=4)
-    sub_style = ParagraphStyle("sub", parent=styles["Normal"],
-                               textColor=colors.grey, fontSize=9, spaceAfter=10)
+                            topMargin=12*mm, bottomMargin=14*mm)
+    avail = landscape(A4)[0] - 30 * mm
 
     col_headers = ["Adm No", "Full Name", "Phone", "Company",
                    "Address", "Supervisor", "Sup. Phone", "Start", "End", "Status"]
@@ -1495,32 +1508,39 @@ def _export_pdf(rows, title: str, period_label: str, year: int):
             "Start Date", "End Date", "Status"]
 
     data = [col_headers] + [[r.get(k, "") for k in keys] for r in rows]
-
     col_widths_mm = [22, 48, 26, 48, 52, 40, 26, 20, 20, 18]
     col_widths_pt = [w * mm for w in col_widths_mm]
 
     tbl = Table(data, colWidths=col_widths_pt, repeatRows=1)
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND",  (0, 0), (-1, 0), navy),
-        ("TEXTCOLOR",   (0, 0), (-1, 0), colors.white),
-        ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
+    style_cmds = list(pdf_header_style_cmds(0)) + [
         ("FONTSIZE",    (0, 0), (-1, 0), 8),
         ("FONTSIZE",    (0, 1), (-1, -1), 7.5),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
         ("GRID",        (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
         ("ALIGN",       (0, 0), (-1, -1), "LEFT"),
         ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING",  (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
-    ]))
-
-    story = [
-        Paragraph(f"{title}", title_style),
-        Paragraph(f"Period: {period_label} {year}  |  Total records: {len(rows)}", sub_style),
-        Spacer(1, 4),
-        tbl,
     ]
+    tbl.setStyle(TableStyle(style_cmds))
+
+    story = list(pdf_letterhead(
+        doc_name=title or "Industrial Attachments Register",
+        avail_width=avail,
+        dept_name=dept_name or "All Departments",
+        meta_lines=(
+            f"Period: {period_label} {year}",
+            f"Total records: {len(rows)}",
+        ),
+    ))
+    story += [Spacer(1, 4), tbl]
+    story += pdf_signature_block(
+        avail,
+        officer_title="Industrial Liaison Officer",
+        officer_name="",
+        extra_officers=("Head of Department",),
+    )
     doc.build(story)
     buf.seek(0)
     filename = f"attachments_{period_label.replace('–', '-')}_{year}.pdf"
@@ -1552,12 +1572,12 @@ def gis_tracking_export():
     dept_name = ""
     if dept_filter:
         depts = db.table("departments").select("name").eq("id", dept_filter).execute().data or []
-        dept_name = f" — {depts[0]['name']}" if depts else ""
-    title = f"Industrial Attachments{dept_name}"
+        dept_name = depts[0]["name"] if depts else ""
+    title = "Industrial Attachments Register"
 
     if fmt == "pdf":
-        return _export_pdf(rows, title, label, year)
-    return _export_excel(rows, title, label, year)
+        return _export_pdf(rows, title, label, year, dept_name=dept_name)
+    return _export_excel(rows, title, label, year, dept_name=dept_name)
 
 
 # ── System Notices / Memos ────────────────────────────────────────────────────
@@ -2379,7 +2399,7 @@ def delete_scanner(scanner_id):
 # ── Industrial Attachment Marks ───────────────────────────────────────────────
 
 from routes.attachment_helpers import (
-    get_grading_config, compute_weighted_grade, score_to_cdacc
+    get_grading_config, compute_weighted_grade, score_to_cdacc, section_max
 )
 
 @super_admin_bp.route("/attachment-marks")
@@ -2466,6 +2486,7 @@ def save_attachment_marks(att_id):
     }
     config  = get_grading_config(db)
     weights = {k: v for k, v in config.items() if k.startswith("weight_")}
+    scores  = {k: min(max(v, 0.0), section_max(weights, k)) for k, v in scores.items()}
     total   = compute_weighted_grade(scores, weights)
     grade   = score_to_cdacc(total)
 

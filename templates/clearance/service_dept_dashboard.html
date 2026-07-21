@@ -85,6 +85,30 @@
   .sd-empty { text-align: center; padding: 48px 24px; color: #9ca3af; }
   .sd-empty i { font-size: 48px; color: #d1d5db; display: block; margin-bottom: 14px; }
   .sd-empty h3 { font-size: 16px; color: #6b7280; margin-bottom: 6px; }
+
+  .sd-hint {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 18px; font-size: 13px; color: #1e3a5f;
+    display: flex; align-items: flex-start; gap: 10px; line-height: 1.5;
+  }
+  .sd-hint i { color: #1565c0; margin-top: 2px; flex-shrink: 0; }
+
+  .btn-clr:focus-visible, .btn-rej:focus-visible, .rej-form input:focus-visible {
+    outline: 2px solid #93c5fd; outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .sd-wrap { padding: 14px 12px; }
+    .dept-banner { flex-wrap: wrap; padding: 16px; }
+    .dept-stats { margin-left: 0; text-align: left; width: 100%;
+      display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+    .dept-stats .stat-num { font-size: 22px; }
+    .sd-chips { gap: 8px; }
+    .sd-chip { min-width: calc(50% - 8px); }
+    .sd-actions { flex-direction: column; align-items: stretch; }
+    .sd-actions form, .sd-actions .btn-rej { width: 100%; }
+    .btn-clr, .btn-rej { justify-content: center; width: 100%; }
+  }
 </style>
 {% endblock %}
 
@@ -99,15 +123,22 @@
     <div>
       <h2>{{ meta.label }}</h2>
       <p>
-        Review and clear trainees for this department.
-        Approved clearances automatically update the trainee's clearance progress.
+        Review and clear trainees for this department (Stage 1 — parallel with other clearances).
+        Approvals update the trainee’s progress automatically.
       </p>
     </div>
-    <div class="dept-stats">
+    <div class="dept-stats" aria-label="Pending count">
       <div class="stat-num">{{ pending | length }}</div>
       <div class="stat-lbl">Pending</div>
     </div>
   </div>
+
+  {% if pending %}
+  <div class="sd-hint" role="status">
+    <i class="fas fa-arrow-right"></i>
+    <div><strong>Next step:</strong> Clear or reject each trainee below. Pending items block Stage 1 completion for that student.</div>
+  </div>
+  {% endif %}
 
   <!-- Summary chips -->
   <div class="sd-chips">
@@ -203,10 +234,12 @@
   {% endfor %}
 
   {% else %}
-  <div class="sd-empty">
-    <i class="fas fa-check-circle" style="color:#16a34a;"></i>
+  <div class="sd-empty" role="status">
+    <i class="fas fa-check-circle" style="color:#16a34a;" aria-hidden="true"></i>
     <h3>No Pending Clearances</h3>
-    <p>All trainees are cleared for {{ meta.label }}.</p>
+    <p style="font-size:13px;max-width:380px;margin:0 auto;line-height:1.5">
+      All trainees are cleared for {{ meta.label }}. New requests appear here when trainees start Stage 1.
+    </p>
   </div>
   {% endif %}
 

@@ -94,6 +94,7 @@
   .row-pending td:first-child, .row-in_progress td:first-child { border-left: 4px solid #f59e0b; }
   .row-completed td:first-child { border-left: 4px solid #22c55e; }
   .row-rejected  td:first-child { border-left: 4px solid #ef4444; }
+  .row-returned  td:first-child { border-left: 4px solid #b45309; }
 
   .student-name { font-weight: 700; color: #111827; }
   .student-adm  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
@@ -102,6 +103,7 @@
   .b-pending,.b-in_progress { background: #fef3c7; color: #b45309; }
   .b-completed { background: #dcfce7; color: #15803d; }
   .b-rejected  { background: #fee2e2; color: #b91c1c; }
+  .b-returned  { background: #ffedd5; color: #9a3412; }
 
   .cert-ok   { color: #15803d; font-weight: 600; font-size: 12px; }
   .cert-none { color: #d1d5db; font-size: 12px; }
@@ -196,6 +198,11 @@
        class="tab-link {% if status_filter == 'rejected' %}active{% endif %}">
       <i class="fas fa-times-circle"></i> Rejected
       <span class="tab-count">{{ cnt_rejected }}</span>
+    </a>
+    <a href="/super-admin/clearances{% if dept_filter %}?department={{ dept_filter }}&{% else %}?{% endif %}status=returned"
+       class="tab-link {% if status_filter == 'returned' %}active{% endif %}">
+      <i class="fas fa-undo"></i> Returned
+      <span class="tab-count">{{ clearances | selectattr('status','equalto','returned') | list | length }}</span>
     </a>
   </div>
 

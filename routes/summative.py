@@ -14,6 +14,10 @@ from datetime import datetime
 from io import BytesIO
 from db import get_service_client
 from auth_utils import current_user, login_required
+from report_utils import (
+    excel_letterhead, style_header_row, excel_signature_block,
+    pdf_letterhead, pdf_header_style_cmds, pdf_signature_block,
+)
 
 summative_bp = Blueprint("summative", __name__, url_prefix="/summative")
 
@@ -169,7 +173,7 @@ def _detailed_class_units(db, user, class_id=None, trainer_id=None):
     """Class-unit rows with trainer names, scoped by role and optional filters."""
     sel = (
         "class_id, unit_id, trainer_id, "
-        "units(id,code,name), classes(id,name), "
+        "units(id,code,name), classes(id,name,departments(name)), "
         "user_profiles!class_units_trainer_id_fkey(id, full_name)"
     )
     q = db.table("class_units").select(sel)
@@ -778,37 +782,30 @@ def export_unit_excel():
     wb = Workbook()
     ws = wb.active
     ws.title = "Summative Unit"
-    last = "F"
-    ws.merge_cells(f"A1:{last}1")
-    ws["A1"] = INSTITUTE
-    ws["A1"].font = st["title_font"]
-    ws["A1"].alignment = st["center"]
-    ws.merge_cells(f"A2:{last}2")
-    ws["A2"] = "SUMMATIVE COMPETENCE — UNIT REPORT"
-    ws["A2"].font = Font(bold=True, size=12, color=GOLD)
-    ws["A2"].alignment = st["center"]
-    ws.merge_cells(f"A3:{last}3")
-    ws["A3"] = (
-        f"Class: {cls.get('name', '')}  |  Unit: {unit.get('code', '')} – {unit.get('name', '')}  |  "
-        f"Trainer: {trainer_name}  |  {_period_label(year, term)}"
+    total_cols = 6
+    dept_name = (cls.get("departments") or {}).get("name", "")
+
+    header_row = excel_letterhead(
+        ws, "Summative Competence — Unit Report", total_cols,
+        dept_name=dept_name,
+        meta_lines=(
+            f"Class: {cls.get('name', '')}  |  Unit: {unit.get('code', '')} – {unit.get('name', '')}",
+            f"Trainer: {trainer_name}  |  {_period_label(year, term)}  |  "
+            f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ),
     )
-    ws["A3"].font = st["sub_font"]
-    ws["A3"].alignment = st["center"]
 
     headers = ["#", "Admission No.", "Trainee Name", "Competence", "Remarks", "Assessed"]
     for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=5, column=col, value=h)
-        cell.fill = st["navy_fill"]
-        cell.font = st["white"]
-        cell.alignment = st["center"]
-        cell.border = st["border"]
+        ws.cell(row=header_row, column=col, value=h)
+    style_header_row(ws, header_row, total_cols)
 
     for i, enr in enumerate(students, 1):
         p = enr.get("user_profiles") or {}
         sid = enr.get("student_id") or p.get("id")
         rec = cmap.get(sid) or {}
         comp = _normalize_competence(rec.get("competence", ""))
-        row_i = 5 + i
+        row_i = header_row + i
         vals = [
             i, p.get("admission_no", ""), p.get("full_name", ""),
             COMP_LABEL.get(comp, "—"), rec.get("remarks", "") or "",
@@ -821,6 +818,9 @@ def export_unit_excel():
 
     for col, w in zip("ABCDEF", [5, 16, 28, 18, 30, 14]):
         ws.column_dimensions[col].width = w
+
+    excel_signature_block(ws, header_row + len(students) + 2,
+                          officer_title="Head of Department")
 
     buf = BytesIO()
     wb.save(buf)
@@ -867,37 +867,29 @@ def export_class_excel():
     ws = wb.active
     ws.title = "Class Matrix"
     total_cols = 3 + len(units)
-    last = get_column_letter(total_cols)
 
-    ws.merge_cells(f"A1:{last}1")
-    ws["A1"] = INSTITUTE
-    ws["A1"].font = st["title_font"]
-    ws["A1"].alignment = st["center"]
-    ws.merge_cells(f"A2:{last}2")
-    ws["A2"] = "SUMMATIVE COMPETENCE — CLASS MATRIX"
-    ws["A2"].font = Font(bold=True, size=12, color=GOLD)
-    ws["A2"].alignment = st["center"]
-    ws.merge_cells(f"A3:{last}3")
     dept = (cls.get("departments") or {}).get("name", "")
     course = (cls.get("courses") or {}).get("name", "")
-    ws["A3"] = f"Class: {cls.get('name', '')}  |  Dept: {dept}  |  Course: {course}  |  {_period_label(year, term)}"
-    ws["A3"].font = st["sub_font"]
-    ws["A3"].alignment = st["center"]
+    header_row = excel_letterhead(
+        ws, "Summative Competence — Class Matrix", total_cols,
+        dept_name=dept,
+        meta_lines=(
+            f"Class: {cls.get('name', '')}  |  Course: {course}",
+            f"{_period_label(year, term)}  |  Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ),
+    )
 
     headers = ["#", "Admission No.", "Trainee Name"] + [
         (u.get("code") or u.get("name") or "U")[:16] for u in units
     ]
     for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=5, column=col, value=h)
-        cell.fill = st["navy_fill"]
-        cell.font = st["white"]
-        cell.alignment = st["center"]
-        cell.border = st["border"]
+        ws.cell(row=header_row, column=col, value=h)
+    style_header_row(ws, header_row, total_cols)
 
     for i, enr in enumerate(students, 1):
         p = enr.get("user_profiles") or {}
         sid = enr.get("student_id") or p.get("id")
-        row_i = 5 + i
+        row_i = header_row + i
         vals = [i, p.get("admission_no", ""), p.get("full_name", "")]
         for u in units:
             vals.append(COMP_ABBR.get((cmap.get(sid) or {}).get(u["id"]), "—"))
@@ -911,6 +903,9 @@ def export_class_excel():
     ws.column_dimensions["C"].width = 28
     for i in range(len(units)):
         ws.column_dimensions[get_column_letter(4 + i)].width = 11
+
+    excel_signature_block(ws, header_row + len(students) + 2,
+                          officer_title="Head of Department")
 
     buf = BytesIO()
     wb.save(buf)
@@ -959,22 +954,18 @@ def export_class_pdf():
                             leftMargin=12 * mm, rightMargin=12 * mm,
                             topMargin=12 * mm, bottomMargin=14 * mm)
     styles = getSampleStyleSheet()
-    navy = colors.HexColor("#0F2744")
     cell_s = ParagraphStyle("c", parent=styles["Normal"], fontSize=7, leading=9)
 
-    story = [
-        Paragraph(INSTITUTE, ParagraphStyle("t", parent=styles["Heading1"], fontSize=13,
-                 textColor=navy, alignment=TA_CENTER, fontName="Helvetica-Bold")),
-        Paragraph("SUMMATIVE COMPETENCE — CLASS MATRIX",
-                  ParagraphStyle("s", parent=styles["Normal"], fontSize=10,
-                                 textColor=colors.HexColor("#B45309"), alignment=TA_CENTER, fontName="Helvetica-Bold")),
-        Paragraph(
-            f"Class: {cls.get('name', '')}  |  {_period_label(year, term)}  |  "
-            f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
-            ParagraphStyle("m", parent=styles["Normal"], fontSize=8, alignment=TA_CENTER, spaceAfter=6),
-        ),
-        HRFlowable(width="100%", thickness=1.2, color=navy, spaceAfter=8),
-    ]
+    dept = (cls.get("departments") or {}).get("name", "")
+    course = (cls.get("courses") or {}).get("name", "")
+    story = pdf_letterhead(
+        "Summative Competence — Class Matrix", doc.width,
+        dept_name=dept,
+        meta_lines=[
+            f"Class: {cls.get('name', '')}" + (f"  |  Course: {course}" if course else ""),
+            f"{_period_label(year, term)}  |  Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ],
+    )
 
     headers = ["#", "Adm.", "Name"] + [
         Paragraph(f"<b>{(u.get('code') or 'U')[:8]}</b>", cell_s) for u in units
@@ -991,16 +982,16 @@ def export_class_pdf():
     unit_w = max(10 * mm, min(16 * mm, (200 * mm) / max(len(units), 1)))
     col_widths = [8 * mm, 20 * mm, 42 * mm] + [unit_w] * len(units)
     table = Table(data, colWidths=col_widths, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), navy),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+    style_cmds = [
         ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#CBD5E1")),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-    ]))
+    ]
+    style_cmds.extend(pdf_header_style_cmds(0))
+    table.setStyle(TableStyle(style_cmds))
     story.append(table)
+    story += pdf_signature_block(doc.width, officer_title="Head of Department")
     doc.build(story)
     buf.seek(0)
     safe = (cls.get("name") or "class").replace(" ", "_")[:36]
@@ -1039,27 +1030,31 @@ def export_trainer_excel():
     wb = Workbook()
     ws = wb.active
     ws.title = "Trainer Summative"
-    ws.merge_cells("A1:G1")
-    ws["A1"] = INSTITUTE
-    ws["A1"].font = st["title_font"]
-    ws["A1"].alignment = st["center"]
-    ws.merge_cells("A2:G2")
-    ws["A2"] = f"SUMMATIVE REPORT — TRAINER: {trainer.get('full_name', '')}"
-    ws["A2"].font = Font(bold=True, size=12, color=GOLD)
-    ws["A2"].alignment = st["center"]
-    ws.merge_cells("A3:G3")
-    ws["A3"] = _period_label(year, term)
-    ws["A3"].alignment = st["center"]
+    total_cols = 7
+
+    dept_names = sorted({
+        d for d in (
+            ((cu.get("classes") or {}).get("departments") or {}).get("name", "")
+            for cu in rows
+        ) if d
+    })
+    dept_name = ", ".join(dept_names)
+
+    header_row = excel_letterhead(
+        ws, "Summative Report — Trainer", total_cols,
+        dept_name=dept_name,
+        meta_lines=(
+            f"Trainer: {trainer.get('full_name', '')}",
+            f"{_period_label(year, term)}  |  Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ),
+    )
 
     headers = ["Class", "Unit Code", "Unit Name", "Trainee", "Admission No.", "Competence", "Remarks"]
     for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=5, column=col, value=h)
-        cell.fill = st["navy_fill"]
-        cell.font = st["white"]
-        cell.alignment = st["center"]
-        cell.border = st["border"]
+        ws.cell(row=header_row, column=col, value=h)
+    style_header_row(ws, header_row, total_cols)
 
-    row_i = 5
+    row_i = header_row
     for cu in rows:
         cid = cu.get("class_id") or (cu.get("classes") or {}).get("id")
         u = cu.get("units") or {}
@@ -1086,6 +1081,8 @@ def export_trainer_excel():
 
     for col, w in zip("ABCDEFG", [22, 12, 24, 26, 14, 18, 24]):
         ws.column_dimensions[col].width = w
+
+    excel_signature_block(ws, row_i + 2, officer_title="Head of Department")
 
     buf = BytesIO()
     wb.save(buf)
@@ -1179,43 +1176,28 @@ def graduation_excel():
     total_cols = 4 + len(units) + 1
     last = get_column_letter(total_cols)
 
-    ws.merge_cells(f"A1:{last}1")
-    ws["A1"] = INSTITUTE
-    ws["A1"].font = st["title_font"]
-    ws["A1"].alignment = st["center"]
-    ws.merge_cells(f"A2:{last}2")
-    ws["A2"] = "OFFICIAL GRADUATION LIST — SUMMATIVE COMPETENCE"
-    ws["A2"].font = Font(bold=True, size=12, color=GOLD)
-    ws["A2"].alignment = st["center"]
-    ws.merge_cells(f"A3:{last}3")
-    ws["A3"] = (
-        f"Department: {meta['dept_name'] or '—'}  |  Course: {meta['course_name'] or '—'} "
-        f"({meta['course_code'] or '—'})  |  Class: {meta['class_name']}  |  {_period_label(year, term)}"
+    header_row = excel_letterhead(
+        ws, "Official Graduation List — Summative Competence", total_cols,
+        dept_name=meta["dept_name"],
+        meta_lines=(
+            f"Course: {meta['course_name'] or '—'} ({meta['course_code'] or '—'})  |  "
+            f"Class: {meta['class_name']}  |  {_period_label(year, term)}",
+            f"Eligible: {stats['eligible']} ({stats['pct_eligible']}%)   ·   "
+            f"Not Eligible: {stats['not_eligible']}   ·   Total: {stats['total']}   ·   "
+            f"Units Required: {len(units)}   ·   Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ),
     )
-    ws["A3"].font = st["sub_font"]
-    ws["A3"].alignment = st["center"]
-    ws.merge_cells(f"A4:{last}4")
-    ws["A4"] = (
-        f"Eligible: {stats['eligible']} ({stats['pct_eligible']}%)   ·   "
-        f"Not Eligible: {stats['not_eligible']}   ·   Total: {stats['total']}   ·   "
-        f"Units Required: {len(units)}   ·   Generated: {datetime.now().strftime('%d %b %Y %H:%M')}"
-    )
-    ws["A4"].font = Font(size=9, color="64748B")
-    ws["A4"].alignment = st["center"]
 
     headers = ["#", "Admission No.", "Trainee Name"] + [
         (u.get("code") or u.get("name") or "Unit")[:18] for u in units
     ] + ["Graduation Status"]
     for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=6, column=col, value=h)
-        cell.fill = st["navy_fill"]
-        cell.font = st["white"]
-        cell.alignment = st["center"]
-        cell.border = st["border"]
-    ws.row_dimensions[6].height = 28
+        ws.cell(row=header_row, column=col, value=h)
+    style_header_row(ws, header_row, total_cols)
+    ws.row_dimensions[header_row].height = 28
 
     for i, r in enumerate(rows, 1):
-        row_i = 6 + i
+        row_i = header_row + i
         values = [i, r["admission_no"], r["full_name"]]
         for u in units:
             values.append(COMP_ABBR.get(r["unit_results"].get(u["id"]), "—"))
@@ -1228,7 +1210,7 @@ def graduation_excel():
                 cell.fill = st["ok_fill"] if r["eligible"] else st["no_fill"]
                 cell.font = Font(bold=True, size=9, color="166534" if r["eligible"] else "991B1B")
 
-    legend_row = 8 + len(rows)
+    legend_row = header_row + len(rows) + 2
     ws.merge_cells(f"A{legend_row}:{last}{legend_row}")
     ws[f"A{legend_row}"] = (
         "Legend (TVET CDACC): M = Mastery (80-100%)  |  P = Proficient (65-79%)  |  C = Competent (50-64%)  |  "
@@ -1245,6 +1227,10 @@ def graduation_excel():
         ws.column_dimensions[get_column_letter(4 + i)].width = 12
     ws.column_dimensions[get_column_letter(total_cols)].width = 16
 
+    excel_signature_block(ws, legend_row + 1,
+                          officer_title="Head of Department",
+                          extra_officers=("Examination Officer",))
+
     if not eligible_only and stats["eligible"] > 0:
         ws2 = wb.create_sheet("Eligible Only")
         eligible_rows = [r for r in rows if r["eligible"]]
@@ -1253,10 +1239,8 @@ def graduation_excel():
         ws2["A1"].font = st["title_font"]
         ws2["A2"] = f"Count: {len(eligible_rows)}  |  {_period_label(year, term)}"
         for col, h in enumerate(["#", "Admission No.", "Trainee Name", "Status"], 1):
-            cell = ws2.cell(row=4, column=col, value=h)
-            cell.fill = st["navy_fill"]
-            cell.font = st["white"]
-            cell.border = st["border"]
+            ws2.cell(row=4, column=col, value=h)
+        style_header_row(ws2, 4, 4)
         for i, r in enumerate(eligible_rows, 1):
             ws2.cell(row=4 + i, column=1, value=i).border = st["border"]
             ws2.cell(row=4 + i, column=2, value=r["admission_no"]).border = st["border"]
@@ -1272,11 +1256,18 @@ def graduation_excel():
     ws_auth["A2"].font = st["sub_font"]
     ws_auth["A4"] = f"Class: {meta['class_name']}"
     ws_auth["A5"] = f"Period: {_period_label(year, term)}"
-    ws_auth["A7"] = "Prepared by (Examiner / HOD): ___________________________    Date: ____________"
-    ws_auth["A9"] = "Verified by (Exam Officer): _____________________________    Date: ____________"
-    ws_auth["A11"] = "Approved by (Deputy Principal / Registrar): ______________    Date: ____________"
-    ws_auth["A13"] = "Official stamp / seal:"
-    ws_auth.column_dimensions["A"].width = 90
+    auth_r = 7
+    for officer in ("Head of Department", "Examination Officer", "Chief Principal"):
+        ws_auth.cell(row=auth_r, column=1, value=f"{officer}:").font = Font(bold=True, size=10)
+        ws_auth.cell(
+            row=auth_r + 1, column=1,
+            value="Name: _______________________________    Sign: ______________________    Date: ________________",
+        )
+        auth_r += 3
+    ws_auth.cell(row=auth_r, column=1, value="Official Stamp:").font = Font(bold=True, size=10)
+    ws_auth.cell(row=auth_r + 1, column=1, value="(Affix official institute stamp here)").font = Font(
+        size=9, italic=True, color="64748B")
+    ws_auth.column_dimensions["A"].width = 100
 
     buf = BytesIO()
     wb.save(buf)
@@ -1320,46 +1311,23 @@ def graduation_pdf():
         topMargin=12 * mm, bottomMargin=14 * mm,
     )
     styles = getSampleStyleSheet()
-    navy = colors.HexColor("#0F2744")
-    gold = colors.HexColor("#B45309")
-
-    title = ParagraphStyle(
-        "t", parent=styles["Heading1"], fontSize=13, textColor=navy,
-        alignment=TA_CENTER, spaceAfter=2, fontName="Helvetica-Bold",
-    )
-    subtitle = ParagraphStyle(
-        "s", parent=styles["Normal"], fontSize=10, textColor=gold,
-        alignment=TA_CENTER, spaceAfter=4, fontName="Helvetica-Bold",
-    )
-    meta_s = ParagraphStyle(
-        "m", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#475569"),
-        alignment=TA_CENTER, spaceAfter=6,
-    )
     small = ParagraphStyle(
         "sm", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#64748B"),
         alignment=TA_LEFT, spaceBefore=8,
     )
     cell_s = ParagraphStyle("c", parent=styles["Normal"], fontSize=7, leading=9)
 
-    story = [
-        Paragraph(INSTITUTE, title),
-        Paragraph("OFFICIAL GRADUATION LIST — SUMMATIVE COMPETENCE", subtitle),
-        Paragraph(
-            f"Department: {meta['dept_name'] or '—'} &nbsp;|&nbsp; "
-            f"Course: {meta['course_name'] or '—'} &nbsp;|&nbsp; "
-            f"Class: {meta['class_name']} &nbsp;|&nbsp; {_period_label(year, term)}",
-            meta_s,
-        ),
-        Paragraph(
-            f"Eligible: <b>{stats['eligible']}</b> ({stats['pct_eligible']}%) &nbsp;·&nbsp; "
-            f"Not Eligible: <b>{stats['not_eligible']}</b> &nbsp;·&nbsp; "
-            f"Total: <b>{stats['total']}</b> &nbsp;·&nbsp; "
-            f"Units: <b>{len(units)}</b> &nbsp;·&nbsp; "
-            f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
-            meta_s,
-        ),
-        HRFlowable(width="100%", thickness=1.2, color=navy, spaceAfter=8),
-    ]
+    story = pdf_letterhead(
+        "Official Graduation List — Summative Competence", doc.width,
+        dept_name=meta["dept_name"],
+        meta_lines=[
+            f"Course: {meta['course_name'] or '—'}  |  "
+            f"Class: {meta['class_name']}  |  {_period_label(year, term)}",
+            f"Eligible: {stats['eligible']} ({stats['pct_eligible']}%)  ·  "
+            f"Not Eligible: {stats['not_eligible']}  ·  Total: {stats['total']}  ·  "
+            f"Units: {len(units)}  ·  Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ],
+    )
 
     headers = ["#", "Adm. No.", "Trainee Name"] + [
         Paragraph(f"<b>{(u.get('code') or u.get('name') or 'U')[:10]}</b>", cell_s)
@@ -1379,9 +1347,6 @@ def graduation_pdf():
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style_cmds = [
-        ("BACKGROUND", (0, 0), (-1, 0), navy),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("ALIGN", (2, 1), (2, -1), "LEFT"),
@@ -1400,6 +1365,7 @@ def graduation_pdf():
             style_cmds.append(("TEXTCOLOR", (-1, i), (-1, i), colors.HexColor("#991B1B")))
         style_cmds.append(("FONTNAME", (-1, i), (-1, i), "Helvetica-Bold"))
 
+    style_cmds.extend(pdf_header_style_cmds(0))
     table.setStyle(TableStyle(style_cmds))
     story.append(table)
     story.append(Spacer(1, 8))
@@ -1410,14 +1376,8 @@ def graduation_pdf():
         "A trainee is <b>ELIGIBLE</b> only when every unit is Mastery, Proficient, or Competent.",
         small,
     ))
-    story.append(Spacer(1, 16))
-    story.append(Paragraph(
-        "Prepared by: ______________________ &nbsp;&nbsp; "
-        "Verified by: ______________________ &nbsp;&nbsp; "
-        "Approved by: ______________________ &nbsp;&nbsp; "
-        "Official stamp: __________",
-        small,
-    ))
+    story += pdf_signature_block(doc.width, officer_title="Head of Department",
+                                 extra_officers=("Examination Officer",))
 
     doc.build(story)
     buf.seek(0)

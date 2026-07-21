@@ -210,6 +210,44 @@
     50%  { box-shadow: 0 0 0 8px rgba(59,130,246,.15), 0 4px 14px rgba(59,130,246,.5); }
     100% { box-shadow: 0 0 0 4px #dbeafe, 0 4px 10px rgba(59,130,246,.35); }
   }
+
+  /* Next-step helper */
+  .next-step {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 18px; font-size: 13px; color: #1e3a5f;
+    display: flex; align-items: flex-start; gap: 10px; line-height: 1.5;
+  }
+  .next-step i { color: #1565c0; margin-top: 2px; flex-shrink: 0; }
+  .next-step.ns-warn {
+    background: #fffbeb; border-color: #fde68a; color: #78350f;
+  }
+  .next-step.ns-warn i { color: #b45309; }
+  .next-step.ns-ok {
+    background: #f0fdf4; border-color: #bbf7d0; color: #166534;
+  }
+  .next-step.ns-ok i { color: #15803d; }
+
+  .empty-enroll {
+    text-align: center; padding: 28px 16px; color: #6b7280; font-size: 13px;
+    background: rgba(255,255,255,.12); border-radius: 10px; margin-top: 8px;
+  }
+
+  .btn-initiate:focus-visible,
+  .expand-btn:focus-visible,
+  .select-course:focus-visible {
+    outline: 2px solid #93c5fd; outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .cl-wrap { padding: 16px 12px; }
+    .initiate-card { padding: 22px 18px; }
+    .prog-header { padding: 16px 18px; }
+    .stage-section { padding: 16px; }
+    .approval-panel { margin-left: 12px; }
+    .prog-bar-track { width: 80px; }
+    .sb-serial { width: 100%; text-align: center; }
+    .download-block { padding: 20px 16px; }
+  }
 </style>
 {% endblock %}
 
@@ -226,8 +264,10 @@
     and other HODs are notified simultaneously.
     When Stage 1 is fully complete, your Home HOD reviews and issues the final clearance.
   </p>
+  {% if enrollments %}
   <form method="post" action="/clearance/initiate">
-    <select name="course_id" class="select-course" required>
+    <label for="course_id" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Select course</label>
+    <select id="course_id" name="course_id" class="select-course" required aria-label="Select your course">
       <option value="">— Select your course —</option>
       {% for enrollment in enrollments %}
         {% set cls = enrollment.get('classes') or {} %}
@@ -241,11 +281,17 @@
       <i class="fas fa-play-circle"></i> Start Clearance Process
     </button>
   </form>
+  {% else %}
+  <div class="empty-enroll">
+    <i class="fas fa-info-circle" style="display:block;font-size:22px;margin-bottom:8px;opacity:.9"></i>
+    No enrolled course is available to start clearance. Contact your department if this looks wrong.
+  </div>
+  {% endif %}
 </div>
 
 <!-- Explainer -->
 <div class="flow-card">
-  <p class="flow-title"><i class="fas fa-route" style="color:#1565c0"></i> How the New Clearance Flow Works</p>
+  <p class="flow-title"><i class="fas fa-route" style="color:#1565c0"></i> How Clearance Works</p>
   <div style="display:grid;gap:12px;font-size:13px;color:#374151">
     <div style="display:flex;align-items:flex-start;gap:10px">
       <span style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
@@ -266,12 +312,12 @@
 
 <!-- ── STATUS BANNER ── -->
 {% set cr_status = clearance_request.get('status','in_progress') %}
-<div class="status-banner sb-{{ cr_status }}">
-  <span class="sb-icon">
-    {% if cr_status == 'completed' %}&#127891;
-    {% elif cr_status == 'rejected' %}&#10060;
-    {% elif cr_status == 'returned' %}&#128256;
-    {% else %}&#9203;{% endif %}
+<div class="status-banner sb-{{ cr_status }}" role="status" aria-live="polite">
+  <span class="sb-icon" aria-hidden="true">
+    {% if cr_status == 'completed' %}<i class="fas fa-graduation-cap" style="color:#15803d"></i>
+    {% elif cr_status == 'rejected' %}<i class="fas fa-times-circle" style="color:#b91c1c"></i>
+    {% elif cr_status == 'returned' %}<i class="fas fa-undo" style="color:#b45309"></i>
+    {% else %}<i class="fas fa-hourglass-half" style="color:#1565c0"></i>{% endif %}
   </span>
   <div class="sb-info">
     <div class="sb-title">
@@ -285,14 +331,50 @@
       &nbsp;&middot;&nbsp; Initiated: {{ clearance_request.get('initiated_at','')[:10] or clearance_request.get('created_at','')[:10] }}
     </div>
   </div>
-  <span class="sb-serial">{{ serial }}</span>
+  <span class="sb-serial" title="Clearance serial number">{{ serial }}</span>
 </div>
+
+<!-- ── NEXT STEP HINT ── -->
+{% if cr_status == 'completed' %}
+<div class="next-step ns-ok">
+  <i class="fas fa-check-circle"></i>
+  <div><strong>Next step:</strong> Download your PDF certificate and keep the serial number for verification.</div>
+</div>
+{% elif cr_status == 'returned' %}
+<div class="next-step ns-warn">
+  <i class="fas fa-exclamation-triangle"></i>
+  <div><strong>Next step:</strong> Address the correction notes below, then resubmit for your Home HOD’s final review.</div>
+</div>
+{% elif cr_status == 'rejected' %}
+<div class="next-step ns-warn">
+  <i class="fas fa-info-circle"></i>
+  <div><strong>Next step:</strong> Contact your Home Department HOD for guidance on resolving the rejection.</div>
+</div>
+{% elif stage1_done %}
+<div class="next-step">
+  <i class="fas fa-arrow-right"></i>
+  <div><strong>Next step:</strong> Stage 1 is complete. Your Home HOD is reviewing for final clearance (Stage 2).</div>
+</div>
+{% else %}
+<div class="next-step">
+  <i class="fas fa-arrow-right"></i>
+  <div><strong>Next step:</strong> Wait for Stage 1 approvals (trainers, workshop, services, other HODs). They run in parallel — track progress below.</div>
+</div>
+{% endif %}
 
 <!-- ── RETURNED REASON ── -->
 {% if cr_status == 'returned' and clearance_request.get('return_reason') %}
 <div class="return-box">
   <strong><i class="fas fa-exclamation-triangle"></i> Returned for Correction</strong>
   {{ clearance_request.return_reason }}
+  <form method="post" action="{{ url_for('clearance.resubmit_clearance', request_id=clearance_request.id) }}"
+        style="margin-top:12px"
+        onsubmit="return confirm('Confirm that you have made the required corrections and want to resubmit for final HOD review?');">
+    <button type="submit"
+            style="display:inline-flex;align-items:center;gap:7px;padding:9px 20px;background:#b45309;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+      <i class="fas fa-paper-plane"></i> I Have Corrected — Resubmit for Review
+    </button>
+  </form>
 </div>
 {% endif %}
 
@@ -319,9 +401,15 @@
 </div>
 {% else %}
 <div class="locked-download">
-  <i class="fas fa-lock"></i>
-  <p style="font-size:13px;font-weight:600;margin:0 0 4px">Download Not Yet Available</p>
-  <p style="font-size:12px;margin:0">Complete all clearance stages to unlock your certificate.</p>
+  <i class="fas fa-lock" aria-hidden="true"></i>
+  <p style="font-size:13px;font-weight:600;margin:0 0 4px;color:#6b7280">Download Not Yet Available</p>
+  <p style="font-size:12px;margin:0">
+    {% if stage1_done %}
+    Waiting for Home HOD final approval (Stage 2) to unlock your certificate.
+    {% else %}
+    Complete all Stage 1 sections, then Stage 2 HOD review, to unlock your certificate.
+    {% endif %}
+  </p>
 </div>
 {% endif %}
 
@@ -389,12 +477,13 @@
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span class="sub-pill pill-{{ sec.status }}">
-          {% if sec.status == 'approved' %}&#10003; Approved
-          {% elif sec.status == 'rejected' %}&#10007; Rejected
-          {% else %}&#9203; Pending{% endif %}
+          {% if sec.status == 'approved' %}<i class="fas fa-check"></i> Approved
+          {% elif sec.status == 'rejected' %}<i class="fas fa-times"></i> Rejected
+          {% else %}<i class="fas fa-clock"></i> Pending{% endif %}
         </span>
         {% if sec.approvals | length >= 1 %}
-        <button class="expand-btn" onclick="toggleSec('sec-{{ uid_sec }}', this)">
+        <button type="button" class="expand-btn" onclick="toggleSec('sec-{{ uid_sec }}', this)"
+                aria-expanded="false" aria-controls="sec-{{ uid_sec }}">
           <i class="fas fa-chevron-down" style="font-size:10px"></i>
           Details ({{ sec.approvals | length }})
         </button>
@@ -441,8 +530,10 @@
     {% endfor %}
 
     {% if not stage1_sections %}
-    <div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px">
-      <i class="fas fa-spinner fa-spin"></i> Loading clearance data...
+    <div style="text-align:center;color:#6b7280;padding:28px 16px;font-size:13px;background:#f9fafb;border:1px dashed #e5e7eb;border-radius:10px" role="status">
+      <i class="fas fa-spinner fa-spin" style="display:block;font-size:22px;margin-bottom:10px;color:#9ca3af"></i>
+      <div style="font-weight:700;margin-bottom:4px">Loading clearance sections…</div>
+      <div style="font-size:12px;color:#9ca3af">If this persists, refresh the page or contact your department.</div>
     </div>
     {% endif %}
 
@@ -484,9 +575,9 @@
           </div>
         </div>
         <span class="sub-pill pill-{{ s2_status }}">
-          {% if s2_status == 'approved' %}&#10003; Approved
-          {% elif s2_status == 'rejected' %}&#10007; Rejected
-          {% else %}&#9203; Pending{% endif %}
+          {% if s2_status == 'approved' %}<i class="fas fa-check"></i> Approved
+          {% elif s2_status == 'rejected' %}<i class="fas fa-times"></i> Rejected
+          {% else %}<i class="fas fa-clock"></i> Pending{% endif %}
         </span>
       </div>
       {% else %}
@@ -506,13 +597,13 @@
 
   <!-- Final issued row -->
   {% if cr_status == 'completed' %}
-  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-top:1px solid #bbf7d0;padding:16px 24px;display:flex;align-items:center;gap:12px">
-    <span style="font-size:22px">&#127891;</span>
-    <div style="flex:1">
+  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-top:1px solid #bbf7d0;padding:16px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:22px;color:#15803d" aria-hidden="true"><i class="fas fa-certificate"></i></span>
+    <div style="flex:1;min-width:160px">
       <div style="font-size:14px;font-weight:800;color:#15803d">Clearance Issued!</div>
       <div style="font-size:12px;color:#16a34a;margin-top:2px">Certificate ready with serial number and QR code.</div>
     </div>
-    <span class="sub-pill pill-approved">&#10003; Issued</span>
+    <span class="sub-pill pill-approved"><i class="fas fa-check"></i> Issued</span>
   </div>
   {% endif %}
 
@@ -529,8 +620,9 @@ function toggleSec(id, btn) {
   if (!panel) return;
   var opening = !panel.classList.contains('open');
   panel.classList.toggle('open', opening);
+  btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
   var n = panel.querySelectorAll('.ap-detail').length;
-  btn.innerHTML = '<i class="fas fa-chevron-' + (opening ? 'up' : 'down') + '" style="font-size:10px"></i> ' + (opening ? 'Hide' : 'Show') + ' (' + n + ')';
+  btn.innerHTML = '<i class="fas fa-chevron-' + (opening ? 'up' : 'down') + '" style="font-size:10px"></i> ' + (opening ? 'Hide' : 'Details') + ' (' + n + ')';
 }
 </script>
 

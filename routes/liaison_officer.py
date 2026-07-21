@@ -11,9 +11,12 @@ from routes.attachment_helpers import (
     list_periods, get_open_period, is_student_eligible,
     upload_placement_document, placement_status_label,
     notify_liaison_officers, get_grading_config, compute_weighted_grade,
-    score_to_cdacc, MENTOR_CRITERIA, week_bounds,
+    score_to_cdacc, MENTOR_CRITERIA, week_bounds, section_max,
 )
 from datetime import datetime, date, timedelta
+from report_utils import (excel_letterhead, style_header_row,
+                          excel_signature_block, pdf_letterhead,
+                          pdf_header_style_cmds, pdf_signature_block)
 
 liaison_officer_bp = Blueprint("liaison_officer", __name__)
 @liaison_officer_bp.route("/dashboard")
@@ -353,6 +356,7 @@ def _period_label(period: str) -> str:
 def export_attachments():
     import io
     from datetime import date
+    from flask import Response
     db = get_service_client()
     fmt    = request.args.get("format", "excel")
     period = request.args.get("period", "")
@@ -387,37 +391,35 @@ def export_attachments():
         })
 
     label = _period_label(period)
-    title = "Industrial Attachments — All Departments"
+    title = "Industrial Attachments Register"
+    headers = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
+               "Location / Address", "Supervisor Name", "Supervisor Phone",
+               "Start Date", "End Date", "Status"]
+    user = current_user() or {}
+    officer_name = user.get("full_name") or ""
 
     if fmt == "pdf":
         from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib import colors
         from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
+        from report_utils import pdf_letterhead, pdf_header_style_cmds, pdf_signature_block
 
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
                                 leftMargin=15*mm, rightMargin=15*mm,
-                                topMargin=15*mm, bottomMargin=15*mm)
-        styles = getSampleStyleSheet()
-        navy = colors.HexColor("#1565C0")
-        title_style = ParagraphStyle("t", parent=styles["Heading1"], textColor=navy, fontSize=14, spaceAfter=4)
-        sub_style   = ParagraphStyle("s", parent=styles["Normal"], textColor=colors.grey, fontSize=9, spaceAfter=10)
-
-        col_headers = ["Adm No", "Full Name", "Phone", "Company", "Address", "Supervisor", "Sup. Phone", "Start", "End", "Status"]
-        keys = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
-                "Location / Address", "Supervisor Name", "Supervisor Phone", "Start Date", "End Date", "Status"]
+                                topMargin=12*mm, bottomMargin=14*mm)
+        avail = landscape(A4)[0] - 30 * mm
+        col_headers = ["Adm No", "Full Name", "Phone", "Company", "Address",
+                       "Supervisor", "Sup. Phone", "Start", "End", "Status"]
+        keys = headers
         data = [col_headers] + [[r.get(k, "") for k in keys] for r in rows]
         col_widths_pt = [w * mm for w in [22, 48, 26, 48, 52, 40, 26, 20, 20, 18]]
         tbl = Table(data, colWidths=col_widths_pt, repeatRows=1)
-        tbl.setStyle(TableStyle([
-            ("BACKGROUND",   (0, 0), (-1, 0), navy),
-            ("TEXTCOLOR",    (0, 0), (-1, 0), colors.white),
-            ("FONTNAME",     (0, 0), (-1, 0), "Helvetica-Bold"),
+        tbl.setStyle(TableStyle(list(pdf_header_style_cmds(0)) + [
             ("FONTSIZE",     (0, 0), (-1, 0), 8),
             ("FONTSIZE",     (0, 1), (-1, -1), 7.5),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
             ("GRID",         (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
             ("ALIGN",        (0, 0), (-1, -1), "LEFT"),
             ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
@@ -425,9 +427,19 @@ def export_attachments():
             ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
             ("LEFTPADDING",  (0, 0), (-1, -1), 4),
         ]))
-        story = [Paragraph(title, title_style),
-                 Paragraph(f"Period: {label} {year}  |  Total: {len(rows)}", sub_style),
-                 Spacer(1, 4), tbl]
+        story = list(pdf_letterhead(
+            doc_name=title,
+            avail_width=avail,
+            dept_name="Industrial Liaison Office — All Departments",
+            meta_lines=(f"Period: {label} {year}", f"Total records: {len(rows)}"),
+        ))
+        story += [Spacer(1, 4), tbl]
+        story += pdf_signature_block(
+            avail,
+            officer_title="Industrial Liaison Officer",
+            officer_name=officer_name,
+            extra_officers=("Head of Department",),
+        )
         doc.build(story)
         buf.seek(0)
         fname = f"attachments_{label.replace('–','-')}_{year}.pdf"
@@ -436,41 +448,51 @@ def export_attachments():
 
     # Excel
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Alignment, Border, Side
+    from report_utils import (
+        excel_letterhead, style_header_row, excel_signature_block, HEADER_BORDER_HEX,
+    )
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Attachments"
-    hdr_fill = PatternFill("solid", fgColor="1565C0")
-    hdr_font = Font(color="FFFFFF", bold=True, size=11)
-    thin = Side(style="thin", color="CCCCCC")
+    thin = Side(style="thin", color=HEADER_BORDER_HEX)
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    total_cols = len(headers)
 
-    ws.merge_cells("A1:J1")
-    ws["A1"] = f"{title} — {label} {year}"
-    ws["A1"].font = Font(bold=True, size=13, color="0D2167")
-    ws["A1"].alignment = Alignment(horizontal="center")
-
-    headers = ["Admission No", "Full Name", "Trainee Phone", "Company Attached",
-               "Location / Address", "Supervisor Name", "Supervisor Phone",
-               "Start Date", "End Date", "Status"]
-    ws.append([])
-    ws.append(headers)
-    hdr_row = ws.max_row
-    for col_idx in range(1, len(headers) + 1):
-        cell = ws.cell(row=hdr_row, column=col_idx)
-        cell.fill = hdr_fill
-        cell.font = hdr_font
-        cell.alignment = Alignment(horizontal="center")
+    next_row = excel_letterhead(
+        ws,
+        doc_name=title,
+        total_cols=total_cols,
+        dept_name="Industrial Liaison Office — All Departments",
+        meta_lines=(f"Period: {label} {year}", f"Total records: {len(rows)}"),
+    )
+    hdr_row = next_row
+    for col_idx, h in enumerate(headers, 1):
+        cell = ws.cell(row=hdr_row, column=col_idx, value=h)
         cell.border = border
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    style_header_row(ws, hdr_row, total_cols)
+    ws.row_dimensions[hdr_row].height = 28
 
     for row in rows:
-        ws.append([row.get(h, "") for h in headers])
-        for col_idx in range(1, len(headers) + 1):
-            ws.cell(row=ws.max_row, column=col_idx).border = border
+        r = ws.max_row + 1
+        for col_idx, h in enumerate(headers, 1):
+            cell = ws.cell(row=r, column=col_idx, value=row.get(h, ""))
+            cell.border = border
+            cell.alignment = Alignment(horizontal="left" if col_idx in (2, 4, 5) else "center",
+                                       vertical="center", wrap_text=True)
 
+    from openpyxl.utils import get_column_letter
     for i, w in enumerate([16, 28, 18, 28, 32, 24, 18, 14, 14, 12], 1):
-        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    excel_signature_block(
+        ws, ws.max_row + 2,
+        officer_title="Industrial Liaison Officer",
+        officer_name=officer_name,
+        extra_officers=("Head of Department",),
+    )
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -652,21 +674,6 @@ def grade_attachment(att_id):
 
     if request.method == "POST":
         try:
-            scores = {
-                "score_gps_attendance": float(request.form.get("score_gps_attendance") or 0),
-                "score_logbook": float(request.form.get("score_logbook") or 0),
-                "score_mentor_eval": float(request.form.get("score_mentor_eval") or 0),
-                "score_trainer_assessment": float(request.form.get("score_trainer_assessment") or 0),
-                "score_final_report": float(request.form.get("score_final_report") or 0),
-            }
-            mentor_fields = {}
-            mentor_total = 0
-            for field, _label, max_pts in MENTOR_CRITERIA:
-                val = float(request.form.get(field) or 0)
-                mentor_fields[field] = min(val, max_pts)
-                mentor_total += mentor_fields[field]
-            scores["score_mentor_eval"] = mentor_total
-
             weights = {
                 "weight_gps_attendance": float(config.get("weight_gps_attendance", 10)),
                 "weight_logbook": float(config.get("weight_logbook", 20)),
@@ -674,6 +681,37 @@ def grade_attachment(att_id):
                 "weight_trainer_assessment": float(config.get("weight_trainer_assessment", 30)),
                 "weight_final_report": float(config.get("weight_final_report", 10)),
             }
+            scores = {
+                "score_gps_attendance": float(request.form.get("score_gps_attendance") or 0),
+                "score_logbook": float(request.form.get("score_logbook") or 0),
+                "score_mentor_eval": float(request.form.get("score_mentor_eval") or 0),
+                "score_trainer_assessment": float(request.form.get("score_trainer_assessment") or 0),
+                "score_final_report": float(request.form.get("score_final_report") or 0),
+            }
+            for sk in ("score_gps_attendance", "score_logbook",
+                       "score_trainer_assessment", "score_final_report"):
+                scores[sk] = min(max(scores[sk], 0.0), section_max(weights, sk))
+
+            mentor_fields = {}
+            mentor_total = 0.0
+            mentor_criteria_max = 0.0
+            for field, _label, max_pts in MENTOR_CRITERIA:
+                val = float(request.form.get(field) or 0)
+                mentor_fields[field] = min(max(val, 0.0), float(max_pts))
+                mentor_total += mentor_fields[field]
+                mentor_criteria_max += float(max_pts)
+            # Criteria sum to 100; scale into mentor section max marks (default /30)
+            w_men = section_max(weights, "score_mentor_eval")
+            if mentor_criteria_max > 0:
+                scores["score_mentor_eval"] = round(
+                    mentor_total * w_men / mentor_criteria_max, 2
+                )
+            else:
+                scores["score_mentor_eval"] = 0.0
+            scores["score_mentor_eval"] = min(
+                max(scores["score_mentor_eval"], 0.0), w_men
+            )
+
             weighted = compute_weighted_grade(scores, weights)
             grade = score_to_cdacc(weighted)
 
@@ -786,6 +824,7 @@ def save_attachment_marks(att_id):
     }
     config  = get_grading_config(db)
     weights = {k: v for k, v in config.items() if k.startswith("weight_")}
+    scores  = {k: min(max(v, 0.0), section_max(weights, k)) for k, v in scores.items()}
     total   = compute_weighted_grade(scores, weights)
     grade   = score_to_cdacc(total)
 

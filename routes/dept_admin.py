@@ -9,6 +9,9 @@ from auth_utils import (dept_admin_required, write_audit_log,
                         current_user, dept_isolation_check)
 from db import get_service_client
 from notifications import get_user_notifications, notify_dept_notice, create_notification
+from report_utils import (excel_letterhead, style_header_row,
+                          excel_signature_block, pdf_header_style_cmds,
+                          pdf_signature_block)
 from datetime import datetime, date, timedelta
 import secrets, string, json
 
@@ -1163,14 +1166,16 @@ def attendance_matrix_pdf():
                     cell_cmds.append(("BACKGROUND", (ci, ri), (ci, ri), RED))
                     cell_cmds.append(("TEXTCOLOR",  (ci, ri), (ci, ri), colors.HexColor("#dc2626")))
 
+        HDR_FILL = colors.HexColor("#DCE6F4")
+        HDR_TEXT = colors.HexColor("#0F2744")
         tbl.setStyle(TableStyle([
-            # Header rows
-            ("BACKGROUND",  (0, 0), (-1, 0), NAVY),
-            ("TEXTCOLOR",   (0, 0), (-1, 0), WHITE),
+            # Header rows — light institutional style
+            ("BACKGROUND",  (0, 0), (-1, 0), HDR_FILL),
+            ("TEXTCOLOR",   (0, 0), (-1, 0), HDR_TEXT),
             ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE",    (0, 0), (-1, 0), 6),
-            ("BACKGROUND",  (0, 1), (-1, 1), DBLUE),
-            ("TEXTCOLOR",   (0, 1), (-1, 1), WHITE),
+            ("BACKGROUND",  (0, 1), (-1, 1), HDR_FILL),
+            ("TEXTCOLOR",   (0, 1), (-1, 1), HDR_TEXT),
             ("FONTNAME",    (0, 1), (-1, 1), "Helvetica-Bold"),
             ("FONTSIZE",    (0, 1), (-1, 1), 5),
             # Data rows — use Unicode-capable font for ✓/✗
@@ -1185,7 +1190,7 @@ def attendance_matrix_pdf():
             ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
             # Grid
             ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#D1D5DB")),
-            ("LINEBELOW",   (0, 1), (-1, 1),  0.8, WHITE),
+            ("LINEBELOW",   (0, 1), (-1, 1),  0.8, HDR_TEXT),
             # Padding
             ("TOPPADDING",  (0, 0), (-1, -1), 1.5),
             ("BOTTOMPADDING",(0, 0),(-1, -1), 1.5),
@@ -1199,50 +1204,12 @@ def attendance_matrix_pdf():
                     f"{cls_obj.get('name','').replace(' ','_')}_"
                     f"{term_lbl}{year_lbl}{datetime.now().strftime('%Y%m%d')}.pdf")
 
-        # ── Signing block ──────────────────────────────────────────────────
-        LINE   = colors.HexColor("#374151")
-        sign_data = [
-            [
-                Paragraph("<b>DEPT MONITORING OFFICER</b>", BOLD_C),
-                Paragraph("", CENTER),
-                Paragraph("<b>HEAD OF DEPARTMENT</b>", BOLD_C),
-            ],
-            [
-                Paragraph("Name: _______________________________", CENTER),
-                Paragraph("", CENTER),
-                Paragraph("Name: _______________________________", CENTER),
-            ],
-            [
-                Paragraph("Sign: _______________________________", CENTER),
-                Paragraph("", CENTER),
-                Paragraph("Sign: _______________________________", CENTER),
-            ],
-            [
-                Paragraph("Date: _______________________________", CENTER),
-                Paragraph("", CENTER),
-                Paragraph("Date: _______________________________", CENTER),
-            ],
-            [
-                Paragraph("Stamp:", CENTER),
-                Paragraph("", CENTER),
-                Paragraph("Stamp:", CENTER),
-            ],
-        ]
-        sign_col = (doc.width - 20*mm) / 3
-        sign_tbl = Table(sign_data,
-                         colWidths=[sign_col, 20*mm, sign_col])
-        sign_tbl.setStyle(TableStyle([
-            ("ALIGN",        (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN",       (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING",   (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
-            ("FONTSIZE",     (0, 0), (-1, -1), 9),
-            ("BOX",          (0, 0), (0, -1),  0.5, LINE),
-            ("BOX",          (2, 0), (2, -1),  0.5, LINE),
-            ("ROWBACKGROUNDS",(0, 0),(0, -1),  [colors.HexColor("#F0F9FF")]),
-            ("ROWBACKGROUNDS",(2, 0),(2, -1),  [colors.HexColor("#F0FDF4")]),
-            ("MINROWHEIGHT", (0, 4), (-1, 4),  22*mm),  # stamp space
-        ]))
+        # ── Signing block (shared official sign-off) ───────────────────────
+        sign_flowables = pdf_signature_block(
+            doc.width,
+            officer_title="Departmental Monitoring Officer",
+            extra_officers=("Head of Department",),
+        )
 
         elements = [
             banner_tbl,
@@ -1251,8 +1218,7 @@ def attendance_matrix_pdf():
             HRFlowable(width="100%", thickness=1.5, color=NAVY, spaceAfter=4*mm),
             tbl,
             Spacer(1, 6*mm),
-            sign_tbl,
-        ]
+        ] + sign_flowables
         doc.build(elements)
 
         buf.seek(0)
@@ -1485,10 +1451,14 @@ def export_exam_bookings():
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
+    dept_obj = (db.table("departments").select("name")
+                .eq("id", dept_id).single().execute().data or {})
+    dept_name = dept_obj.get("name", "")
+    hod_name = (current_user() or {}).get("full_name", "")
+
     wb = Workbook()
     wb.remove(wb.active)
 
-    navy    = PatternFill("solid", fgColor="0F2C54")
     alt     = PatternFill("solid", fgColor="EFF6FF")
     pending = PatternFill("solid", fgColor="FEF3C7")
     approved= PatternFill("solid", fgColor="DCFCE7")
@@ -1510,30 +1480,23 @@ def export_exam_bookings():
     for cls_name, rows in by_class.items():
         ws = wb.create_sheet(title=cls_name[:31])
 
-        # ── Title ────────────────────────────────────────────────────────────────
-        ws.merge_cells(f"A1:L1")
-        ws["A1"] = f"THIKA TECHNICAL — {cls_name} — Exam Booking List"
-        ws["A1"].font = Font(bold=True, size=13, color="0F2C54")
-        ws["A1"].alignment = Alignment(horizontal="center")
-
-        ws.merge_cells("A2:L2")
-        ws["A2"] = (f"Generated: {datetime.now().strftime('%d %B %Y')}    |    "
-                    f"Total Entries: {len(rows)}    |    "
-                    f"Status Filter: {status_filter.upper() if status_filter else 'ALL'}")
-        ws["A2"].font = Font(italic=True, size=10, color="64748B")
-        ws["A2"].alignment = Alignment(horizontal="center")
-
-        ws.append([])
+        # ── Letterhead ───────────────────────────────────────────────────────────
+        next_row = excel_letterhead(
+            ws, "Exam Bookings Report", len(HEADERS),
+            dept_name=dept_name,
+            meta_lines=[
+                f"Class: {cls_name}",
+                f"Generated: {datetime.now().strftime('%d %B %Y')}    |    "
+                f"Total Entries: {len(rows)}    |    "
+                f"Status Filter: {status_filter.upper() if status_filter else 'ALL'}",
+            ],
+        )
 
         # ── Headers ──────────────────────────────────────────────────────────────
-        ws.append(HEADERS)
-        hdr_row = ws.max_row
-        for ci in range(1, len(HEADERS) + 1):
-            c = ws.cell(row=hdr_row, column=ci)
-            c.fill = navy
-            c.font = Font(color="FFFFFF", bold=True, size=10)
-            c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            c.border = border
+        hdr_row = next_row
+        for ci, h in enumerate(HEADERS, 1):
+            ws.cell(row=hdr_row, column=ci, value=h)
+        style_header_row(ws, hdr_row, len(HEADERS))
         ws.row_dimensions[hdr_row].height = 26
 
         # ── Group by student ─────────────────────────────────────────────────────
@@ -1588,6 +1551,11 @@ def export_exam_bookings():
         for ci, w in enumerate(WIDTHS, 1):
             ws.column_dimensions[get_column_letter(ci)].width = w
         ws.freeze_panes = ws.cell(row=hdr_row + 1, column=1)
+
+        # ── Official sign-off ─────────────────────────────────────────────────────
+        excel_signature_block(ws, ws.max_row + 2,
+                              officer_title="Head of Department",
+                              officer_name=hod_name)
 
     if not wb.sheetnames:
         flash("No data to export.", "info")
@@ -3340,10 +3308,7 @@ def gis_tracking_export():
         data     = [col_hdrs] + [[r.get(k, "") for k in HEADERS] for r in rows]
         col_w    = [w*mm for w in [20, 44, 24, 44, 30, 36, 19, 19, 14, 18]]
         data_tbl = Table(data, colWidths=col_w, repeatRows=1)
-        data_tbl.setStyle(TableStyle([
-            ("BACKGROUND",    (0, 0), (-1, 0), navy),
-            ("TEXTCOLOR",     (0, 0), (-1, 0), colors.white),
-            ("FONTNAME",      (0, 0), (-1, 0), "Helvetica-Bold"),
+        data_tbl.setStyle(TableStyle(pdf_header_style_cmds(0) + [
             ("FONTSIZE",      (0, 0), (-1, 0), 8),
             ("FONTSIZE",      (0, 1), (-1, -1), 7.5),
             ("ROWBACKGROUNDS",(0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
@@ -3357,28 +3322,10 @@ def gis_tracking_export():
         story.append(data_tbl)
         story.append(Spacer(1, 8*mm))
 
-        # ── Signing area ──────────────────────────────────────────────────────
+        # ── Signing area (shared official sign-off) ───────────────────────────
         story.append(Paragraph("OFFICIAL AUTHORISATION", sec_s))
-        sign_tbl = Table([
-            [Paragraph("Industrial Liaison Officer", sigh_s), Spacer(1, 1), Paragraph("Chief Principal", sigh_s)],
-            [Paragraph("Signature: ____________________________", sign_s), Spacer(1,1), Paragraph("Signature: ____________________________", sign_s)],
-            [Paragraph("Name:  ________________________________", sign_s), Spacer(1,1), Paragraph("Name:  ________________________________", sign_s)],
-            [Paragraph("Date:   ________________________________", sign_s), Spacer(1,1), Paragraph("Date:   ________________________________", sign_s)],
-            [Paragraph("Official Stamp:", sign_s), Spacer(1,1), Paragraph("Official Stamp:", sign_s)],
-            [Spacer(1, 16*mm), Spacer(1,1), Spacer(1, 16*mm)],
-        ], colWidths=["47%", "6%", "47%"])
-        sign_tbl.setStyle(TableStyle([
-            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-            ("BOX",           (0, 0), (0, -1), 0.5, lgray),
-            ("BOX",           (2, 0), (2, -1), 0.5, lgray),
-            ("BACKGROUND",    (0, 0), (0, -1), colors.HexColor("#FAFAFA")),
-            ("BACKGROUND",    (2, 0), (2, -1), colors.HexColor("#FAFAFA")),
-            ("LEFTPADDING",   (0, 0), (0, -1), 8),
-            ("LEFTPADDING",   (2, 0), (2, -1), 8),
-        ]))
-        story.append(sign_tbl)
+        story.extend(pdf_signature_block(
+            doc.width, officer_title="Industrial Liaison Officer"))
 
         doc.build(story)
         buf.seek(0)
@@ -3451,19 +3398,12 @@ def gis_tracking_export():
     # Separator row
     ws.row_dimensions[6].height = 6
 
-    # ── Column headers ────────────────────────────────────────────────────────
+    # ── Column headers (light institutional style) ────────────────────────────
     ws.append([None])   # row 6 spacer
     ws.append(HEADERS)  # row 7
     hdr_row  = ws.max_row
-    hdr_fill = PatternFill("solid", fgColor=NAVY)
-    hdr_font = Font(color="FFFFFF", bold=True, size=10)
     ws.row_dimensions[hdr_row].height = 18
-    for ci in range(1, NUM_COLS + 1):
-        c = ws.cell(row=hdr_row, column=ci)
-        c.fill      = hdr_fill
-        c.font      = hdr_font
-        c.alignment = Alignment(horizontal="center", vertical="center")
-        c.border    = border
+    style_header_row(ws, hdr_row, NUM_COLS)
 
     # ── Data rows ─────────────────────────────────────────────────────────────
     alt_fill = PatternFill("solid", fgColor=STRIPE)
@@ -3482,35 +3422,9 @@ def gis_tracking_export():
     for i, w in enumerate([14, 26, 16, 28, 18, 24, 13, 13, 11, 12], 1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
-    # ── Signing area ──────────────────────────────────────────────────────────
-    ws.append([None])
-    ws.append([None])
-    sign_hdr_row = ws.max_row + 1
-    ws.append(["OFFICIAL AUTHORISATION"])
-    c = ws.cell(row=ws.max_row, column=1)
-    c.font      = Font(bold=True, size=11, color=NAVY)
-    c.alignment = Alignment(vertical="center")
-    ws.row_dimensions[ws.max_row].height = 18
-
-    ws.append([None])
-    for label_l, label_r in [
-        ("Industrial Liaison Officer", "Chief Principal"),
-        ("Signature:  _______________________________", "Signature:  _______________________________"),
-        ("Name:  ____________________________________", "Name:  ____________________________________"),
-        ("Date:    ____________________________________", "Date:    ____________________________________"),
-        ("Official Stamp:", "Official Stamp:"),
-        ("", ""),
-        ("", ""),
-    ]:
-        ws.append([label_l, None, None, None, None, label_r])
-        r = ws.max_row
-        ws.row_dimensions[r].height = 18
-        for ci in (1, 6):
-            c = ws.cell(row=r, column=ci)
-            c.alignment = Alignment(vertical="center")
-            if label_l in ("Industrial Liaison Officer", "Chief Principal") or \
-               label_r in ("Industrial Liaison Officer", "Chief Principal"):
-                c.font = Font(bold=True, size=10, color=NAVY)
+    # ── Signing area (shared official sign-off) ───────────────────────────────
+    excel_signature_block(ws, ws.max_row + 2,
+                          officer_title="Industrial Liaison Officer")
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -3794,7 +3708,7 @@ def fingerprint_cancel_enroll():
 # ── Industrial Attachment Marks ───────────────────────────────────────────────
 
 from routes.attachment_helpers import (
-    get_grading_config, compute_weighted_grade, score_to_cdacc
+    get_grading_config, compute_weighted_grade, score_to_cdacc, section_max
 )
 
 @dept_admin_bp.route("/attachment-marks")
@@ -3876,6 +3790,7 @@ def save_attachment_marks(att_id):
     }
     config  = get_grading_config(db, dept_id)
     weights = {k: v for k, v in config.items() if k.startswith("weight_")}
+    scores  = {k: min(max(v, 0.0), section_max(weights, k)) for k, v in scores.items()}
     total   = compute_weighted_grade(scores, weights)
     grade   = score_to_cdacc(total)
 

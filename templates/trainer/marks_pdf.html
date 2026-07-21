@@ -30,12 +30,12 @@
 
     /* ── Table ── */
     table { width:100%; border-collapse:collapse; margin-bottom:20px; font-size:10.5px; }
-    thead th { padding:7px 6px; text-align:center; border:1px solid #ccc; font-weight:700; white-space:nowrap; }
-    .th-fixed { background:#f5f5f5; color:#333; }
+    thead th { padding:7px 6px; text-align:center; border:1px solid #B9C9DE; border-bottom:2px solid #0F2744; font-weight:700; white-space:nowrap; }
+    .th-fixed { background:#DCE6F4; color:#0F2744; }
     .th-oral       { background:#e8f5e9; color:#1b5e20; }
     .th-practical  { background:#fff3e0; color:#e65100; }
     .th-theory     { background:#ede7f6; color:#4527a0; }
-    .th-summary    { background:#1a5fa8; color:#fff; }
+    .th-summary    { background:#DCE6F4; color:#0F2744; }
     tbody td { padding:6px 6px; border:1px solid #ddd; text-align:center; }
     tbody td.col-name { text-align:left; }
     tbody tr:nth-child(even) td { background:#f9f9f9; }
@@ -44,12 +44,15 @@
     .pct-low  { color:#c00; font-weight:700; }
 
     /* ── Signature ── */
-    .sig-section { margin-top:36px; display:flex; justify-content:space-between; gap:20px; }
+    .sig-section { margin-top:36px; display:flex; justify-content:space-between; gap:20px; align-items:flex-end; }
     .sig-block { flex:1; text-align:center; }
     .sig-line  { border-top:1.5px solid #333; margin-bottom:6px; }
     .sig-role  { font-weight:700; font-size:11px; text-transform:uppercase; margin-bottom:3px; }
     .sig-name  { font-size:10px; color:#333; margin-bottom:2px; }
     .sig-label { font-size:10px; color:#555; }
+    .stamp-area { flex:0 0 120px; border:2px dashed #999; border-radius:6px; min-height:80px;
+      display:flex; align-items:center; justify-content:center; text-align:center;
+      font-size:10px; color:#777; text-transform:uppercase; letter-spacing:.05em; }
 
     /* ── Footer ── */
     .footer { text-align:center; margin-top:20px; font-size:9px; color:#888; border-top:1px solid #ddd; padding-top:6px; }
@@ -183,20 +186,17 @@
     <div class="sig-line"></div>
     <div class="sig-role">Trainer</div>
     <div class="sig-name">Name: {{ trainer.name }}</div>
-    <div class="sig-label">Signature &amp; Date</div>
+    <div class="sig-label">Sign: _______________</div>
+    <div class="sig-label">Date: _______________</div>
   </div>
   <div class="sig-block">
     <div class="sig-line"></div>
-    <div class="sig-role">Dept. Monitoring</div>
+    <div class="sig-role">Chief Principal</div>
     <div class="sig-name">Name: _______________</div>
-    <div class="sig-label">Signature &amp; Date</div>
+    <div class="sig-label">Sign: _______________</div>
+    <div class="sig-label">Date: _______________</div>
   </div>
-  <div class="sig-block">
-    <div class="sig-line"></div>
-    <div class="sig-role">Head of Department</div>
-    <div class="sig-name">Name: _______________</div>
-    <div class="sig-label">Signature &amp; Date</div>
-  </div>
+  <div class="stamp-area">Official<br>Stamp</div>
 </div>
 
 <div class="footer">&copy; {{ year }} Thika Technical Training Institute. All rights reserved.</div>

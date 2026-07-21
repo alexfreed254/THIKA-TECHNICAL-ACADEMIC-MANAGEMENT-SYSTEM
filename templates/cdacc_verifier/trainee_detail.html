@@ -215,7 +215,7 @@
                 {{ g.final_grade }}
               </div>
               <div class="text-xs text-gray-500 font-bold mt-1">
-                {{ g.weighted_total|round(1) if g.weighted_total else '—' }}%
+                {% if g.weighted_total is not none %}{{ g.weighted_total|round(1) }} / 100 ({{ g.weighted_total|round(1) }}%){% else %}—{% endif %}
               </div>
             </div>
             {% else %}
@@ -226,25 +226,26 @@
           {% if g %}
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             {% set score_fields = [
-              ('score_gps_attendance','GPS Attendance','fa-map-marker-alt','#f59e0b'),
-              ('score_logbook','Digital Logbook','fa-book','#60a5fa'),
-              ('score_mentor_eval','Mentor Evaluation','fa-handshake','#a78bfa'),
-              ('score_trainer_assessment','Trainer Assessment','fa-chalkboard-teacher','#34d399'),
-              ('score_final_report','Final Report','fa-file-alt','#fb7185'),
+              ('score_gps_attendance','GPS Attendance','fa-map-marker-alt','#f59e0b', config.weight_gps_attendance or 10),
+              ('score_logbook','Digital Logbook','fa-book','#60a5fa', config.weight_logbook or 20),
+              ('score_mentor_eval','Mentor Evaluation','fa-handshake','#a78bfa', config.weight_mentor_eval or 30),
+              ('score_trainer_assessment','Trainer Assessment','fa-chalkboard-teacher','#34d399', config.weight_trainer_assessment or 30),
+              ('score_final_report','Final Report','fa-file-alt','#fb7185', config.weight_final_report or 10),
             ] %}
-            {% for field, label, icon, color in score_fields %}
+            {% for field, label, icon, color, wmax in score_fields %}
             {% set val = g.get(field) %}
+            {% set bar_pct = ((val|float) / (wmax|float) * 100) if (val is not none and wmax) else 0 %}
             <div class="bg-white border border-gray-100 rounded-xl p-3">
               <div class="flex items-center gap-2 mb-1">
                 <i class="fas {{ icon }} text-xs" style="color:{{ color }}"></i>
                 <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">{{ label }}</span>
               </div>
               <div class="text-xl font-black text-gray-800">
-                {% if val is not none %}{{ val|round(1) }}{% else %}—{% endif %}
+                {% if val is not none %}{{ val|round(1) }} / {{ wmax|int }}{% else %}—{% endif %}
               </div>
               {% if val is not none %}
               <div class="pbar mt-1">
-                <div class="pbar-fill" style="width:{{ val }}%;background:{{ color }}"></div>
+                <div class="pbar-fill" style="width:{{ [bar_pct, 100]|min }}%;background:{{ color }}"></div>
               </div>
               {% endif %}
             </div>

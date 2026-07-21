@@ -11,33 +11,47 @@
     body { font-family: 'Inter', sans-serif; background: #f0f4f8; min-height: 100vh;
            display: flex; flex-direction: column; align-items: center; padding: 40px 16px; }
 
-    .header { text-align: center; margin-bottom: 36px; }
+    .header { text-align: center; margin-bottom: 28px; }
     .logo-wrap { width: 72px; height: 72px; margin: 0 auto 14px; }
     .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
     .header h1 { font-size: 22px; font-weight: 800; color: #1e3a5f; }
-    .header p  { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .header p  { font-size: 13px; color: #6b7280; margin-top: 4px; line-height: 1.5; }
 
     .verify-card {
-      background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
-      padding: 32px; width: 100%; max-width: 540px; box-shadow: 0 4px 20px rgba(0,0,0,.06);
+      background: #fff; border: 2px solid #1565c0; border-radius: 16px;
+      padding: 28px 32px; width: 100%; max-width: 540px;
+      box-shadow: 0 8px 28px rgba(21,101,192,.14);
       margin-bottom: 24px;
     }
     .verify-card h2 { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 6px; }
-    .verify-card p  { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+    .verify-card > p  { font-size: 13px; color: #6b7280; margin-bottom: 18px; line-height: 1.5; }
 
+    .sn-label {
+      display: block; font-size: 12px; font-weight: 700; color: #374151;
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
+    }
     .input-row { display: flex; gap: 10px; }
     .sn-input {
-      flex: 1; padding: 12px 16px; border: 2px solid #d1d5db; border-radius: 10px;
-      font-size: 15px; font-family: monospace; font-weight: 600; text-transform: uppercase;
-      outline: none; transition: border-color .2s;
+      flex: 1; padding: 14px 16px; border: 2px solid #93c5fd; border-radius: 10px;
+      font-size: 15px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-weight: 600; text-transform: uppercase; outline: none; transition: border-color .2s;
+      background: #f8fbff; min-width: 0;
     }
-    .sn-input:focus { border-color: #1565c0; }
+    .sn-input:focus { border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,.15); }
     .btn-verify {
-      padding: 12px 22px; background: #1565c0; color: #fff; border: none;
+      padding: 14px 22px; background: #1565c0; color: #fff; border: none;
       border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
       white-space: nowrap; transition: opacity .15s;
     }
     .btn-verify:hover { opacity: .88; }
+    .btn-verify:focus-visible { outline: 2px solid #1e3a5f; outline-offset: 2px; }
+    .format-hint {
+      margin-top: 10px; font-size: 12px; color: #6b7280; line-height: 1.45;
+    }
+    .format-hint code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f3f4f6; padding: 1px 6px; border-radius: 4px; color: #1e3a5f; font-weight: 600;
+    }
 
     /* Result cards */
     .result-ok  {
@@ -46,19 +60,23 @@
     }
     .result-err {
       background: #fef2f2; border: 2px solid #ef4444; border-radius: 14px; padding: 24px;
-      width: 100%; max-width: 540px;
+      width: 100%; max-width: 540px; margin-bottom: 8px;
     }
 
     .result-hdr { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-    .result-icon { font-size: 28px; }
+    .result-icon {
+      width: 44px; height: 44px; border-radius: 50%; background: #dcfce7; color: #15803d;
+      display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
     .result-title { font-size: 18px; font-weight: 800; color: #15803d; }
-    .result-serial { font-family: monospace; font-size: 20px; font-weight: 800; color: #1e3a5f;
-                     letter-spacing: .08em; margin-bottom: 16px; }
+    .result-serial { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                     font-size: 18px; font-weight: 800; color: #1e3a5f;
+                     letter-spacing: .06em; margin-bottom: 16px; word-break: break-all; }
 
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
     .info-cell { background: #f0fdf4; border-radius: 8px; padding: 10px 14px; }
     .info-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
-    .info-val   { font-size: 14px; font-weight: 700; color: #111827; margin-top: 3px; }
+    .info-val   { font-size: 14px; font-weight: 700; color: #111827; margin-top: 3px; word-break: break-word; }
 
     .cleared-badge {
       display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px;
@@ -67,51 +85,68 @@
     }
 
     .err-title { font-size: 16px; font-weight: 700; color: #b91c1c; margin-bottom: 8px; }
-    .err-msg   { font-size: 13px; color: #7f1d1d; }
+    .err-msg   { font-size: 13px; color: #7f1d1d; line-height: 1.5; }
+    .err-hint  { font-size: 12px; color: #9ca3af; margin-top: 10px; line-height: 1.45; }
 
-    .footer { font-size: 12px; color: #9ca3af; text-align: center; margin-top: 32px; }
+    .footer { font-size: 12px; color: #9ca3af; text-align: center; margin-top: 32px; line-height: 1.5; }
+    .footer a { color: #1565c0; }
+
+    @media (max-width: 520px) {
+      body { padding: 24px 12px; }
+      .verify-card { padding: 22px 18px; }
+      .input-row { flex-direction: column; }
+      .btn-verify { width: 100%; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
 
   <div class="header">
     <div class="logo-wrap">
-      <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+      <img src="{{ LOGO_URL }}" alt="Thika Technical Training Institute logo">
     </div>
     <h1>Clearance Verification Portal</h1>
-    <p>Thika Technical Training Institute &mdash; Verify student clearance authenticity</p>
+    <p>Thika Technical Training Institute &mdash; Confirm a clearance certificate is authentic</p>
   </div>
 
-  <!-- Search form -->
+  <!-- Search form (always prominent) -->
   <div class="verify-card">
-    <h2><i class="fas fa-search" style="color:#1565c0;margin-right:8px"></i>Verify Clearance</h2>
-    <p>Enter the serial number printed on the clearance certificate to confirm its authenticity.</p>
-    <form method="post" action="/clearance/verify">
+    <h2><i class="fas fa-search" style="color:#1565c0;margin-right:8px" aria-hidden="true"></i>Verify Serial Number</h2>
+    <p>Enter the serial number printed on the clearance certificate (or scanned from the QR code).</p>
+    <form method="post" action="/clearance/verify" autocomplete="off">
+      <label class="sn-label" for="serial_number">Certificate serial number</label>
       <div class="input-row">
-        <input type="text" name="serial_number" class="sn-input"
-               placeholder="e.g. CLR/2026/A1B2C3"
-               value="{{ serial_number or '' }}" required autocomplete="off">
+        <input type="text" id="serial_number" name="serial_number" class="sn-input"
+               placeholder="TTTI/CLR/{{ now().year }}/A1B2C3D4"
+               value="{{ serial_number or '' }}" required autocomplete="off"
+               spellcheck="false" autofocus
+               aria-describedby="serial-hint">
         <button type="submit" class="btn-verify">
-          <i class="fas fa-search"></i> Verify
+          <i class="fas fa-shield-alt" aria-hidden="true"></i> Verify
         </button>
       </div>
+      <p class="format-hint" id="serial-hint">
+        Format: <code>TTTI/CLR/YEAR/XXXXXXXX</code> — include the slashes exactly as printed.
+      </p>
     </form>
   </div>
 
   <!-- Error result -->
   {% if error %}
-  <div class="result-err">
-    <div class="err-title"><i class="fas fa-times-circle"></i> Verification Failed</div>
+  <div class="result-err" role="alert">
+    <div class="err-title"><i class="fas fa-times-circle" aria-hidden="true"></i> Verification Failed</div>
     <div class="err-msg">{{ error }}</div>
+    <div class="err-hint">Double-check the serial for typos, then try again. Only completed clearances can be verified.</div>
   </div>
   {% endif %}
 
   <!-- Success result -->
   {% if result %}
   {% set student = result.get('user_profiles') or result.get('student') or {} %}
-  <div class="result-ok">
+  <div class="result-ok" role="status">
     <div class="result-hdr">
-      <span class="result-icon">✅</span>
+      <span class="result-icon" aria-hidden="true"><i class="fas fa-check"></i></span>
       <div>
         <div class="result-title">Valid Clearance Confirmed</div>
         <div style="font-size:12px;color:#6b7280">This clearance certificate is authentic and on record.</div>
@@ -148,14 +183,14 @@
     </div>
 
     <span class="cleared-badge">
-      <i class="fas fa-check-circle"></i> CLEARED — All stages approved
+      <i class="fas fa-check-circle" aria-hidden="true"></i> CLEARED — All stages approved
     </span>
   </div>
   {% endif %}
 
   <div class="footer">
     &copy; {{ now().year }} Thika Technical Training Institute &mdash;
-    <a href="/clearance" style="color:#1565c0">Student Portal</a>
+    <a href="/clearance">Student Portal</a>
   </div>
 
 </body>

@@ -672,6 +672,17 @@ def initiate_clearance():
                     notification_type="info",
                     action_url="/clearance/approver",
                 )
+            # Service department approvers (library, ICT, games, kitchen, store, external)
+            for cat, approver_id in svc_approver_map.items():
+                if approver_id:
+                    create_notification(
+                        user_id=approver_id,
+                        title="Trainee Clearance — Service Sign-Off Needed",
+                        message=(f"{sname} requires clearance from "
+                                 f"{CATEGORY_LABELS.get(cat, 'your service department')}."),
+                        notification_type="info",
+                        action_url="/clearance/approver",
+                    )
         except Exception:
             pass
 
@@ -919,12 +930,45 @@ def approver_dashboard():
             except Exception:
                 a["trainer_approvals"] = []
 
+    # For home dept HOD: Stage 1 requests in their department with pending
+    # trainer approvals — so the HOD can open the trainer waiver page early
+    home_stage1_requests = []
+    if role == "dept_admin" and user.get("department_id"):
+        try:
+            reqs = (db.table("clearance_requests")
+                    .select("id, status, stage, created_at, "
+                            "user_profiles:user_profiles!clearance_requests_student_id_fkey"
+                            "(full_name, admission_no)")
+                    .eq("department_id", user["department_id"])
+                    .eq("status", "in_progress")
+                    .eq("stage", 1)
+                    .order("created_at", desc=True)
+                    .execute().data or [])
+            for r in reqs:
+                t_rows = (db.table("clearance_approvals")
+                          .select("id, status, is_waived")
+                          .eq("clearance_request_id", r["id"])
+                          .eq("approver_category", "trainer")
+                          .execute().data or [])
+                total = len(t_rows)
+                done  = sum(1 for t in t_rows
+                            if t.get("status") == "approved" or t.get("is_waived"))
+                required = min(MIN_TRAINERS, total) if total else 0
+                if total and done < required:
+                    r["_trainers_total"]    = total
+                    r["_trainers_done"]     = done
+                    r["_trainers_required"] = required
+                    home_stage1_requests.append(r)
+        except Exception:
+            home_stage1_requests = []
+
     return render_template(
         "clearance/approver_dashboard.html",
         my_approvals=pending,
         completed_approvals=completed,
         stage1_pending=stage1_pending,
         stage2_pending=stage2_pending,
+        home_stage1_requests=home_stage1_requests,
         user_role=role,
         CATEGORY_LABELS=CATEGORY_LABELS,
         portal_base=_portal_base_template(role),
@@ -1158,6 +1202,74 @@ def return_for_correction(request_id):
     return redirect(_approver_back(user["role"]))
 
 
+# ── Student: Resubmit after correction ───────────────────────────────────────
+
+@clearance_bp.route("/resubmit/<request_id>", methods=["POST"])
+@login_required
+@student_required
+def resubmit_clearance(request_id):
+    """
+    Student marks a 'returned' clearance as corrected and resubmits it.
+    Puts the request back to 'in_progress' at Stage 2 and notifies the
+    home department HOD(s) to re-review.
+    """
+    db   = get_service_client()
+    user = current_user()
+
+    try:
+        cr = (db.table("clearance_requests")
+              .select("id, student_id, status, stage, department_id, return_reason")
+              .eq("id", request_id)
+              .single()
+              .execute().data)
+
+        if not cr:
+            abort(404)
+        if cr.get("student_id") != user["id"]:
+            abort(403)
+        if cr.get("status") != "returned":
+            flash("Only a clearance returned for correction can be resubmitted.", "warning")
+            return redirect(url_for("clearance.dashboard"))
+
+        update = {"status": "in_progress"}
+        db.table("clearance_requests").update(update).eq("id", request_id).execute()
+
+        # Record resubmission time if the column exists (non-fatal otherwise)
+        try:
+            db.table("clearance_requests").update(
+                {"resubmitted_at": datetime.now().isoformat()}
+            ).eq("id", request_id).execute()
+        except Exception:
+            pass
+
+        # Notify home dept HOD(s) to re-review
+        try:
+            hods = (db.table("user_profiles")
+                    .select("id")
+                    .eq("role", "dept_admin")
+                    .eq("department_id", cr.get("department_id"))
+                    .execute().data or [])
+            for hod in hods:
+                create_notification(
+                    user_id=hod["id"],
+                    title="Clearance Resubmitted After Correction",
+                    message=(f"{user.get('full_name', 'A trainee')} has corrected and "
+                             f"resubmitted their clearance for your final review."),
+                    notification_type="info",
+                    action_url="/clearance/approver",
+                )
+        except Exception:
+            pass
+
+        write_audit_log("resubmit_clearance", target=f"request:{request_id}")
+        flash("Clearance resubmitted for final review.", "success")
+
+    except Exception as e:
+        flash(f"Error resubmitting clearance: {e}", "error")
+
+    return redirect(url_for("clearance.dashboard"))
+
+
 # ── HOD: Waive inactive trainer ───────────────────────────────────────────────
 
 @clearance_bp.route("/waive-trainer/<approval_id>", methods=["POST"])
@@ -1364,7 +1476,8 @@ def certificate_pdf(request_id):
 
         base   = getSampleStyleSheet()
         DARK   = colors.HexColor("#0f2c54")
-        MID    = colors.HexColor("#1e40af")
+        MID    = colors.HexColor("#DCE6F4")   # light visible header fill
+        HDRTXT = colors.HexColor("#0F2744")   # dark text on light header
         BORDER = colors.HexColor("#e2e8f0")
         LGREY  = colors.HexColor("#f8fafc")
         GTEXT  = colors.HexColor("#15803d")
@@ -1382,7 +1495,8 @@ def certificate_pdf(request_id):
         lft9   = ParagraphStyle("l9",  parent=base["Normal"], fontSize=9,
                                 fontName="Helvetica")
         tbl_h  = ParagraphStyle("th",  parent=base["Normal"], fontSize=8,
-                                fontName="Helvetica-Bold", alignment=TA_CENTER)
+                                fontName="Helvetica-Bold", alignment=TA_CENTER,
+                                textColor=HDRTXT)
         tbl_c  = ParagraphStyle("tc",  parent=base["Normal"], fontSize=8,
                                 fontName="Helvetica", alignment=TA_CENTER)
         tbl_l  = ParagraphStyle("tl",  parent=base["Normal"], fontSize=8,
@@ -1467,7 +1581,9 @@ def certificate_pdf(request_id):
         appr_data  = [appr_hdr]
         appr_style = [
             ("BACKGROUND",    (0,0), (-1,0), MID),
-            ("TEXTCOLOR",     (0,0), (-1,0), colors.white),
+            ("TEXTCOLOR",     (0,0), (-1,0), HDRTXT),
+            ("FONTNAME",      (0,0), (-1,0), "Helvetica-Bold"),
+            ("LINEBELOW",     (0,0), (-1,0), 0.8, HDRTXT),
             ("FONTSIZE",      (0,0), (-1,-1), 8),
             ("GRID",          (0,0), (-1,-1), 0.4, BORDER),
             ("TOPPADDING",    (0,0), (-1,-1), 3),
@@ -1584,6 +1700,7 @@ def certificate_pdf(request_id):
         story.append(Spacer(1, 8))
 
         officials = [
+            "HOME DEPARTMENT HOD",
             "FINANCE DEPARTMENT",
             "DEAN OF STUDENTS",
             "REGISTRAR",
@@ -1806,7 +1923,7 @@ def manage_trainers(request_id):
 
     approved_count = sum(1 for r in t_rows
                          if r.get("status") == "approved" or r.get("is_waived"))
-    required_count = min(5, len(t_rows))
+    required_count = min(MIN_TRAINERS, len(t_rows))
 
     return render_template(
         "clearance/manage_trainers.html",

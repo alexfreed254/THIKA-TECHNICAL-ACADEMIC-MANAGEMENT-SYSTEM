@@ -122,12 +122,12 @@
       </div>
     </div>
     <div class="wt-legend">
-      <span style="color:rgba(255,255,255,.7);font-weight:700">Weights:</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#f59e0b"></span> GPS Attendance {{ (config.weight_gps_attendance or 10)|int }}%</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#60a5fa"></span> Logbook {{ (config.weight_logbook or 20)|int }}%</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#a78bfa"></span> Mentor Eval {{ (config.weight_mentor_eval or 30)|int }}%</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#34d399"></span> Trainer Assessment {{ (config.weight_trainer_assessment or 30)|int }}%</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#fb7185"></span> Final Report {{ (config.weight_final_report or 10)|int }}%</span>
+      <span style="color:rgba(255,255,255,.7);font-weight:700">Max marks:</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#f59e0b"></span> GPS Attendance /{{ (config.weight_gps_attendance or 10)|int }}</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#60a5fa"></span> Logbook /{{ (config.weight_logbook or 20)|int }}</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#a78bfa"></span> Mentor Eval /{{ (config.weight_mentor_eval or 30)|int }}</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#34d399"></span> Trainer Assessment /{{ (config.weight_trainer_assessment or 30)|int }}</span>
+      <span class="wt-item"><span class="wt-dot" style="background:#fb7185"></span> Final Report /{{ (config.weight_final_report or 10)|int }}</span>
     </div>
   </div>
 
@@ -155,12 +155,12 @@
             <th>Company</th>
             <th>Period</th>
             <th class="ctr">Status</th>
-            <th class="ctr">GPS<br><small style="font-weight:400">/100</small></th>
-            <th class="ctr">Logbook<br><small style="font-weight:400">/100</small></th>
-            <th class="ctr">Mentor<br><small style="font-weight:400">/100</small></th>
-            <th class="ctr">Trainer<br><small style="font-weight:400">/100</small></th>
-            <th class="ctr">Report<br><small style="font-weight:400">/100</small></th>
-            <th class="ctr">Total</th>
+            <th class="ctr">GPS<br><small style="font-weight:400">/{{ (config.weight_gps_attendance or 10)|int }}</small></th>
+            <th class="ctr">Logbook<br><small style="font-weight:400">/{{ (config.weight_logbook or 20)|int }}</small></th>
+            <th class="ctr">Mentor<br><small style="font-weight:400">/{{ (config.weight_mentor_eval or 30)|int }}</small></th>
+            <th class="ctr">Trainer<br><small style="font-weight:400">/{{ (config.weight_trainer_assessment or 30)|int }}</small></th>
+            <th class="ctr">Report<br><small style="font-weight:400">/{{ (config.weight_final_report or 10)|int }}</small></th>
+            <th class="ctr">Total<br><small style="font-weight:400">/100</small></th>
             <th class="ctr">Grade</th>
             <th class="ctr">Action</th>
           </tr>
@@ -187,14 +187,14 @@
                 {{ att_status|title }}
               </span>
             </td>
-            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_gps_attendance|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
-            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_logbook|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
-            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_mentor_eval|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
-            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_trainer_assessment|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
-            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_final_report|round(1) }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_gps_attendance|round(1) }} / {{ (config.weight_gps_attendance or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_logbook|round(1) }} / {{ (config.weight_logbook or 20)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_mentor_eval|round(1) }} / {{ (config.weight_mentor_eval or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_trainer_assessment|round(1) }} / {{ (config.weight_trainer_assessment or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
+            <td class="score-cell">{% if g %}<span class="score-val">{{ g.score_final_report|round(1) }} / {{ (config.weight_final_report or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}</td>
             <td class="ctr">
               {% if g and g.get('weighted_total') is not none %}
-              <span class="total-pill">{{ g.weighted_total|round(1) }}%</span>
+              <span class="total-pill">{{ g.weighted_total|round(1) }} / 100 ({{ g.weighted_total|round(1) }}%)</span>
               {% else %}<span class="score-dash">—</span>{% endif %}
             </td>
             <td class="ctr">
@@ -237,34 +237,34 @@
       <form id="marksForm">
         <input type="hidden" id="currentAttId" value="">
         <div class="score-row">
-          <div class="score-label">GPS Attendance<small>Based on geofenced check-in records</small></div>
-          <input class="score-inp" type="number" id="s_gps" name="score_gps_attendance" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">{{ (config.weight_gps_attendance or 10)|int }}%</div>
+          <div class="score-label">GPS Attendance<small>Marks out of {{ (config.weight_gps_attendance or 10)|int }}</small></div>
+          <input class="score-inp" type="number" id="s_gps" name="score_gps_attendance" min="0" max="{{ (config.weight_gps_attendance or 10)|int }}" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">/{{ (config.weight_gps_attendance or 10)|int }}</div>
         </div>
         <div class="score-row">
-          <div class="score-label">Digital Logbook<small>Quality and completeness of logbook entries</small></div>
-          <input class="score-inp" type="number" id="s_log" name="score_logbook" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">{{ (config.weight_logbook or 20)|int }}%</div>
+          <div class="score-label">Digital Logbook<small>Marks out of {{ (config.weight_logbook or 20)|int }}</small></div>
+          <input class="score-inp" type="number" id="s_log" name="score_logbook" min="0" max="{{ (config.weight_logbook or 20)|int }}" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">/{{ (config.weight_logbook or 20)|int }}</div>
         </div>
         <div class="score-row">
-          <div class="score-label">Mentor Evaluation<small>Score from industry mentor / supervisor</small></div>
-          <input class="score-inp" type="number" id="s_men" name="score_mentor_eval" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">{{ (config.weight_mentor_eval or 30)|int }}%</div>
+          <div class="score-label">Mentor Evaluation<small>Marks out of {{ (config.weight_mentor_eval or 30)|int }}</small></div>
+          <input class="score-inp" type="number" id="s_men" name="score_mentor_eval" min="0" max="{{ (config.weight_mentor_eval or 30)|int }}" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">/{{ (config.weight_mentor_eval or 30)|int }}</div>
         </div>
         <div class="score-row">
-          <div class="score-label">Trainer Assessment<small>Institute trainer assessment score</small></div>
-          <input class="score-inp" type="number" id="s_tra" name="score_trainer_assessment" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">{{ (config.weight_trainer_assessment or 30)|int }}%</div>
+          <div class="score-label">Trainer Assessment<small>Marks out of {{ (config.weight_trainer_assessment or 30)|int }}</small></div>
+          <input class="score-inp" type="number" id="s_tra" name="score_trainer_assessment" min="0" max="{{ (config.weight_trainer_assessment or 30)|int }}" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">/{{ (config.weight_trainer_assessment or 30)|int }}</div>
         </div>
         <div class="score-row">
-          <div class="score-label">Final Report<small>Quality of student's final attachment report</small></div>
-          <input class="score-inp" type="number" id="s_rep" name="score_final_report" min="0" max="100" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">{{ (config.weight_final_report or 10)|int }}%</div>
+          <div class="score-label">Final Report<small>Marks out of {{ (config.weight_final_report or 10)|int }}</small></div>
+          <input class="score-inp" type="number" id="s_rep" name="score_final_report" min="0" max="{{ (config.weight_final_report or 10)|int }}" step="0.5" value="0" oninput="calcTotal()">
+          <div class="score-wt">/{{ (config.weight_final_report or 10)|int }}</div>
         </div>
         <div class="am-result">
           <div>
-            <div class="am-result-score"><span id="livePct">0.0</span>%</div>
-            <div class="am-result-lbl">Weighted Total</div>
+            <div class="am-result-score"><span id="livePct">0.0</span> / 100</div>
+            <div class="am-result-lbl">Overall Total</div>
           </div>
           <div id="liveGrade" class="am-result-grade">?</div>
         </div>
@@ -287,16 +287,17 @@ var WEIGHTS = {
   tra: {{ (config.weight_trainer_assessment or 30)|float }},
   rep: {{ (config.weight_final_report or 10)|float }},
 };
-var TOTAL_W = WEIGHTS.gps + WEIGHTS.log + WEIGHTS.men + WEIGHTS.tra + WEIGHTS.rep;
+function _cap(val, max) {
+  return Math.min(Math.max(val || 0, 0), max || 0);
+}
 
 function calcTotal() {
-  var gps = parseFloat(document.getElementById('s_gps').value) || 0;
-  var log = parseFloat(document.getElementById('s_log').value) || 0;
-  var men = parseFloat(document.getElementById('s_men').value) || 0;
-  var tra = parseFloat(document.getElementById('s_tra').value) || 0;
-  var rep = parseFloat(document.getElementById('s_rep').value) || 0;
-  var pct = ((gps*WEIGHTS.gps + log*WEIGHTS.log + men*WEIGHTS.men + tra*WEIGHTS.tra + rep*WEIGHTS.rep) / TOTAL_W);
-  pct = Math.round(pct * 10) / 10;
+  var gps = _cap(parseFloat(document.getElementById('s_gps').value), WEIGHTS.gps);
+  var log = _cap(parseFloat(document.getElementById('s_log').value), WEIGHTS.log);
+  var men = _cap(parseFloat(document.getElementById('s_men').value), WEIGHTS.men);
+  var tra = _cap(parseFloat(document.getElementById('s_tra').value), WEIGHTS.tra);
+  var rep = _cap(parseFloat(document.getElementById('s_rep').value), WEIGHTS.rep);
+  var pct = Math.round((gps + log + men + tra + rep) * 10) / 10;
   document.getElementById('livePct').textContent = pct.toFixed(1);
   var g  = pct >= 80 ? 'M' : pct >= 65 ? 'P' : pct >= 50 ? 'C' : 'NYC';
   var el = document.getElementById('liveGrade');

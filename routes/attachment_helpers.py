@@ -155,13 +155,32 @@ def placement_status_label(status: str) -> str:
 
 
 def compute_weighted_grade(scores: dict, weights: dict) -> float:
-    total_w = sum(weights.values()) or 100
-    weighted = 0.0
+    """
+    Sum raw section marks (each capped at its weight) into an overall mark
+    out of 100. Sections are NOT percentages — e.g. GPS is marked /10,
+    Logbook /20, Mentor /30, Trainer /30, Final Report /10.
+    The returned total IS the overall percentage out of 100.
+    """
+    total = 0.0
     for key, weight in weights.items():
         score_key = key.replace("weight_", "score_")
-        val = float(scores.get(score_key) or 0)
-        weighted += val * (float(weight) / total_w)
-    return round(weighted, 2)
+        try:
+            val = float(scores.get(score_key) or 0)
+        except (TypeError, ValueError):
+            val = 0.0
+        max_w = float(weight or 0)
+        if max_w > 0:
+            total += min(max(val, 0.0), max_w)
+    return round(total, 2)
+
+
+def section_max(weights: dict, score_key: str) -> float:
+    """Max marks for a section given its score_* key (e.g. score_gps_attendance → 10)."""
+    wkey = score_key.replace("score_", "weight_")
+    try:
+        return float(weights.get(wkey) or DEFAULT_GRADING_WEIGHTS.get(wkey) or 0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def score_to_cdacc(total: float) -> str:

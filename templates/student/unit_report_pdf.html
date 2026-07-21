@@ -39,7 +39,8 @@
       gap: 20px;
       border-bottom: 2px solid #0d2f6e;
     }
-    .letterhead img { height: 75px; flex-shrink: 0; }
+    .letterhead img { height: 75px; flex-shrink: 0; object-fit: contain; }
+    .letterhead-logos { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
     .letterhead-text { flex: 1; }
     .lh-institute {
       font-size: 18px;
@@ -197,16 +198,17 @@
     /* ══ Table ══ */
     .tbl-wrap { margin-bottom: 28px; }
     table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    thead tr { background: #0d2f6e; }
+    thead tr { background: #DCE6F4; }
     thead th {
-      color: #fff;
+      color: #0F2744;
       padding: 9px 10px;
       text-align: left;
       font-weight: 700;
       font-size: 10.5px;
       text-transform: uppercase;
       letter-spacing: .04em;
-      border: 1px solid #0d2f6e;
+      border: 1px solid #B9C9DE;
+      border-bottom: 2px solid #0F2744;
     }
     tbody td {
       padding: 7px 10px;
@@ -238,6 +240,7 @@
       margin-top: 32px;
       padding-top: 20px;
       border-top: 1px solid #d0d7e2;
+      align-items: flex-end;
     }
     .sig-block { flex: 1; text-align: center; }
     .sig-space { height: 42px; }
@@ -245,6 +248,20 @@
     .sig-role  { font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #0d2f6e; margin-bottom: 3px; }
     .sig-name  { font-size: 10.5px; color: #333; margin-bottom: 2px; }
     .sig-label { font-size: 10px; color: #888; }
+    .stamp-area {
+      flex: 0 0 120px;
+      border: 2px dashed #999;
+      border-radius: 6px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 10px;
+      color: #777;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
 
     /* ══ Footer bar ══ */
     .footer-bar {
@@ -322,7 +339,10 @@
 
   <!-- ══ Letterhead ══ -->
   <div class="letterhead">
-    <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo">
+    <div class="letterhead-logos">
+      <img src="/static/assets/KENYACOATOFARMS.png" alt="Coat of Arms">
+      <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo">
+    </div>
     <div class="letterhead-text">
       <div class="lh-institute">Thika Technical Training Institute</div>
       <div class="lh-dept">Department of {{ info.dept_name if info else '——' }}</div>
@@ -454,24 +474,20 @@
       <div class="sig-block">
         <div class="sig-space"></div>
         <div class="sig-line"></div>
-        <div class="sig-role">Trainee</div>
-        <div class="sig-name">{{ student.full_name }}</div>
-        <div class="sig-label">Signature &amp; Date</div>
-      </div>
-      <div class="sig-block">
-        <div class="sig-space"></div>
-        <div class="sig-line"></div>
-        <div class="sig-role">Dept. Monitoring Officer</div>
-        <div class="sig-name">Name: ___________________________</div>
-        <div class="sig-label">Signature &amp; Date</div>
-      </div>
-      <div class="sig-block">
-        <div class="sig-space"></div>
-        <div class="sig-line"></div>
         <div class="sig-role">Head of Department</div>
         <div class="sig-name">Name: ___________________________</div>
-        <div class="sig-label">Signature &amp; Date</div>
+        <div class="sig-label">Sign: _______________</div>
+        <div class="sig-label">Date: _______________</div>
       </div>
+      <div class="sig-block">
+        <div class="sig-space"></div>
+        <div class="sig-line"></div>
+        <div class="sig-role">Chief Principal</div>
+        <div class="sig-name">Name: ___________________________</div>
+        <div class="sig-label">Sign: _______________</div>
+        <div class="sig-label">Date: _______________</div>
+      </div>
+      <div class="stamp-area">Official<br>Stamp</div>
     </div>
 
   </div><!-- /body -->

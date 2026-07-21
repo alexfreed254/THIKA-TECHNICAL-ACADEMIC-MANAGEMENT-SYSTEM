@@ -16,11 +16,11 @@
     .info-col { flex:1; }
     .info-col p { margin-bottom:5px; font-size:12px; line-height:1.6; }
     .info-col p strong { font-weight:700; }
-    .unit-title { background:#1565c0; color:#fff; padding:7px 12px; font-size:12px; font-weight:700; margin-bottom:0; border-radius:3px 3px 0 0; }
+    .unit-title { background:#DCE6F4; color:#0F2744; padding:7px 12px; font-size:12px; font-weight:700; margin-bottom:0; border-radius:3px 3px 0 0; border-bottom:2px solid #0F2744; }
     .unit-summary { background:#e3f2fd; padding:6px 12px; font-size:11px; margin-bottom:8px; display:flex; gap:24px; border-radius:0 0 3px 3px; }
     .unit-summary span { font-weight:600; }
     table { width:100%; border-collapse:collapse; margin-bottom:24px; }
-    thead th { background:#1565c0; color:#fff; padding:8px 10px; font-size:11px; text-align:left; border:1px solid #0d47a1; }
+    thead th { background:#DCE6F4; color:#0F2744; padding:8px 10px; font-size:11px; text-align:left; border:1px solid #B9C9DE; border-bottom:2px solid #0F2744; }
     tbody td { padding:7px 10px; border:1px solid #ccc; font-size:11px; }
     tbody tr:nth-child(even) td { background:#f7f7f7; }
     .present { color:#1a7a1a; font-weight:700; }
@@ -31,9 +31,12 @@
     .sig-role { font-weight:700; font-size:12px; text-transform:uppercase; margin-bottom:4px; }
     .sig-name { font-size:11px; color:#333; margin-bottom:2px; }
     .sig-label { font-size:11px; color:#555; }
+    .stamp-area { flex:0 0 120px; border:2px dashed #999; border-radius:6px; min-height:80px;
+      display:flex; align-items:center; justify-content:center; text-align:center;
+      font-size:10px; color:#777; text-transform:uppercase; letter-spacing:.05em; }
     .footer { text-align:center; margin-top:24px; font-size:10px; color:#888; border-top:1px solid #ddd; padding-top:8px; }
     .no-print { text-align:center; margin-top:24px; }
-    @media print { .no-print { display:none; } body { padding:15px 20px; } }
+    @media print { .no-print { display:none; } body { padding:15px 20px; -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
   </style>
 </head>
 <body>
@@ -96,16 +99,19 @@
 <div class="sig-section">
   <div class="sig-block">
     <div class="sig-line"></div>
-    <div class="sig-role">Dept. Admin</div>
+    <div class="sig-role">Head of Department</div>
     <div class="sig-name">Name: _______________</div>
-    <div class="sig-label">Signature &amp; Date</div>
+    <div class="sig-label">Sign: _______________</div>
+    <div class="sig-label">Date: _______________</div>
   </div>
   <div class="sig-block">
     <div class="sig-line"></div>
-    <div class="sig-role">Head of Department</div>
+    <div class="sig-role">Chief Principal</div>
     <div class="sig-name">Name: _______________</div>
-    <div class="sig-label">Signature &amp; Date</div>
+    <div class="sig-label">Sign: _______________</div>
+    <div class="sig-label">Date: _______________</div>
   </div>
+  <div class="stamp-area">Official<br>Stamp</div>
 </div>
 
 <div class="footer">&copy; 2026 Thika Technical Training Institute. All rights reserved by Lawrence K.</div>

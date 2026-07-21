@@ -14,6 +14,9 @@ from auth_utils import (trainer_required, write_audit_log, current_user)
 from db import get_service_client
 from notifications import get_user_notifications
 from datetime import datetime, date, timedelta
+from report_utils import (excel_letterhead, style_header_row,
+                          excel_signature_block, pdf_letterhead,
+                          pdf_header_style_cmds, pdf_signature_block)
 import re
 import os
 import json
@@ -1081,8 +1084,6 @@ def attendance_weekly_export():
     ws = wb.active
     ws.title = "Attendance"
 
-    NAVY    = PatternFill("solid", fgColor="0F2C54")
-    DARK    = PatternFill("solid", fgColor="1A3D6E")
     GREEN   = PatternFill("solid", fgColor="DCFCE7")
     RED     = PatternFill("solid", fgColor="FEE2E2")
     ALT     = PatternFill("solid", fgColor="EFF6FF")
@@ -1094,34 +1095,27 @@ def attendance_weekly_export():
     n_sum = 3          # Total P, Total A, %
     n_tot = n_fix + n_ses + n_sum
 
-    def hdr_cell(row, col, val, fill=NAVY, font_size=10, wrap=False):
+    def hdr_cell(row, col, val):
         c = ws.cell(row=row, column=col, value=val)
-        c.fill = fill
-        c.font = Font(color="FFFFFF", bold=True, size=font_size)
-        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=wrap)
-        c.border = border
         return c
 
-    # Row 1 — Title
-    ws.merge_cells(f"A1:{get_column_letter(n_tot)}1")
-    ws["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE — ATTENDANCE REPORT"
-    ws["A1"].font = Font(bold=True, size=13, color="0F2C54")
-    ws["A1"].alignment = Alignment(horizontal="center")
+    # Common letterhead (logo, institute, document title, department, meta)
+    dept_name = ""
+    if user.get("department_id"):
+        _dept = (db.table("departments").select("name")
+                   .eq("id", user["department_id"]).single().execute().data or {})
+        dept_name = _dept.get("name", "")
 
-    # Row 2 — Sub-title
-    ws.merge_cells(f"A2:{get_column_letter(n_tot)}2")
-    ws["A2"] = (f"Class: {cls.get('name','')}  |  Unit: {unit.get('code','')} — {unit.get('name','')}  |  "
-                f"Year: {year}  Term: {term}  |  Weeks {week_start}–{week_end}  |  "
-                f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
-    ws["A2"].font = Font(italic=True, size=9, color="374151")
-    ws["A2"].alignment = Alignment(horizontal="center")
+    week_row = excel_letterhead(
+        ws, "Weekly Attendance Register", n_tot, dept_name=dept_name,
+        meta_lines=[
+            f"Class: {cls.get('name','')}  |  Unit: {unit.get('code','')} — {unit.get('name','')}",
+            f"Year: {year}  |  Term: {term}  |  Weeks {week_start}–{week_end}",
+            f"Trainer: {user.get('full_name','')}  |  Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ],
+    )
 
-    # Row 3 is blank (intentionally left empty — ws.append([]) does NOT
-    # advance max_row, so we hard-code row positions to avoid writing
-    # into already-merged cells and triggering MergedCell read-only error)
-
-    # Row 4 — Week group headers (merged per week)
-    week_row = 4
+    # Week group headers (merged per week)
     for ci in range(1, n_fix + 1):
         hdr_cell(week_row, ci, "")
     # Merge cells per week
@@ -1135,19 +1129,23 @@ def attendance_weekly_export():
         hdr_cell(week_row, col, f"WEEK {wk}")
         col += span
     for i, lbl in enumerate(["Total P", "Total A", "%"], col):
-        hdr_cell(week_row, i, lbl, fill=DARK)
+        hdr_cell(week_row, i, lbl)
     ws.row_dimensions[week_row].height = 22
 
-    # Row 5 — Sub-header (S/N, Adm, Name, lesson labels, summary)
+    # Sub-header (S/N, Adm, Name, lesson labels, summary)
     sub_row = week_row + 1
-    hdr_cell(sub_row, 1, "S/N", fill=DARK)
-    hdr_cell(sub_row, 2, "Adm. No.", fill=DARK)
-    hdr_cell(sub_row, 3, "Student Name", fill=DARK)
+    hdr_cell(sub_row, 1, "S/N")
+    hdr_cell(sub_row, 2, "Adm. No.")
+    hdr_cell(sub_row, 3, "Student Name")
     for i, (w, l) in enumerate(sessions, n_fix + 1):
-        hdr_cell(sub_row, i, l, fill=DARK, wrap=True)
+        hdr_cell(sub_row, i, l)
     for i, lbl in enumerate(["Total P", "Total A", "%"], n_fix + n_ses + 1):
-        hdr_cell(sub_row, i, lbl, fill=DARK)
+        hdr_cell(sub_row, i, lbl)
     ws.row_dimensions[sub_row].height = 22
+
+    # Light, visible styling for both stacked header rows
+    style_header_row(ws, week_row, n_tot)
+    style_header_row(ws, sub_row, n_tot)
 
     # Data rows
     for idx, stu in enumerate(students, 1):
@@ -1200,6 +1198,11 @@ def attendance_weekly_export():
         ws.column_dimensions[get_column_letter(ci)].width = 9
 
     ws.freeze_panes = ws.cell(row=sub_row + 1, column=n_fix + 1)
+
+    # Official sign-off block
+    excel_signature_block(ws, ws.max_row + 2, officer_title="Trainer",
+                          officer_name=user.get("full_name", ""),
+                          extra_officers=("Head of Department",))
 
     try:
         buf = io.BytesIO()
@@ -1550,45 +1553,25 @@ def marks_pdf():
         topMargin=12 * mm, bottomMargin=14 * mm,
     )
     styles = getSampleStyleSheet()
-    navy = colors.HexColor("#0F2744")
-    gold = colors.HexColor("#B45309")
-    title = ParagraphStyle(
-        "t", parent=styles["Heading1"], fontSize=13, textColor=navy,
-        alignment=TA_CENTER, spaceAfter=2, fontName="Helvetica-Bold",
-    )
-    subtitle = ParagraphStyle(
-        "s", parent=styles["Normal"], fontSize=10, textColor=gold,
-        alignment=TA_CENTER, spaceAfter=4, fontName="Helvetica-Bold",
-    )
-    meta_s = ParagraphStyle(
-        "m", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#475569"),
-        alignment=TA_CENTER, spaceAfter=4,
-    )
     cell_s = ParagraphStyle("c", parent=styles["Normal"], fontSize=7, leading=9)
     small = ParagraphStyle(
         "sm", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#64748B"),
         alignment=TA_LEFT, spaceBefore=8,
     )
 
-    story = [
-        Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", title),
-        Paragraph("OFFICIAL FORMATIVE ASSESSMENT MARKS SHEET", subtitle),
-        Paragraph(
-            f"Department: {dept.get('name') or '—'} &nbsp;|&nbsp; "
+    story = pdf_letterhead(
+        "Official Formative Assessment Marks Sheet", doc.width,
+        dept_name=dept.get("name", ""),
+        meta_lines=[
             f"Class: {cls.get('name') or '—'} &nbsp;|&nbsp; "
             f"Unit: {unit.get('code') or ''} — {unit.get('name') or '—'} &nbsp;|&nbsp; "
             f"Year: {year} &nbsp;|&nbsp; Term: {term}",
-            meta_s,
-        ),
-        Paragraph(
             f"Trainer: {user.get('full_name') or '—'} &nbsp;·&nbsp; "
             f"Trainees: {len(students_list)} &nbsp;·&nbsp; "
             f"Assessments: {len(assessments)} &nbsp;·&nbsp; "
             f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
-            meta_s,
-        ),
-        HRFlowable(width="100%", thickness=1.2, color=navy, spaceAfter=8),
-    ]
+        ],
+    )
 
     from grading_utils import cdacc_code
 
@@ -1627,10 +1610,7 @@ def marks_pdf():
     col_widths = [8 * mm, 22 * mm, name_w] + [assess_w] * len(assessments) + [14 * mm, 14 * mm, 14 * mm]
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), navy),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+    table.setStyle(TableStyle(pdf_header_style_cmds(0) + [
         ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("ALIGN", (2, 1), (2, -1), "LEFT"),
@@ -1649,13 +1629,9 @@ def marks_pdf():
         "<b>CRNM</b> = Course Requirement Not Met (any marks). Avg % = total marks obtained / total maximum marks.",
         small,
     ))
-    story.append(Spacer(1, 14))
-    story.append(Paragraph(
-        "Prepared by (Trainer): ______________________ &nbsp;&nbsp; "
-        "Verified by (HOD): ______________________ &nbsp;&nbsp; "
-        "Date: ____________ &nbsp;&nbsp; Official stamp: __________",
-        small,
-    ))
+    story += pdf_signature_block(doc.width, officer_title="Trainer",
+                                 officer_name=user.get("full_name", ""),
+                                 extra_officers=("Head of Department",))
 
     doc.build(story)
     buf.seek(0)
@@ -1703,9 +1679,6 @@ def export_marks_excel():
     ws = wb.active
     ws.title = "Formative Marks"
 
-    navy = "0F2744"
-    hdr_font = Font(bold=True, color="FFFFFF", size=10)
-    hdr_fill = PatternFill("solid", fgColor=navy)
     center   = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left     = Alignment(horizontal="left", vertical="center")
     thin     = Side(style="thin", color="CBD5E1")
@@ -1716,59 +1689,42 @@ def export_marks_excel():
     total_cols = 3 + len(assessments) + 3  # Total, Avg %, CDACC Grade
     last_col   = get_column_letter(total_cols)
 
-    ws.merge_cells(f"A1:{last_col}1")
-    ws["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE"
-    ws["A1"].font = Font(bold=True, size=14, color=navy)
-    ws["A1"].alignment = Alignment(horizontal="center")
-
-    ws.merge_cells(f"A2:{last_col}2")
-    ws["A2"] = "OFFICIAL FORMATIVE ASSESSMENT MARKS SHEET"
-    ws["A2"].font = Font(bold=True, size=11, color="B45309")
-    ws["A2"].alignment = Alignment(horizontal="center")
-
-    ws.merge_cells(f"A3:{last_col}3")
-    ws["A3"] = (
-        f"Department: {dept.get('name') or '—'}  |  Class: {cls.get('name', '')}  |  "
-        f"Unit: {unit.get('code', '')} – {unit.get('name', '')}  |  "
-        f"Year: {year}  |  Term: {term}  |  Trainer: {user.get('full_name') or '—'}"
+    # Common letterhead
+    type_row = excel_letterhead(
+        ws, "Official Formative Assessment Marks Sheet", total_cols,
+        dept_name=dept.get("name", ""),
+        meta_lines=[
+            f"Class: {cls.get('name', '')}  |  Unit: {unit.get('code', '')} – {unit.get('name', '')}  |  "
+            f"Year: {year}  |  Term: {term}  |  Trainer: {user.get('full_name') or '—'}",
+            f"Trainees: {len(students_list)}  ·  Assessments: {len(assessments)}  ·  "
+            f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ],
     )
-    ws["A3"].font = Font(size=9, color="475569")
-    ws["A3"].alignment = Alignment(horizontal="center")
 
-    ws.merge_cells(f"A4:{last_col}4")
-    ws["A4"] = (
-        f"Trainees: {len(students_list)}  ·  Assessments: {len(assessments)}  ·  "
-        f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}"
-    )
-    ws["A4"].font = Font(size=8, color="64748B")
-    ws["A4"].alignment = Alignment(horizontal="center")
-
-    # Type sub-header (row 6)
+    # Type sub-header (kept light, per-type colour fills)
     for col_idx, a in enumerate(assessments, start=4):
-        c = ws.cell(row=6, column=col_idx, value=a["assessment_type"])
+        c = ws.cell(row=type_row, column=col_idx, value=a["assessment_type"])
         c.fill = PatternFill("solid", fgColor=type_color.get(a["assessment_type"], "E2E8F0"))
         c.font = Font(bold=True, size=8)
         c.alignment = center
         c.border = bdr
 
-    # Column headers (row 7)
+    # Column headers
+    hdr_row = type_row + 1
     for col_idx, h in enumerate(
         ["#", "Admission No.", "Trainee Name"] +
         [f"{a['assessment_name']}\n(/{int(a['max_marks'])})" for a in assessments] +
         ["Total", "Avg %", "Grade"],
         start=1
     ):
-        c = ws.cell(row=7, column=col_idx, value=h)
-        c.font = hdr_font
-        c.fill = hdr_fill
-        c.alignment = center
-        c.border = bdr
-    ws.row_dimensions[7].height = 36
+        ws.cell(row=hdr_row, column=col_idx, value=h)
+    style_header_row(ws, hdr_row, total_cols)
+    ws.row_dimensions[hdr_row].height = 36
 
     for ri, student in enumerate(students_list, start=1):
         p   = student.get("user_profiles") or {}
         sid = student["student_id"]
-        row = ri + 7
+        row = ri + hdr_row
         ws.cell(row=row, column=1, value=ri).alignment = center
         ws.cell(row=row, column=1).border = bdr
         ws.cell(row=row, column=2, value=p.get("admission_no", "")).alignment = center
@@ -1804,7 +1760,7 @@ def export_marks_excel():
         if grade in grade_fills:
             grd_c.fill = PatternFill("solid", fgColor=grade_fills[grade])
 
-    legend_row = 9 + len(students_list)
+    legend_row = hdr_row + len(students_list) + 2
     ws.merge_cells(f"A{legend_row}:{last_col}{legend_row}")
     ws[f"A{legend_row}"] = (
         "TVET CDACC Grading: M = Mastery (80-100%) | P = Proficient (65-79%) | C = Competent (50-64%) | "
@@ -1815,16 +1771,17 @@ def export_marks_excel():
     ws[f"A{legend_row}"].fill = gold_fill
 
     ws2 = wb.create_sheet("Authentication")
-    ws2["A1"] = "THIKA TECHNICAL TRAINING INSTITUTE"
-    ws2["A1"].font = Font(bold=True, size=14, color=navy)
-    ws2["A2"] = "Formative Marks Authentication"
-    ws2["A2"].font = Font(bold=True, size=11)
-    ws2["A4"] = f"Class: {cls.get('name', '')}"
-    ws2["A5"] = f"Unit: {unit.get('code', '')} – {unit.get('name', '')}"
-    ws2["A6"] = f"Year: {year}  Term: {term}"
-    ws2["A8"] = "Prepared by (Trainer): ___________________________    Date: ____________"
-    ws2["A10"] = "Verified by (HOD): ________________________________    Date: ____________"
-    ws2["A12"] = "Official stamp / seal:"
+    r2 = excel_letterhead(
+        ws2, "Formative Marks Authentication", 4,
+        dept_name=dept.get("name", ""),
+        meta_lines=[
+            f"Class: {cls.get('name', '')}  |  Unit: {unit.get('code', '')} – {unit.get('name', '')}  |  "
+            f"Year: {year}  Term: {term}",
+        ],
+    )
+    excel_signature_block(ws2, r2, officer_title="Trainer",
+                          officer_name=user.get("full_name", ""),
+                          extra_officers=("Head of Department",))
     ws2.column_dimensions["A"].width = 90
 
     ws.column_dimensions["A"].width = 5
@@ -1904,8 +1861,6 @@ def marks_import_template():
     ws = wb.active
     ws.title = "Marks Import"
 
-    hdr_fill = PatternFill("solid", fgColor="1E5A9F")
-    hdr_font = Font(bold=True, color="FFFFFF", size=11)
     center   = Alignment(horizontal="center")
     type_color = {"Oral": "E8F5E9", "Practical": "FFF3E0", "Theory": "EDE7F6"}
 
@@ -1925,10 +1880,12 @@ def marks_import_template():
             c.fill = PatternFill("solid", fgColor=type_color.get(a["assessment_type"], "E0E0E0"))
             c.font = Font(bold=True, size=9); c.alignment = center
 
+    # NOTE: no letterhead rows here — the upload parser (upload_marks) expects
+    # headers at row 1/2, so we only restyle the header row (light style).
     hdr_row = 2 if assessments else 1
     for ci, h in enumerate(headers, start=1):
-        c = ws.cell(row=hdr_row, column=ci, value=h)
-        c.font = hdr_font; c.fill = hdr_fill; c.alignment = center
+        ws.cell(row=hdr_row, column=ci, value=h)
+    style_header_row(ws, hdr_row, len(headers))
 
     start_row = hdr_row + 1
     for ri, s in enumerate(students_list, start=start_row):

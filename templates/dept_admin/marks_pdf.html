@@ -64,22 +64,24 @@
 
     /* ── Report title band ── */
     .report-band {
-      background: #0a0f1e;
-      color: #fff;
+      background: #DCE6F4;
+      color: #0F2744;
       text-align: center;
       padding: 8px 16px;
       margin: 8px 0;
       border-radius: 4px;
+      border-bottom: 2px solid #0F2744;
     }
     .report-band h2 {
       font-size: 13pt;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      color: #0F2744;
     }
     .report-band p {
       font-size: 9pt;
-      opacity: .8;
+      color: #374151;
       margin-top: 2px;
     }
 
@@ -126,17 +128,18 @@
       font-size: 9pt;
     }
     table.marks-tbl thead tr {
-      background: #0a0f1e;
+      background: #DCE6F4;
     }
     table.marks-tbl th {
       padding: 7px 8px;
       text-align: left;
-      color: #fff;
+      color: #0F2744;
       font-weight: 700;
       font-size: 8pt;
       text-transform: uppercase;
       letter-spacing: .04em;
-      border: 1px solid #1e293b;
+      border: 1px solid #B9C9DE;
+      border-bottom: 2px solid #0F2744;
       white-space: nowrap;
     }
     table.marks-tbl td {
@@ -499,35 +502,27 @@
     <div class="sig-block">
       <div class="sig-name-box">
         <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">HEAD OF DEPARTMENT</span>
-        {{ hod_name }}
+        Name: {{ hod_name }}
       </div>
       <div style="height:36px"></div>
-      <div class="sig-line">Signature</div>
+      <div class="sig-line">Sign</div>
+      <div class="sig-date-line" style="margin-top:14px">Date</div>
     </div>
 
-    <!-- Date -->
+    <!-- Chief Principal -->
     <div class="sig-block">
-      <div class="sig-name-box" style="background:#fff8ed;border-color:#fde68a">
-        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">DATE</span>
-        {{ generated_at.split(' at ')[0] }}
+      <div class="sig-name-box">
+        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">CHIEF PRINCIPAL</span>
+        Name: ______________________
       </div>
       <div style="height:36px"></div>
-      <div class="sig-date-line">Date Signed</div>
+      <div class="sig-line">Sign</div>
+      <div class="sig-date-line" style="margin-top:14px">Date</div>
     </div>
 
-    <!-- Department stamp -->
+    <!-- Official stamp -->
     <div class="sig-stamp">
-      OFFICIAL<br>DEPARTMENT<br>STAMP
-    </div>
-
-    <!-- Quality check -->
-    <div class="sig-block">
-      <div class="sig-name-box" style="background:#f0fdf4;border-color:#bbf7d0">
-        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">VERIFIED BY</span>
-        &nbsp;
-      </div>
-      <div style="height:36px"></div>
-      <div class="sig-line">Quality Assurance Officer</div>
+      OFFICIAL<br>STAMP
     </div>
 
   </div>

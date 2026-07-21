@@ -8,6 +8,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from auth_utils import login_required, cdacc_verifier_required, current_user, write_audit_log
 from db import get_service_client
 from datetime import datetime
+from routes.attachment_helpers import get_grading_config
 
 cdacc_verifier_bp = Blueprint("cdacc_verifier", __name__)
 
@@ -534,7 +535,8 @@ def trainee_detail(student_id):
                            marks_by_type=marks_by_type,
                            att_grades=att_grades,
                            uploads=uploads,
-                           logbook=logbook)
+                           logbook=logbook,
+                           config=get_grading_config(db))
 
 
 # ── Attachment Marks ──────────────────────────────────────────────────────────
@@ -562,7 +564,8 @@ def attachment_marks():
         grades, departments = [], []
 
     return render_template("cdacc_verifier/attachment_marks.html",
-                           grades=grades, departments=departments, dept_id=dept_id)
+                           grades=grades, departments=departments, dept_id=dept_id,
+                           config=get_grading_config(db, dept_id or None))
 
 
 # ── Mentoring Tool PDFs ───────────────────────────────────────────────────────
