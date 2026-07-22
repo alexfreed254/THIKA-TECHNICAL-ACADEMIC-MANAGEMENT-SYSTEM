@@ -318,7 +318,7 @@
 <div class="am-toast" id="amToast"></div>
 {% endblock %}
 
-{% block extra_script %}
+{% block scripts %}
 <script>
 var WEIGHTS = {
   gps: {{ (config.weight_gps_attendance or 10)|float }},

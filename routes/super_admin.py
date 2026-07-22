@@ -12,7 +12,6 @@ from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, abort, jsonify, make_response)
 from auth_utils import super_admin_required, write_audit_log, current_user
 from db import get_service_client
-from werkzeug.security import generate_password_hash
 from notifications import create_notification
 from report_utils import (excel_letterhead, style_header_row,
                           excel_signature_block, pdf_letterhead,

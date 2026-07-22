@@ -1,0 +1,106 @@
+{% extends "student/base.html" %}
+{% block title %}Employment Projects{% endblock %}
+{% block page_title %}Post-Training Projects{% endblock %}
+
+{% block extra_style %}
+.ep-wrap { padding: 24px; max-width: 900px; margin: 0 auto; }
+.ep-card {
+  background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;
+  margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow: hidden;
+}
+.ep-head {
+  background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  color: #fff; padding: 14px 22px; font-size: 14px; font-weight: 700;
+}
+.ep-body { padding: 22px; }
+.ep-form label { display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase; }
+.ep-form input, .ep-form textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+  font-size: 14px; margin-bottom: 14px;
+}
+.ep-form textarea { min-height: 90px; resize: vertical; }
+.ep-btn {
+  background: #0891b2; color: #fff; border: none; padding: 10px 18px;
+  border-radius: 8px; font-weight: 700; cursor: pointer;
+}
+.ep-btn:hover { background: #0e7490; }
+.ep-list { display: grid; gap: 12px; }
+.ep-item {
+  border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px;
+  display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;
+}
+.ep-item h4 { margin: 0 0 6px; font-size: 15px; color: #0f172a; }
+.ep-meta { font-size: 12px; color: #64748b; }
+.ep-del {
+  background: #b91c1c; color: #fff; border: none; padding: 7px 12px;
+  border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.ep-empty { text-align: center; color: #94a3b8; padding: 28px 12px; }
+{% endblock %}
+
+{% block content %}
+<div class="ep-wrap">
+
+  <div class="ep-card">
+    <div class="ep-head"><i class="fas fa-plus-circle"></i> Upload Project Evidence</div>
+    <div class="ep-body">
+      <form method="post" enctype="multipart/form-data" class="ep-form">
+        <label>Project Name *</label>
+        <input type="text" name="project_name" required placeholder="e.g. Solar installation at client site">
+
+        <label>Description</label>
+        <textarea name="description" placeholder="Brief description of the project and your role"></textarea>
+
+        <label>Location Address</label>
+        <input type="text" name="location_address" placeholder="Town / site name">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label>Latitude</label>
+            <input type="text" name="latitude" placeholder="-1.0332">
+          </div>
+          <div>
+            <label>Longitude</label>
+            <input type="text" name="longitude" placeholder="37.0693">
+          </div>
+        </div>
+
+        <label>Evidence Files (images, PDF, video, audio)</label>
+        <input type="file" name="project_files" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a">
+
+        <button type="submit" class="ep-btn"><i class="fas fa-upload"></i> Upload Project</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="ep-card">
+    <div class="ep-head"><i class="fas fa-folder-open"></i> My Projects ({{ projects|length }})</div>
+    <div class="ep-body">
+      {% if projects %}
+      <div class="ep-list">
+        {% for p in projects %}
+        <div class="ep-item">
+          <div>
+            <h4>{{ p.project_name }}</h4>
+            {% if p.description %}<p class="ep-meta">{{ p.description }}</p>{% endif %}
+            <p class="ep-meta">
+              {% if p.location_address %}<i class="fas fa-map-marker-alt"></i> {{ p.location_address }} &bull; {% endif %}
+              {{ p.created_at[:10] if p.created_at else '—' }}
+              {% if p.evidence_urls %} &bull; {{ p.evidence_urls|length }} file(s){% endif %}
+            </p>
+          </div>
+          <form method="post" action="{{ url_for('student.delete_employment_project', project_id=p.id) }}"
+                onsubmit="return confirm('Delete this project?');">
+            <button type="submit" class="ep-del"><i class="fas fa-trash-alt"></i></button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ep-empty"><i class="fas fa-briefcase" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px;"></i>No projects uploaded yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -34,6 +34,20 @@ def _dept_student_ids(db, dept_id):
     return list({row["student_id"] for row in enrolled if row.get("student_id")})
 
 
+def _student_class_name(db, student_id):
+    """Return enrolled class name for a student."""
+    rows = (db.table("enrollments")
+              .select("classes(name)")
+              .eq("student_id", student_id)
+              .limit(1).execute().data or [])
+    if not rows:
+        return "—"
+    cls = rows[0].get("classes")
+    if isinstance(cls, list):
+        cls = cls[0] if cls else {}
+    return (cls or {}).get("name") or "—"
+
+
 def _gen_password(length=10):
     chars = string.ascii_letters + string.digits + "!@#$"
     while True:
@@ -2360,14 +2374,21 @@ def trainee_search():
     summary = {}
 
     if q:
-        students = (db.table("user_profiles").select("*, classes!enrollments(name)")
+        students = (db.table("user_profiles").select("*")
             .eq("role", "student").eq("department_id", dept_id)
             .or_(f"admission_no.ilike.%{q}%,full_name.ilike.%{q}%")
             .limit(20).execute().data or [])
+        for s in students:
+            s["class_name"] = _student_class_name(db, s["id"])
 
     if student_id:
-        student = db.table("user_profiles").select("*, classes!enrollments(name)").eq("id", student_id).single().execute().data
+        allowed = _dept_student_ids(db, dept_id)
+        if student_id not in allowed:
+            flash("Trainee not found in your department.", "error")
+            return redirect(url_for("dept_admin.trainee_search", q=q))
+        student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
         if student:
+            student["class_name"] = _student_class_name(db, student_id)
             units_list = (db.table("attendance").select("unit_id, units!inner(id, name, code)")
                 .eq("student_id", student_id)
                 .execute().data or [])
@@ -2382,7 +2403,7 @@ def trainee_search():
 
     if student_id and unit_id:
         records = (db.table("attendance")
-            .select("*, units(name, code), trainers:user_profiles!attendance_trainer_id_fkey(name)")
+            .select("*, units(name, code), trainers:user_profiles!attendance_trainer_id_fkey(full_name)")
             .eq("student_id", student_id).eq("unit_id", unit_id)
             .order("attendance_date", desc=True).execute().data or [])
 
@@ -2412,12 +2433,17 @@ def trainee_report_pdf():
     records = []
     summary = {}
     if student_id and unit_id:
-        student = db.table("user_profiles").select("*, classes!enrollments(name)").eq("id", student_id).single().execute().data
+        allowed = _dept_student_ids(db, dept_id)
+        if student_id not in allowed:
+            flash("Trainee not found in your department.", "error")
+            return redirect(url_for("dept_admin.trainee_search"))
+        student = db.table("user_profiles").select("*").eq("id", student_id).single().execute().data
         if student:
+            student["class_name"] = _student_class_name(db, student_id)
             if not student.get("admission_number"):
                 student["admission_number"] = student.get("admission_no", "")
             records = (db.table("attendance")
-                .select("*, units(name, code), trainers:user_profiles!attendance_trainer_id_fkey(name)")
+                .select("*, units(name, code), trainers:user_profiles!attendance_trainer_id_fkey(full_name)")
                 .eq("student_id", student_id).eq("unit_id", unit_id)
                 .order("attendance_date", desc=True).execute().data or [])
             unit_info = db.table("units").select("name, code").eq("id", unit_id).single().execute().data or {}
@@ -2708,9 +2734,10 @@ INDUSTRIES = ['Electrical Engineering','Mechanical Engineering','Information Tec
 @dept_admin_required
 def companies():
     db = get_service_client()
+    dept_id = _dept_id()
     industry = request.args.get("industry", "")
-    # Show ALL companies (same as super admin) — no dept_id filter
-    query = db.table("companies").select("*, departments(name)")
+    # Department-scoped list — edit/delete only works for own department's companies
+    query = db.table("companies").select("*, departments(name)").eq("department_id", dept_id)
     if industry:
         query = query.eq("industry_classification", industry)
     companies_list = query.order("name").execute().data or []

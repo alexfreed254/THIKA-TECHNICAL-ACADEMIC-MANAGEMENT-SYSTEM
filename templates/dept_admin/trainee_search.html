@@ -54,7 +54,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
           <div>
             <strong style="font-size:15px;">{{ s.full_name }}</strong>
             <span style="margin-left:12px;color:#555;font-size:13px;">{{ s.admission_no }}</span>
-            <span style="margin-left:12px;color:#888;font-size:12px;">{{ s.classes.name if s.classes else '—' }}</span>
+            <span style="margin-left:12px;color:#888;font-size:12px;">{{ s.class_name or '—' }}</span>
           </div>
           <i class="fas fa-chevron-right" style="color:#1565c0;"></i>
         </a>
@@ -101,7 +101,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
       <!-- Student info -->
       <div style="background:#f5f8ff;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;display:flex;gap:24px;flex-wrap:wrap;">
         <div><strong>Adm No:</strong> {{ student.admission_no }}</div>
-        <div><strong>Class:</strong> {{ student.classes.name if student.classes else '—' }}</div>
+        <div><strong>Class:</strong> {{ student.class_name or '—' }}</div>
       </div>
 
       <!-- Stats -->
@@ -146,7 +146,7 @@ td { padding:10px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
               <td style="font-weight:700;color:{% if r.status == 'present' %}#2e7d32{% else %}#c62828{% endif %};">
                 {% if r.status == 'present' %}✓ Present{% else %}✗ Absent{% endif %}
               </td>
-              <td style="font-size:12px;">{{ r.trainers.name if r.trainers else '—' }}</td>
+              <td style="font-size:12px;">{{ r.trainers.full_name if r.trainers else '—' }}</td>
               <td style="font-size:12px;color:#888;white-space:nowrap;">
                 {{ r.attendance_date | to_eat }}
               </td>

@@ -53,7 +53,7 @@
   <div class="info-col">
     <p><strong>STUDENT:</strong> {{ student.full_name }}</p>
     <p><strong>ADM NO:</strong> {{ student.admission_number }}</p>
-    <p><strong>CLASS:</strong> {{ student.classes.name if student.classes else '—' }}</p>
+    <p><strong>CLASS:</strong> {{ student.class_name or '—' }}</p>
   </div>
   <div class="info-col">
     <p><strong>UNIT:</strong> {{ summary.unit_code }} — {{ summary.unit_name }}</p>
@@ -86,7 +86,7 @@
         <td>{{ r.year }}</td>
         <td>Term {{ r.term }}</td>
         <td class="{{ r.status }}">{{ '✓ Present' if r.status == 'present' else '✗ Absent' }}</td>
-        <td>{{ r.trainers.name if r.trainers else '—' }}</td>
+        <td>{{ r.trainers.full_name if r.trainers else '—' }}</td>
         <td>{{ r.attendance_date | to_eat('%d %b %Y') }}</td>
       </tr>
       {% else %}
