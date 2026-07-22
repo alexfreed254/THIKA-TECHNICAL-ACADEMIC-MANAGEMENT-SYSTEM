@@ -17,8 +17,7 @@
   </div>
 </footer>
 
-{# Shared near-realtime refresh for every role dashboard. Dept/super-admin
-   dashboards have richer in-place JSON polling and are intentionally excluded. #}
+{# Live status badge for dashboards (SPA navigation owns the refresh timer). #}
 {% if request.endpoint
       and 'dashboard' in request.endpoint
       and request.endpoint not in ('dept_admin.dashboard', 'super_admin.dashboard') %}
@@ -40,66 +39,4 @@
   100% { box-shadow:0 0 0 0 rgba(16,185,129,0) }
 }
 </style>
-<script>
-(function () {
-  const INTERVAL_SECONDS = 20;
-  const endpointKey = 'dashboard-scroll:' + window.location.pathname;
-  const status = document.getElementById('dashboard-live-status');
-  const dot = document.getElementById('dashboard-live-dot');
-  const text = document.getElementById('dashboard-live-text');
-  let remaining = INTERVAL_SECONDS;
-  let formDirty = false;
-
-  try {
-    const saved = sessionStorage.getItem(endpointKey);
-    if (saved !== null) {
-      sessionStorage.removeItem(endpointKey);
-      requestAnimationFrame(function () { window.scrollTo(0, Number(saved) || 0); });
-    }
-  } catch (_) {}
-
-  document.addEventListener('input', function (event) {
-    if (event.target && event.target.closest('form')) formDirty = true;
-  });
-  document.addEventListener('change', function (event) {
-    if (event.target && event.target.closest('form')) formDirty = true;
-  });
-  document.addEventListener('submit', function () { formDirty = false; });
-
-  function isInteracting() {
-    const active = document.activeElement;
-    return formDirty || document.hidden ||
-      (active && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName));
-  }
-
-  function render(paused) {
-    if (!text || !dot) return;
-    if (paused) {
-      dot.style.background = '#f59e0b';
-      text.textContent = formDirty ? 'Live · paused (unsaved changes)' : 'Live · paused';
-    } else {
-      dot.style.background = '#10b981';
-      text.textContent = 'Live · refresh in ' + remaining + 's';
-    }
-  }
-
-  setInterval(function () {
-    if (isInteracting()) {
-      remaining = INTERVAL_SECONDS;
-      render(true);
-      return;
-    }
-    remaining -= 1;
-    if (remaining <= 0) {
-      try { sessionStorage.setItem(endpointKey, String(window.scrollY || 0)); } catch (_) {}
-      window.location.reload();
-      return;
-    }
-    render(false);
-  }, 1000);
-
-  if (status) status.title = 'Dashboard data refreshes automatically every 20 seconds';
-  render(false);
-})();
-</script>
 {% endif %}

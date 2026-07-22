@@ -110,7 +110,7 @@
     <main>{% block content %}{% endblock %}</main>
   </div>
 </div>
-{% block scripts %}{% endblock %}
+<div id="spa-page-scripts">{% block scripts %}{% endblock %}</div>
 <script>
   const toggle=document.getElementById('sidebarToggle'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('sidebarOverlay');
   function openSidebar(){sidebar.classList.add('open');overlay.classList.add('open');toggle.innerHTML='<i class="fas fa-times"></i>';}

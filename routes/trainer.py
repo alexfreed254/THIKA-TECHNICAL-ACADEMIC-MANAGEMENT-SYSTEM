@@ -530,6 +530,138 @@ def attendance():
 
 # ── Assessment Review ─────────────────────────────────────────────────────────
 
+def _normalize_poe_assessment_type(assessment_type: str) -> str:
+    """Map POE upload type to formative Oral/Practical/Theory."""
+    t = (assessment_type or "").strip().lower()
+    if t == "oral":
+        return "Oral"
+    if t == "practical":
+        return "Practical"
+    if t in ("theory", "written"):
+        return "Theory"
+    return (assessment_type or "").strip().title() or "Theory"
+
+
+def _match_formative_assessment(formative_list, poe_type_norm, assessment_no):
+    """Find the formative assessment that corresponds to a POE upload."""
+    if not formative_list:
+        return None
+    ano = int(assessment_no or 1)
+    typed = [a for a in formative_list if a.get("assessment_type") == poe_type_norm]
+    if not typed:
+        return None
+
+    name_patterns = {
+        f"{poe_type_norm} {ano}",
+        f"{poe_type_norm.lower()} {ano}",
+    }
+    if poe_type_norm == "Theory":
+        name_patterns.update({
+            f"Theory {ano}",
+            f"Written Assessment {ano}",
+        })
+
+    lowered = {p.lower() for p in name_patterns}
+    for fa in typed:
+        if (fa.get("assessment_name") or "").strip().lower() in lowered:
+            return fa
+
+    for fa in typed:
+        name = (fa.get("assessment_name") or "").strip()
+        m = re.search(r"(\d+)\s*$", name)
+        if m and int(m.group(1)) == ano:
+            return fa
+
+    ordered = sorted(typed, key=lambda x: x.get("created_at") or "")
+    if 1 <= ano <= len(ordered):
+        return ordered[ano - 1]
+    return None
+
+
+def _bulk_formative_marks_for_poe(db, poe_assessments):
+    """Attach marks_obtained/max_marks from formative_marks (Marks Entry source)."""
+    if not poe_assessments:
+        return poe_assessments
+
+    scopes = {}
+    for a in poe_assessments:
+        key = (a.get("class_id"), a.get("unit_id"), a.get("year"), int(a.get("term") or 1))
+        scopes.setdefault(key, []).append(a)
+
+    fa_by_scope = {}
+    for class_id, unit_id, year, term in scopes:
+        if not (class_id and unit_id):
+            continue
+        rows = (db.table("formative_assessments")
+                  .select("id, assessment_type, assessment_name, max_marks, created_at")
+                  .eq("class_id", class_id)
+                  .eq("unit_id", unit_id)
+                  .eq("year", year)
+                  .eq("term", term)
+                  .execute().data or [])
+        fa_by_scope[(class_id, unit_id, year, term)] = rows
+
+    all_fa_ids = [fa["id"] for rows in fa_by_scope.values() for fa in rows]
+    marks_lookup = {}
+    if all_fa_ids:
+        for m in (db.table("formative_marks")
+                    .select("assessment_id, student_id, marks_obtained")
+                    .in_("assessment_id", all_fa_ids)
+                    .execute().data or []):
+            marks_lookup[(m["student_id"], m["assessment_id"])] = m.get("marks_obtained")
+
+    fa_max = {fa["id"]: float(fa.get("max_marks") or 100)
+              for rows in fa_by_scope.values() for fa in rows}
+
+    for a in poe_assessments:
+        key = (a.get("class_id"), a.get("unit_id"), a.get("year"), int(a.get("term") or 1))
+        formative_list = fa_by_scope.get(key, [])
+        poe_type = _normalize_poe_assessment_type(a.get("assessment_type"))
+        fa = _match_formative_assessment(formative_list, poe_type, a.get("assessment_no"))
+        if fa:
+            mark = marks_lookup.get((a.get("student_id"), fa["id"]))
+            a["marks_obtained"] = float(mark) if mark is not None else 0
+            a["max_marks"] = fa_max.get(fa["id"], 100)
+        else:
+            a["marks_obtained"] = 0
+            a["max_marks"] = 100
+
+    return poe_assessments
+
+
+def _formative_mark_for_poe(db, poe_assessment):
+    """Return (marks_obtained, max_marks) for a single POE assessment."""
+    class_id = poe_assessment.get("class_id")
+    unit_id = poe_assessment.get("unit_id")
+    year = poe_assessment.get("year")
+    term = int(poe_assessment.get("term") or 1)
+    if not (class_id and unit_id):
+        return 0, 100
+
+    formative_list = (db.table("formative_assessments")
+                        .select("id, assessment_type, assessment_name, max_marks, created_at")
+                        .eq("class_id", class_id)
+                        .eq("unit_id", unit_id)
+                        .eq("year", year)
+                        .eq("term", term)
+                        .execute().data or [])
+    poe_type = _normalize_poe_assessment_type(poe_assessment.get("assessment_type"))
+    fa = _match_formative_assessment(formative_list, poe_type, poe_assessment.get("assessment_no"))
+    if not fa:
+        return 0, 100
+
+    row = (db.table("formative_marks")
+             .select("marks_obtained")
+             .eq("assessment_id", fa["id"])
+             .eq("student_id", poe_assessment["student_id"])
+             .limit(1)
+             .execute().data or [])
+    max_m = float(fa.get("max_marks") or 100)
+    if row:
+        return float(row[0].get("marks_obtained", 0)), max_m
+    return 0, max_m
+
+
 @trainer_bp.route("/assessments")
 @trainer_required
 def assessments():
@@ -548,55 +680,9 @@ def assessments():
     if assigned_unit_ids:
         q = q.in_("unit_id", assigned_unit_ids)
     assessments_list = q.execute().data or []
-    
-    # Fetch marks for these assessments from marks table
-    if assessments_list:
-        # Build a map to lookup marks by student, unit, year, term
-        for a in assessments_list:
-            try:
-                # Debug logging
-                print(f"\n=== Looking for marks ===")
-                print(f"Assessment ID: {a.get('id')}")
-                print(f"Student ID: {a.get('student_id')}")
-                print(f"Unit ID: {a.get('unit_id')}")
-                print(f"Year: {a.get('year')}")
-                print(f"Term: {a.get('term')} (type: {type(a.get('term'))})")
-                print(f"Assessment Type: {a.get('assessment_type')}")
-                print(f"Assessment No: {a.get('assessment_no')}")
-                print(f"Cycle: {a.get('cycle')}")
-                
-                # Try to find matching marks entry
-                # Note: term in marks table is TEXT, in assessments it's INTEGER
-                # First try exact match with term as string
-                term_value = str(a["term"])
-                marks_query = db.table("marks").select("marks_obtained, max_marks, assessment_name, assessment_type, cycle, term")
-                marks_query = marks_query.eq("student_id", a["student_id"])
-                marks_query = marks_query.eq("unit_id", a["unit_id"])
-                marks_query = marks_query.eq("year", a["year"])
-                marks_query = marks_query.eq("term", term_value)
-                
-                marks_rows = marks_query.execute().data or []
-                
-                print(f"Query executed - Found {len(marks_rows)} marks rows")
-                if marks_rows:
-                    print(f"Marks data: {marks_rows}")
-                
-                # Use first match if found
-                if marks_rows:
-                    a['marks_obtained'] = float(marks_rows[0].get('marks_obtained', 0))
-                    a['max_marks'] = float(marks_rows[0].get('max_marks', 100))
-                    print(f"✓ Attached marks: {a['marks_obtained']}/{a['max_marks']}")
-                else:
-                    # Default to 0 if no marks entry found
-                    a['marks_obtained'] = 0
-                    a['max_marks'] = 100
-                    print(f"✗ No marks found, defaulting to 0/100")
-            except Exception as e:
-                print(f"✗ Error fetching marks: {e}")
-                import traceback
-                traceback.print_exc()
-                a['marks_obtained'] = 0
-                a['max_marks'] = 100
+
+    # Same marks source as Marks Entry (formative_assessments + formative_marks)
+    _bulk_formative_marks_for_poe(db, assessments_list)
 
     # Build class/unit hierarchy for drill-down
     classes_map = {}
@@ -665,34 +751,9 @@ def review_assessment(assessment_id):
     if not _check_unit_access(db, assessment["unit_id"]):
         abort(403)
     
-    # Fetch marks for this assessment from marks table
-    try:
-        print(f"\n=== Fetching marks for review page ===")
-        print(f"Assessment ID: {assessment_id}")
-        print(f"Student ID: {assessment.get('student_id')}")
-        print(f"Unit ID: {assessment.get('unit_id')}")
-        print(f"Year: {assessment.get('year')}, Term: {assessment.get('term')}")
-        
-        marks_rows = (db.table("marks")
-                     .select("marks_obtained, max_marks, assessment_name")
-                     .eq("student_id", assessment["student_id"])
-                     .eq("unit_id", assessment["unit_id"])
-                     .eq("year", assessment["year"])
-                     .eq("term", str(assessment["term"]))
-                     .execute().data or [])
-        
-        if marks_rows:
-            assessment['marks_obtained'] = float(marks_rows[0].get('marks_obtained', 0))
-            assessment['max_marks'] = float(marks_rows[0].get('max_marks', 100))
-            print(f"✓ Found marks: {assessment['marks_obtained']}/{assessment['max_marks']}")
-        else:
-            assessment['marks_obtained'] = 0
-            assessment['max_marks'] = 100
-            print(f"✗ No marks found, defaulting to 0/100")
-    except Exception as e:
-        print(f"✗ Error fetching marks: {e}")
-        assessment['marks_obtained'] = 0
-        assessment['max_marks'] = 100
+    obtained, max_m = _formative_mark_for_poe(db, assessment)
+    assessment["marks_obtained"] = obtained
+    assessment["max_marks"] = max_m
     
     # Get evidence
     evidence = db.table("evidence").select("*").eq("assessment_id", assessment_id).execute().data or []

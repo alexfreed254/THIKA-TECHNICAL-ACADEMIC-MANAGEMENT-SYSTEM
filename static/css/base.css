@@ -85,6 +85,66 @@ body {
   padding-top: var(--official-header-h);
 }
 
+/* ── Progressive SPA navigation ──────────────────────────────── */
+#spa-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 100000;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+  transition: opacity .15s ease;
+}
+#spa-progress span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #06b6d4, #16a34a);
+  border-radius: 999px;
+  transform: translateX(-110%);
+}
+#spa-progress.active { opacity: 1; }
+#spa-progress.active span { animation: spaProgress 1s ease-in-out infinite; }
+html.spa-loading main { opacity: .72; transition: opacity .15s ease; }
+@keyframes spaProgress {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(300%); }
+}
+
+/* Top-right Sign Out button (moved from sidebar by spa-navigation.js) */
+.topbar-logout {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 13px !important;
+  margin: 0 !important;
+  border: 1px solid #fecaca !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #b91c1c !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+  transition: background .15s, border-color .15s, transform .15s !important;
+}
+.topbar-logout:hover {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #991b1b !important;
+  transform: translateY(-1px);
+}
+.topbar-logout i { margin: 0 !important; width: auto !important; color: inherit !important; }
+@media (max-width: 640px) {
+  .topbar-logout { width: 38px; padding: 8px !important; gap: 0; }
+  .topbar-logout .topbar-logout-label { display: none; }
+}
+
 /* ══════════════════════════════════════════════════════════════
    OFFICIAL INSTITUTE HEADER
    ══════════════════════════════════════════════════════════════ */
