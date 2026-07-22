@@ -44,6 +44,78 @@
   .sec-label{font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.1em;text-transform:uppercase;
     margin:0 0 14px;display:flex;align-items:center;gap:8px;}
   .sec-label::after{content:'';flex:1;height:1px;background:#e5e7eb;}
+  /* workload KPI ribbon */
+  .kpi-ribbon{
+    background:#fff;border:1px solid #e5e7eb;border-radius:16px;
+    box-shadow:0 2px 10px rgba(15,23,42,.05);overflow:hidden;
+  }
+  .kpi-ribbon-grid{
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+  .kpi-cell{
+    position:relative;padding:22px 20px 20px;text-decoration:none;color:inherit;
+    transition:background .18s ease;
+  }
+  .kpi-cell:not(:last-child)::after{
+    content:'';position:absolute;top:18px;right:0;bottom:18px;width:1px;background:#f1f5f9;
+  }
+  .kpi-cell:hover{background:#fafafa;}
+  .kpi-cell.is-link{cursor:pointer;}
+  .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .kpi-icon{
+    width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+  }
+  .kpi-value{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.03em;color:#0f172a;}
+  .kpi-label{margin-top:8px;font-size:12px;font-weight:700;color:#334155;letter-spacing:.02em;}
+  .kpi-hint{margin-top:3px;font-size:11px;color:#94a3b8;font-weight:500;}
+  .kpi-bar{height:4px;border-radius:999px;background:#f1f5f9;margin-top:14px;overflow:hidden;}
+  .kpi-bar > span{display:block;height:100%;border-radius:999px;}
+  .kpi-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 20px;border-top:1px solid #f1f5f9;background:#fafafa;
+  }
+  .kpi-foot-text{font-size:12px;color:#64748b;font-weight:500;}
+  .kpi-foot a{
+    font-size:12px;font-weight:700;color:#7c3aed;text-decoration:none;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .kpi-foot a:hover{color:#6d28d9;}
+  .action-tile{
+    display:flex;align-items:center;gap:16px;padding:18px 20px;
+    background:#fff;border:1px solid #e5e7eb;border-radius:16px;
+    box-shadow:0 2px 10px rgba(15,23,42,.05);text-decoration:none;color:inherit;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .action-tile:hover{
+    transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.08);
+    border-color:#ddd6fe;
+  }
+  .action-tile-icon{
+    width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:18px;flex-shrink:0;
+  }
+  .action-tile-body{flex:1;min-width:0;}
+  .action-tile-value{font-size:26px;font-weight:800;line-height:1;color:#0f172a;letter-spacing:-.02em;}
+  .action-tile-label{margin-top:4px;font-size:13px;font-weight:700;color:#334155;}
+  .action-tile-hint{margin-top:2px;font-size:11px;color:#94a3b8;}
+  .action-tile-go{
+    width:34px;height:34px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;
+    display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0;
+    transition:background .15s,color .15s;
+  }
+  .action-tile:hover .action-tile-go{background:#7c3aed;border-color:#7c3aed;color:#fff;}
+  @media (max-width:900px){
+    .kpi-ribbon-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .kpi-cell:nth-child(2)::after{display:none;}
+    .kpi-cell:nth-child(1),.kpi-cell:nth-child(2){border-bottom:1px solid #f1f5f9;}
+  }
+  @media (max-width:560px){
+    .kpi-ribbon-grid{grid-template-columns:1fr;}
+    .kpi-cell:not(:last-child)::after{display:none;}
+    .kpi-cell{border-bottom:1px solid #f1f5f9;}
+    .kpi-cell:last-child{border-bottom:none;}
+  }
 </style>
 {% endblock %}
 
@@ -62,75 +134,93 @@
     </p>
   </div>
 
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <!-- Workload Snapshot -->
+  {% set _total = stats.total or 0 %}
+  {% set _pending = stats.pending or 0 %}
+  {% set _approved = stats.approved or 0 %}
+  {% set _rejected = stats.rejected or 0 %}
+  {% set _p_pct = ((_pending / _total * 100)|round|int) if _total > 0 else 0 %}
+  {% set _a_pct = ((_approved / _total * 100)|round|int) if _total > 0 else 0 %}
+  {% set _r_pct = ((_rejected / _total * 100)|round|int) if _total > 0 else 0 %}
 
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-file-alt text-purple-600 text-xl"></i>
+  <div class="sec-label"><i class="fas fa-briefcase text-slate-500"></i> Workload Snapshot</div>
+
+  <div class="kpi-ribbon mb-5">
+    <div class="kpi-ribbon-grid">
+      <div class="kpi-cell">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:#f3e8ff;color:#7c3aed"><i class="fas fa-layer-group"></i></div>
         </div>
-        <span class="text-2xl font-bold text-purple-600">{{ stats.total or 0 }}</span>
+        <div class="kpi-value">{{ _total }}</div>
+        <div class="kpi-label">Total Assessments</div>
+        <div class="kpi-hint">All trainee POE submissions</div>
+        <div class="kpi-bar"><span style="width:100%;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></span></div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium mb-1">Total Assessments</h3>
-      <p class="text-gray-900 text-lg font-semibold">All Submissions</p>
+
+      <a class="kpi-cell is-link" href="/trainer/assessments">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:#fff7ed;color:#ea580c"><i class="fas fa-hourglass-half"></i></div>
+          {% if _pending %}<span style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#ea580c;background:#ffedd5;padding:3px 8px;border-radius:999px">Action</span>{% endif %}
+        </div>
+        <div class="kpi-value" style="color:#c2410c">{{ _pending }}</div>
+        <div class="kpi-label">Pending Review</div>
+        <div class="kpi-hint">Awaiting your decision</div>
+        <div class="kpi-bar"><span style="width:{{ _p_pct }}%;background:linear-gradient(90deg,#f59e0b,#fb923c)"></span></div>
+      </a>
+
+      <div class="kpi-cell">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:#ecfdf5;color:#059669"><i class="fas fa-check-circle"></i></div>
+        </div>
+        <div class="kpi-value" style="color:#047857">{{ _approved }}</div>
+        <div class="kpi-label">Approved</div>
+        <div class="kpi-hint">{{ _a_pct }}% of all submissions</div>
+        <div class="kpi-bar"><span style="width:{{ _a_pct }}%;background:linear-gradient(90deg,#10b981,#34d399)"></span></div>
+      </div>
+
+      <a class="kpi-cell is-link" href="/trainer/assessments">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:#fef2f2;color:#dc2626"><i class="fas fa-undo-alt"></i></div>
+        </div>
+        <div class="kpi-value" style="color:#b91c1c">{{ _rejected }}</div>
+        <div class="kpi-label">Returned</div>
+        <div class="kpi-hint">Needs trainee revision</div>
+        <div class="kpi-bar"><span style="width:{{ _r_pct }}%;background:linear-gradient(90deg,#ef4444,#f87171)"></span></div>
+      </a>
     </div>
 
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-clock text-orange-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-orange-600">{{ stats.pending or 0 }}</span>
+    <div class="kpi-foot">
+      <div class="kpi-foot-text">
+        {% if _pending %}
+          Focus on the review queue first — {{ _pending }} file{{ 's' if _pending != 1 else '' }} still open.
+        {% else %}
+          POE review queue is clear. Keep Marks Entry and attendance up to date.
+        {% endif %}
       </div>
-      <h3 class="text-gray-600 text-sm font-medium mb-1">Pending Review</h3>
-      <p class="text-gray-900 text-lg font-semibold">Awaiting Action</p>
+      <a href="/trainer/assessments">Open Trainee POE Review <i class="fas fa-arrow-right"></i></a>
     </div>
+  </div>
 
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-check-circle text-green-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-green-600">{{ stats.approved or 0 }}</span>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <a class="action-tile" href="/academic-trips">
+      <div class="action-tile-icon" style="background:#f0fdfa;color:#0f766e"><i class="fas fa-bus"></i></div>
+      <div class="action-tile-body">
+        <div class="action-tile-value">{{ stats.trips_uploaded or 0 }}</div>
+        <div class="action-tile-label">My Trip Reports</div>
+        <div class="action-tile-hint">Academic trips uploaded by you</div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium mb-1">Approved</h3>
-      <p class="text-gray-900 text-lg font-semibold">Completed</p>
-    </div>
+      <div class="action-tile-go"><i class="fas fa-chevron-right text-xs"></i></div>
+    </a>
 
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-times-circle text-red-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-red-600">{{ stats.rejected or 0 }}</span>
+    <a class="action-tile" href="/clearance/approver">
+      <div class="action-tile-icon" style="background:#eff6ff;color:#2563eb"><i class="fas fa-clipboard-check"></i></div>
+      <div class="action-tile-body">
+        <div class="action-tile-value">{{ stats.clearance_pending or 0 }}</div>
+        <div class="action-tile-label">Clearance Pending</div>
+        <div class="action-tile-hint">Approvals waiting on you</div>
       </div>
-      <h3 class="text-gray-600 text-sm font-medium mb-1">Rejected</h3>
-      <p class="text-gray-900 text-lg font-semibold">Needs Revision</p>
-    </div>
-
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 cursor-pointer" onclick="location.href='/academic-trips'">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-bus text-teal-700 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-teal-700">{{ stats.trips_uploaded or 0 }}</span>
-      </div>
-      <h3 class="text-gray-600 text-sm font-medium mb-1">My Trip Reports</h3>
-      <p class="text-gray-900 text-lg font-semibold">Uploaded</p>
-    </div>
-
-    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 cursor-pointer" onclick="location.href='/clearance/approver'">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-          <i class="fas fa-clipboard-check text-blue-600 text-xl"></i>
-        </div>
-        <span class="text-2xl font-bold text-blue-600">{{ stats.clearance_pending or 0 }}</span>
-      </div>
-      <h3 class="text-gray-600 text-sm font-medium mb-1">Clearance Pending</h3>
-      <p class="text-gray-900 text-lg font-semibold">Awaiting You</p>
-    </div>
-
+      <div class="action-tile-go"><i class="fas fa-chevron-right text-xs"></i></div>
+    </a>
   </div>
 
   <!-- ═══════════════════════════════════════════════
