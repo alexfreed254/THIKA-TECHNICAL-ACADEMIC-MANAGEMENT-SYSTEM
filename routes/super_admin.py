@@ -623,7 +623,7 @@ def credentials():
 
     q = db.table("user_profiles").select(
         "id, full_name, email, admission_no, staff_no, role, is_active, "
-        "must_change_password, departments(name)")
+        "must_change_password, department_id")
     if role:
         q = q.eq("role", role)
     if dept:
@@ -635,7 +635,12 @@ def credentials():
         )
     users_list = q.order("full_name").limit(300).execute().data or []
 
-    departments = db.table("departments").select("id, name").order("name").execute().data or []
+    dept_map = {d["id"]: d["name"] for d in
+                (db.table("departments").select("id, name").execute().data or [])}
+    for u in users_list:
+        u["departments"] = {"name": dept_map.get(u.get("department_id"), "")} if u.get("department_id") else None
+
+    departments = [{"id": k, "name": v} for k, v in sorted(dept_map.items(), key=lambda x: x[1])]
     roles = sorted({(u.get("role") or "") for u in
                     (db.table("user_profiles").select("role").execute().data or [])} - {""})
     return render_template("super_admin/credentials.html",

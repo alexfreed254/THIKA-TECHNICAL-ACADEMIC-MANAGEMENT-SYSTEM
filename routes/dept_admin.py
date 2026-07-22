@@ -48,6 +48,41 @@ def _student_class_name(db, student_id):
     return (cls or {}).get("name") or "—"
 
 
+def _student_in_dept(db, student_id, dept_id):
+    """True if student is enrolled in a class belonging to dept_id."""
+    rows = (db.table("enrollments")
+              .select("student_id, classes!inner(department_id)")
+              .eq("student_id", student_id)
+              .eq("classes.department_id", dept_id)
+              .limit(1).execute().data or [])
+    return bool(rows)
+
+
+def _attach_student_classes(db, students):
+    """Attach class_obj and admission_number on each student dict."""
+    if not students:
+        return students
+    ids = [s["id"] for s in students]
+    enr_rows = (db.table("enrollments")
+                  .select("student_id, classes(id, name)")
+                  .in_("student_id", ids)
+                  .execute().data or [])
+    class_by_sid = {}
+    for e in enr_rows:
+        sid = e["student_id"]
+        if sid in class_by_sid:
+            continue
+        cls = e.get("classes")
+        if isinstance(cls, list):
+            cls = cls[0] if cls else None
+        if cls:
+            class_by_sid[sid] = cls
+    for s in students:
+        s["class_obj"] = class_by_sid.get(s["id"])
+        s["admission_number"] = s.get("admission_no", "")
+    return students
+
+
 def _gen_password(length=10):
     chars = string.ascii_letters + string.digits + "!@#$"
     while True:
@@ -2012,10 +2047,20 @@ def trainer_documents():
 @dept_admin_required
 def view_trainer_document(document_id):
     db = get_service_client()
-    result = db.table("trainer_documents").select("*").eq("id", document_id).execute()
-    doc = result.data[0] if result.data else None
+    dept_id = _dept_id()
+    result = (db.table("trainer_documents")
+              .select("*, trainer:user_profiles!trainer_documents_trainer_id_fkey(department_id)")
+              .eq("id", document_id).limit(1).execute().data or [])
+    doc = result[0] if result else None
     if not doc:
         abort(404)
+    allowed = (doc.get("trainer") or {}).get("department_id") == dept_id
+    if not allowed and doc.get("unit_id"):
+        unit = (db.table("units").select("department_id")
+                  .eq("id", doc["unit_id"]).limit(1).execute().data or [])
+        allowed = unit and unit[0].get("department_id") == dept_id
+    if not allowed:
+        abort(403)
     file_url = doc.get("file_url", "")
     bucket = "assessment-scripts" if "/assessment-scripts/" in file_url else "documents"
     split_key = f"/{bucket}/"
@@ -2234,6 +2279,10 @@ def trainee_document_detail(student_id):
         flash("Student not found.", "error")
         return redirect(url_for("dept_admin.trainees_documents"))
 
+    if not _student_in_dept(db, student_id, dept_id):
+        flash("Student not found in your department.", "error")
+        return redirect(url_for("dept_admin.trainees_documents"))
+
     enr = (db.table("enrollments")
            .select("class_id, classes!inner(name, department_id)")
            .eq("student_id", student_id)
@@ -2272,6 +2321,11 @@ def trainee_document_detail(student_id):
 @dept_admin_required
 def verify_trainee_documents(student_id):
     db = get_service_client()
+    dept_id = _dept_id()
+    if not _student_in_dept(db, student_id, dept_id):
+        flash("Student not found in your department.", "error")
+        return redirect(url_for("dept_admin.trainees_documents"))
+
     status  = request.form.get("status", "pending")
     comment = request.form.get("comment", "").strip()
 
@@ -2626,25 +2680,19 @@ def credentials():
         tq = tq.or_(f"full_name.ilike.%{search_t}%,staff_no.ilike.%{search_t}%,email.ilike.%{search_t}%")
     trainers_list = tq.order("full_name").execute().data or []
 
-    sq = db.table("user_profiles").select("id, full_name, admission_no, email, is_active, must_change_password, classes!enrollments(id, name)")
+    sq = db.table("user_profiles").select(
+        "id, full_name, admission_no, email, is_active, must_change_password")
     sq = sq.eq("role", "student").eq("department_id", dept_id)
     if search_s:
         sq = sq.or_(f"full_name.ilike.%{search_s}%,admission_no.ilike.%{search_s}%")
     students_list = sq.order("full_name").execute().data or []
+    _attach_student_classes(db, students_list)
 
-    # Flatten class + apply class filter (enrollments returns list)
-    filtered_students = []
-    for s in students_list:
-        cls = s.get("classes")
-        if isinstance(cls, list):
-            cls = cls[0] if cls else None
-        s["class_obj"] = cls
-        s["admission_number"] = s.get("admission_no", "")
-        if filter_class:
-            if not cls or str(cls.get("id")) != str(filter_class):
-                continue
-        filtered_students.append(s)
-    students_list = filtered_students
+    if filter_class:
+        students_list = [
+            s for s in students_list
+            if s.get("class_obj") and str(s["class_obj"].get("id")) == str(filter_class)
+        ]
 
     classes_list = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
     return render_template("dept_admin/credentials.html",
