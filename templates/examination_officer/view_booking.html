@@ -1,181 +1,109 @@
 {% extends "examination_officer/base.html" %}
-
-{% block page_title %}View Booking Details{% endblock %}
+{% block title %}Booking Details{% endblock %}
+{% block page_title %}Booking Details{% endblock %}
 
 {% block extra_style %}
-<style>
-  .booking-detail-card {
-    background: white;
-    border-radius: 8px;
-    padding: 30px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    max-width: 800px;
-    margin: 0 auto;
-  }
-  .section {
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #eee;
-  }
-  .section:last-child {
-    border-bottom: none;
-  }
-  .section-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #6a1b9a;
-    margin-bottom: 15px;
-  }
-  .field {
-    display: flex;
-    margin-bottom: 12px;
-  }
-  .field-label {
-    width: 200px;
-    font-weight: 600;
-    color: #333;
-  }
-  .field-value {
-    flex: 1;
-    color: #555;
-  }
-  .status-box {
-    background: #e8f5e9;
-    border: 2px solid #2e7d32;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    margin: 20px 0;
-  }
-  .status-box h3 {
-    color: #2e7d32;
-    font-size: 20px;
-    margin-bottom: 10px;
-  }
-  .btn-back {
-    background: #6a1b9a;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    text-decoration: none;
-  }
-  .btn-back:hover { background: #4a148c; }
-  .btn-confirm {
-    background: #2e7d32;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .btn-confirm:hover { background: #1b5e20; }
-</style>
+.vd-wrap { padding: 24px; max-width: 860px; margin: 0 auto; }
+.vd-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 2px 10px rgba(15,44,84,.05);
+}
+.vd-head {
+  background: linear-gradient(135deg,#0f2c54,#1a3d6e); color: #fff; padding: 18px 22px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.vd-head h1 { font-size: 17px; font-weight: 800; margin: 0; }
+.vd-body { padding: 22px; }
+.section { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #f1f5f9; }
+.section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.section-title {
+  font-size: 13px; font-weight: 800; color: #0d2167; text-transform: uppercase;
+  letter-spacing: .04em; margin-bottom: 12px;
+}
+.field { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.field-label { width: 180px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+.field-value { flex: 1; font-size: 14px; color: #1e293b; font-weight: 600; }
+.status-box {
+  border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.status-box.approved { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+.status-box.completed { background: #eff6ff; border: 1.5px solid #bfdbfe; }
+.badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 800; }
+.b-approved { background: #dcfce7; color: #15803d; }
+.b-completed { background: #dbeafe; color: #1d4ed8; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.btn-back {
+  padding: 9px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;
+  border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-confirm {
+  padding: 9px 18px; background: linear-gradient(135deg,#16a34a,#15803d); color: #fff;
+  border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
 {% endblock %}
 
 {% block content %}
-<div class="booking-detail-card">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h2 style="margin: 0;">Exam Booking Details</h2>
-    <a href="{{ url_for('examination_officer.exam_bookings') }}" class="btn-back">
-      <i class="fas fa-arrow-left"></i> Back
-    </a>
-  </div>
-  
-  {% if booking.status == 'approved' %}
-  <div class="status-box">
-    <h3><i class="fas fa-check-circle"></i> Approved</h3>
-    <p>This exam booking has been approved by the Department Administration.</p>
-  </div>
-  {% endif %}
-  
-  <div class="section">
-    <div class="section-title">Student Information</div>
-    <div class="field">
-      <div class="field-label">Full Name:</div>
-      <div class="field-value">{{ booking.user_profiles.full_name }}</div>
+<div class="vd-wrap">
+  <div class="vd-card">
+    <div class="vd-head">
+      <h1><i class="fas fa-file-signature" style="margin-right:8px;opacity:.9"></i>Exam Booking Detail</h1>
+      <span class="badge b-{{ booking.status }}">{{ booking.status|title }}</span>
     </div>
-    <div class="field">
-      <div class="field-label">Admission Number:</div>
-      <div class="field-value">{{ booking.user_profiles.admission_no }}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Class:</div>
-      <div class="field-value">{{ booking.user_profiles.classes.name }}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Department:</div>
-      <div class="field-value">{{ booking.user_profiles.classes.departments.name }}</div>
-    </div>
-  </div>
-  
-  <div class="section">
-    <div class="section-title">Exam Details</div>
-    <div class="field">
-      <div class="field-label">Unit:</div>
-      <div class="field-value">{{ booking.units.name }} ({{ booking.units.code }})</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Exam Date:</div>
-      <div class="field-value">{{ booking.exam_date | to_eat('%d %B %Y') }}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Exam Session:</div>
-      <div class="field-value">{{ booking.exam_session|title }}</div>
-    </div>
-    {% if booking.exam_venue %}
-    <div class="field">
-      <div class="field-label">Exam Venue:</div>
-      <div class="field-value">{{ booking.exam_venue }}</div>
-    </div>
-    {% endif %}
-  </div>
-  
-  <div class="section">
-    <div class="section-title">Booking Information</div>
-    <div class="field">
-      <div class="field-label">Purpose:</div>
-      <div class="field-value">{{ booking.purpose }}</div>
-    </div>
-    {% if booking.special_requirements %}
-    <div class="field">
-      <div class="field-label">Special Requirements:</div>
-      <div class="field-value">{{ booking.special_requirements }}</div>
-    </div>
-    {% endif %}
-    <div class="field">
-      <div class="field-label">Submitted:</div>
-      <div class="field-value">{{ booking.created_at | to_eat('%d %B %Y at %H:%M') }}</div>
+    <div class="vd-body">
+
+      <div class="status-box {{ booking.status }}">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#0f172a">
+            {% if booking.status == 'approved' %}Ready for examination office confirmation
+            {% elif booking.status == 'completed' %}Confirmed by examination office
+            {% else %}{{ booking.status|title }}{% endif %}
+          </div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">
+            Serial <strong>{{ booking.serial_number or '—' }}</strong>
+            {% if booking.exam_session %} · {{ booking.exam_session }}{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Trainee</div>
+        <div class="field"><div class="field-label">Full Name</div><div class="field-value">{{ (booking.user_profiles or {}).full_name or '—' }}</div></div>
+        <div class="field"><div class="field-label">Admission No</div><div class="field-value">{{ (booking.user_profiles or {}).admission_no or '—' }}</div></div>
+        <div class="field"><div class="field-label">Class</div><div class="field-value">{{ ((booking.user_profiles or {}).classes or {}).name or '—' }}</div></div>
+        <div class="field"><div class="field-label">Department</div><div class="field-value">{{ (((booking.user_profiles or {}).classes or {}).departments or {}).name or '—' }}</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Unit of Competency</div>
+        <div class="field"><div class="field-label">Unit Name</div><div class="field-value">{{ (booking.units or {}).name or '—' }}</div></div>
+        <div class="field"><div class="field-label">Unit Code</div><div class="field-value">{{ (booking.units or {}).code or '—' }}</div></div>
+        <div class="field"><div class="field-label">Attempt Type</div><div class="field-value">{{ (booking.attempt_type or 'first_attempt')|replace('_',' ')|title }}</div></div>
+        {% if booking.previous_grade %}
+        <div class="field"><div class="field-label">Previous Grade</div><div class="field-value">{{ booking.previous_grade }}</div></div>
+        {% endif %}
+      </div>
+
+      <div class="section">
+        <div class="section-title">Approval</div>
+        <div class="field"><div class="field-label">Approved By</div><div class="field-value">{{ (booking.approved_by_user or {}).full_name or '—' }}</div></div>
+        <div class="field"><div class="field-label">Approved At</div><div class="field-value">{{ (booking.approved_at or '—')[:19]|replace('T',' ') }}</div></div>
+        <div class="field"><div class="field-label">Submitted</div><div class="field-value">{{ (booking.created_at or '—')[:19]|replace('T',' ') }}</div></div>
+      </div>
+
+      <div class="actions">
+        <a href="{{ url_for('examination_officer.exam_bookings') }}" class="btn-back"><i class="fas fa-arrow-left"></i> Back</a>
+        {% if booking.status == 'approved' %}
+        <form method="post" action="{{ url_for('examination_officer.confirm_booking', booking_id=booking.id) }}"
+              onsubmit="return confirm('Confirm this booking as completed?');">
+          <button type="submit" class="btn-confirm"><i class="fas fa-check-circle"></i> Confirm Booking</button>
+        </form>
+        {% endif %}
+      </div>
+
     </div>
   </div>
-  
-  <div class="section">
-    <div class="section-title">Approval Information</div>
-    <div class="field">
-      <div class="field-label">Status:</div>
-      <div class="field-value" style="color: #2e7d32; font-weight: bold;">{{ booking.status|title }}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Approved By:</div>
-      <div class="field-value">{{ booking.approved_by_user.full_name }}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Approved At:</div>
-      <div class="field-value">{{ booking.approved_at | to_eat('%d %B %Y at %H:%M') }}</div>
-    </div>
-  </div>
-  
-  {% if booking.status == 'approved' %}
-  <div style="margin-top: 30px;">
-    <form action="{{ url_for('examination_officer.confirm_booking', booking_id=booking.id) }}" method="POST">
-      <button type="submit" class="btn-confirm">
-        <i class="fas fa-check"></i> Confirm Booking
-      </button>
-    </form>
-  </div>
-  {% endif %}
 </div>
 {% endblock %}

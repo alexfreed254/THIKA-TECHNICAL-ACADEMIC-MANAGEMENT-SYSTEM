@@ -1429,8 +1429,25 @@ def exam_bookings():
                 "rejection_reason": b.get("rejection_reason", ""),
                 "reviewer":      (b.get("user_profiles") or {}).get("full_name", ""),
                 "bookings":      [],
+                "_statuses":     [],
             }
         groups[sn]["bookings"].append(b)
+        groups[sn]["_statuses"].append(b.get("status", "pending"))
+
+    for g in groups.values():
+        sts = set(g.pop("_statuses", []) or ["pending"])
+        if "pending" in sts:
+            g["status"] = "pending"
+        elif "rejected" in sts and len(sts) == 1:
+            g["status"] = "rejected"
+        elif "rejected" in sts:
+            g["status"] = "pending"
+        elif "approved" in sts:
+            g["status"] = "approved"
+        elif "completed" in sts:
+            g["status"] = "completed"
+        else:
+            g["status"] = next(iter(sts), "pending")
 
     return render_template("student/exam_bookings.html",
                            booking_groups=list(groups.values()))

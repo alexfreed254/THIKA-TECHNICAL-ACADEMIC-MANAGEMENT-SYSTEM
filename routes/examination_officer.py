@@ -91,6 +91,13 @@ def exam_bookings():
         bookings = [b for b in bookings
                     if any(e.get("class_id") == class_id
                            for e in ((b.get("student") or {}).get("enrollments") or []))]
+    if exam_series:
+        es = exam_series.lower()
+        bookings = [b for b in bookings
+                    if es in (b.get("exam_session") or "").lower()
+                    or es in str(b.get("exam_series_no") or "").lower()
+                    or es in str(b.get("exam_term") or "").lower()
+                    or es in (b.get("serial_number") or "").lower()]
     
     # Flatten bookings
     for booking in bookings:

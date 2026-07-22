@@ -137,7 +137,12 @@
 
   <!-- Page header -->
   <div class="eb-page-hdr">
-    <div class="eb-page-title"><i class="fas fa-file-alt" style="color:#1e5a9f;margin-right:10px"></i>Exam Booking Forms</div>
+    <div>
+      <div class="eb-page-title"><i class="fas fa-file-alt" style="color:#1e5a9f;margin-right:10px"></i>My Exam Bookings</div>
+      <p style="margin:6px 0 0;font-size:13px;color:#64748b;max-width:560px;line-height:1.45">
+        Submit Form 1A → print for HOD signature → HOD approves online → Examination Office confirms.
+      </p>
+    </div>
     <a href="/student/exam-booking-form" class="btn-new-booking">
       <i class="fas fa-plus"></i> New Booking
     </a>
@@ -198,9 +203,9 @@
           <span class="step-arrow"><i class="fas fa-arrow-right"></i></span>
           <span class="step-item"><span class="step-num">2</span> HOD Signs & Stamps</span>
           <span class="step-arrow"><i class="fas fa-arrow-right"></i></span>
-          <span class="step-item"><span class="step-num">3</span> HOD Approves in System</span>
+          <span class="step-item"><span class="step-num">3</span> HOD Approves Online</span>
           <span class="step-arrow"><i class="fas fa-arrow-right"></i></span>
-          <span class="step-item"><span class="step-num">4</span> Cleared for Exams</span>
+          <span class="step-item"><span class="step-num">4</span> Exam Office Confirms</span>
         </div>
       </div>
       <a href="/student/exam-bookings/{{ grp.bookings[0].id }}/download"
@@ -213,16 +218,32 @@
     <div class="hod-banner approved" style="align-items:center;flex-wrap:wrap;gap:14px">
       <div class="hod-banner-icon"><i class="fas fa-check-circle"></i></div>
       <div class="hod-banner-text">
-        <div class="hod-banner-title">Approved — You are cleared for exams</div>
+        <div class="hod-banner-title">HOD Approved — Awaiting Exam Office</div>
         <div class="hod-banner-sub">
           Approved
           {% if grp.reviewer %} by <strong>{{ grp.reviewer }}</strong>{% endif %}
           {% if grp.approved_at %} on {{ grp.approved_at[:10] }}{% endif %}.
+          The Examination Officer will confirm your booking for the exam sitting.
         </div>
       </div>
       <a href="/student/exam-bookings/{{ grp.bookings[0].id }}/download"
          target="_blank" class="btn-dl-approved">
         <i class="fas fa-download"></i> Download Approved Form
+      </a>
+    </div>
+
+    {% elif st == 'completed' %}
+    <div class="hod-banner approved" style="align-items:center;flex-wrap:wrap;gap:14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:#93c5fd">
+      <div class="hod-banner-icon" style="color:#2563eb"><i class="fas fa-flag-checkered"></i></div>
+      <div class="hod-banner-text">
+        <div class="hod-banner-title">Confirmed by Examination Office</div>
+        <div class="hod-banner-sub">
+          Your booking is fully processed. Keep a printed copy of your approved Form 1A for the exam day.
+        </div>
+      </div>
+      <a href="/student/exam-bookings/{{ grp.bookings[0].id }}/download"
+         target="_blank" class="btn-dl-approved" style="background:linear-gradient(135deg,#2563eb,#1d4ed8)">
+        <i class="fas fa-download"></i> Download Form
       </a>
     </div>
 

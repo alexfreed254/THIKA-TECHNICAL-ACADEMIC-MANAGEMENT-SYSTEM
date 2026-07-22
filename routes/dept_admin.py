@@ -1550,6 +1550,7 @@ def exam_bookings():
         "pending":  sum(1 for b in all_student_bookings if b["status"] == "pending"),
         "approved": sum(1 for b in all_student_bookings if b["status"] == "approved"),
         "rejected": sum(1 for b in all_student_bookings if b["status"] == "rejected"),
+        "completed": sum(1 for b in all_student_bookings if b["status"] == "completed"),
     }
 
     return render_template("dept_admin/exam_bookings.html",
@@ -1816,6 +1817,57 @@ def approve_exam_booking(booking_id):
     except Exception as e:
         flash(f"Error: {e}", "danger")
     return redirect(url_for("dept_admin.exam_bookings"))
+
+
+@dept_admin_bp.route("/exam-bookings/batch-approve", methods=["POST"])
+@dept_admin_required
+def batch_approve_exam_bookings():
+    """Approve all pending bookings sharing a Form 1A serial number."""
+    db = get_service_client()
+    dept_id = _dept_id()
+    user = current_user()
+    serial = (request.form.get("serial_number") or "").strip()
+    if not serial:
+        flash("Serial number required.", "error")
+        return redirect(url_for("dept_admin.exam_bookings"))
+
+    rows = (db.table("exam_bookings")
+              .select("id, student_id, unit_id, status")
+              .eq("serial_number", serial)
+              .eq("status", "pending")
+              .execute().data or [])
+    approved = 0
+    student_id = None
+    for booking in rows:
+        unit = (db.table("units").select("department_id")
+                  .eq("id", booking["unit_id"]).limit(1).execute().data or [None])[0]
+        if not unit or unit.get("department_id") != dept_id:
+            continue
+        db.table("exam_bookings").update({
+            "status": "approved",
+            "approved_by": user["id"],
+            "approved_at": datetime.now().isoformat(),
+        }).eq("id", booking["id"]).execute()
+        approved += 1
+        student_id = booking["student_id"]
+    if approved:
+        write_audit_log("batch_approve_exam_bookings", target=f"serial:{serial}", detail={"count": approved})
+        if student_id:
+            try:
+                from notifications import create_notification
+                create_notification(
+                    user_id=student_id,
+                    title="Exam Booking Approved",
+                    message=f"All units on Form 1A ({serial}) have been approved by your HOD.",
+                    notification_type="success",
+                    action_url="/student/exam-bookings",
+                )
+            except Exception:
+                pass
+        flash(f"Approved {approved} unit(s) for serial {serial}.", "success")
+    else:
+        flash("No pending bookings found for that serial in your department.", "warning")
+    return redirect(url_for("dept_admin.exam_bookings", status="pending"))
 
 
 @dept_admin_bp.route("/exam-bookings/<booking_id>/reject", methods=["POST"])

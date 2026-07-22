@@ -2182,7 +2182,8 @@ def exam_bookings():
     counts = {"all":len(all_b),
               "pending": sum(1 for b in all_b if b["status"]=="pending"),
               "approved":sum(1 for b in all_b if b["status"]=="approved"),
-              "rejected":sum(1 for b in all_b if b["status"]=="rejected")}
+              "rejected":sum(1 for b in all_b if b["status"]=="rejected"),
+              "completed":sum(1 for b in all_b if b["status"]=="completed")}
     return render_template("super_admin/exam_bookings.html",
                            bookings=bookings, departments=departments,
                            status_filter=status_filter, dept_filter=dept_filter,
@@ -2216,6 +2217,188 @@ def reject_exam_booking(booking_id):
     except Exception as e:
         flash(f"Error: {e}", "danger")
     return redirect(url_for("super_admin.exam_bookings"))
+
+
+@super_admin_bp.route("/exam-bookings/batch-approve", methods=["POST"])
+@super_admin_required
+def batch_approve_exam_bookings():
+    db = _svc()
+    user = current_user()
+    from datetime import datetime as _dt
+    serial = (request.form.get("serial_number") or "").strip()
+    if not serial:
+        flash("Serial number required.", "error")
+        return redirect(url_for("super_admin.exam_bookings"))
+    rows = (db.table("exam_bookings").select("id, student_id")
+              .eq("serial_number", serial).eq("status", "pending")
+              .execute().data or [])
+    if not rows:
+        flash("No pending bookings for that serial.", "warning")
+        return redirect(url_for("super_admin.exam_bookings", status="pending"))
+    for booking in rows:
+        db.table("exam_bookings").update({
+            "status": "approved",
+            "approved_by": user["id"],
+            "approved_at": _dt.now().isoformat(),
+        }).eq("id", booking["id"]).execute()
+    write_audit_log("batch_approve_exam_bookings", target=f"serial:{serial}", detail={"count": len(rows)})
+    flash(f"Approved {len(rows)} unit(s) for serial {serial}.", "success")
+    return redirect(url_for("super_admin.exam_bookings", status="pending"))
+
+
+@super_admin_bp.route("/exam-bookings/export")
+@super_admin_required
+def export_exam_bookings():
+    """Institute-wide Excel export of exam bookings (optional dept filter)."""
+    import io
+    from collections import OrderedDict
+    from datetime import date as _date, datetime as _dt
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    db = _svc()
+    status_filter = request.args.get("status", "")
+    dept_filter = request.args.get("dept_id", "")
+    year_filter = request.args.get("year", "").strip()
+    term_filter = request.args.get("term", "").strip()
+    TERM_MONTHS = {"1": ("01", "04", "30"), "2": ("05", "08", "31"), "3": ("09", "12", "31")}
+
+    query = (db.table("exam_bookings")
+               .select("id, student_id, unit_id, exam_session, serial_number, status, "
+                       "attempt_type, previous_grade, created_at, "
+                       "units(name, code), "
+                       "student:user_profiles!exam_bookings_student_id_fkey(full_name, admission_no, mobile_number)")
+               .order("created_at").limit(3000))
+    if status_filter and status_filter != "all":
+        query = query.eq("status", status_filter)
+    yr = year_filter or str(_date.today().year)
+    if year_filter:
+        query = query.gte("exam_date", f"{yr}-01-01").lte("exam_date", f"{yr}-12-31")
+    if term_filter and term_filter in TERM_MONTHS:
+        m0, m1, last = TERM_MONTHS[term_filter]
+        query = query.gte("exam_date", f"{yr}-{m0}-01").lte("exam_date", f"{yr}-{m1}-{last}")
+    bookings = query.execute().data or []
+    if not bookings:
+        flash("No bookings found for the selected filters.", "info")
+        return redirect(url_for("super_admin.exam_bookings"))
+
+    sids = list({b["student_id"] for b in bookings if b.get("student_id")})
+    class_map = {}
+    if sids:
+        enr = (db.table("enrollments")
+                 .select("student_id, classes(id, name, department_id)")
+                 .in_("student_id", sids).execute().data or [])
+        for e in enr:
+            sid = e.get("student_id")
+            cls = e.get("classes") or {}
+            if isinstance(cls, list):
+                cls = cls[0] if cls else {}
+            if sid and sid not in class_map:
+                class_map[sid] = cls
+    if dept_filter:
+        bookings = [b for b in bookings
+                    if (class_map.get(b.get("student_id")) or {}).get("department_id") == dept_filter]
+
+    by_class = OrderedDict()
+    for b in bookings:
+        cn = (class_map.get(b.get("student_id")) or {}).get("name") or "Unassigned"
+        by_class.setdefault(cn, []).append(b)
+
+    wb = Workbook()
+    wb.remove(wb.active)
+    alt = PatternFill("solid", fgColor="EFF6FF")
+    pending = PatternFill("solid", fgColor="FEF3C7")
+    approved = PatternFill("solid", fgColor="DCFCE7")
+    rejected = PatternFill("solid", fgColor="FEE2E2")
+    thin = Side(style="thin", color="B0C4D8")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    HEADERS = ["S/N", "Admission No.", "Full Name", "Phone",
+               "Unit Code", "Unit Name", "Attempt Type", "Prev. Grade",
+               "Serial No.", "Session / Term", "Submitted", "Status"]
+    AT_LABELS = {
+        "first_attempt": "First Attempt",
+        "retake": "Retake (NYC/Fail)",
+        "missing_unit": "Missed Unit",
+    }
+    for cls_name, rows in by_class.items():
+        ws = wb.create_sheet(title=cls_name[:31])
+        next_row = excel_letterhead(
+            ws, "Exam Bookings Report", len(HEADERS),
+            dept_name="Institute-wide",
+            meta_lines=[
+                f"Class: {cls_name}",
+                f"Generated: {_dt.now().strftime('%d %B %Y')}    |    "
+                f"Total Entries: {len(rows)}",
+            ],
+        )
+        hdr_row = next_row
+        for ci, h in enumerate(HEADERS, 1):
+            ws.cell(row=hdr_row, column=ci, value=h)
+        style_header_row(ws, hdr_row, len(HEADERS))
+        sn = 1
+        for b in rows:
+            st = b.get("student") or {}
+            unit = b.get("units") or {}
+            at = b.get("attempt_type") or "first_attempt"
+            status = (b.get("status") or "pending").lower()
+            ws.append([
+                sn, st.get("admission_no", ""), st.get("full_name", ""), st.get("mobile_number", ""),
+                unit.get("code", ""), unit.get("name", ""), AT_LABELS.get(at, at),
+                b.get("previous_grade", ""), b.get("serial_number", ""), b.get("exam_session", ""),
+                (b.get("created_at") or "")[:10], status.upper(),
+            ])
+            dr = ws.max_row
+            stat_fill = {"approved": approved, "rejected": rejected, "pending": pending}.get(status)
+            row_fill = alt if sn % 2 == 0 else None
+            for ci in range(1, len(HEADERS) + 1):
+                c = ws.cell(row=dr, column=ci)
+                if ci == len(HEADERS) and stat_fill:
+                    c.fill = stat_fill
+                elif row_fill:
+                    c.fill = row_fill
+                c.border = border
+                c.alignment = Alignment(vertical="center", wrap_text=True)
+            sn += 1
+        for i, w in enumerate([6, 16, 28, 16, 12, 34, 20, 12, 24, 22, 14, 12], 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    resp = make_response(buf.read())
+    resp.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    resp.headers["Content-Disposition"] = 'attachment; filename="exam_bookings_export.xlsx"'
+    return resp
+
+
+@super_admin_bp.route("/exam-bookings/trainee/<student_id>/approved-pdf")
+@super_admin_required
+def trainee_approved_bookings_pdf(student_id):
+    db = _svc()
+    student = (db.table("user_profiles")
+               .select("full_name, admission_no, mobile_number, department_id")
+               .eq("id", student_id).single().execute().data or {})
+    dept_name = ""
+    if student.get("department_id"):
+        dept = (db.table("departments").select("name")
+                  .eq("id", student["department_id"]).limit(1).execute().data or [{}])[0]
+        dept_name = dept.get("name", "")
+    enr = (db.table("enrollments").select("classes(name)").eq("student_id", student_id)
+             .limit(1).execute().data or [])
+    cls = enr[0].get("classes") if enr else {}
+    if isinstance(cls, list):
+        cls = cls[0] if cls else {}
+    class_name = (cls or {}).get("name", "")
+    bookings = (db.table("exam_bookings").select("*, units(name, code)")
+                  .eq("student_id", student_id).eq("status", "approved")
+                  .order("exam_date").execute().data or [])
+    from datetime import datetime as _dt
+    return render_template(
+        "dept_admin/trainee_approved_bookings_pdf.html",
+        student=student, class_name=class_name, dept_name=dept_name,
+        bookings=bookings, date_gen=_dt.now().strftime("%d %B %Y"),
+    )
 
 
 @super_admin_bp.route("/trainees-documents")
