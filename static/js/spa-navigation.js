@@ -244,12 +244,18 @@
   }
 
   function setupTopbarLogout() {
-    const existingTopbar = document.querySelector('.topbar-logout');
-    if (existingTopbar) return;
-    const logout = document.querySelector('.sidebar-footer a[href="/auth/logout"]')
-      || document.querySelector('.sidebar a[href="/auth/logout"]');
     const bellWrapper = document.getElementById('notifWrapper');
-    if (!logout || !bellWrapper || !bellWrapper.parentElement) return;
+    if (!bellWrapper || !bellWrapper.parentElement) return;
+
+    // Remove any leftover Sign Out links still in the sidebar
+    document.querySelectorAll('.sidebar a[href="/auth/logout"]').forEach(node => {
+      if (!node.classList.contains('topbar-logout')) node.remove();
+    });
+
+    if (document.querySelector('.topbar-logout')) return;
+
+    const logout = document.createElement('a');
+    logout.href = '/auth/logout';
     logout.className = 'topbar-logout';
     logout.title = 'Sign out';
     logout.setAttribute('aria-label', 'Sign out');
