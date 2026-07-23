@@ -1053,6 +1053,42 @@ def attendance():
 
 # ── Attendance Matrix PDF Download ───────────────────────────────────────────
 
+@dept_admin_bp.route("/unit-attendance-pdf")
+@dept_admin_required
+def unit_attendance_pdf():
+    """Landscape unit attendance register (all taught weeks) for HOD."""
+    from unit_attendance_register import build_unit_attendance_register
+
+    db = get_service_client()
+    dept_id = _dept_id()
+
+    class_id = request.args.get("class_id", "").strip()
+    unit_id  = request.args.get("unit_id", "").strip()
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    if not (class_id and unit_id):
+        flash("Select a class and unit first.", "warning")
+        return redirect(url_for("dept_admin.attendance"))
+
+    # Scope: class must belong to this department
+    cls = (db.table("classes").select("id, department_id")
+             .eq("id", class_id).single().execute().data or {})
+    if not cls or cls.get("department_id") != dept_id:
+        flash("Class not found in your department.", "error")
+        return redirect(url_for("dept_admin.attendance"))
+
+    data = build_unit_attendance_register(
+        db, class_id=class_id, unit_id=unit_id, year=year, term=term, trainer_id=None,
+    )
+    if not data:
+        flash("No attendance records found for this unit in the selected period.", "warning")
+        return redirect(url_for("dept_admin.attendance",
+                                class_id=class_id, unit_id=unit_id, year=year, term=term))
+
+    return render_template("shared/unit_attendance_pdf.html", **data)
+
+
 @dept_admin_bp.route("/attendance/pdf")
 @dept_admin_required
 def attendance_matrix_pdf():

@@ -322,6 +322,14 @@
       <span class="s-pill sp-green"><i class="fas fa-check-circle"></i> {{ total_present }} present</span>
       <span class="s-pill sp-red"><i class="fas fa-times-circle"></i> {{ total_absent }} absent</span>
       <span class="s-pill sp-amber"><i class="fas fa-chart-pie"></i> Class avg: {{ class_pct }}%</span>
+      <a href="{{ url_for('super_admin.unit_attendance_pdf',
+                          class_id=class_filter, unit_id=unit_filter,
+                          year=year_filter, term=term_int or 1) }}"
+         target="_blank"
+         class="s-pill"
+         style="background:#b91c1c;color:#fff;text-decoration:none;margin-left:auto">
+        <i class="fas fa-file-pdf"></i> Download Unit PDF (All Weeks)
+      </a>
     </div>
 
     <!-- ── Matrix table ── -->

@@ -965,6 +965,34 @@ def attendance():
     )
 
 
+@super_admin_bp.route("/unit-attendance-pdf")
+@super_admin_required
+def unit_attendance_pdf():
+    """Landscape unit attendance register (all taught weeks) for Super Admin."""
+    from datetime import datetime
+    from unit_attendance_register import build_unit_attendance_register
+
+    db = _svc()
+    class_id = request.args.get("class_id", "").strip()
+    unit_id  = request.args.get("unit_id", "").strip()
+    year     = request.args.get("year", datetime.now().year, type=int)
+    term     = request.args.get("term", 1, type=int)
+
+    if not (class_id and unit_id):
+        flash("Select a class and unit first.", "warning")
+        return redirect(url_for("super_admin.attendance"))
+
+    data = build_unit_attendance_register(
+        db, class_id=class_id, unit_id=unit_id, year=year, term=term, trainer_id=None,
+    )
+    if not data:
+        flash("No attendance records found for this unit in the selected period.", "warning")
+        return redirect(url_for("super_admin.attendance",
+                                class_id=class_id, unit_id=unit_id, year=year, term=term))
+
+    return render_template("shared/unit_attendance_pdf.html", **data)
+
+
 # ── Trainees POE ───────────────────────────────────────────────────────────────
 
 @super_admin_bp.route("/assessments")

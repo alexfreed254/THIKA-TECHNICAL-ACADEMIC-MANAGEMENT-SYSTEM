@@ -1348,8 +1348,9 @@ def unit_attendance_pdf():
     """
     Landscape attendance register for one unit — all weeks/lessons the trainer
     has taught in the selected year/term, as a single printable page.
+    Column headers show the real date/time attendance was taken.
     """
-    from collections import defaultdict, OrderedDict
+    from unit_attendance_register import build_unit_attendance_register
 
     db   = get_service_client()
     user = current_user()
@@ -1363,133 +1364,30 @@ def unit_attendance_pdf():
         flash("Select a Class and Unit to download the unit attendance register.", "error")
         return redirect(url_for("trainer.attendance_history"))
 
-    # Confirm this trainer is assigned to the class/unit
     assigned = (db.table("class_units")
                   .select("id")
                   .eq("class_id", class_id)
                   .eq("unit_id", unit_id)
                   .eq("trainer_id", user["id"])
                   .limit(1).execute().data or [])
-    if not assigned and user.get("role") == "trainer":
+    if not assigned:
         flash("You are not assigned to this class/unit.", "error")
         return redirect(url_for("trainer.attendance_history"))
 
-    cls  = (db.table("classes").select("name")
-              .eq("id", class_id).single().execute().data or {})
-    unit = (db.table("units").select("code, name")
-              .eq("id", unit_id).single().execute().data or {})
-    dept = {}
-    if user.get("department_id"):
-        dept = (db.table("departments").select("name")
-                  .eq("id", user["department_id"]).single().execute().data or {})
-
-    att_rows = (db.table("attendance")
-                  .select("student_id, week, lesson, status, attendance_date, "
-                          "user_profiles:student_id(full_name, admission_no)")
-                  .eq("unit_id", unit_id)
-                  .eq("trainer_id", user["id"])
-                  .eq("year", year)
-                  .eq("term", term)
-                  .execute().data or [])
-
-    if not att_rows:
+    data = build_unit_attendance_register(
+        db,
+        class_id=class_id,
+        unit_id=unit_id,
+        year=year,
+        term=term,
+        trainer_id=user["id"],
+    )
+    if not data:
         flash("No attendance records found for this unit in the selected period.", "warning")
         return redirect(url_for("trainer.attendance_history",
                                 class_id=class_id, unit_id=unit_id, year=year, term=term))
 
-    # Session columns (all weeks taught), sorted
-    session_keys = sorted({(int(r["week"]), str(r["lesson"]))
-                           for r in att_rows
-                           if r.get("week") is not None and r.get("lesson")})
-
-    # Status matrix + student list
-    matrix = defaultdict(dict)  # student_id -> {(week, lesson): status}
-    students = OrderedDict()
-    for r in att_rows:
-        sid = r.get("student_id")
-        if not sid:
-            continue
-        key = (int(r["week"]), str(r["lesson"]))
-        st = (r.get("status") or "").lower()
-        matrix[sid][key] = st
-        if sid not in students:
-            p = r.get("user_profiles") or {}
-            students[sid] = {
-                "id": sid,
-                "full_name": p.get("full_name") or "—",
-                "admission_no": p.get("admission_no") or "—",
-            }
-
-    # Prefer full class roll so unrecorded students still appear
-    enrolled = (db.table("enrollments")
-                  .select("student_id, user_profiles(id, full_name, admission_no)")
-                  .eq("class_id", class_id)
-                  .execute().data or [])
-    for e in enrolled:
-        sid = e.get("student_id")
-        if not sid:
-            continue
-        p = e.get("user_profiles") or {}
-        if sid not in students:
-            students[sid] = {
-                "id": sid,
-                "full_name": p.get("full_name") or "—",
-                "admission_no": p.get("admission_no") or "—",
-            }
-
-    student_rows = []
-    for sid, stu in sorted(students.items(),
-                           key=lambda x: ((x[1].get("full_name") or "").lower(),
-                                          x[1].get("admission_no") or "")):
-        cells = []
-        present = absent = late = 0
-        for key in session_keys:
-            st = matrix.get(sid, {}).get(key, "")
-            if st == "present":
-                present += 1
-                mark = "P"
-            elif st == "late":
-                late += 1
-                present += 1  # counts toward attendance rate
-                mark = "L"
-            elif st == "absent":
-                absent += 1
-                mark = "A"
-            else:
-                mark = "—"
-            cells.append({"status": st or "none", "mark": mark})
-        taught = present + absent  # late already in present
-        # Recalc: present includes late; absent separate; total marked = present+late+absent but late counted once
-        marked = sum(1 for c in cells if c["mark"] != "—")
-        rate = round((present / marked) * 100, 1) if marked else 0
-        student_rows.append({
-            **stu,
-            "cells": cells,
-            "present": present,
-            "absent": absent,
-            "late": late,
-            "marked": marked,
-            "rate": rate,
-        })
-
-    session_cols = [{"week": w, "lesson": les, "label": f"W{w}-{les}"}
-                    for w, les in session_keys]
-
-    generated = datetime.now().strftime("%d %B %Y %H:%M")
-    ref_code = f"ATT/{(unit.get('code') or 'UNIT').upper()}/T{term}/{year}"
-
-    return render_template(
-        "trainer/unit_attendance_pdf.html",
-        cls=cls, unit=unit, dept=dept,
-        year=year, term=term,
-        session_cols=session_cols,
-        student_rows=student_rows,
-        trainer={"name": user.get("full_name", "")},
-        generated=generated,
-        ref_code=ref_code,
-        session_count=len(session_cols),
-        student_count=len(student_rows),
-    )
+    return render_template("shared/unit_attendance_pdf.html", **data)
 
 
 # ── Formative Assessment Marks ───────────────────────────────────────────────

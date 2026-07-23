@@ -350,16 +350,16 @@
           <div class="doc-dept-name">Department of {{ dept_obj.name if dept_obj else '—' }}</div>
           <div class="doc-doc-title">Unit Attendance Register</div>
         </div>
-        <a href="{{ url_for('dept_admin.attendance_matrix_pdf',
+        <a href="{{ url_for('dept_admin.unit_attendance_pdf',
                              class_id=class_filter, unit_id=unit_filter,
-                             term=term_filter, year=year_filter,
-                             week=week_filter, lesson=lesson_filter) }}"
-           title="Download PDF"
+                             term=term_filter or 1, year=year_filter) }}"
+           target="_blank"
+           title="Download landscape PDF — all weeks taught with session times"
            style="flex-shrink:0;display:flex;align-items:center;gap:7px;
                   background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
                   border-radius:9px;padding:9px 16px;color:#fff;text-decoration:none;
                   font-size:13px;font-weight:700;white-space:nowrap">
-          <i class="fas fa-file-pdf"></i> Download PDF
+          <i class="fas fa-file-pdf"></i> Download Unit PDF (All Weeks)
         </a>
       </div>
 
