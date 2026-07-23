@@ -44,13 +44,51 @@ const trainerNav: NavSection[] = [
 
 const studentNav: NavSection[] = [
   {
+    title: 'Overview',
+    items: [{ label: 'Dashboard', to: '/student/dashboard', icon: 'tachometer-alt' }],
+  },
+  {
+    title: 'Learning',
     items: [
-      { label: 'Dashboard', to: '/student/dashboard', icon: 'tachometer-alt' },
       { label: 'My Units', to: '/student/units', icon: 'book-open' },
-      { label: 'Attendance', to: '/student/attendance', icon: 'clipboard-list' },
+      { label: 'Lesson Attendance', to: '/student/attendance', icon: 'clipboard-list' },
       { label: 'Marks & Transcripts', to: '/student/marks', icon: 'chart-line' },
       { label: 'Portfolio of Evidence', to: '/student/portfolio', icon: 'folder-open' },
-      { label: 'Exam Bookings', to: '/student/exam-bookings', icon: 'file-signature' },
+      { label: 'My Assessments', to: '/student/assessments', icon: 'file-alt' },
+    ],
+  },
+  {
+    title: 'Records',
+    items: [{ label: 'My Documents', to: '/student/documents', icon: 'archive' }],
+  },
+  {
+    title: 'Exams',
+    items: [
+      { label: 'Exam Booking Form', to: '/student/exam-booking-form', icon: 'file-signature' },
+      { label: 'My Exam Bookings', to: '/student/exam-bookings', icon: 'calendar-check' },
+    ],
+  },
+  {
+    title: 'Industrial Attachment',
+    items: [
+      { label: 'Attachment Placement & Letter Review', to: '/student/industrial-attachment', icon: 'industry' },
+      { label: 'Digital Logbook', to: '/student/logbook', icon: 'book' },
+      { label: 'My Attachment Marks', to: '/student/attachment-marks', icon: 'star-half-alt' },
+      { label: 'Mentoring Tool / Logbook', to: '/student/mentoring-tool', icon: 'file-pdf' },
+    ],
+  },
+  {
+    title: 'Services',
+    items: [
+      { label: 'Course Clearance', to: '/clearance/', icon: 'clipboard-check', external: true },
+      { label: 'Employment Status', to: '/student/employment-status', icon: 'user-tie' },
+    ],
+  },
+  {
+    title: 'Account',
+    items: [
+      { label: 'My Profile', to: '/auth/profile', icon: 'user-circle', external: true },
+      { label: 'Notifications', to: '/notifications', icon: 'bell', external: true },
     ],
   },
 ]

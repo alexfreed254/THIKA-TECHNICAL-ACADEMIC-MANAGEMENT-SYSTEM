@@ -296,3 +296,489 @@ def api_trainer_dashboard():
             "trend_absent": trend_absent,
         },
     })
+
+
+# ── Trainer: Marks Entry ──────────────────────────────────────────────────────
+
+@api_v1_bp.route("/trainer/marks-entry", methods=["GET"])
+@api_role_required("trainer")
+def api_trainer_marks_entry():
+    from datetime import datetime
+    from routes.trainer import _marks_class_unit_data, _load_assessments_and_marks
+
+    db = get_service_client()
+    user = current_user()
+    cu_rows, class_list = _marks_class_unit_data(db, user)
+
+    class_id = request.args.get("class_id", "")
+    unit_id = request.args.get("unit_id", "")
+    year = request.args.get("year", datetime.now().year, type=int)
+    term = request.args.get("term", 1, type=int)
+
+    units_list = []
+    students_list = []
+    assessments = []
+    marks_map = {}
+
+    if class_id:
+        for r in cu_rows:
+            if (r.get("classes") or {}).get("id") == class_id:
+                u = r.get("units") or {}
+                if u.get("id"):
+                    units_list.append({"id": u["id"], "code": u.get("code"), "name": u.get("name")})
+
+    if class_id and unit_id:
+        raw = (db.table("enrollments")
+                 .select("student_id, user_profiles(full_name, admission_no)")
+                 .eq("class_id", class_id).execute().data or [])
+        students_list = sorted(raw, key=lambda s: (s.get("user_profiles") or {}).get("full_name", ""))
+        assessments, marks_map = _load_assessments_and_marks(db, unit_id, class_id, user["id"], year, term)
+
+    return _ok({
+        "class_list": class_list,
+        "units_list": units_list,
+        "students_list": students_list,
+        "assessments": assessments,
+        "oral_list": [a for a in assessments if a.get("assessment_type") == "Oral"],
+        "practical_list": [a for a in assessments if a.get("assessment_type") == "Practical"],
+        "theory_list": [a for a in assessments if a.get("assessment_type") == "Theory"],
+        "marks_map": marks_map,
+        "class_id": class_id,
+        "unit_id": unit_id,
+        "year": year,
+        "term": term,
+    })
+
+
+@api_v1_bp.route("/trainer/marks-entry/save-mark", methods=["POST"])
+@api_role_required("trainer")
+def api_trainer_save_mark():
+    from datetime import datetime
+    db = get_service_client()
+    user = current_user()
+    data = request.get_json(silent=True) or {}
+    assessment_id = data.get("assessment_id", "")
+    student_id = data.get("student_id", "")
+    marks_str = data.get("marks", "")
+
+    if not assessment_id or not student_id:
+        return _err("Missing fields.", 400)
+
+    rec = (db.table("formative_assessments")
+             .select("trainer_id, max_marks")
+             .eq("id", assessment_id).single().execute().data)
+    if not rec or rec["trainer_id"] != user["id"]:
+        return _err("Access denied.", 403, "forbidden")
+
+    if marks_str == "" or marks_str is None:
+        try:
+            (db.table("formative_marks").delete()
+               .eq("assessment_id", assessment_id)
+               .eq("student_id", student_id).execute())
+            return jsonify({"ok": True, "success": True, "cleared": True})
+        except Exception as e:
+            return _err(str(e), 500)
+
+    try:
+        marks_val = float(marks_str)
+    except (ValueError, TypeError):
+        return _err("Marks must be a number.", 400)
+
+    max_m = float(rec.get("max_marks", 100))
+    if marks_val < 0:
+        return _err("Marks cannot be negative.", 400)
+    if marks_val > max_m:
+        return _err(f"Cannot exceed {int(max_m)}.", 400)
+
+    try:
+        existing = (db.table("formative_marks").select("id")
+                      .eq("assessment_id", assessment_id)
+                      .eq("student_id", student_id).execute().data or [])
+        if existing:
+            db.table("formative_marks").update({
+                "marks_obtained": marks_val,
+                "uploaded_by": user["id"],
+                "updated_at": datetime.now().isoformat(),
+            }).eq("id", existing[0]["id"]).execute()
+        else:
+            db.table("formative_marks").insert({
+                "assessment_id": assessment_id,
+                "student_id": student_id,
+                "marks_obtained": marks_val,
+                "uploaded_by": user["id"],
+            }).execute()
+        return jsonify({"ok": True, "success": True})
+    except Exception as e:
+        return _err(str(e), 500)
+
+
+@api_v1_bp.route("/trainer/marks-entry/add-assessment", methods=["POST"])
+@api_role_required("trainer")
+def api_trainer_add_assessment():
+    from datetime import datetime
+    db = get_service_client()
+    user = current_user()
+    data = request.get_json(silent=True) or {}
+
+    unit_id = (data.get("unit_id") or "").strip()
+    class_id = (data.get("class_id") or "").strip()
+    assessment_type = (data.get("assessment_type") or "").strip()
+    assessment_name = (data.get("assessment_name") or "").strip()
+    max_marks = data.get("max_marks", 100)
+    year = int(data.get("year", datetime.now().year))
+    term = int(data.get("term", 1))
+
+    if not all([unit_id, class_id, assessment_type, assessment_name]):
+        return _err("All fields are required.", 400)
+    if assessment_type not in ("Oral", "Practical", "Theory"):
+        return _err("Invalid type.", 400)
+
+    dup = (db.table("formative_assessments").select("id")
+             .eq("unit_id", unit_id).eq("class_id", class_id)
+             .eq("trainer_id", user["id"])
+             .eq("assessment_name", assessment_name)
+             .eq("year", year).eq("term", term)
+             .execute().data or [])
+    if dup:
+        return _err(f"'{assessment_name}' already exists.", 400)
+
+    try:
+        result = db.table("formative_assessments").insert({
+            "unit_id": unit_id, "class_id": class_id,
+            "trainer_id": user["id"],
+            "assessment_type": assessment_type,
+            "assessment_name": assessment_name,
+            "max_marks": float(max_marks),
+            "year": year, "term": term,
+        }).execute()
+        write_audit_log("add_formative_assessment",
+                        target=f"unit:{unit_id},{assessment_type}:{assessment_name}")
+        return _ok({"assessment": result.data[0] if result.data else {}})
+    except Exception as e:
+        return _err(str(e), 500)
+
+
+# ── Trainer: POE assessments ──────────────────────────────────────────────────
+
+@api_v1_bp.route("/trainer/assessments", methods=["GET"])
+@api_role_required("trainer")
+def api_trainer_assessments():
+    from routes.trainer import _trainer_assigned_unit_ids, _bulk_formative_marks_for_poe
+
+    db = get_service_client()
+    assigned_unit_ids = _trainer_assigned_unit_ids(db)
+
+    q = db.table("assessments").select(
+        "*, "
+        "user_profiles!assessments_student_id_fkey(full_name, admission_no), "
+        "reviewer:user_profiles!assessments_reviewed_by_fkey(full_name), "
+        "units(name, code), "
+        "classes(id, name)"
+    ).order("uploaded_at", desc=True)
+    if assigned_unit_ids:
+        q = q.in_("unit_id", assigned_unit_ids)
+    assessments_list = q.execute().data or []
+    _bulk_formative_marks_for_poe(db, assessments_list)
+
+    classes_map = {}
+    status_counts = {"total": 0, "pending": 0, "approved": 0, "rejected": 0}
+    for a in assessments_list:
+        status_counts["total"] += 1
+        s = a.get("status", "pending")
+        if s in status_counts:
+            status_counts[s] += 1
+        cls = a.get("classes") or {}
+        cid = cls.get("id")
+        if not cid:
+            continue
+        if cid not in classes_map:
+            classes_map[cid] = {"id": cid, "name": cls.get("name", ""), "units": {}}
+        u = a.get("units") or {}
+        uid = a.get("unit_id")
+        if not uid:
+            continue
+        if uid not in classes_map[cid]["units"]:
+            classes_map[cid]["units"][uid] = {
+                "id": uid,
+                "name": u.get("name", ""),
+                "code": u.get("code", ""),
+                "total": 0, "pending": 0, "approved": 0, "rejected": 0,
+                "assessments": [],
+            }
+        bucket = classes_map[cid]["units"][uid]
+        bucket["total"] += 1
+        bucket[s] = bucket.get(s, 0) + 1
+        bucket["assessments"].append(a)
+
+    class_list = []
+    for cid, cdata in classes_map.items():
+        unit_list = list(cdata["units"].values())
+        class_list.append({
+            "id": cid,
+            "name": cdata["name"],
+            "units": sorted(unit_list, key=lambda u: u["name"]),
+            "unit_count": len(unit_list),
+            "pending": sum(u["pending"] for u in unit_list),
+        })
+    class_list.sort(key=lambda c: c["name"])
+    return _ok({"classes": class_list, "status_counts": status_counts})
+
+
+@api_v1_bp.route("/trainer/assessments/<assessment_id>/review", methods=["POST"])
+@api_role_required("trainer")
+def api_trainer_review_assessment(assessment_id):
+    from datetime import datetime
+    from routes.trainer import _check_unit_access, _rename_script_file
+
+    db = get_service_client()
+    user = current_user()
+    body = request.get_json(silent=True) or {}
+    action = body.get("action")
+    review_note = (body.get("review_note") or "").strip()
+
+    if action not in ("approve", "reject"):
+        return _err("action must be approve or reject.", 400)
+
+    assessment = (db.table("assessments")
+                  .select("id, unit_id, status")
+                  .eq("id", assessment_id).limit(1).execute().data or [None])[0]
+    if not assessment:
+        return _err("Assessment not found.", 404)
+    if not _check_unit_access(db, assessment["unit_id"]):
+        return _err("Forbidden.", 403, "forbidden")
+
+    new_status = "approved" if action == "approve" else "rejected"
+    try:
+        db.table("assessments").update({
+            "status": new_status,
+            "reviewed_by": user["id"],
+            "reviewed_at": datetime.now().isoformat(),
+            "review_note": review_note or None,
+        }).eq("id", assessment_id).execute()
+        try:
+            _rename_script_file(db, assessment_id, new_status, user.get("full_name", ""))
+        except Exception:
+            pass
+        write_audit_log(f"assessment_{new_status}", target=f"assessment:{assessment_id}")
+        return _ok({"status": new_status})
+    except Exception as e:
+        return _err(str(e), 500)
+
+
+# ── Trainer: Attendance ───────────────────────────────────────────────────────
+
+@api_v1_bp.route("/trainer/attendance", methods=["GET"])
+@api_role_required("trainer")
+def api_trainer_attendance_get():
+    from datetime import datetime
+    db = get_service_client()
+    user = current_user()
+    dept_id = user.get("department_id")
+
+    cu_rows = (db.table("class_units").select("class_id").eq("trainer_id", user["id"]).execute().data or [])
+    class_ids = list({r["class_id"] for r in cu_rows})
+    class_list = []
+    if class_ids:
+        q = db.table("classes").select("id, name").in_("id", class_ids).order("name")
+        if dept_id:
+            q = q.eq("department_id", dept_id)
+        class_list = q.execute().data or []
+
+    class_id = request.args.get("class_id", "")
+    unit_id = request.args.get("unit_id", "")
+    week = request.args.get("week", 0, type=int)
+    lesson = request.args.get("lesson", "")
+    year = request.args.get("year", datetime.now().year, type=int)
+    term = request.args.get("term", 1, type=int)
+
+    units_list = []
+    students_list = []
+    attendance_submitted = False
+    active_event = None
+
+    if class_id:
+        units_list = (db.table("class_units")
+                        .select("unit_id, units(id, code, name)")
+                        .eq("class_id", class_id)
+                        .eq("trainer_id", user["id"])
+                        .execute().data or [])
+        students_list = (db.table("enrollments")
+                           .select("student_id, user_profiles(full_name, admission_no)")
+                           .eq("class_id", class_id)
+                           .execute().data or [])
+        if unit_id and week and lesson:
+            existing = (db.table("attendance").select("id", count="exact")
+                          .eq("unit_id", unit_id).eq("trainer_id", user["id"])
+                          .eq("week", week).eq("lesson", lesson)
+                          .eq("year", year).eq("term", term).execute())
+            attendance_submitted = (existing.count or 0) > 0
+            event_row = (db.table("class_events").select("*")
+                           .eq("class_id", class_id).eq("trainer_id", user["id"])
+                           .eq("week", week).eq("lesson", lesson)
+                           .eq("year", year).eq("term", term).execute().data or [])
+            active_event = event_row[0] if event_row else None
+
+    return _ok({
+        "class_list": class_list,
+        "units_list": [
+            {"id": (u.get("units") or {}).get("id") or u.get("unit_id"),
+             "code": (u.get("units") or {}).get("code"),
+             "name": (u.get("units") or {}).get("name")}
+            for u in units_list
+        ],
+        "students_list": students_list,
+        "attendance_submitted": attendance_submitted,
+        "active_event": active_event,
+        "class_id": class_id,
+        "unit_id": unit_id,
+        "week": week,
+        "lesson": lesson,
+        "year": year,
+        "term": term,
+        "lessons": [
+            {"id": "L1", "label": "08:00–10:00"},
+            {"id": "L2", "label": "10:15–12:15"},
+            {"id": "L3", "label": "12:45–02:45"},
+            {"id": "L4", "label": "03:00–05:00"},
+        ],
+    })
+
+
+@api_v1_bp.route("/trainer/attendance/submit", methods=["POST"])
+@api_role_required("trainer")
+def api_trainer_attendance_submit():
+    db = get_service_client()
+    user = current_user()
+    body = request.get_json(silent=True) or {}
+
+    class_id = body.get("class_id", "")
+    unit_id = body.get("unit_id", "")
+    unit_code = body.get("unit_code", "")
+    week = int(body.get("week") or 0)
+    lesson = body.get("lesson", "")
+    year = int(body.get("year") or date.today().year)
+    term = int(body.get("term") or 1)
+    statuses = body.get("statuses") or {}
+
+    if not class_id or not unit_id or not week or not lesson:
+        return _err("Class, unit, week and lesson are required.", 400)
+    if not statuses:
+        return _err("No student statuses provided.", 400)
+
+    existing = (db.table("attendance").select("id", count="exact")
+                  .eq("unit_id", unit_id).eq("trainer_id", user["id"])
+                  .eq("week", week).eq("lesson", lesson)
+                  .eq("year", year).eq("term", term).execute())
+    if (existing.count or 0) > 0:
+        return _err("Attendance already submitted for this session.", 409, "already_submitted")
+
+    try:
+        for sid, status in statuses.items():
+            st = "present" if status == "present" else "absent"
+            db.table("attendance").insert({
+                "student_id": sid,
+                "unit_id": unit_id,
+                "unit_code": unit_code,
+                "trainer_id": user["id"],
+                "lesson": lesson,
+                "week": week,
+                "year": year,
+                "term": term,
+                "status": st,
+            }).execute()
+        write_audit_log("submit_attendance", target=f"class:{class_id},unit:{unit_id}")
+        return _ok({"submitted": True})
+    except Exception as e:
+        return _err(str(e), 500)
+
+
+# ── Student dashboard ─────────────────────────────────────────────────────────
+
+@api_v1_bp.route("/student/dashboard", methods=["GET"])
+@api_role_required("student")
+def api_student_dashboard():
+    from datetime import datetime
+    from notifications import get_user_notifications
+
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    stats = {}
+    attendance_data = []
+    recent_assessments = []
+    overall_pct = 0
+    total_attended = 0
+
+    try:
+        stats["total"] = db.table("assessments").select("id", count="exact").eq("student_id", student_id).execute().count or 0
+        stats["pending"] = db.table("assessments").select("id", count="exact").eq("student_id", student_id).eq("status", "pending").execute().count or 0
+        stats["approved"] = db.table("assessments").select("id", count="exact").eq("student_id", student_id).eq("status", "approved").execute().count or 0
+        stats["rejected"] = db.table("assessments").select("id", count="exact").eq("student_id", student_id).eq("status", "rejected").execute().count or 0
+
+        raw_attendance = (db.table("attendance")
+                         .select("status, attendance_date, units(id, name, code)")
+                         .eq("student_id", student_id).execute().data or [])
+        unit_map = {}
+        for r in raw_attendance:
+            u = r.get("units") or {}
+            uid = u.get("id")
+            if not uid:
+                continue
+            if uid not in unit_map:
+                unit_map[uid] = {
+                    "id": uid, "unit_code": u.get("code", ""), "unit_name": u.get("name", ""),
+                    "attended": 0, "total_records": 0, "last_update": None,
+                }
+            unit_map[uid]["total_records"] += 1
+            if r.get("status") == "present":
+                unit_map[uid]["attended"] += 1
+            dt = r.get("attendance_date")
+            if dt and (not unit_map[uid]["last_update"] or dt > unit_map[uid]["last_update"]):
+                unit_map[uid]["last_update"] = dt
+        attendance_data = list(unit_map.values())
+
+        total_records = db.table("attendance").select("id", count="exact").eq("student_id", student_id).execute().count or 0
+        total_attended = db.table("attendance").select("id", count="exact").eq("student_id", student_id).eq("status", "present").execute().count or 0
+        overall_pct = round((total_attended / total_records * 100), 1) if total_records > 0 else 0
+        stats["attendance_total"] = total_records
+        stats["attendance_percent"] = overall_pct
+
+        recent_assessments = (db.table("assessments")
+                  .select("id, status, assessment_type, uploaded_at, units(name), classes(name)")
+                  .eq("student_id", student_id)
+                  .order("uploaded_at", desc=True).limit(6).execute().data or [])
+
+        cl = (db.table("clearance_requests").select("status, stage")
+                .eq("student_id", student_id).order("created_at", desc=True).limit(1).execute().data or [])
+        stats["clearance_status"] = cl[0].get("status", "") if cl else ""
+        stats["clearance_stage"] = cl[0].get("stage", 0) if cl else 0
+
+        attachments = (db.table("industrial_attachments")
+                      .select("status").eq("student_id", student_id).execute().data or [])
+        stats["attachment_active"] = sum(1 for a in attachments if a.get("status") == "active")
+        stats["attachment_total"] = len(attachments)
+        stats["logbook_entries"] = db.table("digital_logbook").select("id", count="exact").eq("student_id", student_id).execute().count or 0
+        try:
+            stats["pending_competencies"] = (db.table("competency_tracking")
+                               .select("id", count="exact")
+                               .eq("student_id", student_id)
+                               .eq("competency_status", "NYC").execute().count or 0)
+        except Exception:
+            stats["pending_competencies"] = 0
+    except Exception as e:
+        print(f"[api_v1] student dashboard: {e}")
+        return _err("Could not load student dashboard.", 500)
+
+    return _ok({
+        "current_month": datetime.now().strftime("%B %Y"),
+        "student": {
+            "full_name": user.get("full_name"),
+            "admission_no": user.get("admission_no"),
+        },
+        "stats": stats,
+        "overall_pct": overall_pct,
+        "total_attended": total_attended,
+        "attendance_data": attendance_data,
+        "recent_assessments": recent_assessments,
+        "unread_notifications": get_user_notifications(student_id, unread_only=True, limit=3),
+    })
