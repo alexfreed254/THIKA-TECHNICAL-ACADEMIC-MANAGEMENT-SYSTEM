@@ -382,7 +382,7 @@
 
     <label>Assessment Name</label>
     <input type="text" id="asmName" placeholder="e.g. Oral 1, Practical 3, Written Assessment 2"
-           oninput="suggestName()">
+           oninput="onAsmNameInput()">
 
     <label>Maximum Marks (1–100, default 100)</label>
     <input type="number" id="asmMax" value="100" min="1" max="100" step="1"
@@ -531,9 +531,11 @@ function previewMaxConvert() {
 
 /* ── Add Assessment Modal ── */
 var selectedType = '';
+var nameManuallyEdited = false;
 
 function openAddModal() {
   selectedType = '';
+  nameManuallyEdited = false;
   document.getElementById('asmName').value = '';
   document.getElementById('asmMax').value  = '100';
   document.getElementById('modalErr').style.display = 'none';
@@ -556,19 +558,58 @@ function selectType(t) {
   document.getElementById('tTheory').classList.remove('selected');
   var map = { Oral:'tOral', Practical:'tPractical', Theory:'tTheory' };
   if (map[t]) document.getElementById(map[t]).classList.add('selected');
-  suggestName();
+  // Always refresh suggested name when switching type (unless user typed a custom name)
+  suggestName(true);
 }
 
 /* Auto-suggest name based on type and existing assessments */
-var existingNames = [{% for a in assessments %}"{{ a.assessment_name }}"{% if not loop.last %},{% endif %}{% endfor %}];
+var existingNames = [{% for a in assessments %}{{ a.assessment_name|tojson }}{% if not loop.last %},{% endif %}{% endfor %}];
 
-function suggestName() {
-  if (!selectedType || document.getElementById('asmName').value.trim()) return;
-  var prefix = selectedType;
-  var count = existingNames.filter(function(n) {
-    return n.toLowerCase().startsWith(prefix.toLowerCase());
-  }).length;
-  document.getElementById('asmName').value = prefix + ' ' + (count + 1);
+function isAutoSuggestedName(name) {
+  return /^(Oral|Practical|Theory|Written)(\s+\d+)?$/i.test((name || '').trim())
+      || /^Written\s+Assessment(\s+\d+)?$/i.test((name || '').trim());
+}
+
+function nextSuggestedName(type) {
+  var prefix = type;
+  var count = 0;
+  var lower = prefix.toLowerCase();
+  for (var i = 0; i < existingNames.length; i++) {
+    var n = (existingNames[i] || '').toLowerCase();
+    if (n === lower || n.indexOf(lower + ' ') === 0) count++;
+  }
+  // Theory also counts "Written Assessment N" style names
+  if (type === 'Theory') {
+    for (var j = 0; j < existingNames.length; j++) {
+      var w = (existingNames[j] || '').toLowerCase();
+      if (w.indexOf('written') === 0 && w.indexOf('theory') !== 0) count++;
+    }
+  }
+  return prefix + ' ' + (count + 1);
+}
+
+function onAsmNameInput() {
+  nameManuallyEdited = true;
+}
+
+function suggestName(forceFromTypeSwitch) {
+  if (!selectedType) return;
+  var nameEl = document.getElementById('asmName');
+  var current = (nameEl.value || '').trim();
+
+  // On type switch: update immediately if empty or still an auto name.
+  // Never overwrite a custom name the trainer typed.
+  if (forceFromTypeSwitch) {
+    if (current && nameManuallyEdited && !isAutoSuggestedName(current)) return;
+    nameEl.value = nextSuggestedName(selectedType);
+    nameManuallyEdited = false;
+    return;
+  }
+
+  if (!current) {
+    nameEl.value = nextSuggestedName(selectedType);
+    nameManuallyEdited = false;
+  }
 }
 
 function submitAddAssessment() {

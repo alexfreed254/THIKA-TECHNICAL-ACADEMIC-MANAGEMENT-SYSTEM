@@ -25,6 +25,7 @@ export default function MarksEntryPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selType, setSelType] = useState('')
   const [asmName, setAsmName] = useState('')
+  const [nameManual, setNameManual] = useState(false)
   const [asmMax, setAsmMax] = useState(100)
   const [modalErr, setModalErr] = useState('')
   const [toasts, setToasts] = useState<ToastItem[]>([])
@@ -81,6 +82,7 @@ export default function MarksEntryPage() {
       setModalOpen(false)
       setSelType('')
       setAsmName('')
+      setNameManual(false)
       setAsmMax(100)
       setModalErr('')
       toast('Assessment added')
@@ -155,6 +157,38 @@ export default function MarksEntryPage() {
     if (t === 'Oral') return 'microphone'
     if (t === 'Practical') return 'flask'
     return 'book'
+  }
+
+  function isAutoSuggestedName(name: string) {
+    const n = name.trim()
+    return (
+      /^(Oral|Practical|Theory|Written)(\s+\d+)?$/i.test(n) ||
+      /^Written\s+Assessment(\s+\d+)?$/i.test(n)
+    )
+  }
+
+  function nextSuggestedName(type: string) {
+    const names = ordered.map((a) => a.assessment_name || '')
+    const lower = type.toLowerCase()
+    let count = names.filter((n) => {
+      const v = n.toLowerCase()
+      return v === lower || v.startsWith(lower + ' ')
+    }).length
+    if (type === 'Theory') {
+      count += names.filter((n) => {
+        const v = n.toLowerCase()
+        return v.startsWith('written') && !v.startsWith('theory')
+      }).length
+    }
+    return `${type} ${count + 1}`
+  }
+
+  function pickType(t: 'Oral' | 'Practical' | 'Theory') {
+    setSelType(t)
+    const trimmed = asmName.trim()
+    if (trimmed && nameManual && !isAutoSuggestedName(trimmed)) return
+    setNameManual(false)
+    setAsmName(nextSuggestedName(t))
   }
 
   const pdfHref = `/trainer/marks-entry/marks-pdf?class_id=${encodeURIComponent(classId)}&unit_id=${encodeURIComponent(unitId)}&year=${year}&term=${term}`
@@ -270,7 +304,14 @@ export default function MarksEntryPage() {
                     No assessments yet — add one to start entering marks.
                   </span>
                 ) : null}
-                <button type="button" className="btn-add-assess" onClick={() => setModalOpen(true)}>
+                <button type="button" className="btn-add-assess" onClick={() => {
+                  setSelType('')
+                  setAsmName('')
+                  setNameManual(false)
+                  setAsmMax(100)
+                  setModalErr('')
+                  setModalOpen(true)
+                }}>
                   <i className="fas fa-plus" /> Add Assessment
                 </button>
               </div>
@@ -478,7 +519,7 @@ export default function MarksEntryPage() {
                   key={t}
                   type="button"
                   className={`${t === 'Theory' ? 'theory' : t.toLowerCase()} ${selType === t ? 'selected' : ''}`}
-                  onClick={() => setSelType(t)}
+                  onClick={() => pickType(t)}
                 >
                   {t === 'Theory' ? 'Theory / Written' : t}
                 </button>
@@ -489,7 +530,10 @@ export default function MarksEntryPage() {
               type="text"
               value={asmName}
               placeholder="e.g. Oral 1, Practical 3, Written Assessment 2"
-              onChange={(e) => setAsmName(e.target.value)}
+              onChange={(e) => {
+                setNameManual(true)
+                setAsmName(e.target.value)
+              }}
             />
             <label>Maximum Marks (1–100, default 100)</label>
             <input
