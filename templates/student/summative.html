@@ -1,0 +1,203 @@
+{% extends "student/base.html" %}
+{% block title %}Summative Assessment{% endblock %}
+{% block page_title %}Summative Assessment{% endblock %}
+
+{% block extra_style %}
+.sa-wrap { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.sa-hdr {
+  background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  border-radius: 16px; padding: 26px 30px; margin-bottom: 22px;
+  color: #fff; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.sa-hdr-info { flex: 1; min-width: 200px; }
+.sa-hdr-title { font-family: 'Poppins', sans-serif; font-size: 17px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.sa-hdr-sub { font-size: 12.5px; opacity: .78; margin-top: 4px; line-height: 1.45; max-width: 560px; }
+.sa-hdr-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12.5px; }
+.sa-hdr-meta i { opacity: .7; margin-right: 4px; }
+.ro-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(251,191,36,.18); border: 1px solid rgba(251,191,36,.45);
+  color: #fde68a; font-size: 11.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+}
+
+.sa-filter {
+  background: #fff; border-radius: 13px; padding: 16px 22px; margin-bottom: 20px;
+  border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;
+}
+.sa-filter label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px; }
+.sa-filter select {
+  padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff;
+}
+.btn-filter {
+  padding: 9px 20px; background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  color: #fff; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+
+.sa-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 22px; }
+.stat-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 13px; padding: 16px 18px;
+  text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.stat-card .n { font-size: 26px; font-weight: 800; line-height: 1.1; }
+.stat-card .l { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.leg {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 8px; border: 1px solid;
+}
+.leg-mastery { background:#f5f3ff; color:#5b21b6; border-color:#ddd6fe; }
+.leg-proficient { background:#f0fdf4; color:#166534; border-color:#bbf7d0; }
+.leg-competent { background:#eff6ff; color:#1e40af; border-color:#bfdbfe; }
+.leg-not_yet_competent { background:#fff7ed; color:#c2410c; border-color:#fed7aa; }
+.leg-crnm { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+
+.sa-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05); overflow: hidden;
+}
+.sa-card-hdr {
+  background: linear-gradient(135deg, #0f2c54, #1a3d6e);
+  color: #fff; padding: 12px 20px; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.sa-card-hdr span { font-size: 11.5px; font-weight: 500; color: rgba(255,255,255,.72); }
+
+.tbl-wrap { overflow-x: auto; }
+table.sa-tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+table.sa-tbl th {
+  text-align: left; padding: 11px 14px; background: #f8fafc; color: #475569;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 2px solid #e2e8f0;
+}
+table.sa-tbl td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #1e293b; }
+table.sa-tbl tbody tr:hover td { background: #f8fafc; }
+.unit-code {
+  display: inline-flex; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;
+  border-radius: 6px; padding: 2px 7px; font-size: 11px; font-weight: 700; margin-right: 6px;
+}
+.gb {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 48px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;
+}
+.gb-mastery { background:#f5f3ff; color:#5b21b6; }
+.gb-proficient { background:#dcfce7; color:#15803d; }
+.gb-competent { background:#dbeafe; color:#1d4ed8; }
+.gb-not_yet_competent { background:#ffedd5; color:#c2410c; }
+.gb-crnm { background:#fee2e2; color:#b91c1c; }
+.remarks { font-size: 12.5px; color: #64748b; max-width: 260px; }
+.empty {
+  text-align: center; padding: 56px 24px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+}
+.empty i { font-size: 48px; color: #cbd5e1; display: block; margin-bottom: 14px; }
+{% endblock %}
+
+{% block content %}
+<div class="sa-wrap">
+
+  <div class="sa-hdr">
+    <div class="sa-hdr-info">
+      <div class="sa-hdr-title">Summative Assessment</div>
+      <div class="sa-hdr-sub">
+        View your CDACC summative competence results for each unit.
+        This page is read-only — only your own records are shown.
+      </div>
+      <div class="sa-hdr-meta">
+        <span><i class="fas fa-user"></i>{{ profile.get('full_name','—') }}</span>
+        <span><i class="fas fa-id-card"></i>{{ profile.get('admission_no','—') }}</span>
+        {% if class_name %}<span><i class="fas fa-chalkboard"></i>{{ class_name }}</span>{% endif %}
+        {% if dept_name %}<span><i class="fas fa-sitemap"></i>{{ dept_name }}</span>{% endif %}
+      </div>
+    </div>
+    <span class="ro-badge"><i class="fas fa-eye"></i> Read only</span>
+  </div>
+
+  <form method="get" class="sa-filter">
+    <div>
+      <label>Year</label>
+      <select name="year">
+        {% for y in range(2024, 2028) %}
+        <option value="{{ y }}" {% if y|string == year|string %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Term</label>
+      <select name="term">
+        <option value="">All terms</option>
+        {% for t in ['1','2','3'] %}
+        <option value="{{ t }}" {% if t == term|string %}selected{% endif %}>Term {{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-filter"><i class="fas fa-filter"></i> Apply</button>
+  </form>
+
+  <div class="sa-stats">
+    <div class="stat-card"><div class="n" style="color:#0f2c54">{{ total }}</div><div class="l">Units assessed</div></div>
+    <div class="stat-card"><div class="n" style="color:#15803d">{{ passed }}</div><div class="l">Passed (M/P/C)</div></div>
+    <div class="stat-card"><div class="n" style="color:#c2410c">{{ nyc }}</div><div class="l">Not yet competent</div></div>
+    <div class="stat-card"><div class="n" style="color:#b91c1c">{{ crnm }}</div><div class="l">CRNM</div></div>
+  </div>
+
+  <div class="legend">
+    {% for key, label in competence_levels %}
+    <span class="leg leg-{{ key }}"><i class="fas fa-circle" style="font-size:7px"></i> {{ label }}</span>
+    {% endfor %}
+  </div>
+
+  {% if not results %}
+  <div class="empty">
+    <i class="fas fa-award"></i>
+    <h3 style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:6px">No summative results yet</h3>
+    <p style="font-size:13.5px;color:#64748b;max-width:420px;margin:0 auto;line-height:1.5">
+      Your HOD enters summative competence after unit assessment. Check back once results are published for Year {{ year }}{% if term %}, Term {{ term }}{% endif %}.
+    </p>
+  </div>
+  {% else %}
+  <div class="sa-card">
+    <div class="sa-card-hdr">
+      <div><i class="fas fa-award" style="margin-right:8px"></i>My Competence Results</div>
+      <span>{{ results|length }} unit(s) · Year {{ year }}{% if term %} · Term {{ term }}{% endif %}</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="sa-tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Unit</th>
+            <th>Term</th>
+            <th>Competence</th>
+            <th>Grade</th>
+            <th>Date</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr>
+            <td style="color:#94a3b8;font-weight:700;font-size:12px">{{ loop.index }}</td>
+            <td>
+              <span class="unit-code">{{ r.unit_code }}</span>
+              <strong>{{ r.unit_name }}</strong>
+            </td>
+            <td style="font-weight:600;color:#64748b">
+              {% if r.term %}T{{ r.term }}{% else %}—{% endif %}
+            </td>
+            <td style="font-weight:600">{{ r.competence_label }}</td>
+            <td><span class="gb gb-{{ r.competence }}">{{ r.abbr }}</span></td>
+            <td style="white-space:nowrap;color:#64748b;font-size:12.5px">
+              {% if r.assessment_date %}{{ r.assessment_date[:10] }}{% else %}—{% endif %}
+            </td>
+            <td class="remarks">{{ r.remarks or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -53,6 +53,7 @@ const studentNav: NavSection[] = [
       { label: 'My Units', to: '/student/units', icon: 'book-open' },
       { label: 'Lesson Attendance', to: '/student/attendance', icon: 'clipboard-list' },
       { label: 'Marks & Transcripts', to: '/student/marks', icon: 'chart-line' },
+      { label: 'Summative Assessment', to: '/student/summative', icon: 'award', external: true },
       { label: 'Portfolio of Evidence', to: '/student/portfolio', icon: 'folder-open' },
       { label: 'My Assessments', to: '/student/assessments', icon: 'file-alt' },
     ],

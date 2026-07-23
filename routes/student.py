@@ -2083,6 +2083,112 @@ def marks():
                            passed=passed)
 
 
+# ── Summative Competence (read-only, own records only) ────────────────────────
+
+@student_bp.route("/summative")
+@student_required
+def summative_competence():
+    """
+    Read-only view of the logged-in trainee's summative competence results.
+    Never exposes other trainees' records.
+    """
+    from routes.summative import (
+        COMPETENCE_LEVELS, COMP_ABBR, COMP_LABEL, PASSING, _normalize_competence,
+    )
+
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    year = request.args.get("year", str(datetime.now().year))
+    term = (request.args.get("term") or "").strip()
+
+    profile = (db.table("user_profiles")
+                 .select("full_name, admission_no")
+                 .eq("id", student_id).limit(1).execute().data or [])
+    profile = profile[0] if profile else {}
+
+    enrollment = (db.table("enrollments")
+                    .select("class_id, classes(name, departments(name))")
+                    .eq("student_id", student_id).limit(1).execute().data or [])
+    class_name = dept_name = ""
+    if enrollment:
+        cls = enrollment[0].get("classes") or {}
+        dept = cls.get("departments") or {}
+        class_name = cls.get("name", "")
+        dept_name = dept.get("name", "")
+
+    # Strictly scoped to this trainee
+    q = (db.table("summative_competences")
+           .select("unit_id, competence, remarks, assessment_date, year, term, "
+                   "units(id, code, name), "
+                   "assessor:user_profiles!summative_competences_assessed_by_fkey(full_name)")
+           .eq("student_id", student_id)
+           .eq("year", int(year)))
+    if term:
+        try:
+            q = q.eq("term", int(term))
+        except ValueError:
+            pass
+
+    try:
+        rows = q.order("assessment_date", desc=True).execute().data or []
+    except Exception:
+        # Fallback if assessor FK alias is unavailable
+        q2 = (db.table("summative_competences")
+                .select("unit_id, competence, remarks, assessment_date, year, term, "
+                        "units(id, code, name), assessed_by")
+                .eq("student_id", student_id)
+                .eq("year", int(year)))
+        if term:
+            try:
+                q2 = q2.eq("term", int(term))
+            except ValueError:
+                pass
+        rows = q2.order("assessment_date", desc=True).execute().data or []
+
+    results = []
+    summary = {k: 0 for k, _ in COMPETENCE_LEVELS}
+    for r in rows:
+        comp = _normalize_competence(r.get("competence"))
+        if comp in summary:
+            summary[comp] += 1
+        unit = r.get("units") or {}
+        assessor = r.get("assessor") or {}
+        results.append({
+            "unit_code": unit.get("code") or "—",
+            "unit_name": unit.get("name") or "—",
+            "competence": comp,
+            "competence_label": COMP_LABEL.get(comp, comp or "—"),
+            "abbr": COMP_ABBR.get(comp, "—"),
+            "passing": comp in PASSING,
+            "remarks": r.get("remarks") or "",
+            "assessment_date": r.get("assessment_date") or "",
+            "year": r.get("year"),
+            "term": r.get("term"),
+            "assessor_name": assessor.get("full_name") or "",
+        })
+
+    passed = sum(summary[k] for k in PASSING if k in summary)
+    total = len(results)
+
+    return render_template(
+        "student/summative.html",
+        profile=profile,
+        class_name=class_name,
+        dept_name=dept_name,
+        year=year,
+        term=term,
+        results=results,
+        summary=summary,
+        competence_levels=COMPETENCE_LEVELS,
+        total=total,
+        passed=passed,
+        nyc=summary.get("not_yet_competent", 0),
+        crnm=summary.get("crnm", 0),
+    )
+
+
 # ── Result Slip PDF Download ─────────────────────────────────────────────────────
 
 @student_bp.route("/marks/download-result-slip")
