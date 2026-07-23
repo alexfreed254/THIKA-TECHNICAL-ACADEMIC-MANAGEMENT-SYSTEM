@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Official Graduation List — {{ meta.class_name or 'TTTI' }}</title>
+<style>
+  :root{
+    --navy:#0e2a5e; --navy-deep:#0a1f47; --orange:#c2410c; --orange-line:#e85d04;
+    --ink:#1b2430; --muted:#5b6472; --border:#dbe2ee; --panel:#f3f6fb;
+    --green-bg:#e9f7ee; --green-tx:#166534;
+    --red-bg:#fdeceb; --red-tx:#991b1b;
+    --m-bg:#dcfce7; --m-tx:#15803d;
+    --p-bg:#dbeafe; --p-tx:#1d4ed8;
+    --c-bg:#ede9fe; --c-tx:#5b21b6;
+    --n-bg:#fff7ed; --n-tx:#c2410c;
+    --f-bg:#fee2e2; --f-tx:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    color:var(--ink); background:#e9edf3;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .no-print{ width:100%; max-width:1100px; margin:14px auto 0; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .btn{ padding:10px 22px; border:none; border-radius:8px; color:#fff; font-size:13px; font-weight:700; cursor:pointer; }
+  .btn-print{ background:linear-gradient(135deg,#c2410c,#9a3412); }
+  .btn-back{ background:#64748b; }
+
+  .page{
+    width:297mm; min-height:210mm; margin:14px auto 24px; background:#fff;
+    padding:12mm 12mm 14mm; position:relative;
+    box-shadow:0 6px 24px rgba(10,20,50,.12);
+  }
+  .top-bar{
+    position:absolute; top:0; left:0; right:0; height:6px;
+    background:linear-gradient(90deg, var(--orange-line), #f48c06 55%, #ffba08);
+  }
+
+  header{
+    display:flex; align-items:center; gap:16px;
+    padding-top:4px; padding-bottom:10px;
+    border-bottom:1.5px solid #cbd5e1;
+  }
+  .logo{
+    width:58px; height:58px; border-radius:8px; border:1px solid var(--border);
+    overflow:hidden; flex:none; background:#fff;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .logo img{ width:100%; height:100%; object-fit:contain; }
+  .brand{ flex:1; text-align:center; }
+  .brand h1{
+    margin:0; font-size:18px; font-weight:800; letter-spacing:.4px;
+    text-transform:uppercase; color:var(--navy-deep);
+  }
+  .brand .sub{
+    margin:3px 0 0; font-size:11px; font-style:italic; color:var(--muted); font-weight:500;
+  }
+  .brand .doc-title{
+    margin:8px 0 0; font-size:14px; font-weight:800; color:var(--orange);
+    letter-spacing:.3px; text-transform:uppercase;
+  }
+
+  .meta-block{ text-align:center; margin-top:10px; }
+  .meta-block .dept{
+    margin:0; font-size:12.5px; font-weight:800; color:var(--navy-deep); text-transform:uppercase;
+  }
+  .meta-block .course{
+    margin:4px 0 0; font-size:11.5px; font-weight:600; color:var(--navy);
+  }
+  .meta-block .stats{
+    margin:6px 0 0; font-size:10.5px; color:var(--muted); font-weight:600;
+  }
+
+  .tbl-wrap{ margin-top:12px; overflow:hidden; }
+  table.gl{
+    width:100%; border-collapse:collapse; table-layout:fixed; font-size:10px;
+  }
+  table.gl thead th{
+    background:var(--navy-deep); color:#fff;
+    padding:7px 5px; font-size:9px; font-weight:800;
+    text-align:center; border:1px solid #0a1f47; vertical-align:middle;
+  }
+  table.gl thead th.name{ text-align:left; padding-left:8px; }
+  table.gl thead th.unit{
+    font-size:8px; font-weight:700; line-height:1.25; word-wrap:break-word;
+  }
+  table.gl tbody td{
+    border:1px solid var(--border); padding:5px 4px; text-align:center; vertical-align:middle;
+  }
+  table.gl tbody tr:nth-child(even) td{ background:#fafbfd; }
+  table.gl .num{ color:#94a3b8; font-weight:700; width:28px; }
+  table.gl .adm{ font-weight:700; white-space:nowrap; }
+  table.gl .name{ text-align:left; padding-left:8px; font-weight:700; color:#0f172a; }
+  .g{
+    display:inline-block; min-width:28px; padding:2px 6px; border-radius:4px;
+    font-weight:800; font-size:10px;
+  }
+  .g-M{ background:var(--m-bg); color:var(--m-tx); }
+  .g-P{ background:var(--p-bg); color:var(--p-tx); }
+  .g-C{ background:var(--c-bg); color:var(--c-tx); }
+  .g-NYC{ background:var(--n-bg); color:var(--n-tx); }
+  .g-CRNM{ background:var(--f-bg); color:var(--f-tx); }
+  .g-miss{ color:#94a3b8; font-weight:700; }
+  .st{
+    display:inline-block; padding:3px 8px; border-radius:4px;
+    font-size:9px; font-weight:800; letter-spacing:.02em; text-transform:uppercase;
+  }
+  .st-yes{ background:var(--green-bg); color:var(--green-tx); }
+  .st-no{ background:var(--red-bg); color:var(--red-tx); }
+
+  .legend{
+    margin-top:10px; font-size:9.5px; color:var(--muted); line-height:1.45;
+    padding:8px 10px; background:var(--panel); border:1px solid var(--border); border-radius:6px;
+  }
+  .legend strong{ color:var(--navy-deep); }
+  .legend .elig{ color:var(--green-tx); font-weight:800; }
+
+  .auth{
+    display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:18px;
+    margin-top:18px; padding-top:14px; border-top:1px solid #cbd5e1; align-items:end;
+  }
+  .sign .role{
+    font-size:10px; font-weight:800; color:var(--navy-deep);
+    text-transform:uppercase; letter-spacing:.35px; margin-bottom:12px;
+  }
+  .sign .line{
+    border-top:1px solid #9fb0c9; margin-top:12px; padding-top:4px;
+    font-size:9.5px; color:var(--muted);
+  }
+  .stamp{
+    width:88px; height:88px; border:1.5px solid #94a3b8; border-radius:6px;
+    background:#f8fafc; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:6px;
+  }
+  .stamp .t{ font-size:9px; font-weight:800; color:var(--navy-deep); letter-spacing:.3px; }
+  .stamp .h{ font-size:8px; font-style:italic; color:#8496ad; margin-top:6px; line-height:1.3; }
+
+  footer{
+    margin-top:12px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;
+    font-size:8.5px; color:var(--muted);
+  }
+
+  @page{ size:A4 landscape; margin:8mm; }
+  @media print{
+    body{ background:none; }
+    .no-print{ display:none !important; }
+    .page{ box-shadow:none; margin:0; width:auto; min-height:auto; padding:0; }
+  }
+</style>
+</head>
+<body>
+
+{% if show_print_controls %}
+<div class="no-print">
+  <button class="btn btn-print" type="button" onclick="window.print()">🖨 Print / Save as PDF (Landscape)</button>
+  <button class="btn btn-back" type="button" onclick="history.back()">← Back</button>
+</div>
+{% endif %}
+
+<div class="page">
+  <div class="top-bar"></div>
+
+  <header>
+    <div class="logo">
+      <img src="/static/assets/KENYACOATOFARMS.png" alt="Government of Kenya"
+           onerror="this.parentElement.innerHTML='GOVT<br>LOGO'">
+    </div>
+    <div class="brand">
+      <h1>Thika Technical Training Institute</h1>
+      <div class="sub">Academic Management System — Official Document</div>
+      <div class="doc-title">Official Graduation List — Summative Competence</div>
+    </div>
+    <div class="logo">
+      <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI"
+           onerror="this.src='/ttti-logo.jpg'">
+    </div>
+  </header>
+
+  <div class="meta-block">
+    <p class="dept">Department: {{ meta.dept_name or '—' }}</p>
+    <p class="course">
+      Course: {{ meta.course_name or '—' }}{% if meta.course_code %} ({{ meta.course_code }}){% endif %}
+      &nbsp;|&nbsp; Class: {{ meta.class_name or '—' }}
+      &nbsp;|&nbsp; {{ period_label }}
+    </p>
+    <p class="stats">
+      Eligible: {{ stats.eligible }} ({{ stats.pct_eligible }}%)
+      &nbsp;·&nbsp; Not Eligible: {{ stats.not_eligible }}
+      &nbsp;·&nbsp; Total: {{ stats.total }}
+      &nbsp;·&nbsp; Units: {{ units|length }}
+      &nbsp;·&nbsp; Generated: {{ generated }}
+      {% if eligible_only %}&nbsp;·&nbsp; Eligible graduates only{% endif %}
+    </p>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="gl">
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th style="width:72px">Adm. No.</th>
+          <th class="name" style="width:140px">Trainee Name</th>
+          {% for u in units %}
+          <th class="unit" title="{{ u.code }} — {{ u.name }}">
+            {% if u.code %}<div>{{ u.code }}</div>{% endif %}
+            <div style="font-weight:600;opacity:.92">{{ u.name }}</div>
+          </th>
+          {% endfor %}
+          <th style="width:78px">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="num">{{ loop.index }}</td>
+          <td class="adm">{{ r.admission_no }}</td>
+          <td class="name">{{ r.full_name }}</td>
+          {% for u in units %}
+          {% set c = r.unit_results.get(u.id) %}
+          <td>
+            {% if c == 'mastery' %}<span class="g g-M">M</span>
+            {% elif c == 'proficient' %}<span class="g g-P">P</span>
+            {% elif c == 'competent' %}<span class="g g-C">C</span>
+            {% elif c == 'not_yet_competent' %}<span class="g g-NYC">NYC</span>
+            {% elif c == 'crnm' %}<span class="g g-CRNM">CRNM</span>
+            {% else %}<span class="g-miss">—</span>{% endif %}
+          </td>
+          {% endfor %}
+          <td>
+            {% if r.eligible %}
+            <span class="st st-yes">Eligible</span>
+            {% else %}
+            <span class="st st-no">Not Eligible</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 4 + units|length }}" style="padding:20px;color:#8496ad;font-style:italic">
+            No trainees on this list.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <strong>Legend (TVET CDACC):</strong>
+    M = Mastery (80–100%) &nbsp;|&nbsp; P = Proficient (65–79%) &nbsp;|&nbsp; C = Competent (50–64%) &nbsp;|&nbsp;
+    NYC = Not Yet Competent (0–49%) &nbsp;|&nbsp; CRNM = Course Requirement Not Met &nbsp;|&nbsp; — = Missing.
+    A trainee is <span class="elig">ELIGIBLE</span> only when every unit is Mastery, Proficient, or Competent.
+  </div>
+
+  <div class="auth">
+    <div class="sign">
+      <div class="role">Head of Department</div>
+      <div class="line">Name: ____________________</div>
+      <div class="line">Sign: ____________________</div>
+      <div class="line">Date: ____________________</div>
+    </div>
+    <div class="sign">
+      <div class="role">Examination Officer</div>
+      <div class="line">Name: ____________________</div>
+      <div class="line">Sign: ____________________</div>
+      <div class="line">Date: ____________________</div>
+    </div>
+    <div class="sign">
+      <div class="role">Chief Principal</div>
+      <div class="line">Name: ____________________</div>
+      <div class="line">Sign: ____________________</div>
+      <div class="line">Date: ____________________</div>
+    </div>
+    <div class="stamp">
+      <div class="t">OFFICIAL STAMP</div>
+      <div class="h">(Affix institute stamp here)</div>
+    </div>
+  </div>
+
+  <footer>
+    <span>© {{ year or '' }} Thika Technical Training Institute — All Rights Reserved</span>
+    <span>Official Graduation List — Summative Competence</span>
+    <span>{{ generated }}</span>
+  </footer>
+</div>
+</body>
+</html>

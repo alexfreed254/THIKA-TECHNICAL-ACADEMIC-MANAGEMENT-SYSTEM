@@ -5,33 +5,91 @@
 {% block extra_style %}
 {% include "summative/_styles.html" %}
 <style>
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
-.stat{background:#fff;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:4px solid #0f2744}
-.stat.ok{border-left-color:#16a34a}.stat.no{border-left-color:#dc2626}.stat.pct{border-left-color:#7c3aed}
-.stat .n{font-size:28px;font-weight:800;color:#0f2744}
-.stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;font-weight:700}
-.wrap{overflow-x:auto}
-table.gl{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
-table.gl th{padding:8px 10px;background:#0f2744;color:#fff;font-size:10px;font-weight:700;text-align:center;white-space:nowrap;position:sticky;top:0}
-table.gl th.name{text-align:left}
-table.gl td{padding:7px 8px;border-bottom:1px solid #f1f5f9;text-align:center;vertical-align:middle}
-table.gl td.name{text-align:left;font-weight:600;color:#111827;white-space:nowrap}
-table.gl tbody tr:hover{background:#f8fafc}
-.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;text-transform:uppercase}
-.badge-yes{background:#dcfce7;color:#166534}.badge-no{background:#fee2e2;color:#991b1b}
-.cell-ma{background:#ede9fe;color:#5b21b6;font-weight:700;font-size:10px}
-.cell-p{background:#dcfce7;color:#166534;font-weight:700;font-size:10px}
-.cell-c{background:#dbeafe;color:#1e40af;font-weight:700;font-size:10px}
-.cell-n{background:#fff7ed;color:#c2410c;font-weight:700;font-size:10px}
-.cell-f{background:#fee2e2;color:#991b1b;font-weight:700;font-size:10px}
-.cell-m{background:#f8fafc;color:#94a3b8;font-weight:700;font-size:10px}
-.adm{font-size:11px;color:#94a3b8;font-weight:500}
-.official-note{margin:12px 0 0;font-size:12px;color:#64748b;line-height:1.5}
-.course-banner{background:linear-gradient(135deg,#0f2744 0%,#1565c0 100%);color:#fff;border-radius:10px;padding:16px 20px;margin-bottom:18px}
-.course-banner h2{margin:0 0 4px;font-size:18px;font-weight:800}
-.course-banner p{margin:0;font-size:13px;opacity:.9}
+.gl-page{
+  --navy:#0e2a5e; --navy-deep:#0a1f47; --orange:#c2410c; --orange-line:#e85d04;
+  --muted:#5b6472; --border:#dbe2ee; --panel:#f3f6fb;
+  background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;
+  box-shadow:0 4px 18px rgba(15,39,68,.08); margin-bottom:22px; position:relative;
+}
+.gl-page .top-bar{ height:6px; background:linear-gradient(90deg,#e85d04,#f48c06 55%,#ffba08); }
+.gl-hdr{
+  display:flex; align-items:center; gap:16px; padding:18px 22px 14px;
+  border-bottom:1.5px solid #cbd5e1;
+}
+.gl-logo{
+  width:58px; height:58px; border-radius:8px; border:1px solid var(--border);
+  overflow:hidden; flex:none; background:#fff;
+  display:flex; align-items:center; justify-content:center;
+}
+.gl-logo img{ width:100%; height:100%; object-fit:contain; }
+.gl-brand{ flex:1; text-align:center; }
+.gl-brand h1{
+  margin:0; font-size:18px; font-weight:800; letter-spacing:.4px;
+  text-transform:uppercase; color:var(--navy-deep);
+}
+.gl-brand .sub{ margin:3px 0 0; font-size:12px; font-style:italic; color:var(--muted); }
+.gl-brand .doc-title{
+  margin:8px 0 0; font-size:14px; font-weight:800; color:var(--orange);
+  letter-spacing:.3px; text-transform:uppercase;
+}
+.gl-meta{ text-align:center; padding:12px 20px 4px; }
+.gl-meta .dept{ margin:0; font-size:13px; font-weight:800; color:var(--navy-deep); text-transform:uppercase; }
+.gl-meta .course{ margin:5px 0 0; font-size:12.5px; font-weight:600; color:var(--navy); }
+.gl-meta .stats{ margin:6px 0 0; font-size:12px; color:var(--muted); font-weight:600; }
+
+.gl-body{ padding:12px 18px 20px; }
+.wrap{ overflow-x:auto; }
+table.gl{ width:100%; border-collapse:collapse; font-size:12px; min-width:700px; }
+table.gl th{
+  padding:9px 8px; background:#0a1f47; color:#fff; font-size:10px; font-weight:800;
+  text-align:center; white-space:normal; vertical-align:middle; border:1px solid #0a1f47;
+}
+table.gl th.name{ text-align:left; padding-left:10px; }
+table.gl th.unit{ font-size:9.5px; line-height:1.25; font-weight:700; }
+table.gl td{
+  padding:8px 7px; border:1px solid #dbe2ee; text-align:center; vertical-align:middle;
+}
+table.gl tbody tr:nth-child(even) td{ background:#fafbfd; }
+table.gl td.name{ text-align:left; font-weight:700; color:#0f172a; padding-left:10px; white-space:nowrap; }
+.adm{ font-size:11px; color:#64748b; font-weight:700; }
+.g{ display:inline-block; min-width:30px; padding:3px 7px; border-radius:5px; font-weight:800; font-size:11px; }
+.g-M{ background:#dcfce7; color:#15803d; }
+.g-P{ background:#dbeafe; color:#1d4ed8; }
+.g-C{ background:#ede9fe; color:#5b21b6; }
+.g-NYC{ background:#fff7ed; color:#c2410c; }
+.g-CRNM{ background:#fee2e2; color:#b91c1c; }
+.g-miss{ color:#94a3b8; font-weight:700; }
+.st{ display:inline-block; padding:4px 10px; border-radius:5px; font-size:10px; font-weight:800; text-transform:uppercase; }
+.st-yes{ background:#e9f7ee; color:#166534; }
+.st-no{ background:#fdeceb; color:#991b1b; }
+
+.gl-legend{
+  margin-top:12px; font-size:12px; color:#5b6472; line-height:1.5;
+  padding:10px 12px; background:#f3f6fb; border:1px solid #dbe2ee; border-radius:8px;
+}
+.gl-legend strong{ color:#0a1f47; }
+.gl-legend .elig{ color:#166534; font-weight:800; }
+
+.gl-auth{
+  display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:18px;
+  margin-top:18px; padding-top:16px; border-top:1px solid #cbd5e1; align-items:end;
+}
+.gl-sign .role{ font-size:11px; font-weight:800; color:#0a1f47; text-transform:uppercase; letter-spacing:.35px; margin-bottom:12px; }
+.gl-sign .line{ border-top:1px solid #9fb0c9; margin-top:14px; padding-top:5px; font-size:11px; color:#5b6472; }
+.gl-stamp{
+  width:96px; height:96px; border:1.5px solid #94a3b8; border-radius:6px; background:#f8fafc;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px;
+}
+.gl-stamp .t{ font-size:10px; font-weight:800; color:#0a1f47; }
+.gl-stamp .h{ font-size:9px; font-style:italic; color:#8496ad; margin-top:6px; line-height:1.3; }
+
 .filter-check{display:flex;align-items:center;gap:8px;padding:10px 0;font-size:13px;font-weight:600;color:#475569}
 .filter-check input{width:16px;height:16px}
+.official-note{margin:12px 0 0;font-size:12px;color:#64748b;line-height:1.5}
+@media(max-width:900px){
+  .gl-auth{ grid-template-columns:1fr 1fr; }
+  .gl-stamp{ grid-column:1 / -1; justify-self:start; }
+}
 </style>
 {% endblock %}
 
@@ -71,9 +129,9 @@ table.gl tbody tr:hover{background:#f8fafc}
         {% if class_id and rows %}
         <div class="form-group">
           <div class="export-row">
-            <a class="btn-apply btn-pdf"
+            <a class="btn-apply btn-pdf" target="_blank"
                href="{{ url_for('summative.graduation_pdf', class_id=class_id, year=year, term=term or '', eligible_only='1' if eligible_only else '') }}">
-              <i class="fas fa-file-pdf"></i> PDF
+              <i class="fas fa-file-pdf"></i> Download PDF
             </a>
             <a class="btn-apply btn-xls"
                href="{{ url_for('summative.graduation_excel', class_id=class_id, year=year, term=term or '', eligible_only='1' if eligible_only else '') }}">
@@ -91,130 +149,151 @@ table.gl tbody tr:hover{background:#f8fafc}
     </form>
     <p class="official-note">
       A trainee is <strong>eligible</strong> when every unit is rated <strong>Mastery</strong>, <strong>Proficient</strong>, or <strong>Competent</strong> (TVET CDACC scale).
-      Not Yet Competent, Course Requirement Not Met (CRNM), or missing unit results make a trainee not eligible.
-      Excel includes a separate <em>Eligible Only</em> sheet and an authentication sign-off page.
+      Official PDF opens in landscape with government and institute logos for print / save.
     </p>
   </div>
 
   {% if class_id %}
-  {% if course_name or dept_name %}
-  <div class="course-banner">
-    <h2>{{ class_name }}</h2>
-    <p>
-      {% if dept_name %}{{ dept_name }}{% endif %}
-      {% if course_name %} · {{ course_name }}{% if course_code %} ({{ course_code }}){% endif %}{% endif %}
-      {% if year %} · {{ year }}{% endif %}{% if term %} Term {{ term }}{% endif %}
-    </p>
+  <div class="gl-page">
+    <div class="top-bar"></div>
+    <div class="gl-hdr">
+      <div class="gl-logo">
+        <img src="/static/assets/KENYACOATOFARMS.png" alt="Government of Kenya"
+             onerror="this.style.display='none'">
+      </div>
+      <div class="gl-brand">
+        <h1>Thika Technical Training Institute</h1>
+        <div class="sub">Academic Management System — Official Document</div>
+        <div class="doc-title">Official Graduation List — Summative Competence</div>
+      </div>
+      <div class="gl-logo">
+        <img src="{{ LOGO_URL or '/static/assets/THIKATTILOGO.jpg' }}" alt="TTTI"
+             onerror="this.src='/ttti-logo.jpg'">
+      </div>
+    </div>
+
+    <div class="gl-meta">
+      <p class="dept">Department: {{ dept_name or '—' }}</p>
+      <p class="course">
+        Course: {{ course_name or '—' }}{% if course_code %} ({{ course_code }}){% endif %}
+        &nbsp;|&nbsp; Class: {{ class_name or '—' }}
+        &nbsp;|&nbsp; {% if year %}Year {{ year }}{% endif %}{% if term %} · Term {{ term }}{% endif %}
+      </p>
+      <p class="stats">
+        Eligible: {{ stats.eligible }} ({{ stats.pct_eligible }}%)
+        &nbsp;·&nbsp; Not Eligible: {{ stats.not_eligible }}
+        &nbsp;·&nbsp; Total: {{ stats.total }}
+        &nbsp;·&nbsp; Units: {{ units|length }}
+        {% if eligible_only %}&nbsp;·&nbsp; Eligible only{% endif %}
+      </p>
+    </div>
+
+    <div class="gl-body">
+      {% if rows and units %}
+      <div class="wrap">
+        <table class="gl">
+          <thead>
+            <tr>
+              <th style="width:36px">#</th>
+              <th style="width:90px">Adm. No.</th>
+              <th class="name">Trainee Name</th>
+              {% for u in units %}
+              <th class="unit" title="{{ u.code }} — {{ u.name }}">
+                {% if u.code %}<div>{{ u.code }}</div>{% endif %}
+                <div style="font-weight:600;opacity:.92">{{ u.name }}</div>
+              </th>
+              {% endfor %}
+              <th style="width:100px">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr>
+              <td style="color:#94a3b8;font-weight:700">{{ loop.index }}</td>
+              <td class="adm">{{ r.admission_no }}</td>
+              <td class="name">{{ r.full_name }}</td>
+              {% for u in units %}
+              {% set c = r.unit_results.get(u.id) %}
+              <td>
+                {% if c == 'mastery' %}<span class="g g-M">M</span>
+                {% elif c == 'proficient' %}<span class="g g-P">P</span>
+                {% elif c == 'competent' %}<span class="g g-C">C</span>
+                {% elif c == 'not_yet_competent' %}<span class="g g-NYC">NYC</span>
+                {% elif c == 'crnm' %}<span class="g g-CRNM">CRNM</span>
+                {% else %}<span class="g-miss">—</span>{% endif %}
+              </td>
+              {% endfor %}
+              <td>
+                {% if r.eligible %}<span class="st st-yes">Eligible</span>
+                {% else %}<span class="st st-no">Not Eligible</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gl-legend">
+        <strong>Legend (TVET CDACC):</strong>
+        M = Mastery (80–100%) &nbsp;|&nbsp; P = Proficient (65–79%) &nbsp;|&nbsp; C = Competent (50–64%) &nbsp;|&nbsp;
+        NYC = Not Yet Competent (0–49%) &nbsp;|&nbsp; CRNM = Course Requirement Not Met &nbsp;|&nbsp; — = Missing.
+        A trainee is <span class="elig">ELIGIBLE</span> only when every unit is Mastery, Proficient, or Competent.
+      </div>
+
+      <div class="gl-auth">
+        <div class="gl-sign">
+          <div class="role">Head of Department</div>
+          <div class="line">Name: ____________________</div>
+          <div class="line">Sign: ____________________</div>
+          <div class="line">Date: ____________________</div>
+        </div>
+        <div class="gl-sign">
+          <div class="role">Examination Officer</div>
+          <div class="line">Name: ____________________</div>
+          <div class="line">Sign: ____________________</div>
+          <div class="line">Date: ____________________</div>
+        </div>
+        <div class="gl-sign">
+          <div class="role">Chief Principal</div>
+          <div class="line">Name: ____________________</div>
+          <div class="line">Sign: ____________________</div>
+          <div class="line">Date: ____________________</div>
+        </div>
+        <div class="gl-stamp">
+          <div class="t">OFFICIAL STAMP</div>
+          <div class="h">(Affix institute stamp here)</div>
+        </div>
+      </div>
+      {% elif not units %}
+      <div class="empty">
+        <i class="fas fa-book-open"></i>
+        No units assigned to this class. Assign units under Class Units / Assign Units first.
+      </div>
+      {% else %}
+      <div class="empty">No trainees enrolled in this class.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if rows %}
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+    <a class="btn-apply btn-pdf" target="_blank"
+       href="{{ url_for('summative.graduation_pdf', class_id=class_id, year=year, term=term or '', eligible_only='1' if eligible_only else '') }}">
+      <i class="fas fa-file-pdf"></i> Download Official PDF (Landscape)
+    </a>
+    {% if not eligible_only %}
+    <a class="btn-apply btn-outline" target="_blank"
+       href="{{ url_for('summative.graduation_pdf', class_id=class_id, year=year, term=term or '', eligible_only='1') }}">
+      <i class="fas fa-user-check"></i> Eligible Only PDF
+    </a>
+    {% endif %}
+    <a class="btn-apply btn-xls"
+       href="{{ url_for('summative.graduation_excel', class_id=class_id, year=year, term=term or '', eligible_only='1' if eligible_only else '') }}">
+      <i class="fas fa-file-excel"></i> Official Excel
+    </a>
   </div>
   {% endif %}
 
-  <div class="stats">
-    <div class="stat"><div class="n">{{ stats.total }}</div><div class="l">Total Trainees</div></div>
-    <div class="stat ok"><div class="n">{{ stats.eligible }}</div><div class="l">Eligible to Graduate</div></div>
-    <div class="stat no"><div class="n">{{ stats.not_eligible }}</div><div class="l">Not Yet Eligible</div></div>
-    <div class="stat pct"><div class="n">{{ stats.pct_eligible }}%</div><div class="l">Eligibility Rate</div></div>
-    <div class="stat"><div class="n">{{ units|length }}</div><div class="l">Units Required</div></div>
-  </div>
-
-  <div class="legend">
-    <span class="cell-ma">M — Mastery (80–100%)</span>
-    <span class="cell-p">P — Proficient (65–79%)</span>
-    <span class="cell-c">C — Competent (50–64%)</span>
-    <span class="cell-n">NYC — Not Yet Competent (0–49%)</span>
-    <span class="cell-f">CRNM — Course Requirement Not Met</span>
-    <span class="cell-m">— Missing</span>
-  </div>
-
-  <div class="card">
-    <div class="card-hdr">
-      <h3>{{ class_name or 'Class' }} — {% if eligible_only %}Eligible Graduates{% else %}Full Matrix Preview{% endif %}</h3>
-      <div class="export-row">
-        {% if rows %}
-        <a class="btn-apply btn-pdf" style="padding:8px 12px;font-size:12px"
-           href="{{ url_for('summative.graduation_pdf', class_id=class_id, year=year, term=term or '', eligible_only='1' if eligible_only else '') }}">
-          <i class="fas fa-file-pdf"></i> Official PDF
-        </a>
-        <a class="btn-apply btn-xls" style="padding:8px 12px;font-size:12px"
-           href="{{ url_for('summative.graduation_excel', class_id=class_id, year=year, term=term or '', eligible_only='1' if eligible_only else '') }}">
-          <i class="fas fa-file-excel"></i> Official Excel
-        </a>
-        {% if not eligible_only %}
-        <a class="btn-apply btn-outline" style="padding:8px 12px;font-size:12px"
-           href="{{ url_for('summative.graduation_pdf', class_id=class_id, year=year, term=term or '', eligible_only='1') }}">
-          <i class="fas fa-user-check"></i> Eligible Only PDF
-        </a>
-        {% endif %}
-        {% endif %}
-        <a href="{{ url_for('summative.entry', class_id=class_id) }}" style="font-size:12px;font-weight:600;color:#1565c0;text-decoration:none">
-          <i class="fas fa-edit"></i> Enter Competence
-        </a>
-      </div>
-    </div>
-    {% if rows and units %}
-    <div class="wrap">
-      <table class="gl">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th class="name">Trainee</th>
-            <th>Adm. No.</th>
-            {% if not eligible_only %}
-            {% for u in units %}
-            <th title="{{ u.name }}">{% if u.code %}{{ u.code }}{% else %}{{ u.name[:14] }}{% endif %}</th>
-            {% endfor %}
-            {% endif %}
-            <th>Status</th>
-            {% if not eligible_only %}<th>Gaps</th>{% endif %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr>
-            <td>{{ loop.index }}</td>
-            <td class="name">{{ r.full_name }}</td>
-            <td><span class="adm">{{ r.admission_no }}</span></td>
-            {% if not eligible_only %}
-            {% for u in units %}
-            {% set c = r.unit_results.get(u.id) %}
-            <td class="{% if c == 'mastery' %}cell-ma{% elif c == 'proficient' %}cell-p{% elif c == 'competent' %}cell-c{% elif c == 'not_yet_competent' %}cell-n{% elif c == 'crnm' %}cell-f{% else %}cell-m{% endif %}">
-              {% if c == 'mastery' %}M
-              {% elif c == 'proficient' %}P
-              {% elif c == 'competent' %}C
-              {% elif c == 'not_yet_competent' %}NYC
-              {% elif c == 'crnm' %}CRNM
-              {% else %}—{% endif %}
-            </td>
-            {% endfor %}
-            {% endif %}
-            <td>
-              {% if r.eligible %}
-              <span class="badge badge-yes">Eligible</span>
-              {% else %}
-              <span class="badge badge-no">Not Eligible</span>
-              {% endif %}
-            </td>
-            {% if not eligible_only %}
-            <td style="font-size:10px;color:#64748b">
-              {% if r.missing %}<span title="Missing">{{ r.missing }} missing</span>{% endif %}
-              {% if r.nyc %}{% if r.missing %} · {% endif %}<span title="NYC">{{ r.nyc }} NYC</span>{% endif %}
-              {% if r.crnm %}{% if r.missing or r.nyc %} · {% endif %}<span title="Course Requirement Not Met">{{ r.crnm }} CRNM</span>{% endif %}
-              {% if not r.missing and not r.nyc and not r.crnm %}—{% endif %}
-            </td>
-            {% endif %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% elif not units %}
-    <div class="empty">
-      <i class="fas fa-book-open"></i>
-      No units assigned to this class. Assign units under Class Units / Assign Units first.
-    </div>
-    {% else %}
-    <div class="empty">No trainees enrolled in this class.</div>
-    {% endif %}
-  </div>
   {% else %}
   <div class="card">
     <div class="empty">

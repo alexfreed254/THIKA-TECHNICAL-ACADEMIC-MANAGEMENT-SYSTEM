@@ -1290,15 +1290,7 @@ def graduation_excel():
 @summative_bp.route("/graduation-list/export.pdf")
 @admin_required
 def graduation_pdf():
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
-    )
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT
-
+    """Official landscape graduation list — print/save as PDF in browser."""
     db = get_service_client()
     class_id, year, term, eligible_only = _graduation_export_params()
     if not class_id:
@@ -1312,88 +1304,19 @@ def graduation_pdf():
         flash(str(e), "error")
         return redirect(url_for("summative.graduation_list"))
 
-    buf = BytesIO()
-    doc = SimpleDocTemplate(
-        buf, pagesize=landscape(A4),
-        leftMargin=12 * mm, rightMargin=12 * mm,
-        topMargin=12 * mm, bottomMargin=14 * mm,
+    return render_template(
+        "summative/graduation_list_pdf.html",
+        meta=meta,
+        units=units,
+        rows=rows,
+        stats=stats,
+        year=year,
+        term=term,
+        period_label=_period_label(year, term),
+        eligible_only=eligible_only,
+        generated=datetime.now().strftime("%d %b %Y"),
+        show_print_controls=True,
     )
-    styles = getSampleStyleSheet()
-    small = ParagraphStyle(
-        "sm", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#64748B"),
-        alignment=TA_LEFT, spaceBefore=8,
-    )
-    cell_s = ParagraphStyle("c", parent=styles["Normal"], fontSize=7, leading=9)
-
-    story = pdf_letterhead(
-        "Official Graduation List — Summative Competence", doc.width,
-        dept_name=meta["dept_name"],
-        meta_lines=[
-            f"Course: {meta['course_name'] or '—'}  |  "
-            f"Class: {meta['class_name']}  |  {_period_label(year, term)}",
-            f"Eligible: {stats['eligible']} ({stats['pct_eligible']}%)  ·  "
-            f"Not Eligible: {stats['not_eligible']}  ·  Total: {stats['total']}  ·  "
-            f"Units: {len(units)}  ·  Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
-        ],
-    )
-
-    headers = ["#", "Adm. No.", "Trainee Name"] + [
-        Paragraph(f"<b>{(u.get('code') or u.get('name') or 'U')[:10]}</b>", cell_s)
-        for u in units
-    ] + ["Status"]
-    data = [headers]
-    for i, r in enumerate(rows, 1):
-        row = [str(i), r["admission_no"], Paragraph(r["full_name"], cell_s)]
-        for u in units:
-            row.append(COMP_ABBR.get(r["unit_results"].get(u["id"]), "—"))
-        row.append("ELIGIBLE" if r["eligible"] else "NOT ELIGIBLE")
-        data.append(row)
-
-    name_w = 45 * mm
-    unit_w = max(12 * mm, min(18 * mm, (180 * mm) / max(len(units), 1)))
-    col_widths = [8 * mm, 22 * mm, name_w] + [unit_w] * len(units) + [28 * mm]
-
-    table = Table(data, colWidths=col_widths, repeatRows=1)
-    style_cmds = [
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("ALIGN", (2, 1), (2, -1), "LEFT"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#CBD5E1")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-    ]
-    for i, r in enumerate(rows, 1):
-        if r["eligible"]:
-            style_cmds.append(("BACKGROUND", (-1, i), (-1, i), colors.HexColor("#DCFCE7")))
-            style_cmds.append(("TEXTCOLOR", (-1, i), (-1, i), colors.HexColor("#166534")))
-        else:
-            style_cmds.append(("BACKGROUND", (-1, i), (-1, i), colors.HexColor("#FEE2E2")))
-            style_cmds.append(("TEXTCOLOR", (-1, i), (-1, i), colors.HexColor("#991B1B")))
-        style_cmds.append(("FONTNAME", (-1, i), (-1, i), "Helvetica-Bold"))
-
-    style_cmds.extend(pdf_header_style_cmds(0))
-    table.setStyle(TableStyle(style_cmds))
-    story.append(table)
-    story.append(Spacer(1, 8))
-    story.append(Paragraph(
-        "Legend (TVET CDACC): <b>M</b> = Mastery (80-100%) &nbsp;|&nbsp; <b>P</b> = Proficient (65-79%) &nbsp;|&nbsp; "
-        "<b>C</b> = Competent (50-64%) &nbsp;|&nbsp; <b>NYC</b> = Not Yet Competent (0-49%) &nbsp;|&nbsp; "
-        "<b>CRNM</b> = Course Requirement Not Met &nbsp;|&nbsp; <b>—</b> = Missing. "
-        "A trainee is <b>ELIGIBLE</b> only when every unit is Mastery, Proficient, or Competent.",
-        small,
-    ))
-    story += pdf_signature_block(doc.width, officer_title="Head of Department",
-                                 extra_officers=("Examination Officer",))
-
-    doc.build(story)
-    buf.seek(0)
-    safe = (meta["class_name"] or "class").replace(" ", "_")[:40]
-    term_s = f"_T{term}" if term else ""
-    suffix = "_Eligible" if eligible_only else ""
-    fname = f"TTTI_Graduation_List_{safe}{term_s}_{year}{suffix}.pdf"
-    return _attach_pdf(make_response(buf.getvalue()), fname)
 
 
 @summative_bp.route("/api/units/<class_id>")
