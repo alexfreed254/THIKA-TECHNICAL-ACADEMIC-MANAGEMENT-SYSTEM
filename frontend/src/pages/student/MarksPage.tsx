@@ -98,7 +98,7 @@ export default function StudentMarksPage() {
             className="ml-auto inline-flex items-center gap-1.5 rounded-[9px] px-5 py-2.5 text-[13px] font-bold text-white"
             style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)' }}
           >
-            <i className="fas fa-file-pdf" /> Result slip
+            <i className="fas fa-file-pdf" /> Download Transcript
           </a>
         </div>
 
