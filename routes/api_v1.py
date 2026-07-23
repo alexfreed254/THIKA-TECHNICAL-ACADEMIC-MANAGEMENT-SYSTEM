@@ -935,13 +935,19 @@ def api_student_marks():
     overall = round(sum(u["pct"] for u in scored) / len(scored), 1) if scored else 0
     passed = sum(1 for u in scored if u["final_grade"] in ("M", "P", "C"))
 
+    from academic_result_transcript import build_marks_transcript_view
+    table = build_marks_transcript_view(units_data)
+
     return _ok({
         "profile": profile,
         "class_name": class_name,
         "dept_name": dept_name,
         "year": year,
         "term": term,
-        "units_data": units_data,
+        "units_data": table["units_rows"],
+        "oral_labels": table["oral_labels"],
+        "practical_labels": table["practical_labels"],
+        "written_labels": table["written_labels"],
         "overall": overall,
         "passed": passed,
         "scored_units": len(scored),

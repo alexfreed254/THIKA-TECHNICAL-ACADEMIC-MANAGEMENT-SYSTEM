@@ -80,6 +80,9 @@ export async function fetchStudentMarks(params: { year?: string | number; term?:
     dept_name: string
     year: string
     term: string
+    oral_labels: string[]
+    practical_labels: string[]
+    written_labels: string[]
     units_data: Array<{
       unit: { name?: string; code?: string }
       term?: number
@@ -91,6 +94,9 @@ export async function fetchStudentMarks(params: { year?: string | number; term?:
         grade: string | null
         pct: number | null
       }>
+      oral_cells: string[]
+      practical_cells: string[]
+      written_cells: string[]
       total_obt: number
       total_max: number
       pct: number

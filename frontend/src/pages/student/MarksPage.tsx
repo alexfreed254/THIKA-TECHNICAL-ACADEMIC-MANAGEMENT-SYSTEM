@@ -35,10 +35,13 @@ export default function StudentMarksPage() {
   }
 
   const data = q.data!
+  const oral = data.oral_labels || []
+  const practical = data.practical_labels || []
+  const written = data.written_labels || []
 
   return (
     <PortalShell title="Marks & Transcript">
-      <div className="mx-auto max-w-[1060px] p-6">
+      <div className="mx-auto max-w-[1200px] p-6">
         <div
           className="mb-6 flex flex-wrap items-center gap-5 rounded-2xl px-[30px] py-[26px] text-white"
           style={{ background: 'linear-gradient(135deg,#0f2c54,#1a3d6e)' }}
@@ -48,7 +51,7 @@ export default function StudentMarksPage() {
             <div className="text-[17px] font-extrabold uppercase tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>
               Marks & Transcript
             </div>
-            <div className="mt-0.5 text-xs text-white/75">Formative assessment results</div>
+            <div className="mt-0.5 text-xs text-white/75">Same layout as the downloadable Academic Result Transcript</div>
             <div className="mt-2.5 flex flex-wrap gap-4 text-[12.5px]">
               <span><i className="fas fa-user mr-1 opacity-70" />{data.profile.full_name || '—'}</span>
               <span><i className="fas fa-id-card mr-1 opacity-70" />{data.profile.admission_no || '—'}</span>
@@ -112,50 +115,165 @@ export default function StudentMarksPage() {
         {data.units_data.length === 0 ? (
           <EmptyState title="No formative marks for this filter" hint="Marks appear after your trainer enters them." />
         ) : (
-          data.units_data.map((u, idx) => (
-            <div key={idx} className="mb-5 overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-sm">
-              <div
-                className="flex flex-wrap items-center gap-3 px-[22px] py-3.5"
-                style={{ background: 'linear-gradient(135deg,#0f2c54,#1a3d6e)' }}
-              >
-                <span className="rounded-md bg-white/18 px-2.5 py-0.5 text-xs font-bold text-white">
-                  {u.unit?.code || '—'}
-                </span>
-                <span className="flex-1 text-[15px] font-bold text-white">{u.unit?.name || 'Unit'}</span>
-                <span className="rounded-md bg-white/12 px-2 py-0.5 text-[11.5px] text-white/75">
-                  {u.has_marks ? `${u.pct}% · ${u.final_grade}` : 'Pending'}
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      {['Assessment', 'Type', 'Score', 'Max', '%', 'Grade'].map((h) => (
-                        <th key={h} className="px-4 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {u.assessments.map((a, i) => (
-                      <tr key={i}>
-                        <td className="px-4 py-2.5 text-sm font-medium text-slate-900">{a.assessment_name}</td>
-                        <td className="px-4 py-2.5 text-xs font-bold text-slate-500">{a.assessment_type}</td>
-                        <td className="px-4 py-2.5 text-sm">{a.marks_obtained ?? '—'}</td>
-                        <td className="px-4 py-2.5 text-sm">{a.max_marks}</td>
-                        <td className="px-4 py-2.5 text-sm">{a.pct != null ? `${a.pct}%` : '—'}</td>
-                        <td className="px-4 py-2.5 text-sm font-bold">{a.grade || 'Pending'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <div className="mb-6 overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-sm">
+            <div
+              className="flex flex-wrap items-center gap-2.5 px-[22px] py-3"
+              style={{ background: 'linear-gradient(135deg,#0f2c54,#1a3d6e)' }}
+            >
+              <span className="text-sm font-bold text-white">
+                <i className="fas fa-table mr-2" />
+                Assessment Marks — {data.units_data.length} Unit(s)
+              </span>
+              <span className="ml-auto text-[11px] text-white/70">
+                Marks shown as obtained/max · same as transcript PDF
+              </span>
             </div>
-          ))
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] border-collapse text-[12.5px]">
+                <thead>
+                  <tr className="text-white">
+                    <th rowSpan={2} className="bg-[#0f2c54] px-3 py-2.5 text-left text-[11px] font-bold uppercase">#</th>
+                    <th rowSpan={2} className="bg-[#0f2c54] px-3 py-2.5 text-left text-[11px] font-bold uppercase">Unit</th>
+                    <th rowSpan={2} className="bg-[#0f2c54] px-3 py-2.5 text-center text-[11px] font-bold uppercase">Term</th>
+                    {oral.length > 0 && (
+                      <th colSpan={oral.length} className="bg-[#1e5a9f] px-2 py-2 text-center text-[11px] font-bold uppercase">
+                        Oral Assessments
+                      </th>
+                    )}
+                    {practical.length > 0 && (
+                      <th colSpan={practical.length} className="bg-[#c2410c] px-2 py-2 text-center text-[11px] font-bold uppercase">
+                        Practical Assessments
+                      </th>
+                    )}
+                    {written.length > 0 && (
+                      <th colSpan={written.length} className="bg-[#5b21b6] px-2 py-2 text-center text-[11px] font-bold uppercase">
+                        Written Assessments
+                      </th>
+                    )}
+                    <th rowSpan={2} className="bg-[#0f2c54] px-3 py-2.5 text-center text-[11px] font-bold uppercase">Total</th>
+                    <th rowSpan={2} className="bg-[#0f2c54] px-3 py-2.5 text-center text-[11px] font-bold uppercase">Score %</th>
+                    <th rowSpan={2} className="bg-[#0f2c54] px-3 py-2.5 text-center text-[11px] font-bold uppercase">Grade</th>
+                  </tr>
+                  <tr className="text-white">
+                    {oral.map((n) => (
+                      <th key={`o-${n}`} className="bg-[#1e5a9f] px-2 py-2 text-center text-[10px] font-semibold normal-case tracking-normal">
+                        {n}
+                      </th>
+                    ))}
+                    {practical.map((n) => (
+                      <th key={`p-${n}`} className="bg-[#c2410c] px-2 py-2 text-center text-[10px] font-semibold normal-case tracking-normal">
+                        {n}
+                      </th>
+                    ))}
+                    {written.map((n) => (
+                      <th key={`w-${n}`} className="bg-[#5b21b6] px-2 py-2 text-center text-[10px] font-semibold normal-case tracking-normal">
+                        {n}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {data.units_data.map((u, idx) => {
+                    const bar =
+                      u.pct >= 85 ? '#16a34a' : u.pct >= 70 ? '#2563eb' : u.pct >= 50 ? '#d97706' : '#dc2626'
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="px-3 py-2.5 text-center text-[11px] font-bold text-slate-400">{idx + 1}</td>
+                        <td className="px-3 py-2.5">
+                          <span className="mr-1.5 inline-flex rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                            {u.unit?.code || '—'}
+                          </span>
+                          <span className="font-bold text-slate-800">{u.unit?.name || '—'}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-[11.5px] font-semibold text-slate-500">
+                          {term ? `T${term}` : u.term ? `T${u.term}` : '—'}
+                        </td>
+                        {(u.oral_cells || []).map((cell, i) => (
+                          <td key={`o${i}`} className="px-2 py-2.5 text-center">
+                            <MarkChip cell={cell} tone="oral" />
+                          </td>
+                        ))}
+                        {(u.practical_cells || []).map((cell, i) => (
+                          <td key={`p${i}`} className="px-2 py-2.5 text-center">
+                            <MarkChip cell={cell} tone="practical" />
+                          </td>
+                        ))}
+                        {(u.written_cells || []).map((cell, i) => (
+                          <td key={`w${i}`} className="px-2 py-2.5 text-center">
+                            <MarkChip cell={cell} tone="written" />
+                          </td>
+                        ))}
+                        <td className="px-3 py-2.5 text-center text-[12.5px] font-bold text-slate-900">
+                          {u.has_marks ? (
+                            <>
+                              {u.total_obt}
+                              <span className="text-[11px] font-normal text-slate-400">/{u.total_max}</span>
+                            </>
+                          ) : (
+                            <span className="text-[11px] text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {u.has_marks ? (
+                            <div className="inline-flex flex-col items-center gap-1">
+                              <span className="text-[12.5px] font-bold" style={{ color: bar }}>{u.pct}%</span>
+                              <div className="h-1 w-[52px] overflow-hidden rounded-full bg-slate-200">
+                                <div className="h-full rounded-full" style={{ width: `${u.pct}%`, background: bar }} />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] italic text-slate-400">Pending</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {u.has_marks ? <GradeBadge grade={u.final_grade} /> : <span className="text-[11px] text-slate-400">—</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-wrap items-center gap-3.5 border-t border-slate-100 bg-slate-50 px-[22px] py-2.5 text-[11.5px] text-slate-500">
+              <span className="font-bold text-slate-700">Legend:</span>
+              <span><MarkChip cell="18/20" tone="oral" /> Oral</span>
+              <span><MarkChip cell="42/50" tone="practical" /> Practical</span>
+              <span><MarkChip cell="35/40" tone="written" /> Written / Theory</span>
+              <span className="ml-auto">M 80–100% · P 65–79% · C 50–64% · NYC 0–49%</span>
+            </div>
+          </div>
         )}
       </div>
     </PortalShell>
+  )
+}
+
+function MarkChip({ cell, tone }: { cell: string; tone: 'oral' | 'practical' | 'written' }) {
+  if (!cell || cell === '—') {
+    return <span className="inline-flex min-w-8 items-center justify-center rounded px-1.5 py-0.5 text-[10.5px] italic text-slate-400 bg-slate-100">—</span>
+  }
+  const styles = {
+    oral: 'bg-blue-50 text-blue-800',
+    practical: 'bg-orange-50 text-orange-700',
+    written: 'bg-violet-50 text-violet-800',
+  }[tone]
+  return (
+    <span className={`inline-flex min-w-8 items-center justify-center rounded px-1.5 py-0.5 text-[11.5px] font-bold ${styles}`}>
+      {cell}
+    </span>
+  )
+}
+
+function GradeBadge({ grade }: { grade: string }) {
+  const cls =
+    grade === 'M' ? 'bg-green-100 text-green-700'
+      : grade === 'P' ? 'bg-blue-100 text-blue-700'
+        : grade === 'C' ? 'bg-amber-100 text-amber-800'
+          : 'bg-red-100 text-red-700'
+  return (
+    <span className={`inline-flex min-w-10 items-center justify-center rounded-md px-2.5 py-0.5 text-[11.5px] font-extrabold ${cls}`}>
+      {grade}
+    </span>
   )
 }
 

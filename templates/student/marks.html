@@ -3,7 +3,7 @@
 {% block page_title %}Marks & Transcript{% endblock %}
 
 {% block extra_style %}
-.tr-wrap { padding: 24px; max-width: 1060px; margin: 0 auto; }
+.tr-wrap { padding: 24px; max-width: 1200px; margin: 0 auto; }
 
 /* ── Header card ─────────────────────────────────── */
 .tr-hdr {
@@ -263,7 +263,7 @@
 </div>
 {% endif %}
 
-{# ── COMPACT MARKS TABLE — one unit per row ────────── #}
+{# ── TRANSCRIPT TABLE — same columns as downloadable PDF ────────── #}
 {% if not units_data %}
 <div class="tr-empty">
   <i class="fas fa-chart-line"></i>
@@ -271,26 +271,6 @@
   <p style="font-size:13.5px;color:#64748b">No marks recorded for Year {{ year }}{% if term %}, Term {{ term }}{% endif %}. Try a different filter.</p>
 </div>
 {% else %}
-
-{# Determine which assessment types exist across all units so we only show relevant columns #}
-{% set col_types = [] %}
-{% for t in ['ORAL','PRACTICAL','WRITTEN','CA','IA'] %}
-  {% set found = namespace(v=false) %}
-  {% for ud in units_data %}
-    {% for a in ud.assessments if (a.assessment_type or '')|upper == t %}
-      {% set found.v = true %}
-    {% endfor %}
-  {% endfor %}
-  {% if found.v %}{% set _ = col_types.append(t) %}{% endif %}
-{% endfor %}
-
-{% set type_colors = {
-  'ORAL':      '#c2410c',
-  'PRACTICAL': '#1d4ed8',
-  'WRITTEN':   '#6d28d9',
-  'CA':        '#15803d',
-  'IA':        '#854d0e',
-} %}
 
 <div class="tr-card" style="background:#fff;border-radius:14px;border:1px solid #e2e8f0;
      box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden;margin-bottom:24px">
@@ -301,7 +281,7 @@
       <i class="fas fa-table" style="margin-right:8px"></i>Assessment Marks — {{ units_data|length }} Unit(s)
     </span>
     <span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.7)">
-      Hover over a mark chip to see the assessment name
+      Same layout as Download Transcript · marks shown as obtained/max
     </span>
   </div>
 
@@ -309,64 +289,75 @@
   <table class="marks-tbl">
     <thead>
       <tr>
-        <th class="th-left" style="width:22px">#</th>
-        <th class="th-left" style="min-width:200px">Unit</th>
-        <th>Tm</th>
-        {% for t in col_types %}
-        <th style="color:{{ type_colors.get(t,'#fff') }}{% if type_colors.get(t) %};{% endif %}min-width:80px">
-          {{ t|title }}
-        </th>
+        <th rowspan="2" class="th-left" style="width:28px;vertical-align:middle">#</th>
+        <th rowspan="2" class="th-left" style="min-width:160px;vertical-align:middle">Unit</th>
+        <th rowspan="2" style="vertical-align:middle">Term</th>
+        {% if oral_labels %}
+        <th colspan="{{ oral_labels|length }}" style="background:#1e5a9f">Oral Assessments</th>
+        {% endif %}
+        {% if practical_labels %}
+        <th colspan="{{ practical_labels|length }}" style="background:#c2410c">Practical Assessments</th>
+        {% endif %}
+        {% if written_labels %}
+        <th colspan="{{ written_labels|length }}" style="background:#5b21b6">Written Assessments</th>
+        {% endif %}
+        <th rowspan="2" style="vertical-align:middle">Total</th>
+        <th rowspan="2" style="vertical-align:middle">Score %</th>
+        <th rowspan="2" style="vertical-align:middle">Grade</th>
+      </tr>
+      <tr>
+        {% for name in oral_labels %}
+        <th style="background:#1e5a9f;font-size:10px;font-weight:600;text-transform:none;letter-spacing:0">{{ name }}</th>
         {% endfor %}
-        <th>Total</th>
-        <th>Score</th>
-        <th>Grade</th>
+        {% for name in practical_labels %}
+        <th style="background:#c2410c;font-size:10px;font-weight:600;text-transform:none;letter-spacing:0">{{ name }}</th>
+        {% endfor %}
+        {% for name in written_labels %}
+        <th style="background:#5b21b6;font-size:10px;font-weight:600;text-transform:none;letter-spacing:0">{{ name }}</th>
+        {% endfor %}
       </tr>
     </thead>
     <tbody>
-    {% for ud in units_data %}
+    {% for ud in units_rows %}
     {% set unit = ud.unit %}
     {% set fg   = ud.final_grade %}
     {% set bar_color = '#16a34a' if ud.pct >= 85 else '#2563eb' if ud.pct >= 70 else '#d97706' if ud.pct >= 50 else '#dc2626' %}
     <tr>
-
-      {# Row # #}
       <td style="color:#94a3b8;font-weight:700;font-size:11px">{{ loop.index }}</td>
-
-      {# Unit name + code #}
       <td class="td-left">
         <span class="unit-cell-code">{{ unit.get('code','—') }}</span>
         <span class="unit-cell-name">{{ unit.get('name','—') }}</span>
       </td>
-
-      {# Term #}
       <td style="font-size:11.5px;color:#64748b;font-weight:600">
-        {% if ud.term %}T{{ ud.term }}{% else %}—{% endif %}
+        {% if term %}T{{ term }}{% elif ud.term %}T{{ ud.term }}{% else %}—{% endif %}
       </td>
-
-      {# One column per assessment type — marks shown as chips #}
-      {% for t in col_types %}
+      {% for cell in ud.oral_cells %}
       <td>
-        {% set type_asmts = ud.assessments|selectattr("assessment_type","equalto",t)|list %}
-        {% if type_asmts %}
-          {% for a in type_asmts %}
-            {% set has_m = a.marks_obtained is not none and a.marks_obtained != '' %}
-            {% if has_m %}
-              {% set chip_cls = a.grade if a.grade else 'NYC' %}
-              <span class="mk mk-{{ chip_cls }}"
-                    title="{{ a.assessment_name }}: {{ a.marks_obtained }}/{{ a.max_marks|int }}">
-                {{ a.marks_obtained }}
-              </span>
-            {% else %}
-              <span class="mk mk-nd" title="{{ a.assessment_name }}: Not yet entered">—</span>
-            {% endif %}
-          {% endfor %}
+        {% if cell != '—' %}
+        <span class="mk" style="background:#eff6ff;color:#1e40af">{{ cell }}</span>
         {% else %}
-          <span style="color:#e2e8f0;font-size:11px">—</span>
+        <span class="mk mk-nd">—</span>
         {% endif %}
       </td>
       {% endfor %}
-
-      {# Total marks #}
+      {% for cell in ud.practical_cells %}
+      <td>
+        {% if cell != '—' %}
+        <span class="mk" style="background:#fff7ed;color:#c2410c">{{ cell }}</span>
+        {% else %}
+        <span class="mk mk-nd">—</span>
+        {% endif %}
+      </td>
+      {% endfor %}
+      {% for cell in ud.written_cells %}
+      <td>
+        {% if cell != '—' %}
+        <span class="mk" style="background:#f5f3ff;color:#5b21b6">{{ cell }}</span>
+        {% else %}
+        <span class="mk mk-nd">—</span>
+        {% endif %}
+      </td>
+      {% endfor %}
       <td style="font-weight:700;color:#0f172a;font-size:12.5px">
         {% if ud.has_marks %}
           {{ ud.total_obt }}<span style="color:#94a3b8;font-weight:400;font-size:11px">/{{ ud.total_max }}</span>
@@ -374,8 +365,6 @@
           <span style="color:#94a3b8;font-size:11px">—</span>
         {% endif %}
       </td>
-
-      {# Score % with mini bar #}
       <td>
         {% if ud.has_marks %}
         <div class="score-wrap">
@@ -388,8 +377,6 @@
         <span style="color:#94a3b8;font-size:11px;font-style:italic">Pending</span>
         {% endif %}
       </td>
-
-      {# Grade #}
       <td>
         {% if ud.has_marks %}
         <span class="gb gb-{{ fg }}">{{ fg }}</span>
@@ -397,22 +384,20 @@
         <span style="font-size:11px;color:#94a3b8">—</span>
         {% endif %}
       </td>
-
     </tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
 
-  {# Legend row #}
   <div style="padding:10px 22px;background:#f8fafc;border-top:1px solid #f1f5f9;
        display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:#64748b">
-    <span style="font-weight:700;color:#374151">Mark grades:</span>
-    <span><span class="mk mk-M">90</span> M — Mastery 80–100%</span>
-    <span><span class="mk mk-P">75</span> P — Proficient 65–79%</span>
-    <span><span class="mk mk-C">60</span> C — Competent 50–64%</span>
-    <span><span class="mk mk-NYC">40</span> NYC — Not Yet Competent 0–49%</span>
+    <span style="font-weight:700;color:#374151">Legend:</span>
+    <span><span class="mk" style="background:#eff6ff;color:#1e40af">18/20</span> Oral</span>
+    <span><span class="mk" style="background:#fff7ed;color:#c2410c">42/50</span> Practical</span>
+    <span><span class="mk" style="background:#f5f3ff;color:#5b21b6">35/40</span> Written / Theory</span>
     <span><span class="mk mk-nd">—</span> Not yet entered</span>
+    <span style="margin-left:auto">Grades: M 80–100% · P 65–79% · C 50–64% · NYC 0–49%</span>
   </div>
 </div>
 

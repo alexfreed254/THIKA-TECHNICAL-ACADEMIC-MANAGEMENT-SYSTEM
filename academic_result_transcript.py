@@ -87,6 +87,70 @@ def _slot_labels(by_unit: dict, bucket: str, count: int, fallback: str) -> list[
     return labels
 
 
+def build_marks_transcript_view(units_data: list) -> dict:
+    """
+    Build the same Oral / Practical / Written column layout used by the
+    downloadable Academic Result Transcript, for on-screen Marks & Transcript.
+
+    units_data items need: unit, term, assessments[], total_obt, total_max, pct,
+    final_grade, has_marks.
+    """
+    from collections import OrderedDict
+
+    by_unit = OrderedDict()
+    for i, ud in enumerate(units_data or []):
+        by_unit[i] = {
+            "unit": ud.get("unit") or {},
+            "rows": ud.get("assessments") or [],
+        }
+
+    max_oral = max_prac = max_writ = 0
+    for ud in by_unit.values():
+        parts = _split_by_type(ud.get("rows") or [])
+        max_oral = max(max_oral, len(parts["oral"]))
+        max_prac = max(max_prac, len(parts["practical"]))
+        max_writ = max(max_writ, len(parts["written"]))
+
+    if by_unit and max_oral + max_prac + max_writ == 0:
+        max_oral = max_prac = max_writ = 1
+
+    oral_labels = _slot_labels(by_unit, "oral", max_oral, "Oral") if max_oral else []
+    practical_labels = _slot_labels(by_unit, "practical", max_prac, "Practical") if max_prac else []
+    written_labels = _slot_labels(by_unit, "written", max_writ, "Written") if max_writ else []
+
+    rows = []
+    for ud in (units_data or []):
+        parts = _split_by_type(ud.get("assessments") or [])
+        oral_cells = [
+            _mark_cell(parts["oral"][j] if j < len(parts["oral"]) else None)
+            for j in range(max_oral)
+        ]
+        practical_cells = [
+            _mark_cell(parts["practical"][j] if j < len(parts["practical"]) else None)
+            for j in range(max_prac)
+        ]
+        written_cells = [
+            _mark_cell(parts["written"][j] if j < len(parts["written"]) else None)
+            for j in range(max_writ)
+        ]
+        rows.append({
+            **ud,
+            "oral_cells": oral_cells,
+            "practical_cells": practical_cells,
+            "written_cells": written_cells,
+        })
+
+    return {
+        "oral_labels": oral_labels,
+        "practical_labels": practical_labels,
+        "written_labels": written_labels,
+        "max_oral": max_oral,
+        "max_practical": max_prac,
+        "max_written": max_writ,
+        "units_rows": rows,
+    }
+
+
 def build_academic_result_transcript_pdf(
     student: dict,
     course_name: str,
