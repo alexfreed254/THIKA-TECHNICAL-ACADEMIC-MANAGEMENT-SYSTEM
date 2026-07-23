@@ -1,505 +1,285 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Unit Attendance Register | TTTI</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="UTF-8">
+<title>Unit Attendance Register — {{ unit.code or 'TTTI' }}</title>
+<style>
+  :root{
+    --navy:#0e2a5e;
+    --navy-deep:#0a1f47;
+    --blue-line:#1e4fa3;
+    --ink:#1b2430;
+    --muted:#5b6472;
+    --paper:#ffffff;
+    --panel:#f3f6fb;
+    --border:#dbe2ee;
+    --green-bg:#e9f7ee; --green-tx:#1a7a3c;
+    --red-bg:#fdeceb;   --red-tx:#c0392b;
+    --blue-bg:#eaf1fd;  --blue-tx:#1e4fa3;
+    --gold-bg:#fdf6e3;  --gold-tx:#a9740a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    color:var(--ink);
+    background:#e9edf3;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .page{
+    width:800px;
+    min-height:1035px;
+    margin:24px auto;
+    background:var(--paper);
+    padding:34px 42px 56px;
+    position:relative;
+    box-shadow:0 6px 24px rgba(10,20,50,.12);
+  }
+  .top-bar{
+    position:absolute; top:0; left:0; right:0; height:6px;
+    background:linear-gradient(90deg,var(--navy) 0%, var(--blue-line) 55%, #4f7fd6 100%);
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px;
+    padding-top:8px; padding-bottom:16px; border-bottom:2px solid var(--navy);
+  }
+  .logo-slot{
+    width:64px; height:64px; border:1.5px solid var(--border); border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; flex:none; background:#fff;
+  }
+  .logo-slot img{ width:100%; height:100%; object-fit:contain; }
+  .brand-text{ flex:1; text-align:center; }
+  .brand-text h1{
+    margin:0; font-size:20px; letter-spacing:.4px; color:var(--navy-deep);
+    text-transform:uppercase; font-weight:800;
+  }
+  .brand-text .dept{ margin:2px 0 0; font-size:12.5px; font-weight:600; color:var(--muted); }
+  .brand-text .doc-title{
+    margin:8px 0 0; font-size:14px; font-weight:700; color:var(--blue-line);
+    text-decoration:underline; text-underline-offset:3px;
+  }
+  .brand-text .ref{ margin:3px 0 0; font-size:10.5px; color:var(--muted); letter-spacing:.3px; }
+  .brand-text .gen{ margin:5px 0 0; font-size:10.5px; color:var(--muted); }
 
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 12px;
-      color: #111;
-      background: #f4f6f9;
-      padding: 32px 40px;
-    }
+  .meta{
+    display:grid; grid-template-columns:1fr 1fr; gap:0;
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    margin-top:18px; overflow:hidden;
+  }
+  .meta .col{ padding:14px 20px; }
+  .meta .col + .col{ border-left:1px solid var(--border); }
+  .meta-row{ display:flex; gap:8px; font-size:12px; padding:5px 0; }
+  .meta-row .k{ width:112px; flex:none; color:var(--muted); font-weight:600; }
+  .meta-row .v{ font-weight:700; color:var(--ink); }
 
-    /* ══ Outer page shell ══ */
-    .page {
-      background: #fff;
-      max-width: 820px;
-      margin: 0 auto;
-      border-radius: 6px;
-      border: 1px solid #d0d7e2;
-      overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,.10);
-    }
+  .section-title{
+    display:flex; align-items:center; gap:8px; margin:22px 0 10px;
+    font-size:12.5px; font-weight:800; letter-spacing:.5px; color:var(--navy-deep);
+    text-transform:uppercase;
+  }
+  .section-title::before{ content:""; width:4px; height:14px; background:var(--blue-line); border-radius:2px; }
+  .section-title::after{ content:""; flex:1; height:1px; background:var(--border); margin-left:6px; }
 
-    /* ══ Top accent bar ══ */
-    .accent-bar {
-      height: 6px;
-      background: linear-gradient(90deg, #0d2f6e 0%, #1a5fa8 50%, #2196f3 100%);
-    }
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .stat{ border-radius:8px; padding:14px 10px; text-align:center; border:1px solid var(--border); }
+  .stat .num{ font-size:26px; font-weight:800; line-height:1; }
+  .stat .lbl{ margin-top:6px; font-size:9.5px; font-weight:700; letter-spacing:.4px; color:var(--muted); text-transform:uppercase; }
+  .stat.present{ background:var(--green-bg); } .stat.present .num{ color:var(--green-tx); }
+  .stat.absent{ background:var(--red-bg); }   .stat.absent .num{ color:var(--red-tx); }
+  .stat.total{ background:var(--blue-bg); }   .stat.total .num{ color:var(--blue-tx); }
+  .stat.rate{ background:var(--gold-bg); }    .stat.rate .num{ color:var(--gold-tx); }
 
-    /* ══ Letterhead ══ */
-    .letterhead {
-      padding: 24px 32px 16px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      border-bottom: 2px solid #0d2f6e;
-    }
-    .letterhead img { height: 75px; flex-shrink: 0; object-fit: contain; }
-    .letterhead-logos { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-    .letterhead-text { flex: 1; }
-    .lh-institute {
-      font-size: 18px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #0d2f6e;
-      line-height: 1.2;
-    }
-    .lh-dept {
-      font-size: 12px;
-      font-weight: 600;
-      color: #444;
-      margin-top: 4px;
-    }
-    .lh-doc-title {
-      font-size: 13px;
-      font-weight: 800;
-      color: #1a5fa8;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-top: 6px;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-    .lh-ref {
-      font-size: 10px;
-      color: #888;
-      margin-top: 4px;
-    }
-    .letterhead-stamp {
-      text-align: right;
-      flex-shrink: 0;
-    }
-    .stamp-box {
-      border: 2px solid #0d2f6e;
-      border-radius: 6px;
-      padding: 8px 14px;
-      color: #0d2f6e;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      background: #e8f0fb;
-    }
-    .stamp-date {
-      font-size: 11px;
-      color: #555;
-      margin-top: 6px;
-      text-align: right;
-    }
+  .progress-wrap{ margin-top:16px; }
+  .progress-head{ display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:6px; }
+  .progress-head .lbl{ color:var(--muted); font-weight:600; }
+  .progress-head .val{ font-weight:800; }
+  .progress-head .val .status-ok{ color:var(--green-tx); }
+  .progress-head .val .status-warn{ color:var(--gold-tx); }
+  .progress-head .val .status-bad{ color:var(--red-tx); }
+  .track{ height:10px; background:#e7ecf3; border-radius:6px; overflow:hidden; }
+  .fill{ height:100%; border-radius:6px 0 0 6px; }
 
-    /* ══ Body padding ══ */
-    .body { padding: 20px 32px 28px; }
+  table.records{ width:100%; border-collapse:collapse; margin-top:6px; font-size:11.5px; }
+  table.records thead th{
+    background:var(--panel); color:var(--navy-deep); text-align:left;
+    font-size:10px; letter-spacing:.4px; text-transform:uppercase;
+    padding:8px 10px; border-top:1px solid var(--border); border-bottom:2px solid var(--navy);
+  }
+  table.records tbody td{ padding:7px 10px; border-bottom:1px solid var(--border); color:var(--ink); }
+  table.records tbody tr:nth-child(even){ background:#fafbfd; }
+  .badge{ display:inline-block; padding:2px 9px; border-radius:12px; font-size:10.5px; font-weight:700; }
+  .badge.present{ background:var(--green-bg); color:var(--green-tx); }
+  .badge.absent{ background:var(--red-bg); color:var(--red-tx); }
+  .badge.late{ background:var(--gold-bg); color:var(--gold-tx); }
 
-    /* ══ Info grid ══ */
-    .info-grid {
-      display: flex;
-      gap: 0;
-      margin-bottom: 22px;
-      border: 1px solid #c8d6e8;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-    .info-col {
-      flex: 1;
-      padding: 13px 16px;
-      background: #f0f5fb;
-    }
-    .info-col:first-child {
-      border-right: 1px solid #c8d6e8;
-      background: #e8f0fb;
-    }
-    .info-row {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 6px;
-      line-height: 1.5;
-      font-size: 11.5px;
-    }
-    .info-row:last-child { margin-bottom: 0; }
-    .info-label {
-      font-weight: 700;
-      color: #0d2f6e;
-      white-space: nowrap;
-      min-width: 110px;
-    }
-    .info-value { color: #222; }
+  .auth{ display:grid; grid-template-columns:1fr 1fr auto; gap:24px; margin-top:26px; align-items:end; }
+  .sign-block .role{ font-size:11px; font-weight:800; color:var(--navy-deep); letter-spacing:.4px; text-transform:uppercase; margin-bottom:14px; }
+  .sign-line{ border-top:1px solid #9fb0c9; padding-top:5px; font-size:10.5px; color:var(--muted); margin-top:14px; }
+  .sign-line + .sign-line{ margin-top:16px; }
+  .stamp-box{
+    width:96px; height:96px; border:1.5px dashed #9fb0c9; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:9.5px; color:#8496ad; line-height:1.3; letter-spacing:.3px;
+  }
 
-    /* ══ Section heading ══ */
-    .section-heading {
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #0d2f6e;
-      margin-bottom: 10px;
-      padding-bottom: 5px;
-      border-bottom: 1.5px solid #c8d6e8;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .section-heading::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 14px;
-      background: #1a5fa8;
-      border-radius: 2px;
-    }
+  footer{
+    position:absolute; left:0; right:0; bottom:0;
+    background:var(--navy-deep); color:#c7d3e8;
+    font-size:9.5px; padding:9px 42px;
+    display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  }
 
-    /* ══ Summary stats ══ */
-    .summary {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-    .summary-box {
-      flex: 1;
-      text-align: center;
-      padding: 14px 8px 12px;
-      border-radius: 7px;
-      border: 1.5px solid transparent;
-    }
-    .summary-box .num { font-size: 28px; font-weight: 900; line-height: 1; }
-    .summary-box .lbl { font-size: 10px; margin-top: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
-    .box-present { background: #e6f4ea; color: #1b7a34; border-color: #a8d5b0; }
-    .box-absent  { background: #fdecea; color: #c0392b; border-color: #f5b7b1; }
-    .box-total   { background: #e8f0fb; color: #1a5fa8; border-color: #a9c4e8; }
-    .box-pct     { background: #fff8e7; color: #c07000; border-color: #f5d98a; }
+  .no-print{
+    width:800px; margin:20px auto 0; display:flex; gap:10px; justify-content:center;
+  }
+  .btn-print,.btn-back{
+    padding:11px 28px; border:none; border-radius:8px; font-size:14px; font-weight:700;
+    cursor:pointer; display:inline-flex; align-items:center; gap:8px; color:#fff;
+  }
+  .btn-print{ background:linear-gradient(135deg,#1e4fa3,#0a1f47); }
+  .btn-back{ background:#64748b; }
 
-    /* ══ Progress bar ══ */
-    .progress-wrap { margin-bottom: 22px; }
-    .progress-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 5px;
-    }
-    .progress-meta span { font-size: 11px; font-weight: 700; color: #555; }
-    .progress-meta .pct-label {
-      font-size: 13px;
-      font-weight: 900;
-    }
-    .progress-bar {
-      height: 12px;
-      background: #e0e6ef;
-      border-radius: 99px;
-      overflow: hidden;
-      border: 1px solid #c8d6e8;
-    }
-    .progress-fill { height: 100%; border-radius: 99px; }
-
-    /* ══ Table ══ */
-    .tbl-wrap { margin-bottom: 28px; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    thead tr { background: #DCE6F4; }
-    thead th {
-      color: #0F2744;
-      padding: 9px 10px;
-      text-align: left;
-      font-weight: 700;
-      font-size: 10.5px;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-      border: 1px solid #B9C9DE;
-      border-bottom: 2px solid #0F2744;
-    }
-    tbody td {
-      padding: 7px 10px;
-      border: 1px solid #d4dde8;
-      color: #222;
-      vertical-align: middle;
-    }
-    tbody tr:nth-child(even) td { background: #f4f8fc; }
-    tbody tr:hover td { background: #e8f0fb; }
-
-    .td-center { text-align: center; }
-    .td-num { color: #999; font-size: 10px; text-align: center; }
-
-    .status-pill {
-      display: inline-block;
-      padding: 2px 9px;
-      border-radius: 20px;
-      font-size: 10.5px;
-      font-weight: 700;
-    }
-    .pill-present { background: #e6f4ea; color: #1b7a34; border: 1px solid #a8d5b0; }
-    .pill-absent  { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
-
-    /* ══ Signature block ══ */
-    .sig-section {
-      display: flex;
-      justify-content: space-between;
-      gap: 18px;
-      margin-top: 32px;
-      padding-top: 20px;
-      border-top: 1px solid #d0d7e2;
-      align-items: flex-end;
-    }
-    .sig-block { flex: 1; text-align: center; }
-    .sig-space { height: 42px; }
-    .sig-line  { border-top: 1.5px solid #333; margin-bottom: 8px; }
-    .sig-role  { font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #0d2f6e; margin-bottom: 3px; }
-    .sig-name  { font-size: 10.5px; color: #333; margin-bottom: 2px; }
-    .sig-label { font-size: 10px; color: #888; }
-    .stamp-area {
-      flex: 0 0 120px;
-      border: 2px dashed #999;
-      border-radius: 6px;
-      min-height: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      font-size: 10px;
-      color: #777;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-    }
-
-    /* ══ Footer bar ══ */
-    .footer-bar {
-      background: #0d2f6e;
-      color: rgba(255,255,255,.75);
-      text-align: center;
-      font-size: 10px;
-      padding: 9px 20px;
-      margin-top: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .footer-bar a { color: rgba(255,255,255,.6); text-decoration: none; }
-
-    /* ══ Print controls (screen only) ══ */
-    .no-print {
-      max-width: 820px;
-      margin: 20px auto 0;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }
-    .btn-print {
-      padding: 11px 32px;
-      background: linear-gradient(135deg, #1a5fa8, #0d2f6e);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 14px rgba(26,95,168,.35);
-    }
-    .btn-back {
-      padding: 11px 24px;
-      background: #64748b;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    @media print {
-      body { background: #fff; padding: 0; }
-      .page { box-shadow: none; border: none; border-radius: 0; max-width: 100%; }
-      .no-print { display: none; }
-    }
-  </style>
+  @page{ size:A4; margin:0; }
+  @media print{
+    body{ background:none; }
+    .page{ box-shadow:none; margin:0; width:auto; min-height:100vh; }
+    .no-print{ display:none; }
+  }
+</style>
 </head>
 <body>
 
-<!-- ══ Print / Back buttons ══ -->
 <div class="no-print">
-  <button class="btn-print" onclick="window.print()">
-    &#128424; Print / Save as PDF
-  </button>
-  <button class="btn-back" onclick="history.back()">
-    &#8592; Back
-  </button>
+  <button class="btn-print" type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <button class="btn-back" type="button" onclick="history.back()">← Back</button>
 </div>
 
 <div class="page">
+  <div class="top-bar"></div>
 
-  <!-- Top accent -->
-  <div class="accent-bar"></div>
+  <header>
+    <div class="logo-slot">
+      <img src="/static/assets/KENYACOATOFARMS.png" alt="Coat of Arms"
+           onerror="this.parentElement.innerHTML='KENYAN<br>GOVT LOGO'">
+    </div>
+    <div class="brand-text">
+      <h1>Thika Technical Training Institute</h1>
+      <p class="dept">Department of {{ info.dept_name if info and info.dept_name else '—' }}</p>
+      <p class="doc-title">Unit Attendance Register</p>
+      <p class="ref">REF: {{ ref_code }}</p>
+      <p class="gen">Generated: {{ date_gen }}</p>
+    </div>
+    <div class="logo-slot">
+      <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo"
+           onerror="this.src='/ttti-logo.jpg'; this.onerror=function(){this.parentElement.innerHTML='INSTITUTION<br>LOGO'}">
+    </div>
+  </header>
 
-  <!-- ══ Letterhead ══ -->
-  <div class="letterhead">
-    <div class="letterhead-logos">
-      <img src="/static/assets/KENYACOATOFARMS.png" alt="Coat of Arms">
-      <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI Logo">
+  <div class="meta">
+    <div class="col">
+      <div class="meta-row"><span class="k">Trainee Name:</span><span class="v">{{ student.full_name or '—' }}</span></div>
+      <div class="meta-row"><span class="k">Adm. Number:</span><span class="v">{{ student.admission_no or '—' }}</span></div>
+      <div class="meta-row"><span class="k">Class:</span><span class="v">{{ info.class_name if info and info.class_name else '—' }}</span></div>
     </div>
-    <div class="letterhead-text">
-      <div class="lh-institute">Thika Technical Training Institute</div>
-      <div class="lh-dept">Department of {{ info.dept_name if info else '——' }}</div>
-      <div class="lh-doc-title">Unit Attendance Register</div>
-      <div class="lh-ref">REF: ATT/{{ unit.code }}/{{ date_gen[:4] if date_gen else '2026' }}</div>
-    </div>
-    <div class="letterhead-stamp">
-      <div class="stamp-box">Official Record</div>
-      <div class="stamp-date">Generated: {{ date_gen }}</div>
+    <div class="col">
+      <div class="meta-row"><span class="k">Unit:</span><span class="v">{{ unit.code or '—' }}{% if unit.name %} — {{ unit.name }}{% endif %}</span></div>
+      <div class="meta-row"><span class="k">Department:</span><span class="v">{{ info.dept_name if info and info.dept_name else '—' }}</span></div>
+      <div class="meta-row"><span class="k">Date Generated:</span><span class="v">{{ date_gen }}</span></div>
     </div>
   </div>
 
-  <div class="body">
+  <div class="section-title">Attendance Summary</div>
+  <div class="stats">
+    <div class="stat present"><div class="num">{{ attended }}</div><div class="lbl">Present</div></div>
+    <div class="stat absent"><div class="num">{{ absent }}</div><div class="lbl">Absent</div></div>
+    <div class="stat total"><div class="num">{{ total }}</div><div class="lbl">Total Sessions</div></div>
+    <div class="stat rate"><div class="num">{{ pct }}%</div><div class="lbl">Attendance Rate</div></div>
+  </div>
 
-    <!-- ══ Info grid ══ -->
-    <div class="info-grid">
-      <div class="info-col">
-        <div class="info-row">
-          <span class="info-label">Trainee Name:</span>
-          <span class="info-value">{{ student.full_name }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Adm. Number:</span>
-          <span class="info-value">{{ student.admission_no }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Class:</span>
-          <span class="info-value">{{ info.class_name if info else '—' }}</span>
-        </div>
-      </div>
-      <div class="info-col">
-        <div class="info-row">
-          <span class="info-label">Unit:</span>
-          <span class="info-value">{{ unit.code }} — {{ unit.name }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Department:</span>
-          <span class="info-value">{{ info.dept_name if info else '—' }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Date Generated:</span>
-          <span class="info-value">{{ date_gen }}</span>
-        </div>
-      </div>
+  <div class="progress-wrap">
+    <div class="progress-head">
+      <span class="lbl">Attendance Progress</span>
+      <span class="val">
+        {{ pct }}% —
+        {% if pct >= 75 %}
+          <span class="status-ok">Satisfactory</span>
+        {% elif pct >= 50 %}
+          <span class="status-warn">Below Requirement</span>
+        {% else %}
+          <span class="status-bad">Unsatisfactory</span>
+        {% endif %}
+      </span>
     </div>
-
-    <!-- ══ Attendance Summary ══ -->
-    <div class="section-heading">Attendance Summary</div>
-
-    <div class="summary">
-      <div class="summary-box box-present">
-        <div class="num">{{ attended }}</div>
-        <div class="lbl">Present</div>
-      </div>
-      <div class="summary-box box-absent">
-        <div class="num">{{ absent }}</div>
-        <div class="lbl">Absent</div>
-      </div>
-      <div class="summary-box box-total">
-        <div class="num">{{ total }}</div>
-        <div class="lbl">Total Sessions</div>
-      </div>
-      <div class="summary-box box-pct">
-        <div class="num">{{ pct }}%</div>
-        <div class="lbl">Attendance Rate</div>
-      </div>
+    <div class="track">
+      <div class="fill" style="width:{{ pct if pct <= 100 else 100 }}%;background:{% if pct >= 75 %}linear-gradient(90deg,#2fae5c,#3fc873){% elif pct >= 50 %}linear-gradient(90deg,#e0a800,#f0c040){% else %}linear-gradient(90deg,#c0392b,#e74c3c){% endif %}"></div>
     </div>
+  </div>
 
-    <!-- Progress bar -->
-    <div class="progress-wrap">
-      <div class="progress-meta">
-        <span>Attendance Progress</span>
-        <span class="pct-label" style="color:{% if pct >= 75 %}#1b7a34{% elif pct >= 50 %}#c07000{% else %}#c0392b{% endif %}">
-          {{ pct }}% — {% if pct >= 75 %}Satisfactory{% elif pct >= 50 %}Below Requirement{% else %}Unsatisfactory{% endif %}
-        </span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill"
-             style="width:{{ pct }}%;background:{% if pct >= 75 %}linear-gradient(90deg,#22c55e,#16a34a){% elif pct >= 50 %}linear-gradient(90deg,#f59e0b,#d97706){% else %}linear-gradient(90deg,#ef4444,#b91c1c){% endif %}"></div>
-      </div>
-    </div>
-
-    <!-- ══ Attendance Records ══ -->
-    <div class="section-heading">Attendance Records</div>
-
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="td-center" style="width:32px">#</th>
-            <th>Year</th>
-            <th>Term</th>
-            <th>Week</th>
-            <th>Lesson</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in records %}
-          <tr>
-            <td class="td-num">{{ loop.index }}</td>
-            <td>{{ r.year or '—' }}</td>
-            <td>{{ term_label.get(r.term, 'Term ' ~ r.term) if r.term else '—' }}</td>
-            <td class="td-center">Week {{ r.week }}</td>
-            <td class="td-center">{{ r.lesson }}</td>
-            <td class="td-center">
-              <span class="status-pill {% if r.status == 'present' %}pill-present{% else %}pill-absent{% endif %}">
-                {% if r.status == 'present' %}&#10003; Present{% else %}&#10007; Absent{% endif %}
-              </span>
-            </td>
-            <td style="white-space:nowrap">{{ r.attendance_date | to_eat('%d %b %Y') }}</td>
-          </tr>
+  <div class="section-title">Attendance Records</div>
+  <table class="records">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Year</th>
+        <th>Term</th>
+        <th>Week</th>
+        <th>Lesson</th>
+        <th>Status</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in records %}
+      {% set st = (r.status or '')|lower %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ r.year or '—' }}</td>
+        <td>{{ term_label.get(r.term, 'Term ' ~ r.term) if r.term else '—' }}</td>
+        <td>{% if r.week %}Week {{ r.week }}{% else %}—{% endif %}</td>
+        <td>{{ r.lesson or '—' }}</td>
+        <td>
+          {% if st == 'present' %}
+            <span class="badge present">✓ Present</span>
+          {% elif st == 'late' %}
+            <span class="badge late">⏱ Late</span>
           {% else %}
-          <tr>
-            <td colspan="7" style="text-align:center;color:#aaa;padding:24px;font-style:italic">
-              No attendance records found for this unit.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+            <span class="badge absent">✗ Absent</span>
+          {% endif %}
+        </td>
+        <td>{{ r.attendance_date | to_eat('%d %b %Y') if r.attendance_date else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center;color:#8496ad;padding:22px;font-style:italic">
+          No attendance records found for this unit.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="section-title">Authorisation &amp; Verification</div>
+  <div class="auth">
+    <div class="sign-block">
+      <div class="role">Head of Department</div>
+      <div class="sign-line">Name: ____________________________</div>
+      <div class="sign-line">Sign: _______________  Date: ___________</div>
     </div>
-
-    <!-- ══ Signature block ══ -->
-    <div class="section-heading">Authorisation &amp; Verification</div>
-
-    <div class="sig-section">
-      <div class="sig-block">
-        <div class="sig-space"></div>
-        <div class="sig-line"></div>
-        <div class="sig-role">Head of Department</div>
-        <div class="sig-name">Name: ___________________________</div>
-        <div class="sig-label">Sign: _______________</div>
-        <div class="sig-label">Date: _______________</div>
-      </div>
-      <div class="sig-block">
-        <div class="sig-space"></div>
-        <div class="sig-line"></div>
-        <div class="sig-role">Chief Principal</div>
-        <div class="sig-name">Name: ___________________________</div>
-        <div class="sig-label">Sign: _______________</div>
-        <div class="sig-label">Date: _______________</div>
-      </div>
-      <div class="stamp-area">Official<br>Stamp</div>
+    <div class="sign-block">
+      <div class="role">Chief Principal</div>
+      <div class="sign-line">Name: ____________________________</div>
+      <div class="sign-line">Sign: _______________  Date: ___________</div>
     </div>
-
-  </div><!-- /body -->
-
-  <!-- ══ Footer bar ══ -->
-  <div class="footer-bar">
-    <span>&copy; 2026 Thika Technical Training Institute — All Rights Reserved</span>
-    <span>REF: ATT/{{ unit.code }}/{{ date_gen[:4] if date_gen else '2026' }}</span>
-    <span>Generated: {{ date_gen }}</span>
+    <div class="stamp-box">OFFICIAL<br>STAMP</div>
   </div>
 
-</div><!-- /page -->
-
+  <footer>
+    <span>© {{ year_gen }} Thika Technical Training Institute — All Rights Reserved</span>
+    <span>REF: {{ ref_code }}</span>
+    <span>Generated: {{ date_gen }}</span>
+  </footer>
+</div>
 </body>
 </html>

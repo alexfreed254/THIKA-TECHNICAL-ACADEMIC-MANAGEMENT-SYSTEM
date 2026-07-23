@@ -1192,15 +1192,18 @@ def unit_report_pdf():
                .execute().data or [])
 
     total   = len(records)
-    present = sum(1 for r in records if r.get("status") == "present")
-    absent  = total - present
+    present = sum(1 for r in records if (r.get("status") or "").lower() in ("present", "late"))
+    absent  = sum(1 for r in records if (r.get("status") or "").lower() == "absent")
+    # Any other status counts toward total but not present
+    if present + absent < total:
+        absent = total - present
     pct     = round(present / total * 100, 1) if total > 0 else 0
 
     # Resolve class & department from the student's enrollment
-    info = {"class_name": "", "dept_name": ""}
+    info = {"class_name": "", "dept_name": "", "dept_code": ""}
     try:
         enr = (db.table("enrollments")
-               .select("classes(name, departments(name))")
+               .select("classes(name, departments(name, code))")
                .eq("student_id", student_id)
                .limit(1).execute().data or [])
         if enr:
@@ -1208,11 +1211,17 @@ def unit_report_pdf():
             dept = (cls.get("departments") or {})
             info["class_name"] = cls.get("name", "")
             info["dept_name"]  = dept.get("name", "")
+            info["dept_code"]  = (dept.get("code") or "").strip()
     except Exception:
         pass
 
     term_label = {1: "Term 1", 2: "Term 2", 3: "Term 3"}
-    date_gen   = _date.today().strftime("%d %B %Y")
+    today = _date.today()
+    date_gen = today.strftime("%d %B %Y")
+    year_gen = today.year
+    dept_slug = (info.get("dept_code") or "DEPT").upper().replace(" ", "")[:8]
+    unit_slug = (unit.get("code") or "UNIT").upper().replace(" ", "")[:16]
+    ref_code = f"ATT/{dept_slug}/{unit_slug}/{str(year_gen)[2:]}"
 
     return render_template(
         "student/unit_report_pdf.html",
@@ -1226,6 +1235,8 @@ def unit_report_pdf():
         info=info,
         term_label=term_label,
         date_gen=date_gen,
+        year_gen=year_gen,
+        ref_code=ref_code,
     )
 
 
