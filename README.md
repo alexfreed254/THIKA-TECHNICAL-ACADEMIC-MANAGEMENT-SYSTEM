@@ -13,7 +13,7 @@ A full-stack web application for managing academic operations at Thika Technical
 | Auth | Supabase Auth (JWT) for staff/employers · bcrypt hashed passwords for students |
 | Storage | Supabase Storage (PDFs, images, evidence files) |
 | Hosting | Render (Python web service, auto-deploy from GitHub) |
-| Frontend | Jinja2 templates · Vanilla CSS · Font Awesome icons |
+| Frontend | **React 18 + Vite** (SPA in `frontend/`) · Jinja2 portals still available during incremental migration · Tailwind CSS · Font Awesome |
 | PDF generation | ReportLab |
 | Excel export | openpyxl |
 | AI assistant | Anthropic Claude API (student chat) |
@@ -25,7 +25,11 @@ A full-stack web application for managing academic operations at Thika Technical
 ```
 Browser
   │
-  ▼
+  ├─ React + Vite SPA (`frontend/`) ── Axios ──► Flask /api/v1/*
+  │
+  └─ Legacy Jinja portals (unchanged) ─────────► Flask HTML routes
+         │
+         ▼
 Render (Gunicorn → Flask app)
   │
   ├── Supabase Auth  ← login / JWT / password reset
@@ -33,7 +37,9 @@ Render (Gunicorn → Flask app)
   └── Supabase Storage ← uploaded files (PDFs, photos, documents)
 ```
 
-All data lives in Supabase. Render hosts only the Python application layer.
+All data lives in Supabase. Render hosts the Python API. The React frontend is deployed separately (static hosting) and talks to Flask over `/api/v1`. See `frontend/README.md`.
+
+Jinja templates remain until each screen is ported — **design is preserved**, only the frontend language changes.
 
 ---
 

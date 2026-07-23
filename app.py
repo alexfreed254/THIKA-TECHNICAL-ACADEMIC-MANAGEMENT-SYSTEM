@@ -18,10 +18,29 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
 
 # ── Session / Cookie config ───────────────────────────────────────────────────
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"   # "None" requires HTTPS everywhere
-app.config["SESSION_COOKIE_SECURE"] = False    # Set True when behind HTTPS on Render
+# SPA on a different origin needs SameSite=None + Secure (set via env on Render).
+_cross_site = os.environ.get("SPA_CROSS_SITE", "").lower() in ("1", "true", "yes")
+app.config["SESSION_COOKIE_SAMESITE"] = "None" if _cross_site else "Lax"
+app.config["SESSION_COOKIE_SECURE"] = _cross_site or os.environ.get("SESSION_COOKIE_SECURE", "").lower() in ("1", "true", "yes")
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=1)
+
+# ── CORS for separated React + Vite frontend ──────────────────────────────────
+try:
+    from flask_cors import CORS
+    _spa_origins = [
+        o.strip() for o in os.environ.get(
+            "SPA_ORIGINS",
+            "http://localhost:5173,http://127.0.0.1:5173",
+        ).split(",") if o.strip()
+    ]
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": _spa_origins}},
+        supports_credentials=True,
+    )
+except ImportError:
+    pass  # flask-cors optional until installed; Jinja portals unaffected
 
 # ── Reverse-proxy support (Render sits behind a load balancer) ────────────────
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
@@ -57,8 +76,10 @@ from routes.ai import ai_bp
 from routes.service_dept import service_dept_bp
 from routes.academic_trips import academic_trips_bp
 from routes.summative import summative_bp
+from routes.api_v1 import api_v1_bp
 
 app.register_blueprint(main_bp)
+app.register_blueprint(api_v1_bp)
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(super_admin_bp, url_prefix="/super-admin")
 app.register_blueprint(dept_admin_bp, url_prefix="/dept-admin")

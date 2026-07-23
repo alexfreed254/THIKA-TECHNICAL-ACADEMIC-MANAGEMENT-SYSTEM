@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/* Existing TTTI design tokens — keep visual language identical to Jinja portals */
+:root {
+  --primary: #1e5a9f;
+  --primary-dark: #154070;
+  --primary-light: #2e75b6;
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0891b2;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  --sidebar-w: 292px;
+  --topbar-h: 56px;
+  --official-header-h: 72px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.07);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+@theme {
+  --font-sans: Inter, "Segoe UI", system-ui, sans-serif;
+  --font-display: Poppins, Inter, sans-serif;
+  --color-brand: #1e5a9f;
+  --color-brand-dark: #154070;
+  --color-brand-light: #2e75b6;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--gray-50);
+  color: var(--gray-800);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}
