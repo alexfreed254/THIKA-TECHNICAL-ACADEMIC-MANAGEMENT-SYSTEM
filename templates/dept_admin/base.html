@@ -13,6 +13,37 @@
     /* ── Dept Admin: deep royal blue ─────────────────────────── */
     .sidebar {
       background: linear-gradient(180deg, #0a0f1e 0%, #0f1f40 45%, #0d1b35 100%);
+      /* One scroll: logo + institute + dept + role move with the menu */
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Branding block — scrolls away with nav (not sticky/pinned) */
+    .sidebar-header {
+      position: static;
+      flex-shrink: 0;
+      padding: 22px 18px 16px;
+    }
+    .sidebar-header img {
+      height: 64px;
+      width: 64px;
+    }
+    .sidebar-header h2 {
+      font-size: 12px;
+      letter-spacing: .04em;
+      margin: 0;
+    }
+    .sidebar-header .dept-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #fbbf24;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      line-height: 1.35;
+    }
+    .sidebar-header .role-badge {
+      margin-top: 10px;
     }
 
     /* Section labels — brighter, clearly separated */
@@ -29,10 +60,12 @@
       background: linear-gradient(90deg, rgba(251,191,36,.35), rgba(255,255,255,.04));
     }
 
-    /* Menu items — room for multi-line labels (Attachment section) */
+    /* Menu items — no nested scroll so header moves with sidebar */
     .sidebar-menu {
       padding: 10px 10px 28px;
       gap: 8px;
+      overflow: visible;
+      flex: 1 0 auto;
     }
     .sidebar-menu a {
       padding: 12px 14px;
@@ -142,14 +175,15 @@
 <div class="dashboard-container">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+      <img src="{{ LOGO_URL or '/static/assets/THIKATTILOGO.jpg' }}" alt="TTTI Logo"
+           onerror="this.src='/ttti-logo.jpg'">
       <h2>THIKA TECHNICAL<br>TRAINING INSTITUTE</h2>
       {% if department_name %}
-      <div style="font-size:11.5px;font-weight:700;color:#fbbf24;margin-top:6px;text-transform:uppercase;letter-spacing:.5px">
-        <i class="fas fa-sitemap"></i> {{ department_name }}
+      <div class="dept-label">
+        <i class="fas fa-sitemap" aria-hidden="true"></i> {{ department_name }}
       </div>
       {% endif %}
-      <div class="role-badge"><i class="fas fa-user-tie"></i>&nbsp; Dept Admin / HOD</div>
+      <div class="role-badge"><i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp; Dept Admin / HOD</div>
     </div>
 
     <div class="sidebar-menu">
