@@ -190,7 +190,7 @@
         {% endif %}
       </a>
       <a href="#" onclick="toggleTheme();return false"><i class="fas fa-moon fa-fw"></i> <span id="themeLabel">Dark Mode</span></a>
-      <a href="#" onclick="toggleZoom();return false"><i class="fas fa-search-plus fa-fw"></i> Zoom: <span id="zoomLabel">100%</span></a>
+      {% include 'partials/sidebar_zoom.html' %}
 
     </div>
 
@@ -302,21 +302,6 @@
     document.body.classList.add('dark-mode');
     const lbl = document.getElementById('themeLabel');
     if (lbl) lbl.textContent = 'Light Mode';
-  }
-
-  let zoomLevel = parseFloat(localStorage.getItem('ttti_zoom') || '1');
-  const zoomLevels = [1, 1.1, 1.2];
-  function applyZoom() {
-    document.body.style.zoom = zoomLevel;
-    const lbl = document.getElementById('zoomLabel');
-    if (lbl) lbl.textContent = Math.round(zoomLevel * 100) + '%';
-  }
-  applyZoom();
-  function toggleZoom() {
-    const idx = zoomLevels.indexOf(zoomLevel);
-    zoomLevel = zoomLevels[(idx + 1) % zoomLevels.length];
-    localStorage.setItem('ttti_zoom', zoomLevel);
-    applyZoom();
   }
 
   window.showToast = function(msg, type = 'info', duration = 4000) {

@@ -1,0 +1,25 @@
+{# Shared sidebar zoom control — horizontal bar, 0% to maximum (200%) #}
+<div class="sidebar-zoom" role="group" aria-label="Page zoom">
+  <div class="sidebar-zoom-head">
+    <span class="sidebar-zoom-title">
+      <i class="fas fa-search-plus" aria-hidden="true"></i> Zoom
+    </span>
+    <span class="sidebar-zoom-value" id="zoomLabel">100%</span>
+  </div>
+  <input type="range"
+         id="zoomSlider"
+         class="sidebar-zoom-slider"
+         min="0"
+         max="200"
+         step="5"
+         value="100"
+         aria-valuemin="0"
+         aria-valuemax="200"
+         aria-valuenow="100"
+         aria-label="Zoom from 0 to 200 percent">
+  <div class="sidebar-zoom-scale" aria-hidden="true">
+    <span>0</span>
+    <span>100</span>
+    <span>Max</span>
+  </div>
+</div>

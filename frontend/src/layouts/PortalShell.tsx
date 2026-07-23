@@ -1,13 +1,34 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
 import { getPortalNav, getPortalTitle } from '@/config/navigation'
 import { fetchRecentNotifications } from '@/api/trainer'
 import clsx from 'clsx'
 
 const legacyBase = (import.meta.env.VITE_LEGACY_ORIGIN as string | undefined) || ''
+const ZOOM_MIN = 0
+const ZOOM_MAX = 200
+const ZOOM_KEY = 'ttti_zoom'
+
+function readZoomPct() {
+  const raw = parseFloat(localStorage.getItem(ZOOM_KEY) || '100')
+  if (Number.isNaN(raw)) return 100
+  if (raw > 0 && raw <= 3) return Math.round(raw * 100)
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(raw)))
+}
+
+function applyPageZoom(pct: number) {
+  const level = pct / 100
+  const target =
+    (document.querySelector('.main-content') as HTMLElement | null) ||
+    (document.querySelector('main') as HTMLElement | null) ||
+    document.body
+  document.body.style.zoom = ''
+  target.style.zoom = String(level)
+  localStorage.setItem(ZOOM_KEY, String(pct))
+}
 
 function resolveHref(to: string, external?: boolean) {
   if (external && legacyBase) return `${legacyBase.replace(/\/$/, '')}${to}`
@@ -26,8 +47,15 @@ export function PortalShell({
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  const [zoomPct, setZoomPct] = useState(() =>
+    typeof window === 'undefined' ? 100 : readZoomPct(),
+  )
   const role = user?.role || 'trainer'
   const nav = getPortalNav(role)
+
+  useEffect(() => {
+    applyPageZoom(zoomPct)
+  }, [zoomPct])
 
   const notifs = useQuery({
     queryKey: ['notifications', 'recent'],
@@ -121,6 +149,34 @@ export function PortalShell({
               </div>
             </div>
           ))}
+
+          <div
+            className="mx-1 mt-3 rounded-xl border border-white/12 bg-white/8 px-3 py-2.5"
+            role="group"
+            aria-label="Page zoom"
+          >
+            <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/90">
+              <span className="inline-flex items-center gap-2">
+                <i className="fas fa-search-plus" aria-hidden /> Zoom
+              </span>
+              <span className="font-extrabold text-amber-400">{zoomPct}%</span>
+            </div>
+            <input
+              type="range"
+              min={ZOOM_MIN}
+              max={ZOOM_MAX}
+              step={5}
+              value={zoomPct}
+              aria-label="Zoom from 0 to 200 percent"
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-white/20 to-amber-400/55"
+              onChange={(e) => setZoomPct(Number(e.target.value))}
+            />
+            <div className="mt-1.5 flex justify-between text-[10px] font-bold uppercase tracking-wide text-white/45">
+              <span>0</span>
+              <span>100</span>
+              <span>Max</span>
+            </div>
+          </div>
         </nav>
       </aside>
 
@@ -133,7 +189,7 @@ export function PortalShell({
         />
       ) : null}
 
-      <div className="pt-[var(--official-header-h)] lg:pl-[var(--sidebar-w)]">
+      <div className="main-content pt-[var(--official-header-h)] lg:pl-[var(--sidebar-w)]">
         <div
           className="sticky top-[var(--official-header-h)] z-30 flex h-[var(--topbar-h)] items-center justify-between border-b-2 border-amber-100 bg-white px-4"
         >

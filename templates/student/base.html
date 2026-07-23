@@ -224,7 +224,7 @@
         {% endif %}
       </a>
       <a href="#" onclick="toggleTheme(); return false"><i class="fas fa-moon fa-fw"></i><span class="nav-label" id="themeLabel">Dark Mode</span></a>
-      <a href="#" onclick="toggleZoom(); return false"><i class="fas fa-magnifying-glass-plus fa-fw"></i><span class="nav-label">Zoom: <span id="zoomLabel">100%</span></span></a>
+      {% include 'partials/sidebar_zoom.html' %}
 
     </div>
 

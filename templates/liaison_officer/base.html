@@ -59,6 +59,7 @@
       <a href="/notifications"><i class="fas fa-bell fa-fw"></i> Notifications
         {% if unread_notification_count > 0 %}<span style="margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;padding:1px 7px;font-size:10px;font-weight:700">{{ unread_notification_count }}</span>{% endif %}
       </a>
+      {% include 'partials/sidebar_zoom.html' %}
     </div>
     <div class="sidebar-footer">
       <div style="padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px">
