@@ -485,7 +485,7 @@ def build_academic_result_transcript_pdf(
     auth = Table(
         [[sig_block("Head of Department"),
           sig_block("Examinations Officer"),
-          sig_block("Registrar / Principal")]],
+          sig_block("Chief Principal")]],
         colWidths=[W / 3] * 3,
     )
     auth.setStyle(TableStyle([
