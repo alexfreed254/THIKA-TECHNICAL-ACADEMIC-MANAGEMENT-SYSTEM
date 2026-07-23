@@ -10,6 +10,9 @@ const MarksEntryPage = lazy(() => import('@/pages/trainer/MarksEntryPage'))
 const AssessmentsPage = lazy(() => import('@/pages/trainer/AssessmentsPage'))
 const AttendancePage = lazy(() => import('@/pages/trainer/AttendancePage'))
 const StudentDashboardPage = lazy(() => import('@/pages/student/DashboardPage'))
+const StudentAttendancePage = lazy(() => import('@/pages/student/AttendancePage'))
+const StudentUnitsPage = lazy(() => import('@/pages/student/UnitsPage'))
+const StudentMarksPage = lazy(() => import('@/pages/student/MarksPage'))
 const FeaturePlaceholder = lazy(() => import('@/pages/shared/FeaturePlaceholder'))
 
 function Lazy({ children }: { children: ReactNode }) {
@@ -87,9 +90,30 @@ export function AppRouter() {
                   </Lazy>
                 }
               />
-              <Route path="/student/units" element={<Placeholder title="My Units" path="/student/units" />} />
-              <Route path="/student/attendance" element={<Placeholder title="Lesson Attendance" path="/student/attendance" />} />
-              <Route path="/student/marks" element={<Placeholder title="Marks & Transcripts" path="/student/marks" />} />
+              <Route
+                path="/student/units"
+                element={
+                  <Lazy>
+                    <StudentUnitsPage />
+                  </Lazy>
+                }
+              />
+              <Route
+                path="/student/attendance"
+                element={
+                  <Lazy>
+                    <StudentAttendancePage />
+                  </Lazy>
+                }
+              />
+              <Route
+                path="/student/marks"
+                element={
+                  <Lazy>
+                    <StudentMarksPage />
+                  </Lazy>
+                }
+              />
               <Route path="/student/portfolio" element={<Placeholder title="Portfolio of Evidence" path="/student/portfolio" />} />
               <Route path="/student/assessments" element={<Placeholder title="My Assessments" path="/student/assessments" />} />
               <Route path="/student/documents" element={<Placeholder title="My Documents" path="/student/documents" />} />

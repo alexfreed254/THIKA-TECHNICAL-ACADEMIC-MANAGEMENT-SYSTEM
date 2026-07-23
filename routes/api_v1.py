@@ -782,3 +782,167 @@ def api_student_dashboard():
         "recent_assessments": recent_assessments,
         "unread_notifications": get_user_notifications(student_id, unread_only=True, limit=3),
     })
+
+# ── Student: attendance / units / marks ───────────────────────────────────────
+
+@api_v1_bp.route("/student/attendance", methods=["GET"])
+@api_role_required("student")
+def api_student_attendance():
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    attendance_list = (db.table("attendance")
+                      .select("id, status, attendance_date, week, lesson, term, year, units(name, code)")
+                      .eq("student_id", student_id)
+                      .order("attendance_date", desc=True)
+                      .execute().data or [])
+    total = len(attendance_list)
+    present = sum(1 for a in attendance_list if a.get("status") == "present")
+    percentage = round((present / total * 100), 1) if total else 0
+    return _ok({
+        "attendance": attendance_list,
+        "total": total,
+        "present": present,
+        "absent": total - present,
+        "percentage": percentage,
+    })
+
+
+@api_v1_bp.route("/student/units", methods=["GET"])
+@api_role_required("student")
+def api_student_units():
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    enrollments = (db.table("enrollments")
+                  .select("class_id, classes(name)")
+                  .eq("student_id", student_id).execute().data or [])
+    class_ids = [e["class_id"] for e in enrollments if e.get("class_id")]
+    class_units_data = []
+    if class_ids:
+        class_units_data = (db.table("class_units")
+                           .select("class_id, units(name, code, id)")
+                           .in_("class_id", class_ids).execute().data or [])
+    units_data = []
+    seen = set()
+    for cu in class_units_data:
+        unit = cu.get("units") or {}
+        uid = unit.get("id")
+        if not uid or uid in seen:
+            continue
+        seen.add(uid)
+        att = (db.table("attendance").select("status")
+              .eq("student_id", student_id).eq("unit_id", uid).execute().data or [])
+        total = len(att)
+        present = sum(1 for a in att if a.get("status") == "present")
+        pct = round(present / total * 100, 1) if total else 0
+        class_name = ""
+        for enr in enrollments:
+            if enr.get("class_id") == cu.get("class_id"):
+                class_name = (enr.get("classes") or {}).get("name", "")
+                break
+        units_data.append({
+            "id": uid, "code": unit.get("code", ""), "name": unit.get("name", ""),
+            "class_name": class_name, "attended": present, "total": total, "pct": pct,
+        })
+    return _ok({"units": units_data})
+
+
+@api_v1_bp.route("/student/marks", methods=["GET"])
+@api_role_required("student")
+def api_student_marks():
+    from datetime import datetime
+    from collections import OrderedDict
+
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+    year = request.args.get("year", str(datetime.now().year))
+    term = (request.args.get("term") or "").strip()
+
+    profile = (db.table("user_profiles")
+                 .select("full_name, admission_no, mobile_number")
+                 .eq("id", student_id).limit(1).execute().data or [])
+    profile = profile[0] if profile else {}
+
+    enrollment = (db.table("enrollments")
+                    .select("class_id, classes(name, departments(name))")
+                    .eq("student_id", student_id).limit(1).execute().data or [])
+    class_name = dept_name = ""
+    class_id = None
+    if enrollment:
+        class_id = enrollment[0].get("class_id")
+        cls = enrollment[0].get("classes") or {}
+        dept = cls.get("departments") or {}
+        class_name = cls.get("name", "")
+        dept_name = dept.get("name", "")
+
+    assessments = []
+    if class_id:
+        q = (db.table("formative_assessments")
+               .select("id, unit_id, assessment_name, assessment_type, max_marks, year, term, "
+                       "units(name, code), "
+                       "trainer:user_profiles!formative_assessments_trainer_id_fkey(full_name)")
+               .eq("class_id", class_id).eq("year", int(year)))
+        if term:
+            q = q.eq("term", int(term))
+        assessments = (q.order("unit_id").order("assessment_type").order("created_at").execute().data or [])
+
+    marks_map = {}
+    if assessments:
+        a_ids = [a["id"] for a in assessments]
+        fm = (db.table("formative_marks").select("assessment_id, marks_obtained")
+                .eq("student_id", student_id).in_("assessment_id", a_ids).execute().data or [])
+        marks_map = {m["assessment_id"]: m["marks_obtained"] for m in fm}
+
+    by_unit = OrderedDict()
+    for a in assessments:
+        uid = a["unit_id"]
+        unit = a.get("units") or {}
+        if uid not in by_unit:
+            by_unit[uid] = {"unit": unit, "term": a.get("term"), "assessments": []}
+        obt = marks_map.get(a["id"])
+        mx = float(a.get("max_marks") or 100)
+        if obt is not None:
+            pct = round(float(obt) / mx * 100, 1) if mx else 0
+            grade = ("M" if pct >= 80 else "P" if pct >= 65 else "C" if pct >= 50 else "NYC")
+        else:
+            pct = None
+            grade = None
+        by_unit[uid]["assessments"].append({
+            "assessment_name": a.get("assessment_name", ""),
+            "assessment_type": (a.get("assessment_type") or "OTHER").upper(),
+            "term": a.get("term"),
+            "marks_obtained": obt,
+            "max_marks": mx,
+            "grade": grade,
+            "pct": pct,
+            "trainer": a.get("trainer"),
+        })
+
+    units_data = []
+    for uid, data in by_unit.items():
+        entered = [a for a in data["assessments"] if a["marks_obtained"] is not None]
+        total_obt = round(sum(float(a["marks_obtained"]) for a in entered), 1) if entered else 0
+        total_max = round(sum(a["max_marks"] for a in entered), 1) if entered else 0
+        pct = round(total_obt / total_max * 100, 1) if total_max else 0
+        final = ("M" if pct >= 80 else "P" if pct >= 65 else "C" if pct >= 50 else "NYC") if entered else "—"
+        data.update({"total_obt": total_obt, "total_max": total_max, "pct": pct,
+                     "final_grade": final, "has_marks": bool(entered)})
+        units_data.append(data)
+
+    scored = [u for u in units_data if u["has_marks"]]
+    overall = round(sum(u["pct"] for u in scored) / len(scored), 1) if scored else 0
+    passed = sum(1 for u in scored if u["final_grade"] in ("M", "P", "C"))
+
+    return _ok({
+        "profile": profile,
+        "class_name": class_name,
+        "dept_name": dept_name,
+        "year": year,
+        "term": term,
+        "units_data": units_data,
+        "overall": overall,
+        "passed": passed,
+        "scored_units": len(scored),
+    })
