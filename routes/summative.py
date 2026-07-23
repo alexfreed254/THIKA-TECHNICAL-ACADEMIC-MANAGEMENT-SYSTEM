@@ -65,6 +65,8 @@ def _template_ctx(user):
     return {
         "portal_base": _portal(user.get("role")),
         "is_admin": admin,
+        # Trainers may view summative results; only HOD / Super Admin enter competence
+        "can_enter_competence": admin,
         "show_trainer_filter": admin,
         "competence_levels": COMPETENCE_LEVELS,
     }
@@ -550,6 +552,16 @@ def hub():
 def entry():
     db = get_service_client()
     user = current_user()
+
+    # Trainers are read-only for summative — competence entry is admin-only
+    if not _is_admin(user):
+        flash(
+            "Summative competence entry is reserved for Department / Super Admins. "
+            "You can view unit performance and download reports.",
+            "warning",
+        )
+        return redirect(url_for("summative.analysis"))
+
     cu_rows, class_list = _scope_data(db, user)
 
     class_id = request.args.get("class_id", "")
@@ -592,9 +604,16 @@ def entry():
 @summative_bp.route("/save", methods=["POST"])
 @staff_required
 def save_competence():
-    """AJAX — upsert one trainee competence for a unit."""
+    """AJAX — upsert one trainee competence for a unit (admin only)."""
     db = get_service_client()
     user = current_user()
+
+    if not _is_admin(user):
+        return jsonify({
+            "success": False,
+            "message": "Trainers cannot enter summative competence. Contact your HOD.",
+        }), 403
+
     data = request.get_json() or {}
 
     student_id = (data.get("student_id") or "").strip()
@@ -609,17 +628,6 @@ def save_competence():
         return jsonify({"success": False, "message": "Missing required fields"}), 400
     if competence not in COMPETENCE_KEYS:
         return jsonify({"success": False, "message": "Invalid competence level"}), 400
-
-    if user.get("role") == "trainer":
-        assigned = (db.table("class_units")
-                      .select("id")
-                      .eq("trainer_id", user["id"])
-                      .eq("class_id", class_id)
-                      .eq("unit_id", unit_id)
-                      .limit(1)
-                      .execute().data or [])
-        if not assigned:
-            return jsonify({"success": False, "message": "Not assigned to this unit"}), 403
 
     try:
         year = int(year)
