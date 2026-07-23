@@ -433,6 +433,13 @@ def api_trainer_add_assessment():
     if assessment_type not in ("Oral", "Practical", "Theory"):
         return _err("Invalid type.", 400)
 
+    try:
+        max_marks_val = float(max_marks)
+    except (TypeError, ValueError):
+        return _err("Maximum marks must be a number.", 400)
+    if max_marks_val < 1 or max_marks_val > 100:
+        return _err("Maximum marks must be between 1 and 100. Scores convert to % out of 100.", 400)
+
     dup = (db.table("formative_assessments").select("id")
              .eq("unit_id", unit_id).eq("class_id", class_id)
              .eq("trainer_id", user["id"])
@@ -448,7 +455,7 @@ def api_trainer_add_assessment():
             "trainer_id": user["id"],
             "assessment_type": assessment_type,
             "assessment_name": assessment_name,
-            "max_marks": float(max_marks),
+            "max_marks": max_marks_val,
             "year": year, "term": term,
         }).execute()
         write_audit_log("add_formative_assessment",

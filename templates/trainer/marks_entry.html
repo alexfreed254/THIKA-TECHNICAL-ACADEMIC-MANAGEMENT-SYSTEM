@@ -319,19 +319,20 @@
             </td>
             {% endfor %}
             <td class="td-total" id="tot_{{ s.student_id }}">
-              {% set tot = namespace(v=0, n=0) %}
+              {% set tot = namespace(v=0.0, n=0, mx=0.0) %}
               {% for a in oral_list + practical_list + theory_list %}
               {% set mv = sm.get(a.id) %}
               {% if mv is not none %}
               {% set tot.v = tot.v + mv %}
+              {% set tot.mx = tot.mx + (a.max_marks|float) %}
               {% set tot.n = tot.n + 1 %}
               {% endif %}
               {% endfor %}
               {{ tot.v|round(1) if tot.n > 0 else '—' }}
             </td>
             <td id="avg_{{ s.student_id }}">
-              {% if tot.n > 0 %}
-              {% set avg = (tot.v / tot.n)|round(1) %}
+              {% if tot.n > 0 and tot.mx > 0 %}
+              {% set avg = ((tot.v / tot.mx) * 100)|round(1) %}
               <span class="{{ 'avg-high' if avg >= 75 else ('avg-med' if avg >= 50 else 'avg-low') }}">
                 {{ avg }}%
               </span>
@@ -343,9 +344,13 @@
       </table>
     </div>
 
-    <div style="padding:10px 18px;background:#fafafa;border-top:1px solid #eee;font-size:12px;color:#888;display:flex;align-items:center;gap:8px;">
-      <i class="fas fa-info-circle"></i>
-      Marks save automatically when you click away from a cell (auto-save). Green border = saved. Red = error.
+    <div style="padding:10px 18px;background:#fafafa;border-top:1px solid #eee;font-size:12px;color:#888;display:flex;align-items:flex-start;gap:8px;">
+      <i class="fas fa-info-circle" style="margin-top:2px;"></i>
+      <span>
+        Marks save automatically when you click away from a cell (auto-save). Green border = saved. Red = error.
+        <strong>Avg %</strong> converts each score to out of 100% using the assessment maximum
+        (total obtained ÷ total maximum × 100).
+      </span>
     </div>
     {% endif %}
   </div>
@@ -379,8 +384,13 @@
     <input type="text" id="asmName" placeholder="e.g. Oral 1, Practical 3, Written Assessment 2"
            oninput="suggestName()">
 
-    <label>Maximum Marks (default 100)</label>
-    <input type="number" id="asmMax" value="100" min="1" max="200">
+    <label>Maximum Marks (1–100, default 100)</label>
+    <input type="number" id="asmMax" value="100" min="1" max="100" step="1"
+           oninput="previewMaxConvert()">
+    <p id="maxHint" style="font-size:12px;color:#64748b;margin:-6px 0 14px;line-height:1.4;">
+      Entered scores are converted to <strong>out of 100%</strong>
+      (score ÷ maximum × 100). Example: 40 / 50 = <strong>80%</strong>.
+    </p>
 
     <div id="modalErr" style="color:#c62828;font-size:12px;margin-bottom:8px;display:none;"></div>
 
@@ -472,29 +482,51 @@ function autoSave(inp) {
   });
 }
 
-/* ── Recalculate total & avg for a row ── */
+/* ── Recalculate total & avg for a row (avg = convert to /100%) ── */
 function recalcRow(inp) {
   var sid  = inp.dataset.sid;
   var row  = document.querySelector('tr[data-sid="' + sid + '"]');
   if (!row) return;
   var inputs = row.querySelectorAll('.mark-inp');
-  var total  = 0, count = 0;
+  var total = 0, maxTotal = 0, count = 0;
   inputs.forEach(function(i) {
     var v = parseFloat(i.value);
-    if (!isNaN(v)) { total += v; count++; }
+    var mx = parseFloat(i.dataset.max) || 100;
+    if (!isNaN(v)) {
+      total += v;
+      maxTotal += mx;
+      count++;
+    }
   });
   var totEl = document.getElementById('tot_' + sid);
   var avgEl = document.getElementById('avg_' + sid);
   if (!totEl || !avgEl) return;
-  if (count === 0) {
+  if (count === 0 || maxTotal <= 0) {
     totEl.textContent = '—';
     avgEl.innerHTML   = '—';
   } else {
-    var avg = (total / count);
+    /* Convert raw scores against their max to a single % out of 100 */
+    var avg = (total / maxTotal) * 100;
     totEl.textContent = total.toFixed(1);
     var cls = avg >= 75 ? 'avg-high' : (avg >= 50 ? 'avg-med' : 'avg-low');
     avgEl.innerHTML   = '<span class="' + cls + '">' + avg.toFixed(1) + '%</span>';
   }
+}
+
+function previewMaxConvert() {
+  var maxEl = document.getElementById('asmMax');
+  var hint  = document.getElementById('maxHint');
+  if (!maxEl || !hint) return;
+  var mx = parseFloat(maxEl.value);
+  if (isNaN(mx) || mx < 1) mx = 1;
+  if (mx > 100) { mx = 100; maxEl.value = '100'; }
+  var sample = Math.min(mx, Math.round(mx * 0.8 * 2) / 2); /* ~80% sample */
+  if (sample <= 0) sample = mx;
+  var pct = ((sample / mx) * 100).toFixed(1);
+  hint.innerHTML =
+    'Entered scores are converted to <strong>out of 100%</strong> ' +
+    '(score ÷ maximum × 100). Example: <strong>' + sample + ' / ' + mx +
+    '</strong> = <strong>' + pct + '%</strong>.';
 }
 
 /* ── Add Assessment Modal ── */
@@ -509,6 +541,7 @@ function openAddModal() {
     document.getElementById(id).classList.remove('selected');
   });
   document.getElementById('addModal').classList.add('open');
+  previewMaxConvert();
   document.getElementById('asmName').focus();
 }
 
@@ -545,7 +578,12 @@ function submitAddAssessment() {
   if (!selectedType) { errEl.textContent = 'Please select an assessment type.'; errEl.style.display='block'; return; }
   var name = document.getElementById('asmName').value.trim();
   if (!name) { errEl.textContent = 'Please enter an assessment name.'; errEl.style.display='block'; return; }
-  var max  = parseFloat(document.getElementById('asmMax').value) || 100;
+  var max  = parseFloat(document.getElementById('asmMax').value);
+  if (isNaN(max) || max < 1 || max > 100) {
+    errEl.textContent = 'Maximum marks must be between 1 and 100.';
+    errEl.style.display = 'block';
+    return;
+  }
 
   var btn = document.getElementById('addBtn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';

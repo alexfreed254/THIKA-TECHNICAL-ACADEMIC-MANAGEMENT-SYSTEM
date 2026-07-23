@@ -129,15 +129,20 @@ export default function MarksEntryPage() {
 
   function rowStats(sid: string) {
     let total = 0
+    let maxTotal = 0
     let count = 0
     for (const a of ordered) {
       const v = parseFloat(localMarks[`${sid}:${a.id}`] ?? '')
+      const mx = Number(a.max_marks) || 100
       if (!Number.isNaN(v)) {
         total += v
+        maxTotal += mx
         count += 1
       }
     }
-    return { total, count, avg: count ? total / count : 0 }
+    /* Convert raw scores against their max to a single % out of 100 */
+    const avg = count && maxTotal > 0 ? (total / maxTotal) * 100 : 0
+    return { total, count, avg }
   }
 
   function chipClass(t: string) {
@@ -435,13 +440,16 @@ export default function MarksEntryPage() {
                       fontSize: 12,
                       color: '#888',
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                       gap: 8,
                     }}
                   >
-                    <i className="fas fa-info-circle" />
-                    Marks save automatically when you click away from a cell (auto-save). Green border =
-                    saved. Red = error.
+                    <i className="fas fa-info-circle" style={{ marginTop: 2 }} />
+                    <span>
+                      Marks save automatically when you click away from a cell (auto-save). Green border
+                      = saved. Red = error. <strong>Avg %</strong> converts scores to out of 100% using
+                      the assessment maximum (total obtained ÷ total maximum × 100).
+                    </span>
                   </div>
                 </>
               )}
@@ -483,14 +491,39 @@ export default function MarksEntryPage() {
               placeholder="e.g. Oral 1, Practical 3, Written Assessment 2"
               onChange={(e) => setAsmName(e.target.value)}
             />
-            <label>Maximum Marks (default 100)</label>
+            <label>Maximum Marks (1–100, default 100)</label>
             <input
               type="number"
               value={asmMax}
               min={1}
-              max={200}
-              onChange={(e) => setAsmMax(Number(e.target.value) || 100)}
+              max={100}
+              step={1}
+              onChange={(e) => {
+                const n = Number(e.target.value)
+                if (Number.isNaN(n)) {
+                  setAsmMax(100)
+                  return
+                }
+                setAsmMax(Math.min(100, Math.max(1, n)))
+              }}
             />
+            <p style={{ fontSize: 12, color: '#64748b', margin: '-6px 0 14px', lineHeight: 1.4 }}>
+              Entered scores are converted to <strong>out of 100%</strong> (score ÷ maximum × 100).
+              Example:{' '}
+              <strong>
+                {Math.min(asmMax, Math.round(asmMax * 0.8 * 2) / 2 || asmMax)} / {asmMax || 100}
+              </strong>{' '}
+              ={' '}
+              <strong>
+                {(
+                  ((Math.min(asmMax, Math.round(asmMax * 0.8 * 2) / 2 || asmMax) / (asmMax || 100)) *
+                    100) ||
+                  0
+                ).toFixed(1)}
+                %
+              </strong>
+              .
+            </p>
             {modalErr ? (
               <div style={{ color: '#c62828', fontSize: 12, marginBottom: 8 }}>{modalErr}</div>
             ) : null}
@@ -517,12 +550,16 @@ export default function MarksEntryPage() {
                     setModalErr('Assessment name is required.')
                     return
                   }
+                  if (!asmMax || asmMax < 1 || asmMax > 100) {
+                    setModalErr('Maximum marks must be between 1 and 100.')
+                    return
+                  }
                   addMut.mutate({
                     unit_id: unitId,
                     class_id: classId,
                     assessment_type: selType,
                     assessment_name: asmName.trim(),
-                    max_marks: asmMax || 100,
+                    max_marks: asmMax,
                     year,
                     term,
                   })
