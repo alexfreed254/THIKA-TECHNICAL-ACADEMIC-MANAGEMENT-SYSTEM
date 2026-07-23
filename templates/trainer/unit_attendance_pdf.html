@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Unit Attendance Register — {{ unit.code or 'Unit' }} | TTTI</title>
+<style>
+  :root{
+    --navy:#0e2a5e; --navy-deep:#0a1f47; --blue:#1e4fa3;
+    --ink:#1b2430; --muted:#5b6472; --border:#dbe2ee; --panel:#f3f6fb;
+    --green:#1a7a3c; --red:#c0392b; --gold:#a9740a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    color:var(--ink); background:#e9edf3;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+
+  .no-print{
+    width:100%; max-width:1100px; margin:16px auto 0;
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+  }
+  .btn{
+    padding:10px 22px; border:none; border-radius:8px; color:#fff;
+    font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .btn-print{ background:linear-gradient(135deg,#1e4fa3,#0a1f47); }
+  .btn-back{ background:#64748b; }
+
+  .page{
+    width:297mm; min-height:210mm;
+    margin:16px auto 24px; background:#fff;
+    padding:12mm 10mm 14mm;
+    box-shadow:0 6px 24px rgba(10,20,50,.12);
+    position:relative;
+  }
+  .top-bar{
+    position:absolute; top:0; left:0; right:0; height:5px;
+    background:linear-gradient(90deg,var(--navy),var(--blue),#4f7fd6);
+  }
+
+  header{
+    display:flex; align-items:center; gap:14px;
+    padding-bottom:8px; border-bottom:2px solid var(--navy);
+  }
+  .logo{
+    width:48px; height:48px; border-radius:6px; border:1px solid var(--border);
+    overflow:hidden; flex:none; background:#fff;
+  }
+  .logo img{ width:100%; height:100%; object-fit:contain; }
+  .brand{ flex:1; text-align:center; }
+  .brand h1{
+    margin:0; font-size:15px; font-weight:800; letter-spacing:.3px;
+    text-transform:uppercase; color:var(--navy-deep);
+  }
+  .brand .dept{ margin:2px 0 0; font-size:11px; font-weight:600; color:var(--muted); }
+  .brand .title{
+    margin:4px 0 0; font-size:12.5px; font-weight:700; color:var(--blue);
+    text-decoration:underline; text-underline-offset:2px;
+  }
+  .brand .meta{ margin:3px 0 0; font-size:10px; color:var(--muted); }
+
+  .info{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:0;
+    margin-top:10px; border:1px solid var(--border); border-radius:6px;
+    background:var(--panel); overflow:hidden; font-size:10.5px;
+  }
+  .info .col{ padding:8px 12px; }
+  .info .col + .col{ border-left:1px solid var(--border); }
+  .info .row{ display:flex; gap:6px; padding:2px 0; }
+  .info .k{ width:72px; flex:none; color:var(--muted); font-weight:600; }
+  .info .v{ font-weight:700; }
+
+  .legend{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    margin:8px 0 6px; font-size:10px; color:var(--muted);
+  }
+  .legend strong{ color:var(--navy-deep); }
+  .pill{ display:inline-block; padding:1px 7px; border-radius:10px; font-weight:800; font-size:9.5px; }
+  .pill.p{ background:#e9f7ee; color:var(--green); }
+  .pill.a{ background:#fdeceb; color:var(--red); }
+  .pill.l{ background:#fdf6e3; color:var(--gold); }
+
+  .tbl-wrap{ overflow:hidden; margin-top:4px; }
+  table.matrix{
+    width:100%; border-collapse:collapse; table-layout:fixed;
+    font-size:9px;
+  }
+  table.matrix thead th{
+    background:var(--panel); color:var(--navy-deep);
+    border:1px solid var(--border); border-bottom:2px solid var(--navy);
+    padding:4px 2px; font-size:8px; font-weight:800;
+    text-transform:uppercase; letter-spacing:.2px; text-align:center;
+  }
+  table.matrix thead th.sticky-l{ text-align:left; padding-left:6px; }
+  table.matrix tbody td{
+    border:1px solid var(--border); padding:3px 2px; text-align:center;
+    vertical-align:middle;
+  }
+  table.matrix tbody tr:nth-child(even) td{ background:#fafbfd; }
+  table.matrix .num{ color:#94a3b8; font-weight:700; width:22px; }
+  table.matrix .adm{ font-weight:700; text-align:left; padding-left:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  table.matrix .name{ text-align:left; padding-left:5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .m-p{ color:var(--green); font-weight:800; }
+  .m-a{ color:var(--red); font-weight:800; }
+  .m-l{ color:var(--gold); font-weight:800; }
+  .m-n{ color:#cbd5e1; }
+  .tot{ font-weight:800; }
+  .rate-ok{ color:var(--green); font-weight:800; }
+  .rate-mid{ color:var(--gold); font-weight:800; }
+  .rate-bad{ color:var(--red); font-weight:800; }
+
+  .auth{
+    display:grid; grid-template-columns:1fr 1fr auto; gap:18px;
+    margin-top:14px; align-items:end;
+  }
+  .sign .role{
+    font-size:10px; font-weight:800; color:var(--navy-deep);
+    text-transform:uppercase; letter-spacing:.3px; margin-bottom:10px;
+  }
+  .sign .line{
+    border-top:1px solid #9fb0c9; margin-top:12px; padding-top:4px;
+    font-size:9.5px; color:var(--muted);
+  }
+  .stamp{
+    width:72px; height:72px; border:1.5px dashed #9fb0c9; border-radius:5px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:8.5px; color:#8496ad; line-height:1.25; letter-spacing:.2px;
+  }
+
+  footer{
+    margin-top:10px; padding-top:6px; border-top:1px solid var(--border);
+    display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;
+    font-size:8.5px; color:var(--muted);
+  }
+
+  @page{ size:A4 landscape; margin:8mm; }
+  @media print{
+    body{ background:none; }
+    .no-print{ display:none !important; }
+    .page{
+      box-shadow:none; margin:0; width:auto; min-height:auto;
+      padding:0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button class="btn btn-print" type="button" onclick="window.print()">🖨 Print / Save as PDF (Landscape)</button>
+  <button class="btn btn-back" type="button" onclick="history.back()">← Back</button>
+</div>
+
+<div class="page">
+  <div class="top-bar"></div>
+
+  <header>
+    <div class="logo">
+      <img src="/static/assets/KENYACOATOFARMS.png" alt="Coat of Arms"
+           onerror="this.style.display='none'">
+    </div>
+    <div class="brand">
+      <h1>Thika Technical Training Institute</h1>
+      <div class="dept">Department of {{ dept.name if dept and dept.name else '—' }}</div>
+      <div class="title">Unit Attendance Register — All Weeks</div>
+      <div class="meta">REF: {{ ref_code }} · Generated: {{ generated }} · Landscape A4</div>
+    </div>
+    <div class="logo">
+      <img src="/static/assets/THIKATTILOGO.jpg" alt="TTTI"
+           onerror="this.src='/ttti-logo.jpg'">
+    </div>
+  </header>
+
+  <div class="info">
+    <div class="col">
+      <div class="row"><span class="k">Class:</span><span class="v">{{ cls.name if cls else '—' }}</span></div>
+      <div class="row"><span class="k">Unit:</span><span class="v">{{ unit.code or '—' }}{% if unit.name %} — {{ unit.name }}{% endif %}</span></div>
+    </div>
+    <div class="col">
+      <div class="row"><span class="k">Year:</span><span class="v">{{ year }}</span></div>
+      <div class="row"><span class="k">Term:</span><span class="v">Term {{ term }}{% if term==1 %} (Jan–Apr){% elif term==2 %} (May–Aug){% else %} (Sep–Dec){% endif %}</span></div>
+    </div>
+    <div class="col">
+      <div class="row"><span class="k">Trainer:</span><span class="v">{{ trainer.name or '—' }}</span></div>
+      <div class="row"><span class="k">Coverage:</span><span class="v">{{ session_count }} session(s) · {{ student_count }} trainee(s)</span></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <strong>Key:</strong>
+    <span class="pill p">P</span> Present
+    <span class="pill l">L</span> Late
+    <span class="pill a">A</span> Absent
+    <span style="margin-left:6px">— Not marked</span>
+    <span style="margin-left:auto">Sessions across all weeks taught for this unit</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th class="sticky-l" style="width:22px">#</th>
+          <th class="sticky-l" style="width:68px">Adm No</th>
+          <th class="sticky-l" style="width:120px">Trainee Name</th>
+          {% for s in session_cols %}
+          <th title="Week {{ s.week }} · {{ s.lesson }}">{{ s.label }}</th>
+          {% endfor %}
+          <th style="width:28px">P</th>
+          <th style="width:28px">A</th>
+          <th style="width:36px">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in student_rows %}
+        <tr>
+          <td class="num">{{ loop.index }}</td>
+          <td class="adm">{{ row.admission_no }}</td>
+          <td class="name">{{ row.full_name }}</td>
+          {% for c in row.cells %}
+          <td class="{% if c.mark=='P' %}m-p{% elif c.mark=='A' %}m-a{% elif c.mark=='L' %}m-l{% else %}m-n{% endif %}">{{ c.mark }}</td>
+          {% endfor %}
+          <td class="tot m-p">{{ row.present }}</td>
+          <td class="tot m-a">{{ row.absent }}</td>
+          <td class="{% if row.rate >= 75 %}rate-ok{% elif row.rate >= 50 %}rate-mid{% else %}rate-bad{% endif %}">
+            {% if row.marked %}{{ row.rate }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 6 + session_cols|length }}" style="padding:18px;color:#8496ad;font-style:italic">
+            No attendance records for this unit.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="auth">
+    <div class="sign">
+      <div class="role">Trainer</div>
+      <div class="line">Name: {{ trainer.name or '____________________________' }}</div>
+      <div class="line">Sign: _______________ &nbsp; Date: ___________</div>
+    </div>
+    <div class="sign">
+      <div class="role">Head of Department</div>
+      <div class="line">Name: ____________________________</div>
+      <div class="line">Sign: _______________ &nbsp; Date: ___________</div>
+    </div>
+    <div class="stamp">OFFICIAL<br>STAMP</div>
+  </div>
+
+  <footer>
+    <span>© {{ year }} Thika Technical Training Institute — All Rights Reserved</span>
+    <span>REF: {{ ref_code }}</span>
+    <span>Generated: {{ generated }}</span>
+  </footer>
+</div>
+
+<script>
+  // Fit wide matrices onto one landscape page when printing
+  window.addEventListener('beforeprint', function () {
+    var page = document.querySelector('.page');
+    var table = document.querySelector('table.matrix');
+    if (!page || !table) return;
+    var avail = page.clientWidth;
+    var need = table.scrollWidth;
+    if (need > avail + 4) {
+      var scale = Math.max(0.55, avail / need);
+      table.style.transformOrigin = 'top left';
+      table.style.transform = 'scale(' + scale.toFixed(3) + ')';
+      table.parentElement.style.height = (table.offsetHeight * scale) + 'px';
+    }
+  });
+  window.addEventListener('afterprint', function () {
+    var table = document.querySelector('table.matrix');
+    if (!table) return;
+    table.style.transform = '';
+    table.parentElement.style.height = '';
+  });
+</script>
+</body>
+</html>

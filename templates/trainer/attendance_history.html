@@ -223,9 +223,16 @@ tbody td { padding:10px 14px; font-size:13px; }
           Year {{ year }}, Term {{ term }}
         </span>
       </h3>
-      <span style="background:#e3f2fd;color:#1e5a9f;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;">
-        {{ sessions|length }} session(s)
-      </span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="background:#e3f2fd;color:#1e5a9f;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;">
+          {{ sessions|length }} session(s)
+        </span>
+        <a href="/trainer/unit-attendance-pdf?class_id={{ class_id }}&unit_id={{ unit_id }}&year={{ year }}&term={{ term }}"
+           target="_blank" class="btn btn-danger btn-sm"
+           title="Download all weeks for this unit on one landscape page">
+          <i class="fas fa-file-pdf"></i> Download Unit PDF (All Weeks)
+        </a>
+      </div>
     </div>
     <div style="overflow-x:auto;">
       <table>
