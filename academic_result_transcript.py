@@ -1,25 +1,26 @@
 """
 TTTI Academic Result Transcript PDF.
 
-Matches the official Examinations Office transcript layout used from the
-trainee Marks & Transcript download.
+Trainee Marks & Transcript download — shows each Oral, Practical and Written
+assessment mark (as entered by the trainer) in separate columns, plus total
+score and grade.
 """
 
 from __future__ import annotations
 
-import io
 import os
+from collections import Counter
 from datetime import datetime
+from io import BytesIO
 
 
 NAVY = "#1a3a5a"
 BORDER = "#cbd5e1"
 ROW_LINE = "#e2e8f0"
 LIGHT = "#f8fafc"
-
-# Formative types rolled into "Oral / CAT"
-ORAL_CAT_TYPES = {"ORAL", "CA", "WRITTEN", "IA", "CAT", "THEORY", "OTHER"}
-PRACTICAL_TYPES = {"PRACTICAL", "PRACT"}
+ORAL_BG = "#1e5a9f"
+PRAC_BG = "#c2410c"
+WRIT_BG = "#5b21b6"
 
 
 def _resolve_logo_path() -> str | None:
@@ -35,31 +36,55 @@ def _resolve_logo_path() -> str | None:
     return None
 
 
-def _fmt_score(value) -> str:
-    if value is None:
+def _bucket(assessment_type: str) -> str:
+    """Map formative type → oral | practical | written (trainer: Oral/Practical/Theory)."""
+    t = (assessment_type or "").upper().strip()
+    if t in ("ORAL",):
+        return "oral"
+    if t in ("PRACTICAL", "PRACT") or "PRACT" in t:
+        return "practical"
+    # Theory / Written / CA / IA / CAT / anything else → Written column group
+    return "written"
+
+
+def _mark_cell(row: dict | None) -> str:
+    """Format a single trainer-entered mark as obtained/max."""
+    if not row or row.get("marks_obtained") is None:
         return "—"
     try:
-        return f"{float(value):.1f}"
+        obt = float(row["marks_obtained"])
+        mx = float(row.get("max_marks") or 100)
+        # Show whole numbers cleanly when possible
+        obt_s = f"{obt:.0f}" if obt == int(obt) else f"{obt:.1f}"
+        mx_s = f"{mx:.0f}" if mx == int(mx) else f"{mx:.1f}"
+        return f"{obt_s}/{mx_s}"
     except (TypeError, ValueError):
         return "—"
 
 
-def _type_bucket(assessment_type: str) -> str:
-    t = (assessment_type or "").upper().strip()
-    if t in PRACTICAL_TYPES or "PRACT" in t:
-        return "practical"
-    return "oral_cat"
+def _split_by_type(arows: list) -> dict:
+    out = {"oral": [], "practical": [], "written": []}
+    for r in arows:
+        out[_bucket(r.get("assessment_type", ""))].append(r)
+    return out
 
 
-def _avg_pct(rows: list) -> float | None:
-    entered = [r for r in rows if r.get("marks_obtained") is not None]
-    if not entered:
-        return None
-    total_pct = 0.0
-    for r in entered:
-        mx = float(r.get("max_marks") or 100) or 100.0
-        total_pct += float(r["marks_obtained"]) / mx * 100.0
-    return round(total_pct / len(entered), 1)
+def _slot_labels(by_unit: dict, bucket: str, count: int, fallback: str) -> list[str]:
+    """Best assessment name for each column index across units."""
+    labels = []
+    for i in range(count):
+        names = []
+        for ud in by_unit.values():
+            parts = _split_by_type(ud.get("rows") or [])[bucket]
+            if i < len(parts):
+                n = (parts[i].get("assessment_name") or "").strip()
+                if n:
+                    names.append(n)
+        if names:
+            labels.append(Counter(names).most_common(1)[0][0])
+        else:
+            labels.append(f"{fallback} {i + 1}")
+    return labels
 
 
 def build_academic_result_transcript_pdf(
@@ -76,8 +101,9 @@ def build_academic_result_transcript_pdf(
     Build transcript PDF bytes.
 
     by_unit: OrderedDict[unit_id -> {"unit": {...}, "rows": [assessment mark dicts]}]
+    Each row should include assessment_name, assessment_type, marks_obtained, max_marks, term.
     """
-    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib import colors
     from reportlab.lib.units import mm
     from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -87,65 +113,84 @@ def build_academic_result_transcript_pdf(
         HRFlowable, Image as RLImage,
     )
 
+    # Column counts from actual assessments present (no empty groups)
+    max_oral = max_prac = max_writ = 0
+    for ud in (by_unit or {}).values():
+        parts = _split_by_type(ud.get("rows") or [])
+        max_oral = max(max_oral, len(parts["oral"]))
+        max_prac = max(max_prac, len(parts["practical"]))
+        max_writ = max(max_writ, len(parts["written"]))
+
+    n_assess = max_oral + max_prac + max_writ
+    # Ensure table still builds if units exist but marks pending (show placeholder cols)
+    if by_unit and n_assess == 0:
+        max_oral = max_prac = max_writ = 1
+        n_assess = 3
+
+    page = landscape(A4) if n_assess > 5 else A4
+
     navy = colors.HexColor(NAVY)
     border = colors.HexColor(BORDER)
     row_line = colors.HexColor(ROW_LINE)
     light = colors.HexColor(LIGHT)
+    oral_bg = colors.HexColor(ORAL_BG)
+    prac_bg = colors.HexColor(PRAC_BG)
+    writ_bg = colors.HexColor(WRIT_BG)
 
-    buf = io.BytesIO()
+    buf = BytesIO()
     pdf = SimpleDocTemplate(
-        buf, pagesize=A4,
-        leftMargin=16 * mm, rightMargin=16 * mm,
-        topMargin=12 * mm, bottomMargin=12 * mm,
+        buf, pagesize=page,
+        leftMargin=12 * mm, rightMargin=12 * mm,
+        topMargin=10 * mm, bottomMargin=10 * mm,
     )
-    W = A4[0] - 32 * mm
+    W = page[0] - 24 * mm
 
     base = getSampleStyleSheet()
 
     def S(name, **kw):
         return ParagraphStyle(name, parent=base["Normal"], **kw)
 
-    inst = S("inst", fontName="Helvetica-Bold", fontSize=14, textColor=navy,
-             alignment=TA_CENTER, leading=17, spaceAfter=2)
-    office = S("office", fontName="Helvetica-Bold", fontSize=10, textColor=navy,
-               alignment=TA_CENTER, leading=12, spaceAfter=1)
-    title = S("title", fontName="Helvetica-Bold", fontSize=11, textColor=navy,
-              alignment=TA_CENTER, leading=13, spaceAfter=2)
-    year_s = S("year", fontName="Helvetica", fontSize=9, textColor=colors.HexColor("#334155"),
-               alignment=TA_CENTER, leading=11, spaceAfter=0)
-    lbl = S("lbl", fontName="Helvetica-Bold", fontSize=9, textColor=colors.HexColor("#0f172a"), leading=12)
-    val = S("val", fontName="Helvetica", fontSize=9, textColor=colors.HexColor("#1e293b"), leading=12)
-    th = S("th", fontName="Helvetica-Bold", fontSize=7.5, textColor=colors.white,
-           alignment=TA_CENTER, leading=9)
-    th_l = S("thl", fontName="Helvetica-Bold", fontSize=7.5, textColor=colors.white,
-             alignment=TA_LEFT, leading=9)
-    td = S("td", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#0f172a"),
-           alignment=TA_CENTER, leading=10)
-    td_l = S("tdl", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#0f172a"),
-             alignment=TA_LEFT, leading=10)
-    legend = S("leg", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#334155"),
+    inst = S("inst", fontName="Helvetica-Bold", fontSize=13, textColor=navy,
+             alignment=TA_CENTER, leading=16, spaceAfter=2)
+    office = S("office", fontName="Helvetica-Bold", fontSize=9.5, textColor=navy,
+               alignment=TA_CENTER, leading=11, spaceAfter=1)
+    title = S("title", fontName="Helvetica-Bold", fontSize=10.5, textColor=navy,
+              alignment=TA_CENTER, leading=12, spaceAfter=2)
+    year_s = S("year", fontName="Helvetica", fontSize=8.5, textColor=colors.HexColor("#334155"),
                alignment=TA_CENTER, leading=10)
-    verify = S("ver", fontName="Helvetica-Bold", fontSize=10, textColor=navy,
-               alignment=TA_LEFT, leading=12, spaceAfter=8)
-    sig_h = S("sigh", fontName="Helvetica-Bold", fontSize=8.5, textColor=navy,
-              alignment=TA_CENTER, leading=11, spaceAfter=6)
-    sig_l = S("sigl", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#334155"),
-              alignment=TA_CENTER, leading=12)
-    foot = S("foot", fontName="Helvetica", fontSize=7.5, textColor=colors.HexColor("#64748b"),
+    lbl = S("lbl", fontName="Helvetica-Bold", fontSize=8.5, textColor=colors.HexColor("#0f172a"), leading=11)
+    val = S("val", fontName="Helvetica", fontSize=8.5, textColor=colors.HexColor("#1e293b"), leading=11)
+    th = S("th", fontName="Helvetica-Bold", fontSize=7, textColor=colors.white,
+           alignment=TA_CENTER, leading=8)
+    th_sm = S("thsm", fontName="Helvetica-Bold", fontSize=6.5, textColor=colors.white,
+              alignment=TA_CENTER, leading=8)
+    th_l = S("thl", fontName="Helvetica-Bold", fontSize=7, textColor=colors.white,
+             alignment=TA_LEFT, leading=8)
+    td = S("td", fontName="Helvetica", fontSize=7.5, textColor=colors.HexColor("#0f172a"),
+           alignment=TA_CENTER, leading=9)
+    td_l = S("tdl", fontName="Helvetica", fontSize=7.5, textColor=colors.HexColor("#0f172a"),
+             alignment=TA_LEFT, leading=9)
+    legend = S("leg", fontName="Helvetica", fontSize=7.5, textColor=colors.HexColor("#334155"),
+               alignment=TA_CENTER, leading=9)
+    verify = S("ver", fontName="Helvetica-Bold", fontSize=9.5, textColor=navy, leading=11, spaceAfter=6)
+    sig_h = S("sigh", fontName="Helvetica-Bold", fontSize=8, textColor=navy,
+              alignment=TA_CENTER, leading=10, spaceAfter=4)
+    sig_l = S("sigl", fontName="Helvetica", fontSize=7.5, textColor=colors.HexColor("#334155"),
+              alignment=TA_CENTER, leading=11)
+    foot = S("foot", fontName="Helvetica", fontSize=7, textColor=colors.HexColor("#64748b"),
              alignment=TA_CENTER, leading=9)
 
     story = []
 
-    # ── Header (centered logo + titles) ──────────────────────────────────────
+    # ── Header ───────────────────────────────────────────────────────────────
     logo_path = _resolve_logo_path()
     if logo_path:
         try:
-            img = RLImage(logo_path, width=22 * mm, height=22 * mm)
+            img = RLImage(logo_path, width=18 * mm, height=18 * mm)
             wrap = Table([[img]], colWidths=[W])
             wrap.setStyle(TableStyle([
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ]))
             story.append(wrap)
         except Exception:
@@ -158,10 +203,10 @@ def build_academic_result_transcript_pdf(
     if term:
         year_line += f"   ·   Term {term}"
     story.append(Paragraph(year_line, year_s))
-    story.append(Spacer(1, 4))
-    story.append(HRFlowable(width="100%", thickness=2.0, color=navy, spaceBefore=2, spaceAfter=8))
+    story.append(Spacer(1, 3))
+    story.append(HRFlowable(width="100%", thickness=2.0, color=navy, spaceBefore=1, spaceAfter=6))
 
-    # ── Student info (two columns) ───────────────────────────────────────────
+    # ── Student info ─────────────────────────────────────────────────────────
     left = [
         [Paragraph("Student Name:", lbl), Paragraph(student.get("full_name") or "—", val)],
         [Paragraph("Course Name:", lbl), Paragraph(course_name or "—", val)],
@@ -172,15 +217,15 @@ def build_academic_result_transcript_pdf(
         [Paragraph("Course Code:", lbl), Paragraph(course_code or "—", val)],
         [Paragraph("Class / Cohort:", lbl), Paragraph(class_name or "—", val)],
     ]
-    left_t = Table(left, colWidths=[32 * mm, W * 0.5 - 32 * mm])
-    right_t = Table(right, colWidths=[32 * mm, W * 0.5 - 32 * mm])
     info_style = TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("TOPPADDING", (0, 0), (-1, -1), 1),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ])
+    left_t = Table(left, colWidths=[30 * mm, W * 0.5 - 30 * mm])
+    right_t = Table(right, colWidths=[30 * mm, W * 0.5 - 30 * mm])
     left_t.setStyle(info_style)
     right_t.setStyle(info_style)
     info = Table([[left_t, right_t]], colWidths=[W * 0.52, W * 0.48])
@@ -190,42 +235,54 @@ def build_academic_result_transcript_pdf(
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
     ]))
     story.append(info)
-    story.append(Spacer(1, 6))
-    story.append(HRFlowable(width="100%", thickness=0.7, color=border, spaceBefore=2, spaceAfter=8))
+    story.append(Spacer(1, 5))
+    story.append(HRFlowable(width="100%", thickness=0.7, color=border, spaceBefore=1, spaceAfter=6))
 
-    # ── Results table ────────────────────────────────────────────────────────
-    headers = [
-        Paragraph("#", th),
-        Paragraph("Unit Code", th),
-        Paragraph("Unit Name", th_l),
-        Paragraph("Term", th),
-        Paragraph("Oral / CAT", th),
-        Paragraph("Practical", th),
-        Paragraph("Total / Score", th),
-        Paragraph("Grade", th),
-    ]
-    rows = [headers]
-
+    # ── Results table (Oral / Practical / Written columns) ───────────────────
     if not by_unit:
-        empty = [[Paragraph("No assessment records found for the selected period.", td_l)]]
-        empty_t = Table(empty, colWidths=[W])
-        empty_t.setStyle(TableStyle([
+        empty = Table(
+            [[Paragraph("No assessment records found for the selected period.", td_l)]],
+            colWidths=[W],
+        )
+        empty.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), light),
             ("BOX", (0, 0), (-1, -1), 0.6, border),
             ("TOPPADDING", (0, 0), (-1, -1), 10),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
             ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ]))
-        story.append(empty_t)
+        story.append(empty)
     else:
+        oral_labels = _slot_labels(by_unit, "oral", max_oral, "Oral") if max_oral else []
+        prac_labels = _slot_labels(by_unit, "practical", max_prac, "Practical") if max_prac else []
+        writ_labels = _slot_labels(by_unit, "written", max_writ, "Written") if max_writ else []
+
+        # Row 1 — group headers
+        hdr1 = [
+            Paragraph("#", th), Paragraph("Unit Code", th),
+            Paragraph("Unit Name", th_l), Paragraph("Term", th),
+        ]
+        if max_oral:
+            hdr1 += [Paragraph("ORAL ASSESSMENTS", th)] + [Paragraph("", th)] * (max_oral - 1)
+        if max_prac:
+            hdr1 += [Paragraph("PRACTICAL ASSESSMENTS", th)] + [Paragraph("", th)] * (max_prac - 1)
+        if max_writ:
+            hdr1 += [Paragraph("WRITTEN ASSESSMENTS", th)] + [Paragraph("", th)] * (max_writ - 1)
+        hdr1 += [Paragraph("Total", th), Paragraph("Score %", th), Paragraph("Grade", th)]
+
+        # Row 2 — individual assessment names
+        hdr2 = [Paragraph("", th_sm)] * 4
+        hdr2 += [Paragraph(n, th_sm) for n in oral_labels]
+        hdr2 += [Paragraph(n, th_sm) for n in prac_labels]
+        hdr2 += [Paragraph(n, th_sm) for n in writ_labels]
+        hdr2 += [Paragraph("Σ marks", th_sm), Paragraph("Avg", th_sm), Paragraph("", th_sm)]
+
+        data = [hdr1, hdr2]
+
         for i, (_uid, ud) in enumerate(by_unit.items(), start=1):
             unit = ud.get("unit") or {}
             arows = ud.get("rows") or []
-            oral_rows = [r for r in arows if _type_bucket(r.get("assessment_type", "")) == "oral_cat"]
-            prac_rows = [r for r in arows if _type_bucket(r.get("assessment_type", "")) == "practical"]
-
-            oral_pct = _avg_pct(oral_rows)
-            prac_pct = _avg_pct(prac_rows)
+            parts = _split_by_type(arows)
 
             entered = [r for r in arows if r.get("marks_obtained") is not None]
             if entered:
@@ -234,10 +291,15 @@ def build_academic_result_transcript_pdf(
                 u_pct = round(u_obt / u_mx * 100, 1) if u_mx else 0.0
                 grade = ("M" if u_pct >= 80 else "P" if u_pct >= 65
                          else "C" if u_pct >= 50 else "NYC")
-                total_txt = f"{u_obt:.1f} / {u_pct:.1f}%"
+                if u_obt == int(u_obt) and u_mx == int(u_mx):
+                    total_txt = f"{int(u_obt)}/{int(u_mx)}"
+                else:
+                    total_txt = f"{u_obt}/{u_mx}"
+                pct_txt = f"{u_pct:.1f}%"
             else:
                 grade = "—"
                 total_txt = "—"
+                pct_txt = "—"
 
             terms = sorted({str(r.get("term")) for r in arows if r.get("term") not in (None, "")})
             if term:
@@ -247,51 +309,85 @@ def build_academic_result_transcript_pdf(
             else:
                 term_txt = "—"
 
-            rows.append([
-                Paragraph(str(i), td),
-                Paragraph(unit.get("code") or "—", td),
-                Paragraph(unit.get("name") or "—", td_l),
-                Paragraph(term_txt, td),
-                Paragraph(_fmt_score(oral_pct), td),
-                Paragraph(_fmt_score(prac_pct), td),
-                Paragraph(total_txt, td),
-                Paragraph(grade, ParagraphStyle(
-                    f"g{i}", parent=td, fontName="Helvetica-Bold"
-                )),
-            ])
+            mark_cells = []
+            for j in range(max_oral):
+                mark_cells.append(Paragraph(
+                    _mark_cell(parts["oral"][j] if j < len(parts["oral"]) else None), td))
+            for j in range(max_prac):
+                mark_cells.append(Paragraph(
+                    _mark_cell(parts["practical"][j] if j < len(parts["practical"]) else None), td))
+            for j in range(max_writ):
+                mark_cells.append(Paragraph(
+                    _mark_cell(parts["written"][j] if j < len(parts["written"]) else None), td))
 
-        col_w = [
-            8 * mm,   # #
-            28 * mm,  # code
-            W - 8 * mm - 28 * mm - 12 * mm - 20 * mm - 20 * mm - 28 * mm - 16 * mm,  # name
-            12 * mm,  # term
-            20 * mm,  # oral
-            20 * mm,  # practical
-            28 * mm,  # total
-            16 * mm,  # grade
-        ]
-        tbl = Table(rows, colWidths=col_w, repeatRows=1)
+            data.append(
+                [Paragraph(str(i), td),
+                 Paragraph(unit.get("code") or "—", td),
+                 Paragraph(unit.get("name") or "—", td_l),
+                 Paragraph(term_txt, td)]
+                + mark_cells
+                + [Paragraph(total_txt, ParagraphStyle(f"tot{i}", parent=td, fontName="Helvetica-Bold")),
+                   Paragraph(pct_txt, ParagraphStyle(f"pct{i}", parent=td, fontName="Helvetica-Bold")),
+                   Paragraph(grade, ParagraphStyle(f"g{i}", parent=td, fontName="Helvetica-Bold"))]
+            )
+
+        fixed = 7 * mm + 22 * mm + 12 * mm + 18 * mm + 16 * mm + 12 * mm
+        name_min = 28 * mm
+        assess_budget = max(W - fixed - name_min, max(n_assess, 1) * 14 * mm)
+        assess_w = assess_budget / max(n_assess, 1)
+        name_w = W - fixed - (assess_budget if n_assess else 0)
+        col_w = [7 * mm, 22 * mm, name_w, 12 * mm]
+        if n_assess:
+            col_w += [assess_w] * n_assess
+        col_w += [18 * mm, 16 * mm, 12 * mm]
+
         style_cmds = [
-            ("BACKGROUND", (0, 0), (-1, 0), navy),
+            ("BACKGROUND", (0, 0), (3, 1), navy),
+            ("BACKGROUND", (4 + n_assess, 0), (-1, 1), navy),
+            ("SPAN", (0, 0), (0, 1)),
+            ("SPAN", (1, 0), (1, 1)),
+            ("SPAN", (2, 0), (2, 1)),
+            ("SPAN", (3, 0), (3, 1)),
+            ("SPAN", (-1, 0), (-1, 1)),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("LINEBELOW", (0, 1), (-1, -2), 0.4, row_line),
-            ("LINEBELOW", (0, -1), (-1, -1), 0.6, border),
-            ("BOX", (0, 0), (-1, -1), 0.7, navy),
-            ("LINEBELOW", (0, 0), (-1, 0), 0.8, navy),
+            ("ALIGN", (0, 0), (-1, 1), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+            ("GRID", (0, 0), (-1, -1), 0.4, border),
+            ("BOX", (0, 0), (-1, -1), 0.8, navy),
+            ("LINEBELOW", (0, 1), (-1, 1), 0.8, navy),
         ]
-        for ri in range(1, len(rows)):
+
+        col = 4
+        if max_oral:
+            style_cmds.append(("BACKGROUND", (col, 0), (col + max_oral - 1, 1), oral_bg))
+            if max_oral > 1:
+                style_cmds.append(("SPAN", (col, 0), (col + max_oral - 1, 0)))
+            col += max_oral
+        if max_prac:
+            style_cmds.append(("BACKGROUND", (col, 0), (col + max_prac - 1, 1), prac_bg))
+            if max_prac > 1:
+                style_cmds.append(("SPAN", (col, 0), (col + max_prac - 1, 0)))
+            col += max_prac
+        if max_writ:
+            style_cmds.append(("BACKGROUND", (col, 0), (col + max_writ - 1, 1), writ_bg))
+            if max_writ > 1:
+                style_cmds.append(("SPAN", (col, 0), (col + max_writ - 1, 0)))
+
+        for ri in range(2, len(data)):
             if ri % 2 == 0:
                 style_cmds.append(("BACKGROUND", (0, ri), (-1, ri), light))
+            style_cmds.append(("LINEBELOW", (0, ri), (-1, ri), 0.35, row_line))
+
+        tbl = Table(data, colWidths=col_w, repeatRows=2)
         tbl.setStyle(TableStyle(style_cmds))
         story.append(tbl)
 
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
-    # ── Grading legend ───────────────────────────────────────────────────────
+    # ── Legend ───────────────────────────────────────────────────────────────
     legend_row = [[
         Paragraph("<b>M — Mastery</b><br/>80–100%", legend),
         Paragraph("<b>P — Proficient</b><br/>65–79%", legend),
@@ -304,16 +400,14 @@ def build_academic_result_transcript_pdf(
         ("BOX", (0, 0), (-1, -1), 0.6, border),
         ("INNERGRID", (0, 0), (-1, -1), 0.4, border),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))
     story.append(leg)
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=0.7, color=border, spaceBefore=2, spaceAfter=10))
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width="100%", thickness=0.7, color=border, spaceBefore=2, spaceAfter=8))
 
-    # ── Official verification (3 columns) ────────────────────────────────────
+    # ── Official verification ────────────────────────────────────────────────
     story.append(Paragraph("OFFICIAL VERIFICATION", verify))
 
     def sig_block(heading: str):
@@ -332,34 +426,30 @@ def build_academic_result_transcript_pdf(
     )
     auth.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
     story.append(auth)
-
-    story.append(Spacer(1, 14))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=border, spaceBefore=2, spaceAfter=4))
+    story.append(Spacer(1, 10))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=border, spaceBefore=2, spaceAfter=3))
     story.append(Paragraph(
         f"Generated: {datetime.now().strftime('%d %B %Y  %H:%M')}  ·  "
-        f"{student.get('full_name') or '—'}  ·  Adm: {student.get('admission_no') or '—'}",
+        f"{student.get('full_name') or '—'}  ·  Adm: {student.get('admission_no') or '—'}  ·  "
+        f"Marks shown as obtained/max as entered by trainer",
         foot,
     ))
 
-    # Light diagonal watermark
     adm = student.get("admission_no") or ""
 
     def _watermark(canvas_obj, _doc):
         canvas_obj.saveState()
-        canvas_obj.setFont("Helvetica-Bold", 40)
-        canvas_obj.setFillColorRGB(0.78, 0.82, 0.86, alpha=0.16)
-        canvas_obj.translate(A4[0] / 2, A4[1] / 2)
+        canvas_obj.setFont("Helvetica-Bold", 36)
+        canvas_obj.setFillColorRGB(0.78, 0.82, 0.86, alpha=0.14)
+        canvas_obj.translate(page[0] / 2, page[1] / 2)
         canvas_obj.rotate(45)
-        canvas_obj.drawCentredString(0, 18, "TTTI OFFICIAL DOCUMENT")
+        canvas_obj.drawCentredString(0, 14, "TTTI OFFICIAL DOCUMENT")
         if adm:
-            canvas_obj.drawCentredString(0, -28, adm)
+            canvas_obj.drawCentredString(0, -24, adm)
         canvas_obj.restoreState()
 
     pdf.build(story, onFirstPage=_watermark, onLaterPages=_watermark)
