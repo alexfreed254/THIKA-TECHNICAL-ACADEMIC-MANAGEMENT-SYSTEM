@@ -149,17 +149,21 @@ export function PortalShell({
               </div>
             </div>
           ))}
+        </nav>
 
+        <div className="shrink-0 border-t border-white/10 p-3">
           <div
-            className="mx-1 mt-3 rounded-xl border border-white/12 bg-white/8 px-3 py-2.5"
+            className="rounded-xl border border-amber-400/45 bg-slate-950/55 px-3 py-2.5 shadow-lg"
             role="group"
             aria-label="Page zoom"
           >
-            <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/90">
+            <div className="mb-2 flex items-center justify-between text-[13px] font-extrabold text-white">
               <span className="inline-flex items-center gap-2">
-                <i className="fas fa-search-plus" aria-hidden /> Zoom
+                <i className="fas fa-search-plus text-amber-400" aria-hidden /> Zoom
               </span>
-              <span className="font-extrabold text-amber-400">{zoomPct}%</span>
+              <span className="min-w-[52px] rounded-full border border-amber-400/35 bg-amber-400/15 px-2 py-0.5 text-center text-[13px] font-extrabold text-amber-400">
+                {zoomPct}%
+              </span>
             </div>
             <input
               type="range"
@@ -168,16 +172,16 @@ export function PortalShell({
               step={5}
               value={zoomPct}
               aria-label="Zoom from 0 to 200 percent"
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-white/20 to-amber-400/55"
+              className="h-2.5 w-full cursor-pointer appearance-none rounded-full border border-white/20 bg-gradient-to-r from-slate-600 to-amber-400"
               onChange={(e) => setZoomPct(Number(e.target.value))}
             />
-            <div className="mt-1.5 flex justify-between text-[10px] font-bold uppercase tracking-wide text-white/45">
-              <span>0</span>
-              <span>100</span>
+            <div className="mt-2 flex justify-between text-[10px] font-extrabold uppercase tracking-wide text-white/70">
+              <span>0%</span>
+              <span>100%</span>
               <span>Max</span>
             </div>
           </div>
-        </nav>
+        </div>
       </aside>
 
       {sidebarOpen ? (

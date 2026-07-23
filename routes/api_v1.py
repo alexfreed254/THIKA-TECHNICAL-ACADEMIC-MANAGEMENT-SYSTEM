@@ -756,9 +756,14 @@ def api_student_dashboard():
                   .order("uploaded_at", desc=True).limit(6).execute().data or [])
 
         cl = (db.table("clearance_requests").select("status, stage")
-                .eq("student_id", student_id).order("created_at", desc=True).limit(1).execute().data or [])
-        stats["clearance_status"] = cl[0].get("status", "") if cl else ""
-        stats["clearance_stage"] = cl[0].get("stage", 0) if cl else 0
+                .eq("student_id", student_id).order("created_at", desc=True).limit(8).execute().data or [])
+        active = next(
+            (r for r in cl if (r.get("status") or "") in
+             ("pending", "in_progress", "returned", "completed")),
+            None,
+        )
+        stats["clearance_status"] = active.get("status", "") if active else ""
+        stats["clearance_stage"] = active.get("stage", 0) if active else 0
 
         attachments = (db.table("industrial_attachments")
                       .select("status").eq("student_id", student_id).execute().data or [])

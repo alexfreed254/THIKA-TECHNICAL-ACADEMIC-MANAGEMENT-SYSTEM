@@ -8,7 +8,7 @@ from flask import (Blueprint, render_template, request,
 from auth_utils import (dept_admin_required, write_audit_log,
                         current_user, dept_isolation_check)
 from db import get_service_client
-from notifications import get_user_notifications, notify_dept_notice, create_notification
+from notifications import get_user_notifications, notify_dept_notice, create_notification, delete_notifications_for_notice
 from report_utils import (excel_letterhead, style_header_row,
                           excel_signature_block, pdf_header_style_cmds,
                           pdf_signature_block)
@@ -3808,7 +3808,7 @@ def send_notice():
     try:
         db = get_service_client()
         # Persist the notice record
-        db.table("dept_notices").insert({
+        inserted = db.table("dept_notices").insert({
             "department_id": dept_id,
             "sent_by": user["id"],
             "title": title,
@@ -3817,22 +3817,69 @@ def send_notice():
             "class_id": class_id,
             "sent_at": datetime.now().isoformat()
         }).execute()
+        notice_id = (inserted.data or [{}])[0].get("id")
 
         # Push notifications to trainees
+        notif_title = f"[Notice] {title}"
         count = notify_dept_notice(
             department_id=dept_id,
-            title=f"[Notice] {title}",
+            title=notif_title,
             message=message,
             notice_type=ntype,
             action_url="/notifications",
-            class_id=class_id
+            class_id=class_id,
+            sender_id=user["id"],
+            notice_id=notice_id,
         )
         write_audit_log("send_dept_notice",
                         target=f"dept:{dept_id}",
-                        detail={"title": title, "recipients": count})
+                        detail={"title": title, "recipients": count, "notice_id": notice_id})
         flash(f"Notice sent successfully to {count} trainee(s).", "success")
     except Exception as e:
         flash(f"Failed to send notice: {e}", "danger")
+
+    return redirect(url_for("dept_admin.notices"))
+
+
+@dept_admin_bp.route("/notices/<notice_id>/delete", methods=["POST"])
+@dept_admin_required
+def delete_notice(notice_id):
+    """Sender deletes a sent notice and recalls recipient notifications."""
+    db = get_service_client()
+    user = current_user()
+    dept_id = _dept_id()
+
+    try:
+        notice = (db.table("dept_notices")
+                    .select("*")
+                    .eq("id", notice_id)
+                    .single()
+                    .execute().data)
+        if not notice:
+            flash("Notice not found.", "error")
+            return redirect(url_for("dept_admin.notices"))
+        if notice.get("department_id") != dept_id and notice.get("sent_by") != user["id"]:
+            flash("You can only delete notices you sent for your department.", "error")
+            return redirect(url_for("dept_admin.notices"))
+        if notice.get("sent_by") and notice.get("sent_by") != user["id"]:
+            flash("Only the original sender can delete this notice.", "error")
+            return redirect(url_for("dept_admin.notices"))
+
+        title = notice.get("title") or ""
+        message = notice.get("message") or ""
+        deleted = delete_notifications_for_notice(
+            notice_id=notice_id,
+            title=f"[Notice] {title}",
+            message=message,
+            sender_id=user["id"],
+        )
+        db.table("dept_notices").delete().eq("id", notice_id).execute()
+        write_audit_log("delete_dept_notice",
+                        target=f"notice:{notice_id}",
+                        detail={"title": title, "notifications_removed": deleted})
+        flash(f"Notice deleted. Recalled {deleted} notification(s) from recipients.", "success")
+    except Exception as e:
+        flash(f"Failed to delete notice: {e}", "danger")
 
     return redirect(url_for("dept_admin.notices"))
 

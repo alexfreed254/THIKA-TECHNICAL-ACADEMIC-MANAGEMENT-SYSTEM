@@ -6,7 +6,10 @@ Endpoints for viewing and managing notifications.
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from auth_utils import login_required
-from notifications import get_user_notifications, get_unread_count, mark_notification_as_read, mark_all_as_read
+from notifications import (
+    get_user_notifications, get_unread_count, mark_notification_as_read,
+    mark_all_as_read, delete_user_notification,
+)
 
 notifications_bp = Blueprint("notifications", __name__)
 
@@ -71,6 +74,21 @@ def mark_all_read():
     if request.headers.get("Content-Type") == "application/json":
         return jsonify({"success": True})
     
+    return redirect(request.referrer or "/notifications")
+
+
+@notifications_bp.route("/<notification_id>/delete", methods=["POST"])
+@login_required
+def delete_notification(notification_id):
+    """Recipient deletes a notification from their inbox."""
+    from auth_utils import current_user
+    user = current_user()
+
+    ok = delete_user_notification(notification_id, user["id"])
+
+    if request.headers.get("Content-Type") == "application/json" or request.is_json:
+        return jsonify({"success": bool(ok)})
+
     return redirect(request.referrer or "/notifications")
 
 

@@ -34,6 +34,30 @@ def _file_slug(text: str) -> str:
     return text.strip('_-') or 'unknown'
 
 
+def infer_unit_type_from_code(code: str) -> str:
+    """
+    Map TVET unit code segments to exam booking unit type:
+      CR → Core, CC → Common, BC → Basic.
+    Matches path segments like ENG/CU/EE/CR/01/6 (not random substrings).
+    """
+    raw = (code or "").strip().upper()
+    if not raw:
+        return "Core"
+    parts = [p for p in re.split(r"[/_\-\s.]+", raw) if p]
+    for token, label in (("CR", "Core"), ("CC", "Common"), ("BC", "Basic")):
+        if token in parts:
+            return label
+    # Fallback: /CR/ style boundaries only
+    padded = f"/{raw.replace('-', '/').replace('_', '/')}/"
+    if re.search(r"/CR/", padded):
+        return "Core"
+    if re.search(r"/CC/", padded):
+        return "Common"
+    if re.search(r"/BC/", padded):
+        return "Basic"
+    return "Core"
+
+
 def _upload_attachment_letter(file, student_id: str, company_name: str) -> tuple[str, str]:
     """Upload an official attachment acceptance letter and return its public URL + storage path."""
     if not file or not getattr(file, "filename", ""):
@@ -347,17 +371,22 @@ def dashboard():
         except Exception:
             stats['summative_nyc'] = 0
 
-        # Active clearance status
+        # Active clearance status (ignore cancelled so trainee can start again)
         try:
             cl = (db.table("clearance_requests")
                     .select("id, status, stage")
                     .eq("student_id", student_id)
                     .order("created_at", desc=True)
-                    .limit(1)
+                    .limit(8)
                     .execute().data or [])
-            if cl:
-                stats['clearance_status'] = cl[0].get("status", "")
-                stats['clearance_stage'] = cl[0].get("stage", 1)
+            active = next(
+                (r for r in cl if (r.get("status") or "") in
+                 ("pending", "in_progress", "returned", "completed")),
+                None,
+            )
+            if active:
+                stats['clearance_status'] = active.get("status", "")
+                stats['clearance_stage'] = active.get("stage", 1)
             else:
                 stats['clearance_status'] = ""
                 stats['clearance_stage'] = 0
@@ -1509,6 +1538,10 @@ def exam_booking_form():
                    .select("*, units(id, name, code)")
                    .eq("class_id", class_id)
                    .execute().data or [])
+        for row in cu_rows:
+            unit = row.get("units") or {}
+            unit["inferred_type"] = infer_unit_type_from_code(unit.get("code") or "")
+            row["units"] = unit
         units = cu_rows
 
     # Fetch most recent marks per unit — used to pre-fill attempt type
@@ -1643,9 +1676,14 @@ def exam_booking_submit():
     for unit_id in selected_units:
         unit = db.table("units").select("*").eq("id", unit_id).single().execute().data
         if unit:
+            # Unit type is derived from the unit code: CR→Core, CC→Common, BC→Basic
+            unit_type = infer_unit_type_from_code(unit.get("code") or "")
+            form_type = (request.form.get(f"unit_type_{unit_id}") or "").strip()
+            if form_type in ("Core", "Common", "Basic") and not unit.get("code"):
+                unit_type = form_type
             units_data.append({
                 "unit":      unit,
-                "type":      request.form.get(f"unit_type_{unit_id}", "Core"),
+                "type":      unit_type,
                 "attempt":   request.form.get(f"attempt_type_{unit_id}", "first_attempt"),
                 "prev_grade":request.form.get(f"prev_grade_{unit_id}", "") or None,
                 "prev_mid":  request.form.get(f"prev_marks_{unit_id}", "") or None,

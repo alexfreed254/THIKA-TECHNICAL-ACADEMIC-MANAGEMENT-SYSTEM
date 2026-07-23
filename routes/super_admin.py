@@ -12,7 +12,7 @@ from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, abort, jsonify, make_response)
 from auth_utils import super_admin_required, write_audit_log, current_user
 from db import get_service_client
-from notifications import create_notification
+from notifications import create_notification, delete_notifications_for_notice
 from report_utils import (excel_letterhead, style_header_row,
                           excel_signature_block, pdf_letterhead,
                           pdf_header_style_cmds, pdf_signature_block)
@@ -1791,7 +1791,7 @@ def gis_tracking_export():
 
 def _send_system_notifications(db, title, message, notice_type,
                                 action_url, department_id=None, class_id=None,
-                                target_role="student"):
+                                target_role="student", sender_id=None, notice_id=None):
     """
     Push in-app notifications to users.
     target_role: 'student', 'trainer', 'all'
@@ -1821,7 +1821,9 @@ def _send_system_notifications(db, title, message, notice_type,
                 title=f"[Notice] {title}",
                 message=message,
                 notification_type=notice_type,
-                action_url=action_url or "/notifications"
+                action_url=action_url or "/notifications",
+                sender_id=sender_id,
+                notice_id=notice_id,
             )
         return len(users)
     except Exception as e:
@@ -1885,7 +1887,7 @@ def send_notice():
         target_role = "student"
 
     try:
-        db.table("dept_notices").insert({
+        inserted = db.table("dept_notices").insert({
             "department_id": dept_id,
             "sent_by":       user["id"],
             "title":         title,
@@ -1894,6 +1896,7 @@ def send_notice():
             "class_id":      class_id,
             "sent_at":       _dt.now().isoformat(),
         }).execute()
+        notice_id = (inserted.data or [{}])[0].get("id")
 
         count = _send_system_notifications(
             db, title, message, ntype,
@@ -1901,6 +1904,8 @@ def send_notice():
             department_id=dept_id,
             class_id=class_id,
             target_role=target_role,
+            sender_id=user["id"],
+            notice_id=notice_id,
         )
         write_audit_log("send_system_notice",
                         target=f"Notice '{title}' sent to {count} users")
@@ -1909,6 +1914,42 @@ def send_notice():
         flash(f"Failed to send notice: {e}", "danger")
 
     return redirect(url_for("super_admin.notices"))
+
+
+@super_admin_bp.route("/notices/<notice_id>/delete", methods=["POST"])
+@super_admin_required
+def delete_notice(notice_id):
+    """Sender (or super admin) deletes a sent notice and recalls notifications."""
+    db = _svc()
+    user = current_user()
+    try:
+        notice = (db.table("dept_notices")
+                    .select("*")
+                    .eq("id", notice_id)
+                    .single()
+                    .execute().data)
+        if not notice:
+            flash("Notice not found.", "error")
+            return redirect(url_for("super_admin.notices"))
+
+        title = notice.get("title") or ""
+        message = notice.get("message") or ""
+        deleted = delete_notifications_for_notice(
+            notice_id=notice_id,
+            title=f"[Notice] {title}",
+            message=message,
+            sender_id=notice.get("sent_by") or user["id"],
+        )
+        db.table("dept_notices").delete().eq("id", notice_id).execute()
+        write_audit_log("delete_system_notice",
+                        target=f"notice:{notice_id}",
+                        detail={"title": title, "notifications_removed": deleted})
+        flash(f"Notice deleted. Recalled {deleted} notification(s).", "success")
+    except Exception as e:
+        flash(f"Failed to delete notice: {e}", "danger")
+
+    return redirect(url_for("super_admin.notices"))
+
 
 # ── Super Admin: pages mirroring departmental admin (institute-wide scope) ────
 

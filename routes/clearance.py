@@ -38,6 +38,10 @@ from notifications import create_notification
 
 clearance_bp = Blueprint("clearance", __name__)
 
+# Trainee-owned clearance lifecycle helpers
+_ACTIVE_CLEARANCE = ("pending", "in_progress", "returned")
+_STOPPABLE_CLEARANCE = ("pending", "in_progress", "returned", "rejected")
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 MIN_TRAINERS = 7
@@ -377,7 +381,7 @@ def dashboard():
                 .select("*, courses(name, code), departments(name)")
                 .eq("student_id", student_id)
                 .order("initiated_at", desc=True)
-                .limit(1)
+                .limit(10)
                 .execute().data or [])
 
     enrollments = (db.table("enrollments")
@@ -385,20 +389,37 @@ def dashboard():
                    .eq("student_id", student_id)
                    .execute().data or [])
 
-    if not req_rows:
+    # Prefer an active request; otherwise a completed one (certificate).
+    # Cancelled / rejected do not block initiate — trainee can start again.
+    active_cr = next(
+        (r for r in req_rows if (r.get("status") or "") in _ACTIVE_CLEARANCE),
+        None,
+    )
+    completed_cr = next(
+        (r for r in req_rows if (r.get("status") or "") == "completed"),
+        None,
+    )
+    cr = active_cr or completed_cr
+
+    if not cr:
         return render_template(
             "clearance/student_dashboard.html",
             clearance_request=None,
             has_request=False,
+            can_stop=False,
             enrollments=enrollments,
             stage1_sections=[],
             stage2_approval=None,
             serial=None,
+            last_cancelled=next(
+                (r for r in req_rows if (r.get("status") or "") in ("cancelled", "rejected")),
+                None,
+            ),
         )
 
-    cr = req_rows[0]
     serial = cr.get("serial_number") or _serial(cr["id"])
     approvals = _fetch_all_approvals(db, cr["id"])
+    can_stop = (cr.get("status") or "") in _STOPPABLE_CLEARANCE
 
     # ── Attach approver names to all approval records ────────────────────────
     approver_ids = [a["approver_id"] for a in approvals if a.get("approver_id")]
@@ -463,6 +484,7 @@ def dashboard():
         "clearance/student_dashboard.html",
         clearance_request=cr,
         has_request=True,
+        can_stop=can_stop,
         serial=serial,
         approvals=approvals,
         enrollments=enrollments,
@@ -694,6 +716,90 @@ def initiate_clearance():
 
     except Exception as e:
         flash(f"Error initiating clearance: {e}", "error")
+
+    return redirect(url_for("clearance.dashboard"))
+
+
+# ── Student: stop / delete clearance ──────────────────────────────────────────
+
+@clearance_bp.route("/stop/<request_id>", methods=["POST"])
+@login_required
+@student_required
+def stop_clearance(request_id):
+    """
+    Trainee stops (cancels) their own active clearance process.
+    Soft-cancels the request and removes pending approval rows so
+    they can initiate a new clearance afterwards.
+    Completed clearances cannot be stopped.
+    """
+    db = get_service_client()
+    user = current_user()
+
+    try:
+        cr = (db.table("clearance_requests")
+              .select("id, student_id, status, serial_number")
+              .eq("id", request_id)
+              .single()
+              .execute().data)
+
+        if not cr:
+            abort(404)
+        if cr.get("student_id") != user["id"]:
+            abort(403)
+
+        status = cr.get("status") or ""
+        if status == "completed":
+            flash("A completed clearance with an issued certificate cannot be stopped.", "error")
+            return redirect(url_for("clearance.dashboard"))
+        if status not in _STOPPABLE_CLEARANCE:
+            flash("This clearance cannot be stopped in its current state.", "warning")
+            return redirect(url_for("clearance.dashboard"))
+
+        # Soft-cancel (preferred for audit). Fall back to hard-delete if the
+        # DB status constraint has not yet been migrated to allow 'cancelled'.
+        cancelled = False
+        try:
+            db.table("clearance_requests").update({
+                "status": "cancelled",
+            }).eq("id", request_id).eq("student_id", user["id"]).execute()
+            cancelled = True
+            try:
+                db.table("clearance_requests").update({
+                    "cancelled_at": datetime.now().isoformat(),
+                    "cancelled_by": user["id"],
+                }).eq("id", request_id).execute()
+            except Exception:
+                pass
+        except Exception:
+            cancelled = False
+
+        if not cancelled:
+            # Hard-delete removes the request; approvals cascade if FK is set.
+            db.table("clearance_approvals").delete().eq("clearance_request_id", request_id).execute()
+            db.table("clearance_requests").delete().eq("id", request_id).eq("student_id", user["id"]).execute()
+        else:
+            # Clear pending approval work from approver queues
+            try:
+                (db.table("clearance_approvals")
+                   .delete()
+                   .eq("clearance_request_id", request_id)
+                   .eq("status", "pending")
+                   .execute())
+            except Exception:
+                pass
+
+        write_audit_log(
+            "stop_clearance",
+            target=f"request:{request_id}",
+            detail={"status_was": status, "serial": cr.get("serial_number") or ""},
+        )
+        flash(
+            "Clearance process stopped. You can start a new clearance when ready.",
+            "success",
+        )
+
+    except Exception as e:
+        flash(f"Error stopping clearance: {e}", "error")
 
     return redirect(url_for("clearance.dashboard"))
 

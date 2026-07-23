@@ -140,6 +140,14 @@
               </div>
             </div>
           </div>
+          <form method="POST" action="/dept-admin/notices/{{ n.id }}/delete"
+                onsubmit="return confirm('Delete this notice and remove it from all recipients\\' notifications?');">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 transition"
+                    title="Delete notice and recall recipient notifications">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          </form>
         </div>
       </div>
       {% endfor %}

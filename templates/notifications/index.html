@@ -219,6 +219,13 @@
             </button>
           </form>
           {% endif %}
+          <form action="/notifications/{{ notification.id }}/delete" method="POST" style="display: inline;"
+                onsubmit="return confirm('Delete this notification?');">
+            <button type="submit" class="btn btn-secondary" title="Delete notification"
+                    style="color:#b91c1c;border-color:#fecaca">
+              <i class="fas fa-trash"></i>
+            </button>
+          </form>
         </div>
         {% endfor %}
       {% else %}

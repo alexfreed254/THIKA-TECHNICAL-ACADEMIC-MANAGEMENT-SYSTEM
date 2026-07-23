@@ -182,6 +182,15 @@
           <span><i class="fas fa-clock"></i> {{ n.get('sent_at','')[:16].replace('T',' ') if n.get('sent_at') else '—' }}</span>
         </div>
       </div>
+      <form method="POST" action="/super-admin/notices/{{ n.id }}/delete"
+            onsubmit="return confirm('Delete this notice and remove it from all recipients\\' notifications?');"
+            style="flex-shrink:0;margin-left:12px">
+        <button type="submit"
+                style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid #fecaca;background:#fff1f2;color:#b91c1c;font-size:12px;font-weight:800;cursor:pointer"
+                title="Delete notice and recall recipient notifications">
+          <i class="fas fa-trash"></i> Delete
+        </button>
+      </form>
     </div>
     {% endfor %}
     {% else %}

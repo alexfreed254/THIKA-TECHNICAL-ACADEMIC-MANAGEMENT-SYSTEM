@@ -610,19 +610,29 @@
                   </div>
                 </td>
                 <td>
-                  <div class="type-radio">
+                  {% set utype = unit.get('inferred_type') or 'Core' %}
+                  <div class="type-radio" data-unit-code="{{ unit.code or '' }}" title="Auto from unit code: CR=Core, CC=Common, BC=Basic">
                     <label>
-                      <input type="radio" name="unit_type_{{ unit.id }}" value="Core" checked>
+                      <input type="radio" name="unit_type_{{ unit.id }}" value="Core"
+                             {% if utype == 'Core' %}checked{% endif %}>
                       Core
                     </label>
                     <label>
-                      <input type="radio" name="unit_type_{{ unit.id }}" value="Common">
+                      <input type="radio" name="unit_type_{{ unit.id }}" value="Common"
+                             {% if utype == 'Common' %}checked{% endif %}>
                       Common
                     </label>
                     <label>
-                      <input type="radio" name="unit_type_{{ unit.id }}" value="Basic">
+                      <input type="radio" name="unit_type_{{ unit.id }}" value="Basic"
+                             {% if utype == 'Basic' %}checked{% endif %}>
                       Basic
                     </label>
+                  </div>
+                  <div style="margin-top:4px;font-size:10px;color:#64748b;font-weight:600">
+                    {% if utype == 'Core' %}From code: CR
+                    {% elif utype == 'Common' %}From code: CC
+                    {% elif utype == 'Basic' %}From code: BC
+                    {% else %}From code{% endif %}
                   </div>
                 </td>
                 <td>
