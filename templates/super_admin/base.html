@@ -42,21 +42,27 @@
       margin-top: 6px;
     }
 
-    /* Menu items */
+    /* Menu items — room for multi-line labels (Attachment section) */
     .sidebar-menu {
       padding: 6px 10px 28px;
-      gap: 2px;
+      gap: 8px;
     }
     .sidebar-menu a {
-      padding: 11px 14px;
+      padding: 12px 14px;
       font-size: 13.5px;
       font-weight: 500;
       color: rgba(255,255,255,.85);
       border-radius: 10px;
       letter-spacing: .01em;
+      align-items: flex-start;
+      line-height: 1.45;
+      min-height: 48px;
+      overflow: visible;
+      white-space: normal;
+      gap: 12px;
     }
 
-    /* Icon badges */
+    /* Icon badges — stay top-aligned when label wraps */
     .sidebar-menu a i {
       width: 32px;
       height: 32px;
@@ -65,6 +71,17 @@
       border-radius: 8px;
       background: rgba(255,255,255,.1);
       border: 1px solid rgba(255,255,255,.1);
+      margin-top: 1px;
+    }
+
+    /* Extra breathing room under Industrial Attachments heading */
+    .sidebar-menu .menu-section.menu-section-attachments {
+      margin-top: 6px;
+      margin-bottom: 4px;
+      padding-bottom: 10px;
+    }
+    .sidebar-menu .menu-section.menu-section-attachments ~ a {
+      margin-bottom: 2px;
     }
 
     /* Hover / active */
@@ -173,13 +190,13 @@
       <a href="/super-admin/service-clearance?cat=svc_games"><i class="fas fa-futbol fa-fw"></i> Games Department</a>
       <a href="/super-admin/service-clearance"><i class="fas fa-building fa-fw"></i> Service Clearance</a>
 
-      <div class="menu-section">Industrial Attachments</div>
-      <a href="/super-admin/attachments"><i class="fas fa-file-signature fa-fw"></i> Attachment Approval Records</a>
-      <a href="/super-admin/attachment-marks"><i class="fas fa-star-half-alt fa-fw"></i> Attachment Marks</a>
-      <a href="/super-admin/mentoring-tools"><i class="fas fa-file-pdf fa-fw"></i> Mentoring Tool / Logbooks</a>
-      <a href="/super-admin/gis-tracking"><i class="fas fa-map-marked-alt fa-fw"></i> GIS Placements &amp; Logbook</a>
-      <a href="/super-admin/logbooks"><i class="fas fa-book-open fa-fw"></i> Digital Logbooks</a>
-      <a href="/super-admin/companies"><i class="fas fa-building fa-fw"></i> Industry Partners</a>
+      <div class="menu-section menu-section-attachments">Industrial Attachments</div>
+      <a href="/super-admin/attachments"><i class="fas fa-file-signature fa-fw"></i> <span>Attachment Approval Records</span></a>
+      <a href="/super-admin/attachment-marks"><i class="fas fa-star-half-alt fa-fw"></i> <span>Attachment Marks</span></a>
+      <a href="/super-admin/mentoring-tools"><i class="fas fa-file-pdf fa-fw"></i> <span>Mentoring Tool / Logbooks</span></a>
+      <a href="/super-admin/gis-tracking"><i class="fas fa-map-marked-alt fa-fw"></i> <span>GIS Placements &amp; Logbook</span></a>
+      <a href="/super-admin/logbooks"><i class="fas fa-book-open fa-fw"></i> <span>Digital Logbooks</span></a>
+      <a href="/super-admin/companies"><i class="fas fa-building fa-fw"></i> <span>Industry Partners</span></a>
 
       <div class="menu-section">Communication</div>
       <a href="/super-admin/notices"><i class="fas fa-bullhorn fa-fw"></i> Send Notice / Memo</a>
