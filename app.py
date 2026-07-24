@@ -7,7 +7,7 @@ Hosted on Render. Database + Auth via Supabase.
 import os
 import traceback
 from datetime import timedelta, datetime
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -67,6 +67,9 @@ from auth_utils import refresh_session_if_needed
 
 @app.before_request
 def before_request():
+    # Never delay logout with a JWT refresh round-trip.
+    if request.endpoint in ("auth.logout", "api_v1.api_logout"):
+        return
     try:
         refresh_session_if_needed()
     except Exception:

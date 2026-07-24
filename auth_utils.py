@@ -91,14 +91,15 @@ def refresh_session_if_needed():
         pass
 
 
-def write_audit_log(action: str, target: str = None, detail: dict = None):
+def write_audit_log(action: str, target: str = None, detail: dict = None,
+                    actor_id: str = None, actor_role: str = None):
     """Write to system_logs using the service client. Never raises."""
     user = current_user()
     try:
         svc = get_service_client()
         svc.table("system_logs").insert({
-            "actor_id":   user["id"]   if user else None,
-            "actor_role": user["role"] if user else None,
+            "actor_id":   actor_id if actor_id is not None else (user["id"] if user else None),
+            "actor_role": actor_role if actor_role is not None else (user["role"] if user else None),
             "action":     action,
             "target":     target,
             "detail":     detail,

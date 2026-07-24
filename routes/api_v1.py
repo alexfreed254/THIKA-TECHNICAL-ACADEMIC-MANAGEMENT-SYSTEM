@@ -159,10 +159,22 @@ def api_login():
 
 @api_v1_bp.route("/auth/logout", methods=["POST"])
 def api_logout():
+    import threading
+
     user = current_user()
-    if user:
-        write_audit_log("logout", target=f"user:{user.get('id')}")
+    actor_id = user.get("id") if user else None
+    actor_role = user.get("role") if user else None
     session.clear()
+    if actor_id:
+        def _audit():
+            write_audit_log(
+                "logout",
+                target=f"user:{actor_id}",
+                actor_id=actor_id,
+                actor_role=actor_role,
+            )
+
+        threading.Thread(target=_audit, daemon=True).start()
     return _ok({"logged_out": True})
 
 

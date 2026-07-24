@@ -210,24 +210,36 @@ def login():
 # ─────────────────────────────────────────────────────────────
 @auth_bp.route("/logout")
 def logout():
+    """
+    Clear the Flask session immediately.
+
+    Remote Supabase sign_out + audit insert used to run *before* session.clear().
+    When those network calls hung (common on cold/slow Supabase), logout timed out
+    and the user stayed signed in — felt slow and "refused" to sign out.
+    """
+    import threading
+
     user = current_user()
-    if user:
-        write_audit_log("logout", target=f"user:{user['id']}")
-    
-    # Clear Supabase Auth session if exists
-    if SESSION_ACCESS in session:
-        try:
-            from db import get_anon_client
-            client = get_anon_client()
-            client.auth.sign_out()
-        except Exception:
-            pass
-    
-    # Clear all session data
+    actor_id = user.get("id") if user else None
+    actor_role = user.get("role") if user else None
+
+    # Local session is the source of truth for portal access — clear it first.
     session.clear()
-    
+
+    # Audit in the background so a slow system_logs insert never delays redirect.
+    if actor_id:
+        def _audit():
+            write_audit_log(
+                "logout",
+                target=f"user:{actor_id}",
+                actor_id=actor_id,
+                actor_role=actor_role,
+            )
+
+        threading.Thread(target=_audit, daemon=True).start()
+
     flash("You have been logged out successfully.", "success")
-    return redirect(url_for("main.index"))
+    return redirect(url_for("auth.login"))
 
 
 # ─────────────────────────────────────────────────────────────
