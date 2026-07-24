@@ -64,8 +64,8 @@ def _ensure_profile(user_id: str, email: str) -> dict:
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("8 per minute", methods=["POST"])
 def login():
-    db = get_service_client()
-    departments = db.table("departments").select("*").order("name").execute().data or []
+    # Login template no longer needs departments — skip the round-trip on every request.
+    departments = []
 
     if is_authenticated():
         user = current_user()

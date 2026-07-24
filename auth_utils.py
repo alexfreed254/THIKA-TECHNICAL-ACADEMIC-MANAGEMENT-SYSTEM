@@ -178,23 +178,51 @@ def authenticate_student(admission_no: str, password: str) -> Optional[dict]:
     Returns User profile or None.
     """
     try:
-        svc = get_service_client()
-        res = svc.table("user_profiles").select("*").eq("admission_no", admission_no).eq("role", "student").limit(1).execute()
-        
-        if not res.data or len(res.data) == 0:
+        admission_no = (admission_no or "").strip()
+        if not admission_no or not password:
             return None
-            
+
+        svc = get_service_client()
+        # Only fetch fields needed for auth — avoid pulling large unused columns.
+        cols = (
+            "id, email, full_name, role, admission_no, department_id, "
+            "is_active, must_change_password, password_hash, mobile_number, "
+            "passport_file_path"
+        )
+        res = (
+            svc.table("user_profiles")
+            .select(cols)
+            .eq("admission_no", admission_no)
+            .eq("role", "student")
+            .limit(1)
+            .execute()
+        )
+
+        # Case-insensitive fallback (common when adm numbers were typed mixed-case)
+        if not res.data:
+            res = (
+                svc.table("user_profiles")
+                .select(cols)
+                .ilike("admission_no", admission_no)
+                .eq("role", "student")
+                .limit(1)
+                .execute()
+            )
+
+        if not res.data:
+            return None
+
         profile = res.data[0]
 
         if not profile.get("is_active", False):
             return None
-        
+
         if not profile.get("password_hash"):
             return None
-            
+
         if check_password_hash(profile["password_hash"], password):
             return session_safe_profile(profile)
-            
+
         return None
     except Exception as exc:
         print(f"[auth_utils] authenticate_student error: {exc}")

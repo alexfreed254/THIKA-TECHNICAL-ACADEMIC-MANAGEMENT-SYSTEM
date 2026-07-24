@@ -141,19 +141,57 @@ def _validate_password(pwd: str) -> Optional[str]:
 
 
 def _student_row() -> dict:
-    """Return the user_profiles row for the current student, or abort 403."""
+    """Return the user_profiles row for the current student, or abort 403.
+
+    Class/department come from enrollments — user_profiles has no classes FK,
+    so embedding classes() here breaks PostgREST and returns 403 after login.
+    """
     user = current_user()
+    if not user or not user.get("id"):
+        abort(403)
+
     db = get_service_client()
+    student_id = user["id"]
     try:
-        rows = (db.table("user_profiles")
-                  .select("*, classes(name, department_id, departments(name))")
-                  .eq("id", user["id"])
-                  .limit(1)
-                  .execute().data or [])
+        rows = (
+            db.table("user_profiles")
+            .select(
+                "id, email, full_name, role, admission_no, mobile_number, "
+                "department_id, is_active, must_change_password, "
+                "passport_file_path, departments(name)"
+            )
+            .eq("id", student_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
         if not rows:
             abort(403)
-        return rows[0]
-    except Exception:
+        student = rows[0]
+
+        # Optional class name via enrollments (never fail the dashboard for this)
+        try:
+            enroll = (
+                db.table("enrollments")
+                .select("classes(name, department_id, departments(name))")
+                .eq("student_id", student_id)
+                .limit(1)
+                .execute()
+                .data
+                or []
+            )
+            if enroll:
+                student["classes"] = enroll[0].get("classes")
+        except Exception:
+            student["classes"] = None
+
+        return student
+    except Exception as exc:
+        # Fall back to session profile so a bad embed never blocks login → dashboard.
+        print(f"[student] _student_row error: {exc}")
+        if user.get("role") == "student":
+            return dict(user)
         abort(403)
 
 
@@ -206,10 +244,12 @@ def dashboard():
         # Fetch unread notifications for inline display
         unread_notifications = get_user_notifications(student_id, unread_only=True, limit=3)
 
-        # Attendance data by unit (for dashboard table)
+        # Attendance by unit — cap rows so large histories don't stall login→dashboard
         raw_attendance = (db.table("attendance")
                          .select("status, attendance_date, units(id, name, code)")
                          .eq("student_id", student_id)
+                         .order("attendance_date", desc=True)
+                         .limit(500)
                          .execute().data or [])
         # Group by unit in Python
         unit_map = {}
@@ -274,23 +314,20 @@ def dashboard():
             r['script_file_size_fmt'] = _format_bytes(r.get('script_file_size', 0))
             r['evidence_count'] = evidence_map.get(r['id'], 0)
 
-        # Recent attendance
+        # Recent attendance — keep select shallow (deep enrollments embed was slow/fragile)
         recent_attendance = (db.table("attendance")
-                  .select("*, units(name, code), user_profiles:student_id(enrollments(classes(name)))")
+                  .select("*, units(name, code)")
                   .eq("student_id", student_id)
                   .order("attendance_date", desc=True)
                   .limit(10)
                   .execute().data or [])
-                  
+
         for att in recent_attendance:
-            att_user = att.get("user_profiles") or {}
-            enrolls = att_user.get("enrollments") or []
-            first_enroll = enrolls[0] if enrolls else {}
-            cls = first_enroll.get("classes") or {}
-            att["classes"] = cls
+            att["classes"] = {}
 
     except Exception as e:
-        flash(f'Error loading dashboard: {str(e)}', 'danger')
+        print(f"[student] dashboard load error: {e}")
+        flash('Some dashboard data could not be loaded. You can keep using the portal.', 'warning')
 
     # Check clearance eligibility (has completed course requirements)
     clearance_eligible = False
@@ -325,11 +362,12 @@ def dashboard():
     stats.setdefault('pending_competencies', 0)
 
     try:
-        # Get current active attachment
+        # Get current active attachment (limit — full history not needed for dashboard)
         attachments = (db.table("industrial_attachments")
                       .select("*, companies(name, address, latitude, longitude), units(name, code), mentors(user_profiles(full_name))")
                       .eq("student_id", student_id)
                       .order("created_at", desc=True)
+                      .limit(20)
                       .execute().data or [])
         
         # Count attachment stats
