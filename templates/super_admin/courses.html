@@ -76,10 +76,11 @@ code{background:#f3f4f6;color:#374151;padding:2px 7px;border-radius:5px;font-siz
           <td><strong>{{ c.name }}</strong></td>
           <td><span class="dept-chip">{{ c.get('departments',{}).get('name','—') }}</span></td>
           <td>
-            <a href="?delete={{ c.id }}" class="btn btn-del"
-               onclick="return confirm('Delete course {{ c.name }}?\nThis will also remove linked classes and units.')">
-              <i class="fas fa-trash"></i> Delete
-            </a>
+            <form method="post" style="display:inline"
+                  onsubmit="return confirm('Delete course {{ c.name }}?\nThis will also remove linked classes and units.')">
+              <input type="hidden" name="delete" value="{{ c.id }}">
+              <button type="submit" class="btn btn-del"><i class="fas fa-trash"></i> Delete</button>
+            </form>
           </td>
         </tr>
         {% else %}

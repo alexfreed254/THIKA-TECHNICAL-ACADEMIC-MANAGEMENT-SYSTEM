@@ -1121,6 +1121,13 @@ def approve_clearance(approval_id):
             else:
                 abort(403)
 
+        if approval.get("status") != "pending":
+            flash("This clearance step is no longer pending.", "warning")
+            return redirect(_approver_back(role))
+        if (req.get("status") or "") in ("completed", "cancelled", "rejected"):
+            flash("This clearance request can no longer be changed.", "warning")
+            return redirect(_approver_back(role))
+
         # Stage 2 gating: check stage 1 is complete
         if cat in STAGE2_CATEGORIES:
             req_stage = req.get("stage", 1)
@@ -1214,6 +1221,13 @@ def reject_clearance(approval_id):
             else:
                 abort(403)
 
+        if approval.get("status") != "pending":
+            flash("This clearance step is no longer pending.", "warning")
+            return redirect(_approver_back(role))
+        if (req.get("status") or "") in ("completed", "cancelled", "rejected"):
+            flash("This clearance request can no longer be changed.", "warning")
+            return redirect(_approver_back(role))
+
         db.table("clearance_approvals").update({
             "status":      "rejected",
             "approver_id": uid,
@@ -1223,7 +1237,7 @@ def reject_clearance(approval_id):
 
         db.table("clearance_requests").update({
             "status": "rejected"
-        }).eq("id", req["id"]).execute()
+        }).eq("id", req["id"]).eq("status", "in_progress").execute()
 
         student_id = req.get("student_id")
         if student_id:
@@ -1454,9 +1468,14 @@ def certificate(request_id):
     db   = get_service_client()
     user = current_user()
 
+    CERT_PROFILE_COLS = (
+        "full_name, admission_no, national_id_no, mobile_number, email, "
+        "passport_file_path, staff_no"
+    )
+
     cr = (db.table("clearance_requests")
           .select("*, courses(name, code), departments(name), "
-                  "user_profiles:user_profiles!clearance_requests_student_id_fkey(*)")
+                  f"user_profiles:user_profiles!clearance_requests_student_id_fkey({CERT_PROFILE_COLS})")
           .eq("id", request_id)
           .single()
           .execute().data)
@@ -1473,11 +1492,25 @@ def certificate(request_id):
         "quality_assurance_officer", "dean_students", "finance_officer",
         "environment_hod",
     }
+    SERVICE_CERT_ROLES = {
+        "library_hod", "sports_hod", "service_clearance_officer",
+        "quality_assurance_officer", "dean_students", "finance_officer",
+        "environment_hod",
+    }
     if user["role"] != "student" and user["role"] not in CERT_VIEW_ROLES:
         abort(403)
     if user["role"] == "dept_admin":
         # Home-dept HOD only
         if cr.get("department_id") and cr.get("department_id") != user.get("department_id"):
+            abort(403)
+    if user["role"] in SERVICE_CERT_ROLES:
+        acted = (db.table("clearance_approvals")
+                 .select("id")
+                 .eq("clearance_request_id", request_id)
+                 .eq("approver_id", user["id"])
+                 .limit(1)
+                 .execute().data or [])
+        if not acted:
             abort(403)
 
     if cr.get("status") != "completed":
@@ -1545,9 +1578,14 @@ def certificate_pdf(request_id):
     db   = get_service_client()
     user = current_user()
 
+    CERT_PROFILE_COLS = (
+        "full_name, admission_no, national_id_no, mobile_number, email, "
+        "passport_file_path, staff_no"
+    )
+
     cr = (db.table("clearance_requests")
           .select("*, courses(name, code), departments(name), "
-                  "user_profiles:user_profiles!clearance_requests_student_id_fkey(*)")
+                  f"user_profiles:user_profiles!clearance_requests_student_id_fkey({CERT_PROFILE_COLS})")
           .eq("id", request_id)
           .single()
           .execute().data)
@@ -1562,10 +1600,24 @@ def certificate_pdf(request_id):
         "quality_assurance_officer", "dean_students", "finance_officer",
         "environment_hod",
     }
+    SERVICE_CERT_ROLES = {
+        "library_hod", "sports_hod", "service_clearance_officer",
+        "quality_assurance_officer", "dean_students", "finance_officer",
+        "environment_hod",
+    }
     if user["role"] != "student" and user["role"] not in CERT_VIEW_ROLES:
         abort(403)
     if user["role"] == "dept_admin":
         if cr.get("department_id") and cr.get("department_id") != user.get("department_id"):
+            abort(403)
+    if user["role"] in SERVICE_CERT_ROLES:
+        acted = (db.table("clearance_approvals")
+                 .select("id")
+                 .eq("clearance_request_id", request_id)
+                 .eq("approver_id", user["id"])
+                 .limit(1)
+                 .execute().data or [])
+        if not acted:
             abort(403)
     if cr.get("status") != "completed":
         flash("The clearance certificate is only available once all stages are approved.", "warning")

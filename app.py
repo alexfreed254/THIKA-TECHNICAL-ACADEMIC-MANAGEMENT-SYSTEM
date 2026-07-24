@@ -34,8 +34,9 @@ app.config["SESSION_COOKIE_SECURE"] = True if (_cross_site or _prod) else (
 )
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=1)
-app.config["WTF_CSRF_TIME_LIMIT"] = None
+app.config["WTF_CSRF_TIME_LIMIT"] = 3600
 app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken", "X-CSRF-Token"]
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # 25 MB request body cap
 
 limiter.init_app(app)
 csrf.init_app(app)
@@ -169,6 +170,15 @@ def inject_globals():
     def storage_url(bucket, path):
         if not path:
             return ""
+        # Prefer short-lived signed URLs when PRIVATE_STORAGE=true (buckets set private in Supabase).
+        if os.environ.get("PRIVATE_STORAGE", "").lower() in ("1", "true", "yes"):
+            try:
+                from db import get_service_client
+                signed = get_service_client().storage.from_(bucket).create_signed_url(path, 3600)
+                if isinstance(signed, dict):
+                    return signed.get("signedURL") or signed.get("signedUrl") or ""
+            except Exception:
+                pass
         return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
 
     def get_file_icon_class(url):

@@ -358,21 +358,18 @@ def device_scan():
 
     scan_time = datetime.now().isoformat()
 
-    # Find matching active session (prefer room match, fallback to any active)
+    # Find matching active session — room is required (no fallback to arbitrary session)
+    if not room:
+        return jsonify({"status": "error", "message": "Missing room"}), 400
+
     with _lock:
         matched_sid = None
         for sid, sess in _sessions.items():
             if sess["status"] != "active":
                 continue
-            if room and sess["room"].lower() == room.lower():
+            if sess["room"].lower() == room.lower():
                 matched_sid = sid
                 break
-        # Fallback: any active session if room not provided / not found
-        if not matched_sid and not room:
-            for sid, sess in _sessions.items():
-                if sess["status"] == "active":
-                    matched_sid = sid
-                    break
 
         if not matched_sid:
             return jsonify({"status": "error", "message": "No active session for this room"}), 404

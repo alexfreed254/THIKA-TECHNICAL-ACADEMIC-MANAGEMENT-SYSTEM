@@ -103,10 +103,11 @@ tr:hover td{background:#fafafa}
           <td>{{ c.level or '—' }}</td>
           <td>{{ c.cycle or '—' }}</td>
           <td>
-            <a href="?delete={{ c.id }}" class="btn btn-del"
-               onclick="return confirm('Delete class {{ c.name }}?\nThis will remove all enrollments and attendance records.')">
-              <i class="fas fa-trash"></i> Delete
-            </a>
+            <form method="post" style="display:inline"
+                  onsubmit="return confirm('Delete class {{ c.name }}?\nThis will remove all enrollments and attendance records.')">
+              <input type="hidden" name="delete" value="{{ c.id }}">
+              <button type="submit" class="btn btn-del"><i class="fas fa-trash"></i> Delete</button>
+            </form>
           </td>
         </tr>
         {% else %}

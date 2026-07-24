@@ -97,10 +97,11 @@ code{background:#f3f4f6;color:#374151;padding:2px 7px;border-radius:5px;font-siz
           <td><span class="chip chip-dept">{{ u.get('departments',{}).get('name','—') }}</span></td>
           <td><span class="chip chip-course">{{ u.get('courses',{}).get('name','—') }}</span></td>
           <td>
-            <a href="?delete={{ u.id }}" class="btn btn-del"
-               onclick="return confirm('Delete unit {{ u.code }} — {{ u.name }}?')">
-              <i class="fas fa-trash"></i> Delete
-            </a>
+            <form method="post" style="display:inline"
+                  onsubmit="return confirm('Delete unit {{ u.code }} — {{ u.name }}?')">
+              <input type="hidden" name="delete" value="{{ u.id }}">
+              <button type="submit" class="btn btn-del"><i class="fas fa-trash"></i> Delete</button>
+            </form>
           </td>
         </tr>
         {% else %}

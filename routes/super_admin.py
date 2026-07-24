@@ -431,17 +431,17 @@ def departments():
             except Exception as exc:
                 error = f"Error: {exc}"
 
-    if request.args.get("delete"):
+    if request.method == "POST" and request.form.get("delete"):
         try:
-            dept_id = request.args["delete"]
+            dept_id = request.form.get("delete")
             # Nullify FK references that don't cascade automatically
             db.table("course_applications").update({"department_id": None}).eq("department_id", dept_id).execute()
             db.table("departments").delete().eq("id", dept_id).execute()
             write_audit_log("delete_department", target=dept_id)
             flash("Department deleted.", "success")
             return redirect(url_for("super_admin.departments"))
-        except Exception as exc:
-            error = f"Error deleting department: {exc}"
+        except Exception:
+            error = "Error deleting department."
 
     depts = db.table("departments").select("*").order("name").execute().data or []
     return render_template("super_admin/departments.html", departments=depts, error=error)
@@ -678,14 +678,14 @@ def classes():
     db = _svc()
     error = None
 
-    if request.args.get("delete"):
+    if request.method == "POST" and request.form.get("delete"):
         try:
-            db.table("classes").delete().eq("id", request.args["delete"]).execute()
-            write_audit_log("delete_class", target=request.args["delete"])
+            db.table("classes").delete().eq("id", request.form.get("delete")).execute()
+            write_audit_log("delete_class", target=request.form.get("delete"))
             flash("Class deleted.", "success")
             return redirect(url_for("super_admin.classes"))
-        except Exception as exc:
-            error = f"Error deleting: {exc}"
+        except Exception:
+            error = "Error deleting class."
 
     if request.method == "POST" and request.form.get("add_class"):
         name          = request.form.get("name", "").strip()
@@ -734,14 +734,14 @@ def units():
     db = _svc()
     error = None
 
-    if request.args.get("delete"):
+    if request.method == "POST" and request.form.get("delete"):
         try:
-            db.table("units").delete().eq("id", request.args["delete"]).execute()
-            write_audit_log("delete_unit", target=request.args["delete"])
+            db.table("units").delete().eq("id", request.form.get("delete")).execute()
+            write_audit_log("delete_unit", target=request.form.get("delete"))
             flash("Unit deleted.", "success")
             return redirect(url_for("super_admin.units"))
-        except Exception as exc:
-            error = f"Error deleting: {exc}"
+        except Exception:
+            error = "Error deleting unit."
 
     if request.method == "POST" and request.form.get("add_unit"):
         code          = request.form.get("code", "").strip().upper()
@@ -784,14 +784,14 @@ def courses():
     db = _svc()
     error = None
 
-    if request.args.get("delete"):
+    if request.method == "POST" and request.form.get("delete"):
         try:
-            db.table("courses").delete().eq("id", request.args["delete"]).execute()
-            write_audit_log("delete_course", target=request.args["delete"])
+            db.table("courses").delete().eq("id", request.form.get("delete")).execute()
+            write_audit_log("delete_course", target=request.form.get("delete"))
             flash("Course deleted.", "success")
             return redirect(url_for("super_admin.courses"))
-        except Exception as exc:
-            error = f"Error deleting: {exc}"
+        except Exception:
+            error = "Error deleting course."
 
     if request.method == "POST" and request.form.get("add_course"):
         name          = request.form.get("name", "").strip()

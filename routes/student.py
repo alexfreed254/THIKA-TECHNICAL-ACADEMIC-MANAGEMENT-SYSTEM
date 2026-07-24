@@ -835,6 +835,14 @@ def upload_assessment():
                 display_name = f"{base_name}{page_sfx}.pdf"
                 storage_path = f"scripts/{student_id}/{display_name}"
                 file_data = file.read()
+                from security_utils import allowed_upload
+                ok_up, err_up = allowed_upload(
+                    display_name, file_data,
+                    allowed_ext={"pdf"}, max_bytes=10 * 1024 * 1024,
+                )
+                if not ok_up:
+                    errors.append(f"'{file.filename}': {err_up}")
+                    continue
                 get_service_client().storage.from_("assessment-scripts").upload(
                     storage_path, file_data, {"content-type": "application/pdf"}
                 )
@@ -1022,6 +1030,18 @@ def add_evidence(assessment_id):
         
         caption = request.form.get("caption", "")
 
+        file_data = file.read()
+        from security_utils import allowed_upload
+        ok_up, err_up = allowed_upload(
+            file.filename, file_data,
+            allowed_ext={"jpg", "jpeg", "png", "gif", "webp", "mp4", "mov", "avi", "mkv", "webm",
+                         "mp3", "wav", "ogg", "m4a", "flac", "aac"},
+            max_bytes=20 * 1024 * 1024,
+        )
+        if not ok_up:
+            flash(err_up, "danger")
+            return redirect(url_for("student.add_evidence", assessment_id=assessment_id))
+
         # Build structured evidence filename: adm-unit-type-no-cycle-term-ev{n}.ext
         _eprof = (db.table("user_profiles").select("admission_no")
                   .eq("id", student_id).single().execute().data or {})
@@ -1037,7 +1057,6 @@ def add_evidence(assessment_id):
         try:
             display_ev_name = f"{_base_ev}.{ext}"
             filename = f"evidence/{student_id}/{display_ev_name}"
-            file_data = file.read()
             get_service_client().storage.from_("assessment-evidence").upload(
                 filename, file_data, {"content-type": content_type}
             )
@@ -1061,7 +1080,7 @@ def add_evidence(assessment_id):
                           evidence=evidence_list)
 
 
-@student_bp.route("/assessments/<assessment_id>/evidence/<evidence_id>/delete", methods=["GET", "POST"])
+@student_bp.route("/assessments/<assessment_id>/evidence/<evidence_id>/delete", methods=["POST"])
 @student_required
 def delete_evidence(assessment_id, evidence_id):
     db = get_service_client()
@@ -1405,8 +1424,10 @@ def poe_upload():
     student_id = user["id"]
     
     try:
-        # Get form data
-        admission_no = request.form.get('admissionNo', '')
+        # Always use server-side admission number (never trust form)
+        profile = (db.table("user_profiles").select("admission_no")
+                   .eq("id", student_id).limit(1).execute().data or [None])[0]
+        admission_no = (profile or {}).get("admission_no") or ""
         class_name = request.form.get('className', '')
         unit_name = request.form.get('unitName', '')
         cycle = request.form.get('cycle', '1')
@@ -1424,11 +1445,21 @@ def poe_upload():
         saved_records = []
         
         storage_client = get_service_client().storage
+        from security_utils import allowed_upload
         
         for file in files:
             if file.filename == '':
                 continue
             
+            file_data = file.read()
+            ok_up, err_up = allowed_upload(
+                file.filename, file_data,
+                allowed_ext={"pdf", "jpg", "jpeg", "png", "webp"},
+                max_bytes=10 * 1024 * 1024,
+            )
+            if not ok_up:
+                return jsonify({'success': False, 'error': err_up}), 400
+
             # Get file extension
             orig_ext = os.path.splitext(file.filename)[1].lower()
             
@@ -1441,12 +1472,9 @@ def poe_upload():
             # Create storage path: POE/CLASS/UNIT/ADMISSION_NO/
             storage_path = f"POE/{_file_slug(class_name)}/{_file_slug(unit_name)}/{_file_slug(admission_no)}/{clean_filename}"
             
-            # Read file data
-            file_data = file.read()
-            
             # Upload to Supabase Storage
             storage_client.from_("assessment-evidence").upload(storage_path, file_data, {
-                "content-type": file.content_type,
+                "content-type": file.content_type or "application/octet-stream",
                 "upsert": "true"
             })
             
@@ -2496,11 +2524,20 @@ def upload_document():
     try:
         # Upload file to Supabase Storage — use service client directly
         import uuid
-        file_extension = file.filename.split('.')[-1]
+        from security_utils import allowed_upload
+        file_data = file.read()
+        ok_up, err_up = allowed_upload(
+            file.filename, file_data,
+            allowed_ext={"pdf", "jpg", "jpeg", "png", "webp", "doc", "docx"},
+            max_bytes=10 * 1024 * 1024,
+        )
+        if not ok_up:
+            flash(err_up, "error")
+            return redirect(url_for("student.portfolio"))
+        file_extension = file.filename.rsplit(".", 1)[-1].lower()
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
         storage_path = f"trainee_documents/{user['id']}/{unique_filename}"
 
-        file_data = file.read()
         svc = get_service_client()
         svc.storage.from_("assessment-scripts").upload(
             path=storage_path,

@@ -465,10 +465,10 @@ def courses():
     dept_id = _dept_id()
     error = None
 
-    # Delete
-    if request.args.get("delete"):
+    # Delete (POST only — CSRF-protected)
+    if request.method == "POST" and request.form.get("delete"):
         try:
-            course_id = request.args["delete"]
+            course_id = request.form.get("delete")
             # Verify course belongs to this department
             row = db.table("courses").select("department_id").eq("id", course_id).single().execute().data
             if not row or row.get("department_id") != dept_id:
@@ -477,8 +477,8 @@ def courses():
                 db.table("courses").delete().eq("id", course_id).execute()
                 write_audit_log("delete_course", target=course_id)
                 flash("Course deleted.", "success")
-        except Exception as exc:
-            error = f"Error deleting course: {exc}"
+        except Exception:
+            error = "Error deleting course."
         return redirect(url_for("dept_admin.courses"))
 
     if request.method == "POST":

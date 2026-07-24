@@ -111,10 +111,11 @@ code{background:#f1f5f9;color:#1e3a8a;padding:3px 9px;border-radius:6px;font-siz
                 title="Edit">
                 <i class="fas fa-pen"></i> Edit
               </button>
-              <a href="?delete={{ c.id }}" class="btn btn-danger"
-                 onclick="return confirm('Delete course \'{{ c.name|e }}\'?\nThis will also remove all linked classes and units.')">
-                <i class="fas fa-trash"></i> Delete
-              </a>
+              <form method="post" style="display:inline"
+                    onsubmit="return confirm('Delete course \'{{ c.name|e }}\'?\nThis will also remove all linked classes and units.')">
+                <input type="hidden" name="delete" value="{{ c.id }}">
+                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+              </form>
             </div>
           </td>
         </tr>

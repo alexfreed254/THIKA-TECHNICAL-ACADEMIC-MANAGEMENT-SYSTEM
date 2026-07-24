@@ -61,10 +61,11 @@ tr:hover td{background:#fafafa}
           <td><strong>{{ d.name }}</strong></td>
           <td><span class="badge">{{ d.code }}</span></td>
           <td>
-            <a href="?delete={{ d.id }}" class="btn btn-del"
-               onclick="return confirm('Delete department {{ d.name }}?\nThis will also delete all related courses, classes, and units.')">
-              <i class="fas fa-trash"></i> Delete
-            </a>
+            <form method="post" style="display:inline"
+                  onsubmit="return confirm('Delete department {{ d.name }}?\nThis will also delete all related courses, classes, and units.')">
+              <input type="hidden" name="delete" value="{{ d.id }}">
+              <button type="submit" class="btn btn-del"><i class="fas fa-trash"></i> Delete</button>
+            </form>
           </td>
         </tr>
         {% else %}

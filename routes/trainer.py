@@ -25,13 +25,32 @@ trainer_bp = Blueprint("trainer", __name__)
 
 
 def _trainer_assigned_unit_ids(db) -> list:
-    """Return list of unit_ids this trainer is assigned to."""
+    """Return unit_ids this trainer is assigned to (trainer_units ∪ class_units)."""
     user = current_user()
     if user.get("role") != "trainer":
-        return []  # dept_admin / super_admin see everything
+        return []  # non-trainers: caller decides (do not treat as "see everything")
+    ids = set()
     rows = (db.table("trainer_units").select("unit_id")
             .eq("trainer_id", user["id"]).execute().data or [])
-    return [r["unit_id"] for r in rows]
+    ids.update(r["unit_id"] for r in rows if r.get("unit_id"))
+    cu = (db.table("class_units").select("unit_id")
+          .eq("trainer_id", user["id"]).execute().data or [])
+    ids.update(r["unit_id"] for r in cu if r.get("unit_id"))
+    return list(ids)
+
+
+def _trainer_owns_class_unit(db, class_id: str, unit_id: str) -> bool:
+    """True if current trainer is assigned to this class+unit."""
+    user = current_user()
+    if not user or user.get("role") != "trainer":
+        return user.get("role") in ("super_admin", "dept_admin") if user else False
+    row = (db.table("class_units").select("id")
+           .eq("class_id", class_id)
+           .eq("unit_id", unit_id)
+           .eq("trainer_id", user["id"])
+           .limit(1)
+           .execute().data or [])
+    return bool(row)
 
 
 def _check_unit_access(db, unit_id: str) -> bool:
@@ -387,6 +406,8 @@ def attendance():
         if action == "submit_attendance":
             if not class_id or not unit_id:
                 flash("Class and unit are required.", "error")
+            elif not _trainer_owns_class_unit(db, class_id, unit_id):
+                abort(403)
             else:
                 try:
                     for student in students_list:
@@ -406,12 +427,14 @@ def attendance():
                     write_audit_log("submit_attendance", target=f"class:{class_id},unit:{unit_id}")
                     flash("Attendance submitted successfully.", "success")
                     return redirect(url_for("trainer.attendance", class_id=class_id, unit_id=unit_id, week=week, lesson=lesson, year=year, term=term))
-                except Exception as e:
-                    flash(f"Error submitting attendance: {e}", "error")
+                except Exception:
+                    flash("Error submitting attendance. Please try again.", "error")
         
         elif action in ("mark_holiday", "mark_academic_trip"):
             if not class_id or not unit_id:
                 flash("Class and unit are required.", "error")
+            elif not _trainer_owns_class_unit(db, class_id, unit_id):
+                abort(403)
             else:
                 try:
                     # Create class_event
@@ -669,17 +692,19 @@ def assessments():
     user = current_user()
     assigned_unit_ids = _trainer_assigned_unit_ids(db)
 
-    # Get all assessments — include reviewer info via FK alias
-    q = db.table("assessments").select(
-        "*, "
-        "user_profiles!assessments_student_id_fkey(full_name, admission_no), "
-        "reviewer:user_profiles!assessments_reviewed_by_fkey(full_name), "
-        "units(name, code), "
-        "classes(id, name)"
-    ).order("uploaded_at", desc=True)
-    if assigned_unit_ids:
-        q = q.in_("unit_id", assigned_unit_ids)
-    assessments_list = q.execute().data or []
+    # Never omit the unit filter — empty assignment must mean empty results, not "all".
+    if not assigned_unit_ids:
+        assessments_list = []
+    else:
+        assessments_list = (db.table("assessments").select(
+            "*, "
+            "user_profiles!assessments_student_id_fkey(full_name, admission_no), "
+            "reviewer:user_profiles!assessments_reviewed_by_fkey(full_name), "
+            "units(name, code), "
+            "classes(id, name)"
+        ).in_("unit_id", assigned_unit_ids)
+         .order("uploaded_at", desc=True)
+         .execute().data or [])
 
     # Same marks source as Marks Entry (formative_assessments + formative_marks)
     _bulk_formative_marks_for_poe(db, assessments_list)
@@ -1511,6 +1536,9 @@ def add_assessment():
             "success": False,
             "message": "Maximum marks must be between 1 and 100. Scores convert to % out of 100.",
         }), 400
+
+    if not _trainer_owns_class_unit(db, class_id, unit_id):
+        return jsonify({"success": False, "message": "You are not assigned to this class/unit."}), 403
 
     dup = (db.table("formative_assessments").select("id")
              .eq("unit_id", unit_id).eq("class_id", class_id)

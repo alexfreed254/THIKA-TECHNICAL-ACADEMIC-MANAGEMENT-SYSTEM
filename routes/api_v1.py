@@ -14,7 +14,7 @@ from flask import Blueprint, jsonify, request, session
 from auth_utils import (
     SESSION_USER, SESSION_ACCESS, SESSION_REFRESH,
     authenticate_staff, authenticate_student, current_user,
-    is_authenticated, write_audit_log,
+    is_authenticated, write_audit_log, _must_change_password_block,
 )
 from db import get_service_client
 from extensions import limiter
@@ -81,6 +81,9 @@ def api_login_required(f):
     def decorated(*args, **kwargs):
         if not is_authenticated():
             return _err("Not authenticated.", 401, "unauthorized")
+        blocked = _must_change_password_block(current_user(), api=True)
+        if blocked is not None:
+            return blocked
         return f(*args, **kwargs)
     return decorated
 
@@ -94,6 +97,9 @@ def api_role_required(*roles):
             user = current_user()
             if not user or user.get("role") not in roles:
                 return _err("Forbidden for this role.", 403, "forbidden")
+            blocked = _must_change_password_block(user, api=True)
+            if blocked is not None:
+                return blocked
             return f(*args, **kwargs)
         return decorated
     return decorator
@@ -453,6 +459,10 @@ def api_trainer_add_assessment():
     if max_marks_val < 1 or max_marks_val > 100:
         return _err("Maximum marks must be between 1 and 100. Scores convert to % out of 100.", 400)
 
+    from routes.trainer import _trainer_owns_class_unit
+    if not _trainer_owns_class_unit(db, class_id, unit_id):
+        return _err("You are not assigned to this class/unit.", 403, "forbidden")
+
     dup = (db.table("formative_assessments").select("id")
              .eq("unit_id", unit_id).eq("class_id", class_id)
              .eq("trainer_id", user["id"])
@@ -488,16 +498,18 @@ def api_trainer_assessments():
     db = get_service_client()
     assigned_unit_ids = _trainer_assigned_unit_ids(db)
 
-    q = db.table("assessments").select(
-        "*, "
-        "user_profiles!assessments_student_id_fkey(full_name, admission_no), "
-        "reviewer:user_profiles!assessments_reviewed_by_fkey(full_name), "
-        "units(name, code), "
-        "classes(id, name)"
-    ).order("uploaded_at", desc=True)
-    if assigned_unit_ids:
-        q = q.in_("unit_id", assigned_unit_ids)
-    assessments_list = q.execute().data or []
+    if not assigned_unit_ids:
+        assessments_list = []
+    else:
+        assessments_list = (db.table("assessments").select(
+            "*, "
+            "user_profiles!assessments_student_id_fkey(full_name, admission_no), "
+            "reviewer:user_profiles!assessments_reviewed_by_fkey(full_name), "
+            "units(name, code), "
+            "classes(id, name)"
+        ).in_("unit_id", assigned_unit_ids)
+         .order("uploaded_at", desc=True)
+         .execute().data or [])
     _bulk_formative_marks_for_poe(db, assessments_list)
 
     classes_map = {}

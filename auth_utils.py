@@ -203,10 +203,12 @@ def authenticate_student(admission_no: str, password: str) -> Optional[dict]:
 
 def create_student_auth_user(admission_no: str, password: str, email: str, full_name: str,
                              department_id: str, class_id: str,
-                             mobile_number: str = None) -> str:
+                             mobile_number: str = None,
+                             is_active: bool = True) -> str:
     """
     Create a student user with password hash.
     Returns the user UUID.
+    Pass is_active=False for public self-registration (admin must approve).
     """
     import uuid
 
@@ -237,7 +239,7 @@ def create_student_auth_user(admission_no: str, password: str, email: str, full_
         "admission_no": admission_no,
         "department_id": department_id,
         "password_hash": generate_password_hash(password),
-        "is_active": True,
+        "is_active": bool(is_active),
     }
     if mobile_number:
         profile["mobile_number"] = mobile_number
@@ -336,25 +338,42 @@ def reset_user_password(user_id: str, new_password: str) -> tuple[bool, str]:
 
 # ── RBAC Decorators ───────────────────────────────────────────────────────────
 
+_PASSWORD_CHANGE_ALLOWED = frozenset({
+    "auth.change_password",
+    "auth.logout",
+    "api_v1.api_logout",
+    "api_v1.api_me",
+    "api_v1.api_csrf_token",
+})
+
+
+def _must_change_password_block(user, *, api: bool = False):
+    """If user must change password, return a Flask response; else None."""
+    if not user or not user.get("must_change_password"):
+        return None
+    endpoint = (request.endpoint or "")
+    if endpoint in _PASSWORD_CHANGE_ALLOWED or str(endpoint).startswith("static"):
+        return None
+    if api:
+        from flask import jsonify
+        return jsonify({
+            "ok": False,
+            "error": "Password change required.",
+            "code": "must_change_password",
+        }), 403
+    from flask import flash
+    flash("You must change your temporary password before continuing.", "warning")
+    return redirect(url_for("auth.change_password"))
+
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not is_authenticated():
             return redirect(url_for("auth.login"))
-        user = current_user()
-        if user and user.get("must_change_password"):
-            endpoint = (request.endpoint or "")
-            allowed = {
-                "auth.change_password",
-                "auth.logout",
-                "api_v1.api_logout",
-                "api_v1.api_me",
-                "api_v1.api_csrf_token",
-            }
-            if endpoint not in allowed and not str(endpoint).startswith("static"):
-                from flask import flash
-                flash("You must change your temporary password before continuing.", "warning")
-                return redirect(url_for("auth.change_password"))
+        blocked = _must_change_password_block(current_user())
+        if blocked is not None:
+            return blocked
         return f(*args, **kwargs)
     return decorated
 
@@ -373,6 +392,9 @@ def role_required(*roles):
             user = current_user()
             if not user or user.get("role") not in roles:
                 abort(403)
+            blocked = _must_change_password_block(user)
+            if blocked is not None:
+                return blocked
             return f(*args, **kwargs)
         return decorated
     return decorator

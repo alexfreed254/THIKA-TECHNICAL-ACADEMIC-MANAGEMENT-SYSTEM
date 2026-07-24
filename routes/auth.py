@@ -318,8 +318,14 @@ def change_password():
 # STUDENT REGISTRATION (if enabled)
 # ─────────────────────────────────────────────────────────────
 @auth_bp.route("/student/register", methods=["GET", "POST"])
+@limiter.limit("3 per minute", methods=["POST"])
 def student_register():
-    """Student self-registration (if enabled by admin)."""
+    """Student self-registration (disabled unless ALLOW_STUDENT_SELF_REGISTER=true)."""
+    import os
+    from flask import abort
+    if os.environ.get("ALLOW_STUDENT_SELF_REGISTER", "").lower() not in ("1", "true", "yes"):
+        abort(404)
+
     if request.method == "POST":
         admission_no = request.form.get("admission_no", "").strip()
         email = request.form.get("email", "").strip()
@@ -342,27 +348,27 @@ def student_register():
         # Check if admission number already exists
         svc = get_service_client()
         try:
-            res = svc.table("user_profiles").select("*").eq("admission_no", admission_no).limit(1).execute()
+            res = svc.table("user_profiles").select("id").eq("admission_no", admission_no).limit(1).execute()
             if res.data:
                 flash("Admission number already registered", "error")
                 return render_template("auth/student_register.html")
             
             # Check if email already exists
-            res = svc.table("user_profiles").select("*").eq("email", email).limit(1).execute()
+            res = svc.table("user_profiles").select("id").eq("email", email).limit(1).execute()
             if res.data:
                 flash("Email already registered", "error")
                 return render_template("auth/student_register.html")
             
-            # Create student user (inactive until admin approval)
-            user_id = create_student_auth_user(
+            # Create inactive until admin approval (no race with is_active=True)
+            create_student_auth_user(
                 admission_no=admission_no,
                 password=password,
                 email=email,
                 full_name=full_name,
-                department_id=None,  # Will be assigned by admin
-                class_id=None
+                department_id=None,
+                class_id=None,
+                is_active=False,
             )
-            svc.table("user_profiles").update({"is_active": False}).eq("id", user_id).execute()
             
             flash("Registration successful. Please wait for admin approval before logging in.", "success")
             return redirect(url_for("auth.login"))
@@ -447,23 +453,32 @@ def profile():
                 return redirect(url_for("auth.profile"))
             
             try:
+                from security_utils import allowed_upload
+                file_bytes = file.read()
+                ok_up, err_up = allowed_upload(
+                    file.filename, file_bytes,
+                    allowed_ext=("jpg", "jpeg", "png", "webp"),
+                    max_bytes=2 * 1024 * 1024,
+                )
+                if not ok_up:
+                    flash(err_up, "danger")
+                    return redirect(url_for("auth.profile"))
                 filename = f"passports/{user_id}_{uuid.uuid4().hex}.{ext}"
                 storage_client = db.storage
                 storage_client.from_("assessment-evidence").upload(
                     filename,
-                    file.read(),
+                    file_bytes,
                     {"content-type": f"image/{ext}" if ext != 'jpg' else 'image/jpeg'}
                 )
                 
-                public_url = storage_client.from_("assessment-evidence").get_public_url(filename)
-                
+                # Store storage path (not a permanent public URL)
                 db.table("user_profiles").update({
-                    "passport_file_path": public_url,
+                    "passport_file_path": filename,
                     "passport_file_name": file.filename
                 }).eq("id", user_id).execute()
                 
                 # Refresh session user
-                user["passport_file_path"] = public_url
+                user["passport_file_path"] = filename
                 user["passport_file_name"] = file.filename
                 session[SESSION_USER] = session_safe_profile(user)
                 
@@ -526,8 +541,12 @@ def profile():
                 
             return redirect(url_for("auth.profile"))
             
-    # Fetch updated user profile
-    student = db.table("user_profiles").select("*, departments(name)").eq("id", user_id).single().execute().data
+    # Fetch updated user profile (never select password_hash into templates)
+    student = (db.table("user_profiles")
+               .select("id, full_name, email, role, admission_no, staff_no, mobile_number, "
+                       "department_id, is_active, must_change_password, passport_file_path, "
+                       "passport_file_name, departments(name)")
+               .eq("id", user_id).single().execute().data)
     base_template = _get_base_template(user.get("role"))
     
     return render_template("auth/profile.html", student=student, base_template=base_template)
