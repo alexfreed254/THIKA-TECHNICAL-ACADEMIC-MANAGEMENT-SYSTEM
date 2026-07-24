@@ -182,12 +182,19 @@
   padding: 2px 8px; font-size: 11px; font-weight: 700;
   margin-left: 6px;
 }
-.type-radio { display: flex; gap: 12px; }
+.type-radio { display: flex; gap: 8px; flex-wrap: wrap; }
 .type-radio label {
   display: flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 600; cursor: pointer; color: #475569;
+  padding: 5px 10px; border-radius: 8px; border: 1px solid #e2e8f0;
+  font-size: 12px; font-weight: 700; color: #64748b; background: #f8fafc;
+  cursor: default; user-select: none;
 }
-.type-radio input[type=radio] { accent-color: #1e5a9f; }
+.type-radio label.is-active {
+  border-color: #1e5a9f; background: #dbeafe; color: #1e3a5f;
+  box-shadow: 0 0 0 2px rgba(30,90,159,.15);
+}
+.type-radio input[type=radio] { accent-color: #1e5a9f; pointer-events: none; }
+.unit-type-hint { margin-top: 5px; font-size: 10px; color: #64748b; font-weight: 700; }
 .cost-input { width: 90px; padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; }
 
 /* ── Attempt type & previous result ───────────────── */
@@ -610,30 +617,36 @@
                   </div>
                 </td>
                 <td>
-                  {% set utype = unit.get('inferred_type') or 'Core' %}
-                  <div class="type-radio" data-unit-code="{{ unit.code or '' }}" title="Auto from unit code: CR=Core, CC=Common, BC=Basic">
-                    <label>
-                      <input type="radio" name="unit_type_{{ unit.id }}" value="Core"
-                             {% if utype == 'Core' %}checked{% endif %}>
+                  {% set utype = unit.inferred_type if unit.inferred_type is defined and unit.inferred_type else 'Core' %}
+                  <div class="type-radio"
+                       data-unit-code="{{ unit.code or '' }}"
+                       data-inferred-type="{{ utype }}"
+                       title="Auto-filled from unit code: CR=Core, CC=Common, BC=Basic">
+                    {# Visual radios only — disabled so they do not submit; hidden field carries value #}
+                    <label class="{% if utype == 'Core' %}is-active{% endif %}">
+                      <input type="radio" value="Core" class="unit-type-radio"
+                             {% if utype == 'Core' %}checked{% endif %} disabled>
                       Core
                     </label>
-                    <label>
-                      <input type="radio" name="unit_type_{{ unit.id }}" value="Common"
-                             {% if utype == 'Common' %}checked{% endif %}>
+                    <label class="{% if utype == 'Common' %}is-active{% endif %}">
+                      <input type="radio" value="Common" class="unit-type-radio"
+                             {% if utype == 'Common' %}checked{% endif %} disabled>
                       Common
                     </label>
-                    <label>
-                      <input type="radio" name="unit_type_{{ unit.id }}" value="Basic"
-                             {% if utype == 'Basic' %}checked{% endif %}>
+                    <label class="{% if utype == 'Basic' %}is-active{% endif %}">
+                      <input type="radio" value="Basic" class="unit-type-radio"
+                             {% if utype == 'Basic' %}checked{% endif %} disabled>
                       Basic
                     </label>
                   </div>
-                  <div style="margin-top:4px;font-size:10px;color:#64748b;font-weight:600">
-                    {% if utype == 'Core' %}From code: CR
-                    {% elif utype == 'Common' %}From code: CC
-                    {% elif utype == 'Basic' %}From code: BC
-                    {% else %}From code{% endif %}
+                  <div class="unit-type-hint">
+                    Auto-filled
+                    {% if utype == 'Common' %}· CC → Common
+                    {% elif utype == 'Basic' %}· BC → Basic
+                    {% else %}· CR → Core{% endif %}
                   </div>
+                  <input type="hidden" class="unit-type-value"
+                         name="unit_type_{{ unit.id }}" value="{{ utype }}">
                 </td>
                 <td>
                   <input class="cost-input form-input" type="number"
@@ -852,6 +865,48 @@
 
 {% block extra_script %}
 <script>
+  /* ── Auto-select Core / Common / Basic from unit code (CR / CC / BC) ── */
+  function inferUnitTypeFromCode(code) {
+    var raw = String(code || '').toUpperCase().replace(/[^A-Z0-9]+/g, '/').replace(/^\/+|\/+$/g, '');
+    if (/(^|\/)CC(\/|$|\d)/.test(raw)) return 'Common';
+    if (/(^|\/)BC(\/|$|\d)/.test(raw)) return 'Basic';
+    if (/(^|\/)CR(\/|$|\d)/.test(raw)) return 'Core';
+    return 'Core';
+  }
+
+  function applyUnitTypeRadios() {
+    document.querySelectorAll('.type-radio').forEach(function (group) {
+      var type = group.getAttribute('data-inferred-type')
+        || inferUnitTypeFromCode(group.getAttribute('data-unit-code'));
+      if (['Core', 'Common', 'Basic'].indexOf(type) < 0) type = 'Core';
+
+      group.querySelectorAll('label').forEach(function (lab) {
+        lab.classList.remove('is-active');
+      });
+      group.querySelectorAll('.unit-type-radio').forEach(function (radio) {
+        var on = radio.value === type;
+        radio.checked = on;
+        if (on && radio.closest('label')) radio.closest('label').classList.add('is-active');
+      });
+
+      var cell = group.parentElement;
+      var hidden = cell ? cell.querySelector('.unit-type-value') : null;
+      if (hidden) hidden.value = type;
+
+      var hint = cell ? cell.querySelector('.unit-type-hint') : null;
+      if (hint) {
+        var map = { Core: 'CR → Core', Common: 'CC → Common', Basic: 'BC → Basic' };
+        hint.textContent = 'Auto-filled · ' + (map[type] || type);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyUnitTypeRadios);
+  } else {
+    applyUnitTypeRadios();
+  }
+
   /* ── Row highlight on checkbox ───────────────────────────── */
   function toggleRow(unitId, checked) {
     const row = document.getElementById('row-' + unitId);

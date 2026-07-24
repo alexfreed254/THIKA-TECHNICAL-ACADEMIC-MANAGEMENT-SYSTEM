@@ -38,23 +38,38 @@ def infer_unit_type_from_code(code: str) -> str:
     """
     Map TVET unit code segments to exam booking unit type:
       CR → Core, CC → Common, BC → Basic.
-    Matches path segments like ENG/CU/EE/CR/01/6 (not random substrings).
+
+    Supports forms like:
+      ENG/CU/EE/CR/01/6, 071306T4ELE/CC/02/6, BC01, ELE-CR-01
     """
     raw = (code or "").strip().upper()
     if not raw:
         return "Core"
-    parts = [p for p in re.split(r"[/_\-\s.]+", raw) if p]
-    for token, label in (("CR", "Core"), ("CC", "Common"), ("BC", "Basic")):
-        if token in parts:
+
+    # Normalize separators so path-style and compact codes share one matcher
+    normalized = re.sub(r"[^A-Z0-9]+", "/", raw).strip("/")
+
+    # Check CC/BC before CR so compact codes resolve correctly.
+    # Match: /CC/, /CC01/, leading CC/, trailing /CC, exact CC, CC+digits
+    patterns = (
+        ("Common", r"(^|/)CC(/|$|\d)"),
+        ("Basic",  r"(^|/)BC(/|$|\d)"),
+        ("Core",   r"(^|/)CR(/|$|\d)"),
+    )
+    for label, pat in patterns:
+        if re.search(pat, normalized):
             return label
-    # Fallback: /CR/ style boundaries only
-    padded = f"/{raw.replace('-', '/').replace('_', '/')}/"
-    if re.search(r"/CR/", padded):
-        return "Core"
-    if re.search(r"/CC/", padded):
-        return "Common"
-    if re.search(r"/BC/", padded):
-        return "Basic"
+
+    # Exact token match after split (handles COMMON/BASIC/CORE words too)
+    parts = [p for p in normalized.split("/") if p]
+    for part in parts:
+        if part in ("CC", "COMMON"):
+            return "Common"
+        if part in ("BC", "BASIC"):
+            return "Basic"
+        if part in ("CR", "CORE"):
+            return "Core"
+
     return "Core"
 
 
