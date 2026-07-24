@@ -237,6 +237,7 @@
           <i class="fas fa-shield-halved"></i> Verify Clearance
         </div>
         <form action="/clearance/verify" method="post" style="display:flex;gap:5px">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="text" name="serial_number"
                  style="flex:1;padding:6px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:11px;font-family:monospace;outline:none"
                  placeholder="Serial no…" autocomplete="off" autocapitalize="characters">

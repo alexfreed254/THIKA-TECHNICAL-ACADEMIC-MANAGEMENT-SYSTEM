@@ -389,6 +389,7 @@
         {% endwith %}
 
         <form method="post" action="/auth/login" class="form" id="loginForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="login_type" id="loginType" value="{{ request.form.get('login_type', 'staff') }}">
 
           {% set is_student = request.form.get('login_type') == 'student' %}

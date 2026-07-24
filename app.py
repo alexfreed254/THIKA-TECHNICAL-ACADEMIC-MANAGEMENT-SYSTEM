@@ -272,6 +272,21 @@ def bad_request(e):
     return render_template("errors/400.html"), 400
 
 
+from flask_wtf.csrf import CSRFError
+
+
+@app.errorhandler(CSRFError)
+def csrf_error(e):
+    """CSRF failures used to show a generic 400 page — send users back to login."""
+    from flask import flash, redirect, url_for, request as req
+
+    flash("Your session expired or the form was invalid. Please sign in again.", "error")
+    # Prefer returning to login for auth posts; otherwise go home.
+    if req.path.startswith("/auth/") or req.endpoint in ("auth.login", "main.index"):
+        return redirect(url_for("auth.login")), 302
+    return redirect(url_for("auth.login")), 302
+
+
 @app.errorhandler(403)
 def forbidden(e):
     return render_template("errors/403.html"), 403

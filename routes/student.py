@@ -144,7 +144,7 @@ def _student_row() -> dict:
     """Return the user_profiles row for the current student, or abort 403.
 
     Class/department come from enrollments — user_profiles has no classes FK,
-    so embedding classes() here breaks PostgREST and returns 403 after login.
+    so embedding classes() here breaks PostgREST and blocked the dashboard.
     """
     user = current_user()
     if not user or not user.get("id"):
@@ -157,8 +157,7 @@ def _student_row() -> dict:
             db.table("user_profiles")
             .select(
                 "id, email, full_name, role, admission_no, mobile_number, "
-                "department_id, is_active, must_change_password, "
-                "passport_file_path, departments(name)"
+                "department_id, is_active, must_change_password, passport_file_path"
             )
             .eq("id", student_id)
             .limit(1)
@@ -167,6 +166,9 @@ def _student_row() -> dict:
             or []
         )
         if not rows:
+            # Session is enough to render the portal if the profile row is briefly unavailable.
+            if user.get("role") == "student":
+                return dict(user)
             abort(403)
         student = rows[0]
 
@@ -174,7 +176,7 @@ def _student_row() -> dict:
         try:
             enroll = (
                 db.table("enrollments")
-                .select("classes(name, department_id, departments(name))")
+                .select("classes(name)")
                 .eq("student_id", student_id)
                 .limit(1)
                 .execute()
@@ -188,7 +190,7 @@ def _student_row() -> dict:
 
         return student
     except Exception as exc:
-        # Fall back to session profile so a bad embed never blocks login → dashboard.
+        # Fall back to session profile so a bad query never blocks login → dashboard.
         print(f"[student] _student_row error: {exc}")
         if user.get("role") == "student":
             return dict(user)
@@ -225,7 +227,22 @@ def dashboard():
     student_id = user["id"]
     
     student = _student_row()
-    stats = {}
+    stats = {
+        "total": 0,
+        "pending": 0,
+        "approved": 0,
+        "rejected": 0,
+        "attendance_total": 0,
+        "attendance_percent": 0,
+        "job_apps": 0,
+        "attachment_active": 0,
+        "attachment_total": 0,
+        "logbook_entries": 0,
+        "pending_competencies": 0,
+        "summative_nyc": 0,
+        "clearance_status": "",
+        "clearance_stage": 0,
+    }
     unread_notifications = []
     recent_assessments = []
     recent_attendance = []
