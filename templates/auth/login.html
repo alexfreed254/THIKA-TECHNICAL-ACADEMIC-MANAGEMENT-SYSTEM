@@ -216,6 +216,11 @@
 
     .form { display: flex; flex-direction: column; gap: 20px; }
     .field { display: flex; flex-direction: column; gap: 8px; }
+    /* Author display:flex overrides the UA [hidden] rule without !important */
+    [hidden],
+    .field[hidden] {
+      display: none !important;
+    }
     .field label { font-size: 14px; font-weight: 700; color: #1e293b; }
 
     .input-wrap { position: relative; }
@@ -368,7 +373,7 @@
 
         <div class="heading">
           <h2 id="welcomeHeading">{% if request.form.get('login_type') == 'student' %}Trainee portal{% else %}Welcome back{% endif %}</h2>
-          <p id="welcomeSubtext">{% if request.form.get('login_type') == 'student' %}Sign in using your admission number.{% else %}Sign in with your institutional email address.{% endif %}</p>
+          <p id="welcomeSubtext">{% if request.form.get('login_type') == 'student' %}Sign in using your admission number.{% else %}Sign in with your email address.{% endif %}</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -394,7 +399,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
               </span>
               <input id="email" type="email" name="email"
-                     placeholder="you@ttti.ac.ke"
+                     placeholder="you@ttti.ac.ke/your@email.com"
                      value="{% if not is_student %}{{ request.form.get('email', '') }}{% endif %}"
                      autocomplete="email"
                      {% if not is_student %}required{% else %}disabled{% endif %}>
@@ -465,6 +470,8 @@
         var isStudent = type === 'student';
         staffField.hidden = isStudent;
         studentField.hidden = !isStudent;
+        staffField.style.display = isStudent ? 'none' : '';
+        studentField.style.display = isStudent ? '' : 'none';
         forgotLink.hidden = !isStudent;
         heading.textContent = isStudent ? 'Trainee portal' : 'Welcome back';
         subtext.textContent = isStudent
