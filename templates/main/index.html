@@ -507,7 +507,9 @@
         <div class="input-wrap">
           <i class="fas fa-envelope"></i>
           <input id="email" type="email" name="email" placeholder="you@ttti.ac.ke"
-                 value="{{ request.form.get('email', '') }}" autocomplete="email">
+                 value="{% if request.form.get('login_type') != 'student' and request.form.get('origin') != 'employer' %}{{ request.form.get('email', '') }}{% endif %}"
+                 autocomplete="email"
+                 {% if request.form.get('login_type') == 'student' or request.form.get('origin') == 'employer' %}disabled{% else %}required{% endif %}>
         </div>
       </div>
 
@@ -517,7 +519,9 @@
         <div class="input-wrap">
           <i class="fas fa-building"></i>
           <input id="employerEmail" type="email" name="email" placeholder="admin@company.com"
-                 value="{{ request.form.get('email', '') }}" autocomplete="email">
+                 value="{% if request.form.get('origin') == 'employer' %}{{ request.form.get('email', '') }}{% endif %}"
+                 autocomplete="email"
+                 {% if request.form.get('origin') == 'employer' %}required{% else %}disabled{% endif %}>
         </div>
       </div>
 
@@ -527,7 +531,9 @@
         <div class="input-wrap">
           <i class="fas fa-id-badge"></i>
           <input id="admissionNo" type="text" name="admission_no" placeholder="e.g. TTTI/2025/001"
-                 value="{{ request.form.get('admission_no', '') }}" autocomplete="username">
+                 value="{% if request.form.get('login_type') == 'student' %}{{ request.form.get('admission_no', '') }}{% endif %}"
+                 autocomplete="username"
+                 {% if request.form.get('login_type') == 'student' %}required{% else %}disabled{% endif %}>
         </div>
       </div>
 
@@ -592,6 +598,30 @@
   const studentField  = document.getElementById('studentField');
   const loginType   = document.getElementById('loginType');
   const origin      = document.getElementById('origin');
+  const emailInput  = document.getElementById('email');
+  const employerEmail = document.getElementById('employerEmail');
+  const admInput    = document.getElementById('admissionNo');
+
+  function setCredInputs(mode) {
+    // Only the active identifier field is enabled/submitted.
+    const isStudent = mode === 'student';
+    const isEmployer = mode === 'employer';
+    if (emailInput) {
+      emailInput.disabled = isStudent || isEmployer;
+      emailInput.required = mode === 'staff';
+      if (emailInput.disabled) emailInput.value = '';
+    }
+    if (employerEmail) {
+      employerEmail.disabled = !isEmployer;
+      employerEmail.required = isEmployer;
+      if (employerEmail.disabled) employerEmail.value = '';
+    }
+    if (admInput) {
+      admInput.disabled = !isStudent;
+      admInput.required = isStudent;
+      if (admInput.disabled) admInput.value = '';
+    }
+  }
 
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -605,20 +635,30 @@
         employerField.style.display = 'none';
         studentField.style.display  = 'grid';
         origin.value = 'main';
+        setCredInputs('student');
       } else if (type === 'employer') {
         staffField.style.display    = 'none';
         employerField.style.display = 'grid';
         studentField.style.display  = 'none';
         loginType.value = 'staff';
         origin.value = 'employer';
+        setCredInputs('employer');
       } else {
         staffField.style.display    = 'grid';
         employerField.style.display = 'none';
         studentField.style.display  = 'none';
         origin.value = 'main';
+        setCredInputs('staff');
       }
     });
   });
+
+  // Initialise from current tab / form state
+  (function initCredMode() {
+    if (origin.value === 'employer') setCredInputs('employer');
+    else if (loginType.value === 'student') setCredInputs('student');
+    else setCredInputs('staff');
+  })();
 
   /* ── Password visibility toggle ───────────────────────────── */
   function togglePw() {

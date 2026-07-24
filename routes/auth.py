@@ -103,17 +103,21 @@ def login():
         return redirect(url_for("auth.profile"))
 
     if request.method == "POST":
-        login_type = request.form.get("login_type")  # "staff" or "student"
+        login_type = (request.form.get("login_type") or "").strip().lower()
         origin = request.form.get("origin", "")
-        
+
+        # Staff/admin: email + password only. Trainee: admission number + password only.
         if login_type == "staff":
             email = request.form.get("email", "").strip()
             password = request.form.get("password", "")
-            
+
             if not email or not password:
                 flash("Email and password are required", "error")
                 return render_template("auth/login.html", departments=departments)
-            
+            if "@" not in email:
+                flash("Staff / Admin sign-in requires an email address and password.", "error")
+                return render_template("auth/login.html", departments=departments)
+
             profile = authenticate_staff(email, password)
             
             if profile:
@@ -169,29 +173,35 @@ def login():
         elif login_type == "student":
             admission_no = request.form.get("admission_no", "").strip()
             password = request.form.get("password", "")
-            
+
             if not admission_no or not password:
                 flash("Admission number and password are required", "error")
                 return render_template("auth/login.html", departments=departments)
-            
+            if "@" in admission_no:
+                flash("Trainee sign-in requires an admission number and password, not an email.", "error")
+                return render_template("auth/login.html", departments=departments)
+
             profile = authenticate_student(admission_no, password)
-            
+
             if profile:
                 session.clear()
                 session.permanent = True
                 session[SESSION_USER] = session_safe_profile(profile)
                 # Students don't get JWT tokens, just session
-                
+
                 write_audit_log("login", target=f"student:{profile['id']}")
-                
+
                 if profile.get("must_change_password"):
                     flash("Please set a new password to continue.", "warning")
                     return redirect(url_for("auth.change_password"))
                 flash("Login successful", "success")
                 return redirect(url_for("student.dashboard"))
-            
+
             flash("Invalid admission number or password", "error")
-    
+            return render_template("auth/login.html", departments=departments)
+
+        flash("Please choose Staff / Admin or Trainee to sign in.", "error")
+
     return render_template("auth/login.html", departments=departments)
 
 

@@ -395,9 +395,9 @@
               </span>
               <input id="email" type="email" name="email"
                      placeholder="you@ttti.ac.ke"
-                     value="{{ request.form.get('email', '') }}"
+                     value="{% if not is_student %}{{ request.form.get('email', '') }}{% endif %}"
                      autocomplete="email"
-                     {% if not is_student %}required{% endif %}>
+                     {% if not is_student %}required{% else %}disabled{% endif %}>
             </div>
           </div>
 
@@ -409,9 +409,9 @@
               </span>
               <input id="admissionNo" type="text" name="admission_no"
                      placeholder="A123456"
-                     value="{{ request.form.get('admission_no', '') }}"
+                     value="{% if is_student %}{{ request.form.get('admission_no', '') }}{% endif %}"
                      autocomplete="username"
-                     {% if is_student %}required{% endif %}>
+                     {% if is_student %}required{% else %}disabled{% endif %}>
             </div>
           </div>
 
@@ -461,7 +461,7 @@
       var emailInput = document.getElementById('email');
       var admInput = document.getElementById('admissionNo');
 
-      function applyTab(type) {
+      function applyTab(type, clearInactive) {
         var isStudent = type === 'student';
         staffField.hidden = isStudent;
         studentField.hidden = !isStudent;
@@ -470,8 +470,19 @@
         subtext.textContent = isStudent
           ? 'Sign in using your admission number.'
           : 'Sign in with your institutional email address.';
-        if (emailInput) emailInput.required = !isStudent;
-        if (admInput) admInput.required = isStudent;
+
+        // Only the active identifier is submitted (disabled inputs are omitted).
+        if (emailInput) {
+          emailInput.disabled = isStudent;
+          emailInput.required = !isStudent;
+          if (clearInactive && isStudent) emailInput.value = '';
+        }
+        if (admInput) {
+          admInput.disabled = !isStudent;
+          admInput.required = isStudent;
+          if (clearInactive && !isStudent) admInput.value = '';
+        }
+
         tabs.forEach(function (t) {
           var on = t.dataset.type === type;
           t.classList.toggle('active', on);
@@ -479,13 +490,17 @@
         });
       }
 
-      applyTab(loginType.value || 'staff');
+      applyTab(loginType.value || 'staff', false);
 
       tabs.forEach(function (tab) {
         tab.addEventListener('click', function () {
           loginType.value = tab.dataset.type;
-          applyTab(tab.dataset.type);
+          applyTab(tab.dataset.type, true);
         });
+      });
+
+      document.getElementById('loginForm').addEventListener('submit', function () {
+        applyTab(loginType.value || 'staff', false);
       });
 
       var pw = document.getElementById('password');

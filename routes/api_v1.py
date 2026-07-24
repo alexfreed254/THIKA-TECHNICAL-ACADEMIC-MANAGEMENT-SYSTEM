@@ -122,6 +122,8 @@ def api_login():
         password = body.get("password") or ""
         if not email or not password:
             return _err("Email and password are required.", 400)
+        if "@" not in email:
+            return _err("Staff / Admin sign-in requires an email address and password.", 400)
         profile = authenticate_staff(email, password)
         if not profile:
             return _err("Invalid email or password.", 401, "invalid_credentials")
@@ -141,6 +143,8 @@ def api_login():
         password = body.get("password") or ""
         if not admission_no or not password:
             return _err("Admission number and password are required.", 400)
+        if "@" in admission_no:
+            return _err("Trainee sign-in requires an admission number and password, not an email.", 400)
         profile = authenticate_student(admission_no, password)
         if not profile:
             return _err("Invalid admission number or password.", 401, "invalid_credentials")
