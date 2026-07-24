@@ -13,17 +13,32 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
+from security_utils import is_production
+from extensions import limiter, csrf
+
 app = Flask(__name__)
-# Fallback secret key for local dev — always set SECRET_KEY in production
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
+
+_secret = (os.environ.get("SECRET_KEY") or "").strip()
+if not _secret:
+    if is_production():
+        raise RuntimeError("SECRET_KEY environment variable is required in production")
+    _secret = "dev-secret-change-in-production"
+app.secret_key = _secret
 
 # ── Session / Cookie config ───────────────────────────────────────────────────
-# SPA on a different origin needs SameSite=None + Secure (set via env on Render).
 _cross_site = os.environ.get("SPA_CROSS_SITE", "").lower() in ("1", "true", "yes")
+_prod = is_production()
 app.config["SESSION_COOKIE_SAMESITE"] = "None" if _cross_site else "Lax"
-app.config["SESSION_COOKIE_SECURE"] = _cross_site or os.environ.get("SESSION_COOKIE_SECURE", "").lower() in ("1", "true", "yes")
+app.config["SESSION_COOKIE_SECURE"] = True if (_cross_site or _prod) else (
+    os.environ.get("SESSION_COOKIE_SECURE", "").lower() in ("1", "true", "yes")
+)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=1)
+app.config["WTF_CSRF_TIME_LIMIT"] = None
+app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken", "X-CSRF-Token"]
+
+limiter.init_app(app)
+csrf.init_app(app)
 
 # ── CORS for separated React + Vite frontend ──────────────────────────────────
 try:
@@ -38,6 +53,7 @@ try:
         app,
         resources={r"/api/*": {"origins": _spa_origins}},
         supports_credentials=True,
+        expose_headers=["Content-Type"],
     )
 except ImportError:
     pass  # flask-cors optional until installed; Jinja portals unaffected
@@ -100,11 +116,17 @@ app.register_blueprint(service_dept_bp, url_prefix="/service-dept")
 app.register_blueprint(academic_trips_bp)
 app.register_blueprint(summative_bp)
 
+# Device hardware callbacks use a shared secret, not browser CSRF cookies.
+from routes.biometric_attendance import device_scan, device_enroll
+csrf.exempt(device_scan)
+csrf.exempt(device_enroll)
+
 # ── Template globals ──────────────────────────────────────────────────────────
 @app.context_processor
 def inject_globals():
     from auth_utils import current_user
     from notifications import get_unread_count
+    from flask_wtf.csrf import generate_csrf
 
     user = current_user()
     unread_count = 0
@@ -178,6 +200,7 @@ def inject_globals():
         "SUPABASE_URL": supabase_url,
         "BUCKET_SCRIPTS": "assessment-scripts",
         "BUCKET_EVIDENCE": "assessment-evidence",
+        "csrf_token": generate_csrf,
     }
 
 # ── Jinja2 filter: convert UTC ISO string → EAT display string ───────────────
@@ -249,16 +272,15 @@ def not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     traceback.print_exc()
-    return render_template("errors/500.html", error=str(e)), 500
+    return render_template("errors/500.html"), 500
 
 
 @app.errorhandler(Exception)
 def unhandled_exception(e):
     traceback.print_exc()
-    return render_template("errors/500.html", error=str(e)), 500
+    return render_template("errors/500.html"), 500
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
-

@@ -108,6 +108,10 @@
       <form method="post" action="{{ url_for('auth.profile') }}">
         <input type="hidden" name="form_action" value="password">
         <div class="profile-input-group">
+          <label>Current Password *</label>
+          <input type="password" name="current_password" required placeholder="Enter current password" autocomplete="current-password">
+        </div>
+        <div class="profile-input-group">
           <label>New Password *</label>
           <input type="password" name="new_password" required placeholder="Min 8 characters, number & symbol">
         </div>

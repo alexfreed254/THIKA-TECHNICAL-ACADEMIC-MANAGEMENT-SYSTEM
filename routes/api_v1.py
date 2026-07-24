@@ -17,6 +17,8 @@ from auth_utils import (
     is_authenticated, write_audit_log,
 )
 from db import get_service_client
+from extensions import limiter
+from security_utils import session_safe_profile
 
 api_v1_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
@@ -97,7 +99,14 @@ def api_role_required(*roles):
     return decorator
 
 
+@api_v1_bp.route("/csrf-token", methods=["GET"])
+def api_csrf_token():
+    from flask_wtf.csrf import generate_csrf
+    return _ok({"csrf_token": generate_csrf()})
+
+
 @api_v1_bp.route("/auth/login", methods=["POST"])
+@limiter.limit("8 per minute")
 def api_login():
     body = request.get_json(silent=True) or {}
     login_type = (body.get("login_type") or "staff").strip().lower()
@@ -113,7 +122,9 @@ def api_login():
         sb_session = profile.pop("_session", None)
         if not sb_session:
             return _err("Authentication session could not be established.", 500)
-        session[SESSION_USER] = profile
+        session.clear()
+        session.permanent = True
+        session[SESSION_USER] = session_safe_profile(profile)
         session[SESSION_ACCESS] = sb_session.access_token
         session[SESSION_REFRESH] = sb_session.refresh_token
         write_audit_log("login", target=f"user:{profile['id']}")
@@ -127,7 +138,9 @@ def api_login():
         profile = authenticate_student(admission_no, password)
         if not profile:
             return _err("Invalid admission number or password.", 401, "invalid_credentials")
-        session[SESSION_USER] = profile
+        session.clear()
+        session.permanent = True
+        session[SESSION_USER] = session_safe_profile(profile)
         write_audit_log("login", target=f"student:{profile['id']}")
         return _ok({"user": _public_user(profile)})
 
@@ -672,6 +685,25 @@ def api_trainer_attendance_submit():
     if not statuses:
         return _err("No student statuses provided.", 400)
 
+    assigned = (db.table("class_units")
+                .select("id")
+                .eq("class_id", class_id)
+                .eq("unit_id", unit_id)
+                .eq("trainer_id", user["id"])
+                .limit(1)
+                .execute().data or [])
+    if not assigned:
+        return _err("You are not assigned to this class/unit.", 403, "forbidden")
+
+    enrolled_ids = {
+        e["student_id"]
+        for e in (db.table("enrollments")
+                  .select("student_id")
+                  .eq("class_id", class_id)
+                  .execute().data or [])
+        if e.get("student_id")
+    }
+
     existing = (db.table("attendance").select("id", count="exact")
                   .eq("unit_id", unit_id).eq("trainer_id", user["id"])
                   .eq("week", week).eq("lesson", lesson)
@@ -681,6 +713,8 @@ def api_trainer_attendance_submit():
 
     try:
         for sid, status in statuses.items():
+            if sid not in enrolled_ids:
+                continue
             st = "present" if status == "present" else "absent"
             db.table("attendance").insert({
                 "student_id": sid,

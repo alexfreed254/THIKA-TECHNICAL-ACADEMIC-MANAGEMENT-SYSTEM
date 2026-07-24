@@ -1107,10 +1107,12 @@ def approve_clearance(approval_id):
         req = approval.get("clearance_requests") or {}
         cat = approval.get("approver_category") or _infer_category(approval)
 
-        # Security: must be assigned to this user OR be a claimable record
+        # Security: must be assigned to this user OR be a claimable service-desk record
         if approval.get("approver_id") != uid:
             if cat in SERVICE_DEPT_CATEGORIES:
-                pass  # claimable by service dept users
+                from security_utils import can_approve_service_clearance
+                if not can_approve_service_clearance(role, cat, approval.get("approver_id"), uid):
+                    abort(403)
             elif (cat == "hod_other" and role == "dept_admin"
                   and approval.get("approver_id") is None):
                 # HOD can claim this only if the student is NOT from their own dept
@@ -1164,8 +1166,8 @@ def approve_clearance(approval_id):
         write_audit_log("approve_clearance", target=f"approval:{approval_id}")
         flash("Clearance approval granted successfully.", "success")
 
-    except Exception as e:
-        flash(f"Error: {e}", "error")
+    except Exception:
+        flash("Could not approve clearance. Please try again.", "error")
 
     return redirect(_approver_back(role))
 
@@ -1202,7 +1204,9 @@ def reject_clearance(approval_id):
 
         if approval.get("approver_id") != uid:
             if cat in SERVICE_DEPT_CATEGORIES:
-                pass  # claimable by service dept users
+                from security_utils import can_approve_service_clearance
+                if not can_approve_service_clearance(role, cat, approval.get("approver_id"), uid):
+                    abort(403)
             elif (cat == "hod_other" and role == "dept_admin"
                   and approval.get("approver_id") is None):
                 if req.get("department_id") == user.get("department_id"):
@@ -1234,8 +1238,8 @@ def reject_clearance(approval_id):
         write_audit_log("reject_clearance", target=f"approval:{approval_id}")
         flash("Clearance stage rejected.", "warning")
 
-    except Exception as e:
-        flash(f"Error: {e}", "error")
+    except Exception:
+        flash("Could not reject clearance. Please try again.", "error")
 
     return redirect(_approver_back(role))
 
@@ -1463,6 +1467,19 @@ def certificate(request_id):
     if user["role"] == "student" and cr["student_id"] != user["id"]:
         abort(403)
 
+    CERT_VIEW_ROLES = {
+        "super_admin", "registrar", "deputy_principal", "dept_admin",
+        "library_hod", "sports_hod", "service_clearance_officer",
+        "quality_assurance_officer", "dean_students", "finance_officer",
+        "environment_hod",
+    }
+    if user["role"] != "student" and user["role"] not in CERT_VIEW_ROLES:
+        abort(403)
+    if user["role"] == "dept_admin":
+        # Home-dept HOD only
+        if cr.get("department_id") and cr.get("department_id") != user.get("department_id"):
+            abort(403)
+
     if cr.get("status") != "completed":
         flash("Clearance certificate is only available after all stages are approved.", "warning")
         return redirect(url_for("clearance.dashboard"))
@@ -1539,6 +1556,17 @@ def certificate_pdf(request_id):
         abort(404)
     if user["role"] == "student" and cr["student_id"] != user["id"]:
         abort(403)
+    CERT_VIEW_ROLES = {
+        "super_admin", "registrar", "deputy_principal", "dept_admin",
+        "library_hod", "sports_hod", "service_clearance_officer",
+        "quality_assurance_officer", "dean_students", "finance_officer",
+        "environment_hod",
+    }
+    if user["role"] != "student" and user["role"] not in CERT_VIEW_ROLES:
+        abort(403)
+    if user["role"] == "dept_admin":
+        if cr.get("department_id") and cr.get("department_id") != user.get("department_id"):
+            abort(403)
     if cr.get("status") != "completed":
         flash("The clearance certificate is only available once all stages are approved.", "warning")
         return redirect(url_for("clearance.dashboard"))

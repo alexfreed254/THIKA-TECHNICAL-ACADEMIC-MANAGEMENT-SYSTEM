@@ -18,6 +18,8 @@ from auth_utils import (
     create_student_auth_user
 )
 from db import get_service_client
+from extensions import limiter
+from security_utils import session_safe_profile
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -60,6 +62,7 @@ def _ensure_profile(user_id: str, email: str) -> dict:
 # LOGIN PAGE
 # ─────────────────────────────────────────────────────────────
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("8 per minute", methods=["POST"])
 def login():
     db = get_service_client()
     departments = db.table("departments").select("*").order("name").execute().data or []
@@ -118,7 +121,9 @@ def login():
                 sb_session = profile.pop("_session", None)
                 
                 if sb_session:
-                    session[SESSION_USER] = profile
+                    session.clear()
+                    session.permanent = True
+                    session[SESSION_USER] = session_safe_profile(profile)
                     session[SESSION_ACCESS] = sb_session.access_token
                     session[SESSION_REFRESH] = sb_session.refresh_token
                     
@@ -172,11 +177,16 @@ def login():
             profile = authenticate_student(admission_no, password)
             
             if profile:
-                session[SESSION_USER] = profile
+                session.clear()
+                session.permanent = True
+                session[SESSION_USER] = session_safe_profile(profile)
                 # Students don't get JWT tokens, just session
                 
                 write_audit_log("login", target=f"student:{profile['id']}")
                 
+                if profile.get("must_change_password"):
+                    flash("Please set a new password to continue.", "warning")
+                    return redirect(url_for("auth.change_password"))
                 flash("Login successful", "success")
                 return redirect(url_for("student.dashboard"))
             
@@ -211,47 +221,34 @@ def logout():
 
 
 # ─────────────────────────────────────────────────────────────
-# FORGOT PASSWORD (trainee — generates system password shown on screen)
+# FORGOT PASSWORD (trainees must contact admin — no self-reset)
 # ─────────────────────────────────────────────────────────────
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def forgot_password():
-    generated_password = None
-    trainee_name = None
-    error = None
-
+    """
+    Public self-service password reset is disabled for security.
+    Admission-number-only resets previously allowed account takeover.
+    """
+    info = None
     if request.method == "POST":
-        admission_no = request.form.get("admission_no", "").strip()
+        # Always show the same message (no account enumeration / no password reset).
+        info = (
+            "Password reset is handled by your department administrator or Super Admin. "
+            "Visit the campus office with your admission number and a valid ID."
+        )
+        write_audit_log(
+            "password_reset_request_denied",
+            target=f"admission:{(request.form.get('admission_no') or '').strip()[:40]}",
+        )
 
-        if not admission_no:
-            error = "Admission number is required."
-        else:
-            svc = get_service_client()
-            try:
-                res = svc.table("user_profiles").select("id, full_name, role").eq("admission_no", admission_no).limit(1).execute()
-                trainee = res.data[0] if res.data else None
-
-                if not trainee or trainee.get("role") != "student":
-                    error = "No trainee account found with that admission number."
-                else:
-                    import random, string
-                    from werkzeug.security import generate_password_hash
-                    chars = string.ascii_uppercase + string.ascii_lowercase + string.digits
-                    new_password = ''.join(random.choices(chars, k=10))
-                    svc.table("user_profiles").update({
-                        "password_hash": generate_password_hash(new_password),
-                        "must_change_password": True
-                    }).eq("id", trainee["id"]).execute()
-                    write_audit_log("password_reset_generated", target=f"student:{trainee['id']}")
-                    generated_password = new_password
-                    trainee_name = trainee.get("full_name", "Trainee")
-            except Exception as exc:
-                print(f"[auth] forgot_password error: {exc}")
-                error = "An error occurred. Please try again."
-
-    return render_template("auth/forgot_password.html",
-                           generated_password=generated_password,
-                           trainee_name=trainee_name,
-                           error=error)
+    return render_template(
+        "auth/forgot_password.html",
+        generated_password=None,
+        trainee_name=None,
+        error=None,
+        info=info,
+    )
 
 
 # ─────────────────────────────────────────────────────────────
@@ -284,23 +281,34 @@ def change_password():
         # Verify current password
         if user.get("role") == "student":
             from werkzeug.security import check_password_hash, generate_password_hash
-            if not check_password_hash(user.get("password_hash", ""), current_password):
+            svc = get_service_client()
+            row = (svc.table("user_profiles")
+                   .select("password_hash")
+                   .eq("id", user["id"])
+                   .limit(1)
+                   .execute().data or [None])[0]
+            stored = (row or {}).get("password_hash") or ""
+            if not stored or not check_password_hash(stored, current_password):
                 flash("Current password is incorrect", "error")
                 return render_template("auth/change_password.html")
             
             # Update password
-            svc = get_service_client()
             svc.table("user_profiles").update({
                 "password_hash": generate_password_hash(new_password),
                 "must_change_password": False
             }).eq("id", user["id"]).execute()
+
+            # Refresh session flag without secrets
+            safe = session_safe_profile(dict(user)) or {}
+            safe["must_change_password"] = False
+            session[SESSION_USER] = safe
             
             write_audit_log("password_change", target=f"user:{user['id']}")
             flash("Password changed successfully", "success")
             return redirect(url_for("student.dashboard"))
         else:
-            # Staff use Supabase Auth
-            flash("Staff should use the forgot password feature", "info")
+            # Staff use Supabase Auth / admin credential reset
+            flash("Staff password changes are handled by Super Admin (Credentials).", "info")
             return render_template("auth/change_password.html")
     
     return render_template("auth/change_password.html")
@@ -345,7 +353,7 @@ def student_register():
                 flash("Email already registered", "error")
                 return render_template("auth/student_register.html")
             
-            # Create student user
+            # Create student user (inactive until admin approval)
             user_id = create_student_auth_user(
                 admission_no=admission_no,
                 password=password,
@@ -354,8 +362,9 @@ def student_register():
                 department_id=None,  # Will be assigned by admin
                 class_id=None
             )
+            svc.table("user_profiles").update({"is_active": False}).eq("id", user_id).execute()
             
-            flash("Registration successful. Please wait for admin approval.", "success")
+            flash("Registration successful. Please wait for admin approval before logging in.", "success")
             return redirect(url_for("auth.login"))
             
         except Exception as exc:
@@ -415,7 +424,7 @@ def profile():
                 # Refresh session user
                 user["mobile_number"] = mobile_number
                 user["full_name"] = full_name
-                session[SESSION_USER] = user
+                session[SESSION_USER] = session_safe_profile(user)
                 
                 write_audit_log("update_profile_details", target=f"user:{user_id}")
                 flash("Profile details updated successfully.", "success")
@@ -456,7 +465,7 @@ def profile():
                 # Refresh session user
                 user["passport_file_path"] = public_url
                 user["passport_file_name"] = file.filename
-                session[SESSION_USER] = user
+                session[SESSION_USER] = session_safe_profile(user)
                 
                 write_audit_log("upload_passport", target=f"user:{user_id}")
                 flash('Passport photo uploaded successfully.', 'success')
@@ -464,6 +473,7 @@ def profile():
                 flash(f'Error uploading passport: {e}', 'danger')
                 
         elif form_action == "password":
+            current_password = request.form.get("current_password", "")
             new_password = request.form.get("new_password", "")
             confirm_password = request.form.get("confirm_password", "")
             
@@ -474,21 +484,45 @@ def profile():
             if new_password != confirm_password:
                 flash("Passwords do not match.", "danger")
                 return redirect(url_for("auth.profile"))
+
+            if not current_password:
+                flash("Current password is required.", "danger")
+                return redirect(url_for("auth.profile"))
                 
             try:
                 if user.get("role") == "student":
-                    # Students: password hash
+                    from werkzeug.security import check_password_hash
+                    row = (db.table("user_profiles")
+                           .select("password_hash")
+                           .eq("id", user_id)
+                           .limit(1)
+                           .execute().data or [None])[0]
+                    stored = (row or {}).get("password_hash") or ""
+                    if not stored or not check_password_hash(stored, current_password):
+                        flash("Current password is incorrect.", "danger")
+                        return redirect(url_for("auth.profile"))
                     db.table("user_profiles").update({
-                        "password_hash": generate_password_hash(new_password)
+                        "password_hash": generate_password_hash(new_password),
+                        "must_change_password": False,
                     }).eq("id", user_id).execute()
                 else:
-                    # Staff: Supabase Auth
+                    # Staff: require current password via Supabase sign-in
+                    from db import get_anon_client
+                    email = user.get("email") or ""
+                    try:
+                        get_anon_client().auth.sign_in_with_password({
+                            "email": email,
+                            "password": current_password,
+                        })
+                    except Exception:
+                        flash("Current password is incorrect.", "danger")
+                        return redirect(url_for("auth.profile"))
                     db.auth.admin.update_user_by_id(user_id, {"password": new_password})
                     
                 write_audit_log("change_password", target=f"user:{user_id}")
                 flash("Password changed successfully.", "success")
-            except Exception as e:
-                flash(f"Error changing password: {e}", "danger")
+            except Exception:
+                flash("Error changing password.", "danger")
                 
             return redirect(url_for("auth.profile"))
             

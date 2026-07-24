@@ -33,6 +33,9 @@
 
     {% block extra_style %}{% endblock %}
   </style>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <script src="/static/js/secure-dom.js" defer></script>
+  <script src="/static/js/csrf.js" defer></script>
 </head>
 <body>
 {% include 'partials/official_header.html' %}
@@ -174,14 +177,14 @@
       const items = data.notifications || [];
       if (!items.length) { list.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:24px;display:block;margin-bottom:8px"></i>No notifications</div>'; return; }
       list.innerHTML = items.map(n => `
-        <a class="notif-item ${n.is_read ? '' : 'unread'}" href="${n.action_url || '/notifications'}"
+        <a class="notif-item ${n.is_read ? '' : 'unread'}" href="${safeUrl(n.action_url)}"
            onclick="markRead('${n.id}')">
           <div class="notif-icon ${n.notification_type||'info'}">
             <i class="fas fa-${n.notification_type==='success'?'check':n.notification_type==='warning'?'exclamation':'info'}"></i>
           </div>
           <div class="notif-body">
-            <div class="notif-title">${n.title||''}</div>
-            <div class="notif-msg">${n.message||''}</div>
+            <div class="notif-title">${escHtml(n.title||'')}</div>
+            <div class="notif-msg">${escHtml(n.message||'')}</div>
             <div class="notif-time">${n.created_at ? n.created_at.slice(0,10) : ''}</div>
           </div>
           ${n.is_read ? '' : '<div class="notif-dot"></div>'}

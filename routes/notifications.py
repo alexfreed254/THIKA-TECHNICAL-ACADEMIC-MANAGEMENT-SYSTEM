@@ -10,6 +10,7 @@ from notifications import (
     get_user_notifications, get_unread_count, mark_notification_as_read,
     mark_all_as_read, delete_user_notification,
 )
+from security_utils import safe_redirect_url
 
 notifications_bp = Blueprint("notifications", __name__)
 
@@ -59,7 +60,7 @@ def mark_read(notification_id):
     if request.headers.get("Content-Type") == "application/json":
         return jsonify({"success": True})
     
-    return redirect(request.referrer or "/notifications")
+    return redirect(safe_redirect_url("/notifications"))
 
 
 @notifications_bp.route("/mark-all-read", methods=["POST"])
@@ -74,7 +75,7 @@ def mark_all_read():
     if request.headers.get("Content-Type") == "application/json":
         return jsonify({"success": True})
     
-    return redirect(request.referrer or "/notifications")
+    return redirect(safe_redirect_url("/notifications"))
 
 
 @notifications_bp.route("/<notification_id>/delete", methods=["POST"])
@@ -89,7 +90,7 @@ def delete_notification(notification_id):
     if request.headers.get("Content-Type") == "application/json" or request.is_json:
         return jsonify({"success": bool(ok)})
 
-    return redirect(request.referrer or "/notifications")
+    return redirect(safe_redirect_url("/notifications"))
 
 
 @notifications_bp.route("/count")

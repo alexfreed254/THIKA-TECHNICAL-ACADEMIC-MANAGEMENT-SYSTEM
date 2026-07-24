@@ -9,7 +9,7 @@ Combines features from both:
 """
 
 from flask import (Blueprint, render_template, request,
-                   redirect, url_for, flash, abort, jsonify, make_response)
+                   redirect, url_for, flash, abort, jsonify, make_response, session)
 from auth_utils import super_admin_required, write_audit_log, current_user
 from db import get_service_client
 from notifications import create_notification, delete_notifications_for_notice
@@ -39,16 +39,23 @@ def _generate_password(length: int = 10) -> str:
 
 
 # ── One-time setup: seed super_admin user_profiles row ───────────────────────
-# Visit /super-admin/setup-profile?email=YOUR_EMAIL once to create the row.
-# This route is only accessible when NOT already logged in as super_admin.
+# Locked behind SETUP_PROFILE_TOKEN. Remove after first use in production.
 
 @super_admin_bp.route("/setup-profile")
 def setup_profile():
     """
     One-time helper: creates a user_profiles row for an existing Supabase Auth
     super_admin user so they can log in through the app.
-    Usage: /super-admin/setup-profile?email=you@example.com
+    Usage: /super-admin/setup-profile?email=you@example.com&token=SETUP_PROFILE_TOKEN
     """
+    import os
+    import secrets as _secrets
+
+    expected = (os.environ.get("SETUP_PROFILE_TOKEN") or "").strip()
+    token = (request.args.get("token") or "").strip()
+    if not expected or not _secrets.compare_digest(token, expected):
+        abort(404)
+
     email = request.args.get("email", "").strip().lower()
     if not email:
         return jsonify({"error": "Pass ?email=your@email.com"}), 400
@@ -90,10 +97,10 @@ def setup_profile():
             "id": user_id,
             "email": email,
             "role": "super_admin",
-            "message": "Profile created. You can now log in."
+            "message": "Profile created. You can now log in. Unset SETUP_PROFILE_TOKEN after use."
         })
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Setup failed. Check server logs."}), 500
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -572,7 +579,7 @@ def edit_user(user_id):
                           error=error)
 
 
-@super_admin_bp.route("/users/<user_id>/delete")
+@super_admin_bp.route("/users/<user_id>/delete", methods=["POST"])
 @super_admin_required
 def delete_user(user_id):
     db = _svc()
@@ -580,8 +587,8 @@ def delete_user(user_id):
         db.table("user_profiles").delete().eq("id", user_id).execute()
         write_audit_log("delete_user", target=f"user:{user_id}")
         flash("User deleted successfully.", "success")
-    except Exception as exc:
-        flash(f"Error deleting user: {exc}", "danger")
+    except Exception:
+        flash("Error deleting user.", "danger")
     return redirect(url_for("super_admin.users"))
 
 
@@ -612,13 +619,21 @@ def credentials():
                 flash("Password must be at least 6 characters.", "error")
             else:
                 ok, m = reset_user_password(uid, new_pw)
-                flash(f"Password for {target['full_name']} set to: {new_pw}" if ok else m,
-                      "success" if ok else "error")
+                if ok:
+                    session["one_time_temp_password"] = new_pw
+                    session["one_time_temp_user"] = target["full_name"]
+                    flash("Password set. Copy the temporary password below — it will not be shown again.", "success")
+                else:
+                    flash(m, "error")
         elif action == "reset_password":
             new_pw = generate_temp_password()
             ok, m = reset_user_password(uid, new_pw)
-            flash(f"New temporary password for {target['full_name']}: {new_pw}" if ok else m,
-                  "success" if ok else "error")
+            if ok:
+                session["one_time_temp_password"] = new_pw
+                session["one_time_temp_user"] = target["full_name"]
+                flash("Temporary password generated. Copy it below — it will not be shown again.", "success")
+            else:
+                flash(m, "error")
         return redirect(url_for("super_admin.credentials", search=search, role=role, dept=dept))
 
     q = db.table("user_profiles").select(
@@ -629,10 +644,13 @@ def credentials():
     if dept:
         q = q.eq("department_id", dept)
     if search:
-        q = q.or_(
-            f"full_name.ilike.%{search}%,email.ilike.%{search}%,"
-            f"admission_no.ilike.%{search}%,staff_no.ilike.%{search}%"
-        )
+        from security_utils import sanitize_search_query
+        search_q = sanitize_search_query(search)
+        if search_q:
+            q = q.or_(
+                f"full_name.ilike.%{search_q}%,email.ilike.%{search_q}%,"
+                f"admission_no.ilike.%{search_q}%,staff_no.ilike.%{search_q}%"
+            )
     users_list = q.order("full_name").limit(300).execute().data or []
 
     dept_map = {d["id"]: d["name"] for d in
@@ -643,9 +661,13 @@ def credentials():
     departments = [{"id": k, "name": v} for k, v in sorted(dept_map.items(), key=lambda x: x[1])]
     roles = sorted({(u.get("role") or "") for u in
                     (db.table("user_profiles").select("role").execute().data or [])} - {""})
+    one_time_password = session.pop("one_time_temp_password", None)
+    one_time_user = session.pop("one_time_temp_user", None)
     return render_template("super_admin/credentials.html",
                            users_list=users_list, departments=departments,
-                           roles=roles, search=search, role=role, dept=dept)
+                           roles=roles, search=search, role=role, dept=dept,
+                           one_time_password=one_time_password,
+                           one_time_user=one_time_user)
 
 
 # ── Classes Management ─────────────────────────────────────────────────────────
@@ -2022,6 +2044,8 @@ def trainee_search():
     unit_id    = request.args.get("unit_id","").strip()
     students = []; student = None; summary = None; records = []; units_list = []
     if query_str:
+        from security_utils import sanitize_search_query
+        query_str = sanitize_search_query(query_str)
         rows = (db.table("user_profiles")
                 .select("id,full_name,admission_no,enrollments(classes(name,departments(name)))")
                 .eq("role","student")

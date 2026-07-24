@@ -4,7 +4,7 @@ Manages everything within the HOD's assigned department only.
 """
 
 from flask import (Blueprint, render_template, request,
-                   redirect, url_for, flash, abort, make_response, jsonify)
+                   redirect, url_for, flash, abort, make_response, jsonify, session)
 from auth_utils import (dept_admin_required, write_audit_log,
                         current_user, dept_isolation_check)
 from db import get_service_client
@@ -2516,7 +2516,10 @@ def trainee_search():
     summary = {}
 
     if q:
-        students = (db.table("user_profiles").select("*")
+        from security_utils import sanitize_search_query
+        q = sanitize_search_query(q)
+        students = (db.table("user_profiles").select(
+                "id, full_name, admission_no, department_id, is_active, role")
             .eq("role", "student").eq("department_id", dept_id)
             .or_(f"admission_no.ilike.%{q}%,full_name.ilike.%{q}%")
             .limit(20).execute().data or [])
@@ -2749,14 +2752,18 @@ def credentials():
             else:
                 ok, m = reset_user_password(uid, new_pw)
                 if ok:
-                    flash(f"Password for {target['full_name']} set to: {new_pw}", "success")
+                    session["one_time_temp_password"] = new_pw
+                    session["one_time_temp_user"] = target["full_name"]
+                    flash("Password set. Copy the temporary password below — it will not be shown again.", "success")
                 else:
                     flash(m, "error")
         elif action == "reset_password":
             new_pw = generate_temp_password()
             ok, m = reset_user_password(uid, new_pw)
             if ok:
-                flash(f"New temporary password for {target['full_name']}: {new_pw}", "success")
+                session["one_time_temp_password"] = new_pw
+                session["one_time_temp_user"] = target["full_name"]
+                flash("Temporary password generated. Copy it below — it will not be shown again.", "success")
             else:
                 flash(m, "error")
         return redirect(url_for("dept_admin.credentials", tab=tab, search_t=search_t,
@@ -2765,14 +2772,20 @@ def credentials():
     tq = db.table("user_profiles").select("id, full_name, email, staff_no, is_active, must_change_password, departments(name)")
     tq = tq.eq("role", "trainer").eq("department_id", dept_id)
     if search_t:
-        tq = tq.or_(f"full_name.ilike.%{search_t}%,staff_no.ilike.%{search_t}%,email.ilike.%{search_t}%")
+        from security_utils import sanitize_search_query
+        search_t = sanitize_search_query(search_t)
+        if search_t:
+            tq = tq.or_(f"full_name.ilike.%{search_t}%,staff_no.ilike.%{search_t}%,email.ilike.%{search_t}%")
     trainers_list = tq.order("full_name").execute().data or []
 
     sq = db.table("user_profiles").select(
         "id, full_name, admission_no, email, is_active, must_change_password")
     sq = sq.eq("role", "student").eq("department_id", dept_id)
     if search_s:
-        sq = sq.or_(f"full_name.ilike.%{search_s}%,admission_no.ilike.%{search_s}%")
+        from security_utils import sanitize_search_query
+        search_s = sanitize_search_query(search_s)
+        if search_s:
+            sq = sq.or_(f"full_name.ilike.%{search_s}%,admission_no.ilike.%{search_s}%")
     students_list = sq.order("full_name").execute().data or []
     _attach_student_classes(db, students_list)
 
@@ -2783,11 +2796,15 @@ def credentials():
         ]
 
     classes_list = db.table("classes").select("id, name").eq("department_id", dept_id).order("name").execute().data or []
+    one_time_password = session.pop("one_time_temp_password", None)
+    one_time_user = session.pop("one_time_temp_user", None)
     return render_template("dept_admin/credentials.html",
                            tab=tab, search_t=search_t, search_s=search_s,
                            filter_class=filter_class,
                            trainers_list=trainers_list, students_list=students_list,
-                           classes_list=classes_list)
+                           classes_list=classes_list,
+                           one_time_password=one_time_password,
+                           one_time_user=one_time_user)
 
 
 # ── Import Data ───────────────────────────────────────────────────────────────

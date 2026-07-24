@@ -15,6 +15,7 @@ from typing import Optional
 from flask import session, redirect, url_for, abort, request
 from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_service_client, get_anon_client
+from security_utils import session_safe_profile
 
 
 # ── Session keys ──────────────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ def authenticate_staff(email: str, password: str) -> Optional[dict]:
             if not emp_res.data or not emp_res.data[0].get("is_verified", False):
                 # Return a special sentinel so the login route can show the right message
                 profile["_unverified_employer"] = True
-                return profile
+                return session_safe_profile(profile)
 
         # Authenticate via Supabase Auth
         client = get_anon_client()
@@ -156,8 +157,9 @@ def authenticate_staff(email: str, password: str) -> Optional[dict]:
         })
 
         if result and result.user and result.session:
-            profile["_session"] = result.session
-            return profile
+            safe = session_safe_profile(profile) or {}
+            safe["_session"] = result.session
+            return safe
 
         return None
     except Exception as exc:
@@ -183,12 +185,15 @@ def authenticate_student(admission_no: str, password: str) -> Optional[dict]:
             return None
             
         profile = res.data[0]
+
+        if not profile.get("is_active", False):
+            return None
         
         if not profile.get("password_hash"):
             return None
             
         if check_password_hash(profile["password_hash"], password):
-            return profile
+            return session_safe_profile(profile)
             
         return None
     except Exception as exc:
@@ -336,6 +341,20 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if not is_authenticated():
             return redirect(url_for("auth.login"))
+        user = current_user()
+        if user and user.get("must_change_password"):
+            endpoint = (request.endpoint or "")
+            allowed = {
+                "auth.change_password",
+                "auth.logout",
+                "api_v1.api_logout",
+                "api_v1.api_me",
+                "api_v1.api_csrf_token",
+            }
+            if endpoint not in allowed and not str(endpoint).startswith("static"):
+                from flask import flash
+                flash("You must change your temporary password before continuing.", "warning")
+                return redirect(url_for("auth.change_password"))
         return f(*args, **kwargs)
     return decorated
 

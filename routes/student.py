@@ -481,9 +481,15 @@ def profile():
                 flash(pwd_err, 'danger')
                 return redirect(url_for("student.profile"))
             
-            # Verify current password
+            # Verify current password from database (never from session)
             from werkzeug.security import check_password_hash, generate_password_hash
-            if not check_password_hash(user.get("password_hash", ""), current_password):
+            row = (db.table("user_profiles")
+                   .select("password_hash")
+                   .eq("id", student_id)
+                   .limit(1)
+                   .execute().data or [None])[0]
+            stored = (row or {}).get("password_hash") or ""
+            if not stored or not check_password_hash(stored, current_password):
                 flash('Current password is incorrect.', 'danger')
                 return redirect(url_for("student.profile"))
             
@@ -492,11 +498,17 @@ def profile():
                     "password_hash": generate_password_hash(new_password),
                     "must_change_password": False
                 }).eq("id", student_id).execute()
+                from security_utils import session_safe_profile
+                from flask import session as flask_session
+                from auth_utils import SESSION_USER
+                safe = session_safe_profile(dict(user)) or {}
+                safe["must_change_password"] = False
+                flask_session[SESSION_USER] = safe
                 write_audit_log("password_change", target=f"user:{student_id}")
                 flash('Password changed successfully.', 'success')
                 return redirect(url_for("student.profile"))
-            except Exception as e:
-                flash(f'Error changing password: {e}', 'danger')
+            except Exception:
+                flash('Error changing password.', 'danger')
         
         elif form_action == "passport":
             if 'passport' not in request.files:
@@ -621,9 +633,19 @@ def my_documents():
 
             doc_label = doc_type.replace("_", " ").title()
             try:
-                ext          = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "pdf"
+                from security_utils import allowed_upload
+                file_bytes = file.read()
+                ok_up, err_up = allowed_upload(
+                    file.filename,
+                    file_bytes,
+                    allowed_ext={"pdf", "jpg", "jpeg", "png", "webp"},
+                    max_bytes=5 * 1024 * 1024,
+                )
+                if not ok_up:
+                    upload_errors.append(f"{doc_label}: {err_up}")
+                    continue
+                ext          = file.filename.rsplit(".", 1)[-1].lower()
                 storage_path = f"trainee_documents/{student_id}_{doc_type}_{uuid.uuid4().hex}.{ext}"
-                file_bytes   = file.read()
                 content_type = _DOC_MIME.get(ext, "application/octet-stream")
 
                 storage.from_("assessment-evidence").upload(
@@ -774,6 +796,11 @@ def upload_assessment():
         
         if not all([unit_id, assessment_type, assessment_no, term, cycle, year]):
             flash('All fields are required.', 'danger')
+            return redirect(url_for("student.upload_assessment"))
+
+        allowed_unit_ids = {cu.get("unit_id") for cu in class_units if cu.get("unit_id")}
+        if unit_id not in allowed_unit_ids:
+            flash("Invalid unit for your class.", "danger")
             return redirect(url_for("student.upload_assessment"))
         
         files = request.files.getlist("scripts")

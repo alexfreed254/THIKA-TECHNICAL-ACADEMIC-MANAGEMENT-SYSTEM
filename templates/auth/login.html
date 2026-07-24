@@ -152,6 +152,9 @@
       .page-shell { border-radius: 22px; }
     }
   </style>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <script src="/static/js/secure-dom.js" defer></script>
+  <script src="/static/js/csrf.js" defer></script>
 </head>
 <body>
   <div class="page-shell">

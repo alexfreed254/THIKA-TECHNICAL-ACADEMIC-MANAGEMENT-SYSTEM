@@ -12,6 +12,7 @@ from db import get_service_client
 from datetime import datetime, date
 import threading
 import os
+import secrets
 
 biometric_bp = Blueprint("biometric", __name__)
 
@@ -340,11 +341,13 @@ def device_scan():
     The sensor must be configured to POST to:
       https://<your-domain>/biometric/api/scan
     """
-    secret = os.environ.get("BIOMETRIC_DEVICE_SECRET", "")
+    secret = os.environ.get("BIOMETRIC_DEVICE_SECRET", "").strip()
     data   = request.get_json(silent=True) or {}
 
-    # Optional shared-secret auth
-    if secret and data.get("device_secret") != secret:
+    if not secret:
+        return jsonify({"status": "error", "message": "Device auth not configured"}), 503
+    provided = str(data.get("device_secret") or "")
+    if not secrets.compare_digest(provided, secret):
         return jsonify({"status": "error", "message": "Unauthorised device"}), 401
 
     biometric_id = str(data.get("biometric_id") or data.get("fingerprint_id") or "").strip()
@@ -424,10 +427,13 @@ def device_enroll():
     trainee places their finger on the scanner. The device sends this callback,
     the server links the biometric_id to the pending student, and saves to DB.
     """
-    secret = os.environ.get("BIOMETRIC_DEVICE_SECRET", "")
+    secret = os.environ.get("BIOMETRIC_DEVICE_SECRET", "").strip()
     data   = request.get_json(silent=True) or {}
 
-    if secret and data.get("device_secret") != secret:
+    if not secret:
+        return jsonify({"status": "error", "message": "Device auth not configured"}), 503
+    provided = str(data.get("device_secret") or "")
+    if not secrets.compare_digest(provided, secret):
         return jsonify({"status": "error", "message": "Unauthorised device"}), 401
 
     biometric_id = str(data.get("biometric_id") or "").strip()
@@ -452,8 +458,8 @@ def device_enroll():
         except Exception as exc:
             with _enrollment_lock:
                 _active_enrollment["status"] = "error"
-                _active_enrollment["error"]  = str(exc)
-            return jsonify({"status": "error", "message": str(exc)}), 500
+                _active_enrollment["error"]  = "Enrollment save failed"
+            return jsonify({"status": "error", "message": "Enrollment save failed"}), 500
 
     return jsonify({
         "status":       "ok",
