@@ -16,7 +16,6 @@ A full-stack web application for managing academic operations at Thika Technical
 | Frontend | **React 18 + Vite** (SPA in `frontend/`) · Jinja2 portals still available during incremental migration · Tailwind CSS · Font Awesome |
 | PDF generation | ReportLab |
 | Excel export | openpyxl |
-| AI assistant | Anthropic Claude API (student chat) |
 
 ---
 
@@ -50,7 +49,7 @@ Jinja templates remain until each screen is ported — **design is preserved**, 
 | `super_admin` | `/super-admin` | Full system access across all departments |
 | `dept_admin` | `/dept-admin` | Department-scoped admin — classes, trainers, students, attendance |
 | `trainer` | `/trainer` | Own assigned classes and units — attendance, assessments, marks, POE |
-| `student` | `/student` | Own records — attendance, assessments, exams, attachment, AI assistant |
+| `student` | `/student` | Own records — attendance, assessments, exams, attachment |
 | `examination_officer` | `/examination-officer` | Approve and confirm exam bookings; read-only marks |
 | `industry_mentor` | `/industry-mentor` | Company-side mentor — logbook approval, competency assessment |
 | `internal_verifier` | `/internal-verifier` | CDACC competency verification, attachment compliance reports |
@@ -142,7 +141,6 @@ Access control is enforced at two layers:
 - Digital logbook — add daily entries with evidence photos
 - Employment status (TVET graduate employment tracking)
 - Employment projects
-- AI assistant (powered by Claude API)
 
 ### Examination Officer (`/examination-officer`)
 - Dashboard with booking statistics
@@ -211,11 +209,6 @@ Access control is enforced at two layers:
 - Bell dropdown in all portal base templates
 - Mark individual or all notifications read
 - Notifications created server-side by route actions (exam approval, logbook approval, clearance updates, etc.)
-
-### AI Assistant
-- Student-facing chat endpoint `/api/ai-ask`
-- Powered by Anthropic Claude API
-- Answers questions about the student's own records
 
 ---
 

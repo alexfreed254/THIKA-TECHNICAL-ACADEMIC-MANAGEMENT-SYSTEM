@@ -1,0 +1,110 @@
+{# Live digital date/time clock for portal topbars (Africa/Nairobi / EAT). #}
+<style>
+  .ttti-digital-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 100%);
+    border: 1px solid rgba(147, 197, 253, 0.35);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+    min-width: 132px;
+    line-height: 1.15;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .ttti-digital-clock .ttti-clock-time {
+    font-family: ui-monospace, 'DM Mono', 'Courier New', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #e0f2fe;
+    font-variant-numeric: tabular-nums;
+  }
+  .ttti-digital-clock .ttti-clock-date {
+    font-family: ui-monospace, 'DM Mono', 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #93c5fd;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ttti-digital-clock .ttti-clock-tz {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #60a5fa;
+    text-transform: uppercase;
+  }
+  body.dark-mode .ttti-digital-clock {
+    background: linear-gradient(145deg, #020617 0%, #1e293b 100%);
+    border-color: rgba(96, 165, 250, 0.4);
+  }
+  @media (max-width: 720px) {
+    .ttti-digital-clock {
+      min-width: 0;
+      padding: 5px 9px;
+    }
+    .ttti-digital-clock .ttti-clock-time { font-size: 13px; letter-spacing: 0.05em; }
+    .ttti-digital-clock .ttti-clock-date { font-size: 9px; }
+    .ttti-digital-clock .ttti-clock-tz { display: none; }
+  }
+  @media (max-width: 480px) {
+    .ttti-digital-clock .ttti-clock-date { display: none; }
+    .ttti-digital-clock { padding: 6px 8px; }
+  }
+</style>
+
+<div class="ttti-digital-clock" role="timer" aria-live="off" aria-label="Current date and time" title="East Africa Time (Nairobi)">
+  <span class="ttti-clock-time">--:--:--</span>
+  <span class="ttti-clock-date">---</span>
+  <span class="ttti-clock-tz">EAT</span>
+</div>
+
+<script>
+(function () {
+  if (window.__tttiDigitalClockStarted) {
+    // New clock nodes may appear after SPA navigation — refresh once.
+    if (typeof window.__tttiTickDigitalClocks === 'function') window.__tttiTickDigitalClocks();
+    return;
+  }
+  window.__tttiDigitalClockStarted = true;
+
+  var TZ = 'Africa/Nairobi';
+  var timeFmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  var dateFmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ,
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+
+  function tick() {
+    var now = new Date();
+    var t = timeFmt.format(now);
+    var d = dateFmt.format(now);
+    document.querySelectorAll('.ttti-digital-clock').forEach(function (el) {
+      var timeEl = el.querySelector('.ttti-clock-time');
+      var dateEl = el.querySelector('.ttti-clock-date');
+      if (timeEl) timeEl.textContent = t;
+      if (dateEl) dateEl.textContent = d;
+      el.setAttribute('aria-label', 'Current time ' + t + ', ' + d + ' East Africa Time');
+    });
+  }
+
+  window.__tttiTickDigitalClocks = tick;
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>

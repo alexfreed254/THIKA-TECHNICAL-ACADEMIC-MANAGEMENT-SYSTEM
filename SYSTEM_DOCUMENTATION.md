@@ -29,7 +29,6 @@ TTTI AMS is a full-stack institutional platform that digitises academic and admi
 
 - **Employer job board:** Schema tables exist (`employers`, `job_postings`, `job_applications`); a dedicated employer portal blueprint is not fully wired like other roles.
 - **React SPA:** Incremental migration only — Jinja portals remain the production default for most roles.
-- **AI assistant:** Currently rule-based institutional Q&A (`/api/ai-ask`), not a live Anthropic Claude dependency in `requirements.txt`.
 
 ---
 
@@ -171,7 +170,6 @@ THIKA TECHNICAL ACADEMIC MANAGEMENT SYSTEM/
 | `service_dept` | `/service-dept` | Library / Sports / Service clearance |
 | `academic_trips` | `/academic-trips` | Trips coordinators / reviewers |
 | `summative` | `/summative` | Trainers / Dept Admin / Super Admin |
-| `ai` | `/api/ai-*` | Authenticated Q&A |
 
 ---
 
@@ -308,7 +306,6 @@ Learner self-service:
 - Employment status / projects  
 - Summative competence (read-only view of own results)  
 - Course clearance entry point  
-- AI help endpoint (`/student/ai-ask` → shared AI API)  
 
 ### 8.5 Examination Officer (`/examination-officer`)
 
@@ -379,7 +376,6 @@ Features: competence entry grid, unit performance analysis, Excel/PDF reports, g
 | Workshop Technician | Workshop inventory + clearance for workshop |
 | Service Dept | Library / Sports / service clearance desks + lost items |
 | Admin Oversight | Registrar, Deputy Principal, QA read/approve views |
-| AI API | Role-aware rule-based Q&A over accessible stats |
 
 ### 8.13 REST API v1 (`/api/v1`) — SPA backend
 

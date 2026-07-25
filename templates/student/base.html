@@ -258,6 +258,7 @@
         <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
+        {% include 'partials/digital_clock.html' %}
         <div class="notif-wrapper" id="notifWrapper">
           <button class="notification-bell" id="notifBell" title="Notifications" aria-expanded="false" aria-haspopup="true">
             <i class="fas fa-bell"></i>
@@ -301,7 +302,6 @@
   </div>
 </div>
 
-{% include 'partials/ai_guardian.html' %}
 <div id="spa-page-scripts">{% block extra_script %}{% endblock %}</div>
 
 <script>

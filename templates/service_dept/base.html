@@ -86,6 +86,7 @@
         {% block page_title %}{{ config.label }}{% endblock %}
       </span>
       <div style="display:flex;align-items:center;gap:10px">
+        {% include 'partials/digital_clock.html' %}
         <!-- Notification bell -->
         <div class="notif-wrapper" id="notifWrapper">
           <button class="notification-bell" id="notifBell" title="Notifications"
@@ -215,7 +216,5 @@
   }
 
   if (localStorage.getItem('ttti_theme') === 'dark') document.body.classList.add('dark-mode');
-</script>
-{% include 'partials/ai_guardian.html' %}
-</body>
+</script></body>
 </html>

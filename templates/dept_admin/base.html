@@ -269,6 +269,7 @@
     <header class="topbar">
       <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
       <div style="display:flex;align-items:center;gap:10px">
+        {% include 'partials/digital_clock.html' %}
         <div class="notif-wrapper" id="notifWrapper">
           <button class="notification-bell" id="notifBell" title="Notifications" aria-expanded="false" aria-haspopup="true">
             <i class="fas fa-bell"></i>
@@ -407,7 +408,5 @@
     setInterval(function() { fetch('/notifications/count').then(r=>r.json()).then(d=>{const nc=d.count||0;if(nc>lastCount)showToast('You have '+nc+' unread notification'+(nc>1?'s':'')+'.','info',5000);lastCount=nc;setBadge(nc);if(!panel.hidden)loadRecent();}).catch(()=>{}); }, 30000);
   })();
 </script>
-
-{% include 'partials/ai_guardian.html' %}
 </body>
 </html>
