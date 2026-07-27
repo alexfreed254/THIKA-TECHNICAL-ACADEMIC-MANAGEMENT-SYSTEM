@@ -201,6 +201,12 @@ def login():
 
                 write_audit_log("login", target=f"student:{profile['id']}")
 
+                # Verify role is actually student
+                if profile.get("role") != "student":
+                    flash(f"Error: Your account role is '{profile.get('role')}' but you're trying to login as a trainee. Please contact admin.", "error")
+                    session.clear()
+                    return render_template("auth/login.html", departments=departments)
+
                 if profile.get("must_change_password"):
                     flash("Please set a new password to continue.", "warning")
                     return redirect(url_for("auth.change_password"))
