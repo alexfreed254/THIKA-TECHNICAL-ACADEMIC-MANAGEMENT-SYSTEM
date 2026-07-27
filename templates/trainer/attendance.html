@@ -118,9 +118,12 @@
         <select id="unitSelect" class="form-control" onchange="onFilterChange()">
           <option value="">-- Choose Unit --</option>
           {% for u in units_list %}
-            <option value="{{ u.units.id }}" {% if unit_id == u.units.id %}selected{% endif %}>
-              {{ u.units.code }} &ndash; {{ u.units.name }}
+            {% set unit = (u.units if u.units else {}) %}
+            {% if unit.id %}
+            <option value="{{ unit.id }}" {% if unit_id == unit.id %}selected{% endif %}>
+              {{ unit.code or '—' }} &ndash; {{ unit.name or '—' }}
             </option>
+            {% endif %}
           {% endfor %}
         </select>
       </div>
@@ -221,6 +224,7 @@
         {% if active_event.note %} &mdash; {{ active_event.note }}{% endif %}
       </span>
       <form method="post" style="display:inline;" onsubmit="return confirm('Remove this event record?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="action"   value="delete_event">
         <input type="hidden" name="event_id" value="{{ active_event.id }}">
         <button type="submit" class="btn btn-sm" style="background:rgba(0,0,0,0.12);color:inherit;">
@@ -248,6 +252,7 @@
     <!-- ── Attendance table ── -->
     <div style="overflow-x:auto;">
       <form id="attendanceForm" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="action"   value="submit_attendance">
         <input type="hidden" name="class_id" value="{{ class_id }}">
         <input type="hidden" name="unit_id"  value="{{ unit_id }}">
@@ -350,6 +355,7 @@
   <div class="modal-box">
     <h3 id="modalTitle"><i class="fas fa-umbrella-beach"></i> Mark Holiday</h3>
     <form id="eventForm" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action"     value="add_event">
       <input type="hidden" id="evEventType" name="event_type" value="holiday">
       <div style="margin-bottom:14px;">

@@ -332,73 +332,117 @@ def attendance():
     dept_id = user.get("department_id")
     dept_name = "Department"
     if dept_id:
-        dept = db.table("departments").select("name").eq("id", dept_id).single().execute().data
-        if dept:
-            dept_name = dept["name"]
+        try:
+            dept_rows = (
+                db.table("departments")
+                .select("name")
+                .eq("id", dept_id)
+                .limit(1)
+                .execute()
+                .data
+                or []
+            )
+            if dept_rows:
+                dept_name = dept_rows[0].get("name") or dept_name
+        except Exception as exc:
+            print(f"[trainer] attendance dept lookup: {exc}")
 
-    # Classes assigned to this trainer
-    cu_rows = (db.table("class_units")
-                 .select("class_id")
-                 .eq("trainer_id", user["id"])
-                 .execute().data or [])
-    class_ids = list({r["class_id"] for r in cu_rows})
+    # Prefer form values on POST (hidden fields), else query string from filters.
+    def _param(name, default=""):
+        if request.method == "POST" and name in request.form:
+            return (request.form.get(name) or default).strip()
+        return (request.args.get(name) or default).strip()
+
+    def _param_int(name, default=0):
+        raw = _param(name, "")
+        if raw == "":
+            return default
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return default
+
+    class_id = _param("class_id")
+    unit_id = _param("unit_id")
+    week = _param_int("week", 0)  # 0 = not yet selected
+    lesson = _param("lesson")  # "" = not yet selected
+    year = _param_int("year", datetime.now().year)
+    term = _param_int("term", 1)
 
     class_list = []
-    if class_ids:
-        class_list = (db.table("classes")
-                        .select("*")
-                        .in_("id", class_ids)
-                        .eq("department_id", dept_id)
-                        .order("name")
-                        .execute().data or [])
-
-    class_id = request.args.get("class_id", "")
-    unit_id  = request.args.get("unit_id", "")
-    week     = request.args.get("week", 0, type=int)   # 0 = not yet selected
-    lesson   = request.args.get("lesson", "")           # "" = not yet selected
-    year     = request.args.get("year", datetime.now().year, type=int)
-    term     = request.args.get("term", 1, type=int)
-
     units_list = []
     students_list = []
     attendance_submitted = False
     active_event = None
 
-    if class_id:
-        units_list = (db.table("class_units")
-                        .select("*, units(id, code, name)")
+    try:
+        # Same class loading as Marks Entry / attendance history (no fragile dept filter)
+        cu_rows, class_list = _marks_class_unit_data(db, user)
+
+        if class_id:
+            units_list = [
+                r for r in cu_rows
+                if (r.get("classes") or {}).get("id") == class_id
+            ]
+            # Normalize shape expected by the template: u.units.id / code / name
+            units_list = [
+                {
+                    "units": r.get("units") or {
+                        "id": r.get("unit_id"),
+                        "code": "",
+                        "name": "",
+                    }
+                }
+                for r in units_list
+                if (r.get("units") or {}).get("id") or r.get("unit_id")
+            ]
+
+            students_list = (
+                db.table("enrollments")
+                .select(
+                    "student_id, user_profiles!enrollments_student_id_fkey(full_name, admission_no)"
+                )
+                .eq("class_id", class_id)
+                .execute()
+                .data
+                or []
+            )
+
+            if unit_id and week and lesson:
+                existing = (
+                    db.table("attendance")
+                    .select("id", count="exact")
+                    .eq("unit_id", unit_id)
+                    .eq("trainer_id", user["id"])
+                    .eq("week", week)
+                    .eq("lesson", lesson)
+                    .eq("year", year)
+                    .eq("term", term)
+                    .execute()
+                )
+                attendance_submitted = (existing.count or 0) > 0
+
+                try:
+                    event_row = (
+                        db.table("class_events")
+                        .select("*")
                         .eq("class_id", class_id)
                         .eq("trainer_id", user["id"])
-                        .execute().data or [])
-
-        students_list = (db.table("enrollments")
-                           .select("*, user_profiles(full_name, admission_no)")
-                           .eq("class_id", class_id)
-                           .execute().data or [])
-
-        if unit_id and week and lesson:
-            existing = (db.table("attendance")
-                          .select("id", count="exact")
-                          .eq("unit_id", unit_id)
-                          .eq("trainer_id", user["id"])
-                          .eq("week", week)
-                          .eq("lesson", lesson)
-                          .eq("year", year)
-                          .eq("term", term)
-                          .execute())
-            attendance_submitted = (existing.count or 0) > 0
-
-            event_row = (db.table("class_events")
-                           .select("*")
-                           .eq("class_id", class_id)
-                           .eq("trainer_id", user["id"])
-                           .eq("week", week)
-                           .eq("lesson", lesson)
-                           .eq("year", year)
-                           .eq("term", term)
-                           .execute().data or [])
-            if event_row:
-                active_event = event_row[0]
+                        .eq("week", week)
+                        .eq("lesson", lesson)
+                        .eq("year", year)
+                        .eq("term", term)
+                        .execute()
+                        .data
+                        or []
+                    )
+                    if event_row:
+                        active_event = event_row[0]
+                except Exception as exc:
+                    print(f"[trainer] class_events lookup: {exc}")
+    except Exception as exc:
+        print(f"[trainer] attendance load error: {exc}")
+        flash("Could not load attendance data. Please try again.", "error")
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -407,7 +451,8 @@ def attendance():
             if not class_id or not unit_id:
                 flash("Class and unit are required.", "error")
             elif not _trainer_owns_class_unit(db, class_id, unit_id):
-                abort(403)
+                flash("You are not assigned to this class/unit, so attendance was not saved.", "error")
+                return redirect(url_for("trainer.attendance"))
             else:
                 try:
                     for student in students_list:
@@ -434,7 +479,8 @@ def attendance():
             if not class_id or not unit_id:
                 flash("Class and unit are required.", "error")
             elif not _trainer_owns_class_unit(db, class_id, unit_id):
-                abort(403)
+                flash("You are not assigned to this class/unit.", "error")
+                return redirect(url_for("trainer.attendance"))
             else:
                 try:
                     # Create class_event

@@ -419,7 +419,8 @@ def role_required(*roles):
             if not is_authenticated():
                 return redirect(url_for("auth.login"))
             user = current_user()
-            if not user or user.get("role") not in roles:
+            role = (user.get("role") or "").strip() if user else ""
+            if not user or role not in roles:
                 abort(403)
             blocked = _must_change_password_block(user)
             if blocked is not None:
