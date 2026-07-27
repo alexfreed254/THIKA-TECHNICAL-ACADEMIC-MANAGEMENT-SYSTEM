@@ -421,6 +421,12 @@ def role_required(*roles):
             user = current_user()
             role = (user.get("role") or "").strip() if user else ""
             if not user or role not in roles:
+                # Add flash message with helpful information
+                from flask import flash
+                if user and role:
+                    flash(f"Access denied. Your role '{role}' does not have permission to access this page. Required role(s): {', '.join(roles)}", "error")
+                else:
+                    flash("Access denied. You don't have permission to view this page.", "error")
                 abort(403)
             blocked = _must_change_password_block(user)
             if blocked is not None:

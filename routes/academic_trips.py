@@ -142,7 +142,7 @@ def _store_trip_media_files(db, trip_id, files, captions=None):
 # ============================================================================
 
 def trainer_or_coordinator_required(f):
-    """Decorator to ensure user is trainer or trip coordinator"""
+    """Decorator to ensure user is trainer (trip coordinators are trainers too)"""
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
@@ -150,8 +150,9 @@ def trainer_or_coordinator_required(f):
         if not user:
             abort(401)
         role = user.get("role")
-        if role not in ["trainer", "trip_coordinator", "super_admin"]:
-            flash("Access denied. Only trainers and trip coordinators can upload trips.", "error")
+        # Only trainers can upload trips
+        if role not in ["trainer", "super_admin"]:
+            flash("Access denied. Only trainers can upload trips.", "error")
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
