@@ -59,6 +59,43 @@ def is_authenticated() -> bool:
     return bool(user and user.get("is_active", False))
 
 
+def normalize_role(role: Optional[str]) -> str:
+    return (role or "").strip()
+
+
+# endpoint names used by url_for — keep in sync with blueprints
+ROLE_HOME_ENDPOINTS = {
+    "super_admin": "super_admin.dashboard",
+    "dept_admin": "dept_admin.dashboard",
+    "trainer": "trainer.dashboard",
+    "student": "student.dashboard",
+    "examination_officer": "examination_officer.dashboard",
+    "industry_mentor": "industry_mentor.dashboard",
+    "internal_verifier": "internal_verifier.dashboard",
+    "registrar": "admin_oversight.registrar_dashboard",
+    "deputy_principal": "admin_oversight.deputy_principal_dashboard",
+    "quality_assurance_officer": "admin_oversight.quality_assurance_dashboard",
+    "library_hod": "service_dept.dashboard",
+    "sports_hod": "service_dept.dashboard",
+    "service_clearance_officer": "service_dept.dashboard",
+    "environment_hod": "clearance.approver_dashboard",
+    "dean_students": "clearance.approver_dashboard",
+    "finance_officer": "clearance.approver_dashboard",
+    "liaison_officer": "liaison_officer.dashboard",
+    "cdacc_verifier": "cdacc_verifier.dashboard",
+    "workshop_technician": "workshop_technician.dashboard",
+}
+
+
+def role_home_url(role: Optional[str]) -> str:
+    """Return the dashboard URL for a role (requires an active request context)."""
+    from flask import url_for
+    endpoint = ROLE_HOME_ENDPOINTS.get(normalize_role(role))
+    if endpoint:
+        return url_for(endpoint)
+    return url_for("auth.profile")
+
+
 def load_user_profile(user_id: str) -> Optional[dict]:
     """Fetch user_profiles row using the service client (bypasses RLS)."""
     try:
@@ -117,6 +154,9 @@ def authenticate_staff(email: str, password: str) -> Optional[dict]:
     Returns User profile dict (with '_session' key holding the Supabase session)
     or None on failure.
 
+    Profile is resolved by Auth user id after sign-in (not by email alone),
+    so the session role always matches the authenticated account.
+
     Special rules:
     - Employers must be verified (employers.is_verified = True) to log in.
     - All other staff must have is_active = True.
@@ -125,51 +165,87 @@ def authenticate_staff(email: str, password: str) -> Optional[dict]:
     log = logging.getLogger(__name__)
 
     email = email.strip().lower()
+    if not email or not password or "@" not in email:
+        return None
 
     try:
+        # 1) Authenticate first — Auth user id is the source of truth
+        client = get_anon_client()
+        result = client.auth.sign_in_with_password({
+            "email": email,
+            "password": password,
+        })
+        if not (result and result.user and result.session):
+            return None
+
+        auth_user_id = str(result.user.id)
         svc = get_service_client()
-        profile_res = svc.table("user_profiles").select("*").eq("email", email).limit(1).execute()
 
-        if not profile_res.data:
+        # 2) Load profile by Auth id
+        profile = None
+        by_id = (
+            svc.table("user_profiles")
+            .select("*")
+            .eq("id", auth_user_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if by_id:
+            profile = by_id[0]
+        else:
+            # Fallback: case-insensitive email (legacy / mismatched id rows)
+            by_email = (
+                svc.table("user_profiles")
+                .select("*")
+                .ilike("email", email)
+                .limit(1)
+                .execute()
+                .data
+                or []
+            )
+            if by_email:
+                profile = by_email[0]
+                log.warning(
+                    "Staff profile id mismatch for %s: auth=%s profile=%s",
+                    email, auth_user_id, profile.get("id"),
+                )
+
+        if not profile:
             return None
 
-        profile = profile_res.data[0]
+        role = normalize_role(profile.get("role"))
+        profile["role"] = role
 
-        if profile["role"] not in STAFF_ROLES:
+        if role not in STAFF_ROLES:
             return None
 
-        # Block inactive accounts
         if not profile.get("is_active", False):
             return None
 
-        # Employers must be verified by super admin before they can log in
-        if profile["role"] == "employer":
-            emp_res = svc.table("employers").select("is_verified").eq("profile_id", profile["id"]).limit(1).execute()
+        if role == "employer":
+            emp_res = (
+                svc.table("employers")
+                .select("is_verified")
+                .eq("profile_id", profile["id"])
+                .limit(1)
+                .execute()
+            )
             if not emp_res.data or not emp_res.data[0].get("is_verified", False):
-                # Return a special sentinel so the login route can show the right message
                 profile["_unverified_employer"] = True
                 return session_safe_profile(profile)
 
-        # Authenticate via Supabase Auth
-        client = get_anon_client()
-        result = client.auth.sign_in_with_password({
-            'email': email,
-            'password': password,
-        })
-
-        if result and result.user and result.session:
-            safe = session_safe_profile(profile) or {}
-            safe["_session"] = result.session
-            return safe
-
-        return None
+        safe = session_safe_profile(profile) or {}
+        safe["_session"] = result.session
+        return safe
     except Exception as exc:
         err = str(exc).lower()
-        if any(k in err for k in ('invalid', 'credentials', 'wrong', 'incorrect',
-                                   'email not confirmed', 'invalid login')):
-            log.warning('Supabase Auth rejected login for %s: %s', email, exc)
+        if any(k in err for k in ("invalid", "credentials", "wrong", "incorrect",
+                                   "email not confirmed", "invalid login")):
+            log.warning("Supabase Auth rejected login for %s: %s", email, exc)
             return None
-        log.warning('Supabase Auth error for %s (%s)', email, exc)
+        log.warning("Supabase Auth error for %s (%s)", email, exc)
         return None
 
 
@@ -419,7 +495,7 @@ def role_required(*roles):
             if not is_authenticated():
                 return redirect(url_for("auth.login"))
             user = current_user()
-            role = (user.get("role") or "").strip() if user else ""
+            role = normalize_role(user.get("role") if user else "")
             if not user or role not in roles:
                 # Add flash message with helpful information
                 from flask import flash

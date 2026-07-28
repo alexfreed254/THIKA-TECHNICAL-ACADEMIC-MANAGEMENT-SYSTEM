@@ -15,7 +15,7 @@ from auth_utils import (
     SESSION_USER, SESSION_ACCESS, SESSION_REFRESH,
     authenticate_staff, authenticate_student,
     write_audit_log, current_user, is_authenticated,
-    create_student_auth_user
+    create_student_auth_user, role_home_url, normalize_role,
 )
 from db import get_service_client
 from extensions import limiter
@@ -67,44 +67,10 @@ def login():
     # Login template no longer needs departments — skip the round-trip on every request.
     departments = []
 
-    if is_authenticated():
-        user = current_user()
-        role = user.get("role")
-        
-        # Redirect authenticated users to their dashboard
-        if role == "super_admin":
-            return redirect(url_for("super_admin.dashboard"))
-        elif role == "dept_admin":
-            return redirect(url_for("dept_admin.dashboard"))
-        elif role == "trainer":
-            return redirect(url_for("trainer.dashboard"))
-        elif role == "student":
-            return redirect(url_for("student.dashboard"))
-        elif role == "examination_officer":
-            return redirect(url_for("examination_officer.dashboard"))
-        elif role == "industry_mentor":
-            return redirect(url_for("industry_mentor.dashboard"))
-        elif role == "internal_verifier":
-            return redirect(url_for("internal_verifier.dashboard"))
-        elif role == "registrar":
-            return redirect(url_for("admin_oversight.registrar_dashboard"))
-        elif role == "deputy_principal":
-            return redirect(url_for("admin_oversight.deputy_principal_dashboard"))
-        elif role == "quality_assurance_officer":
-            return redirect(url_for("admin_oversight.quality_assurance_dashboard"))
-        elif role in ("library_hod", "sports_hod", "service_clearance_officer"):
-            return redirect(url_for("service_dept.dashboard"))
-        elif role in ("environment_hod", "dean_students", "finance_officer"):
-            return redirect(url_for("clearance.approver_dashboard"))
-        elif role == "liaison_officer":
-            return redirect(url_for("liaison_officer.dashboard"))
-        elif role == "cdacc_verifier":
-            return redirect(url_for("cdacc_verifier.dashboard"))
-        elif role == "workshop_technician":
-            return redirect(url_for("workshop_technician.dashboard"))
-        else:
-            # Fallback for unhandled roles
-            return redirect(url_for("auth.profile"))
+    # Only auto-redirect on GET. POST must always process the submitted credentials
+    # so a leftover session (e.g. dept_admin) cannot block a trainer/staff login.
+    if request.method == "GET" and is_authenticated():
+        return redirect(role_home_url(current_user().get("role")))
 
     if request.method == "POST":
         login_type = (request.form.get("login_type") or "").strip().lower()
@@ -137,42 +103,17 @@ def login():
                     
                     write_audit_log("login", target=f"user:{profile['id']}")
                     
-                    # Redirect based on role
-                    role = profile.get("role")
-                    next_url = None
-                    
-                    if role == "super_admin":
-                        next_url = url_for("super_admin.dashboard")
-                    elif role == "dept_admin":
-                        next_url = url_for("dept_admin.dashboard")
-                    elif role == "trainer":
-                        next_url = url_for("trainer.dashboard")
-                    elif role == "examination_officer":
-                        next_url = url_for("examination_officer.dashboard")
-                    elif role == "industry_mentor":
-                        next_url = url_for("industry_mentor.dashboard")
-                    elif role == "internal_verifier":
-                        next_url = url_for("internal_verifier.dashboard")
-                    elif role == "registrar":
-                        next_url = url_for("admin_oversight.registrar_dashboard")
-                    elif role == "deputy_principal":
-                        next_url = url_for("admin_oversight.deputy_principal_dashboard")
-                    elif role == "quality_assurance_officer":
-                        next_url = url_for("admin_oversight.quality_assurance_dashboard")
-                    elif role in ("library_hod", "sports_hod", "service_clearance_officer"):
-                        next_url = url_for("service_dept.dashboard")
-                    elif role in ("environment_hod", "dean_students", "finance_officer"):
-                        next_url = url_for("clearance.approver_dashboard")
-                    elif role == "liaison_officer":
-                        next_url = url_for("liaison_officer.dashboard")
-                    elif role == "cdacc_verifier":
-                        next_url = url_for("cdacc_verifier.dashboard")
-                    elif role == "workshop_technician":
-                        next_url = url_for("workshop_technician.dashboard")
-                    else:
-                        # Fallback for unhandled roles - go to profile page
+                    role = normalize_role(profile.get("role"))
+                    next_url = role_home_url(role)
+                    if role not in (
+                        "super_admin", "dept_admin", "trainer", "examination_officer",
+                        "industry_mentor", "internal_verifier", "registrar",
+                        "deputy_principal", "quality_assurance_officer",
+                        "library_hod", "sports_hod", "service_clearance_officer",
+                        "environment_hod", "dean_students", "finance_officer",
+                        "liaison_officer", "cdacc_verifier", "workshop_technician",
+                    ):
                         flash(f"Login successful. Role '{role}' dashboard not configured.", "warning")
-                        next_url = url_for("auth.profile")
 
                     flash("Login successful", "success")
                     return redirect(next_url)
@@ -202,7 +143,7 @@ def login():
                 write_audit_log("login", target=f"student:{profile['id']}")
 
                 # Verify role is actually student
-                if profile.get("role") != "student":
+                if normalize_role(profile.get("role")) != "student":
                     flash(f"Error: Your account role is '{profile.get('role')}' but you're trying to login as a trainee. Please contact admin.", "error")
                     session.clear()
                     return render_template("auth/login.html", departments=departments)
@@ -211,7 +152,7 @@ def login():
                     flash("Please set a new password to continue.", "warning")
                     return redirect(url_for("auth.change_password"))
                 flash("Login successful", "success")
-                return redirect(url_for("student.dashboard"))
+                return redirect(role_home_url("student"))
 
             flash("Invalid admission number or password", "error")
             return render_template("auth/login.html", departments=departments)
