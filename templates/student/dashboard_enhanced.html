@@ -614,6 +614,69 @@
   color: var(--color-primary);
 }
 
+.ia-cert-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ia-cert-card .ia-cert-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ia-cert-card .ia-cert-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.ia-cert-card .ia-cert-serial {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803d;
+}
+.ia-cert-card .ia-cert-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-cert-dl {
+  background: linear-gradient(135deg, #15803d, #16a34a);
+  color: #fff;
+  border-radius: 8px;
+  padding: 11px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+.btn-cert-dl:hover { color: #fff; opacity: 0.92; }
+.btn-cert-view {
+  background: #fff;
+  color: #0f172a;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 11px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-cert-view:hover { border-color: #94a3b8; color: #0f172a; }
+
 /* --- Map Container --- */
 .map-box {
   height: 320px;
@@ -1165,6 +1228,28 @@
       </a>
     </div>
     {% endif %}
+  </div>
+  {% endif %}
+
+  {% if attachment_certificate %}
+  <div class="ia-cert-card">
+    <div class="ia-cert-meta">
+      <div class="ia-cert-title"><i class="fas fa-certificate" style="color:#15803d;margin-right:6px"></i>Attachment Completion Certificate</div>
+      <div class="ia-cert-serial">{{ attachment_certificate.certificate_number }}</div>
+      <div style="font-size:12px;color:#64748b;font-weight:600">
+        {{ company_cert_label(attachment_certificate.company_certification_status) }}
+      </div>
+    </div>
+    <div class="ia-cert-actions">
+      <a class="btn-cert-dl"
+         href="{{ url_for('attachment_certificate.certificate_pdf', attachment_id=attachment_certificate.attachment_id) }}">
+        <i class="fas fa-file-pdf"></i> Download PDF
+      </a>
+      <a class="btn-cert-view"
+         href="{{ url_for('attachment_certificate.certificate_view', attachment_id=attachment_certificate.attachment_id) }}">
+        <i class="fas fa-eye"></i> View
+      </a>
+    </div>
   </div>
   {% endif %}
 

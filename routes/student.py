@@ -378,6 +378,7 @@ def dashboard():
     stats.setdefault('attachment_total', 0)
     stats.setdefault('logbook_entries', 0)
     stats.setdefault('pending_competencies', 0)
+    attachment_certificate = None
 
     try:
         # Get current active attachment (limit — full history not needed for dashboard)
@@ -470,6 +471,18 @@ def dashboard():
         stats['attachment_total'] = attachment_stats['total']
         stats['logbook_entries'] = logbook_total
         stats['pending_competencies'] = pending_competencies
+
+        # Completion certificate (issued after attachment completed)
+        if certificates_table_ok(db):
+            if current_attachment:
+                attachment_certificate = get_certificate_for_attachment(
+                    db, current_attachment["id"]
+                )
+            if not attachment_certificate:
+                for att in attachments:
+                    attachment_certificate = get_certificate_for_attachment(db, att["id"])
+                    if attachment_certificate:
+                        break
         
     except Exception as e:
         print(f"Error loading attachment data: {e}")
@@ -489,7 +502,9 @@ def dashboard():
                           current_attachment=current_attachment,
                           attachment_stats=attachment_stats,
                           recent_logbook_entries=recent_logbook_entries,
-                          pending_competencies=pending_competencies)
+                          pending_competencies=pending_competencies,
+                          attachment_certificate=attachment_certificate,
+                          company_cert_label=company_cert_label)
 
 
 # ── Profile Management ───────────────────────────────────────────────────────
