@@ -413,7 +413,7 @@ def trainees():
                   .select("*, user_profiles(full_name, admission_no, mobile_number), units(name, code), companies(name)")
                   .eq("company_id", company_id)
                   .execute().data or [])
-    
+
     return render_template("industry_mentor/trainees.html",
                           mentor=mentor,
                           attachments=attachments)
@@ -543,5 +543,5 @@ def mark_weekly_attendance():
             db.table("attachment_weekly_attendance").insert(payload).execute()
         flash("Weekly attendance recorded.", "success")
     except Exception as e:
-        flash(f"Could not save weekly attendance: {e}. Run attachment_workflow_migration.sql if needed.", "danger")
+        flash("Could not save weekly attendance.", "danger")
     return redirect(url_for("industry_mentor.weekly_attendance"))

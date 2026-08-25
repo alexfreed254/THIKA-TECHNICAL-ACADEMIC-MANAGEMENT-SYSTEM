@@ -122,23 +122,12 @@
     </div>
     <div>
       <h2>{{ meta.label }}</h2>
-      <p>
-        Review and clear trainees for this department (Stage 1 — parallel with other clearances).
-        Approvals update the trainee’s progress automatically.
-      </p>
     </div>
     <div class="dept-stats" aria-label="Pending count">
       <div class="stat-num">{{ pending | length }}</div>
       <div class="stat-lbl">Pending</div>
     </div>
   </div>
-
-  {% if pending %}
-  <div class="sd-hint" role="status">
-    <i class="fas fa-arrow-right"></i>
-    <div><strong>Next step:</strong> Clear or reject each trainee below. Pending items block Stage 1 completion for that student.</div>
-  </div>
-  {% endif %}
 
   <!-- Summary chips -->
   <div class="sd-chips">

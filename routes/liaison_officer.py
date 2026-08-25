@@ -12,6 +12,8 @@ from routes.attachment_helpers import (
     upload_placement_document, placement_status_label,
     notify_liaison_officers, get_grading_config, compute_weighted_grade,
     score_to_cdacc, MENTOR_CRITERIA, week_bounds, section_max,
+    attachment_completion_readiness, issue_completion_certificate,
+    get_certificate_for_attachment, company_cert_label, certificates_table_ok,
 )
 from datetime import datetime, date, timedelta
 from report_utils import (excel_letterhead, style_header_row,
@@ -111,13 +113,154 @@ def placement_detail(att_id):
                 .execute().data or [])
     departments = db.table("departments").select("id, name").order("name").execute().data or []
 
+    readiness = attachment_completion_readiness(db, att_id)
+    certificate = get_certificate_for_attachment(db, att_id)
+
     return render_template(
         "liaison_officer/placement_detail.html",
         att=record,
         trainers=trainers,
         departments=departments,
         placement_status_label=placement_status_label,
+        readiness=readiness,
+        certificate=certificate,
+        company_cert_label=company_cert_label,
+        certificates_ready=certificates_table_ok(db),
     )
+
+
+@liaison_officer_bp.route("/attachments/<att_id>/issue-certificate", methods=["POST"])
+@login_required
+@liaison_officer_required
+def issue_certificate(att_id):
+    """Approve attachment completion and generate system certificate."""
+    db = get_service_client()
+    user = current_user()
+    try:
+        cert = issue_completion_certificate(
+            db, att_id, user["id"], liaison_name=user.get("full_name") or ""
+        )
+        write_audit_log(
+            "issue_ia_certificate",
+            target=f"attachment:{att_id}",
+            detail={"certificate_number": cert.get("certificate_number")},
+        )
+        try:
+            from notifications import create_notification
+            att = (db.table("industrial_attachments")
+                   .select("student_id")
+                   .eq("id", att_id)
+                   .limit(1)
+                   .execute().data or [])
+            if att:
+                create_notification(
+                    user_id=att[0]["student_id"],
+                    title="Attachment Completion Certificate Ready",
+                    message=(
+                        f"Certificate {cert.get('certificate_number')} is ready to download."
+                    ),
+                    notification_type="success",
+                    action_url="/student/industrial-attachment",
+                )
+        except Exception:
+            pass
+        flash(
+            f"Certificate issued: {cert.get('certificate_number')}.",
+            "success",
+        )
+        return redirect(url_for(
+            "attachment_certificate.certificate_view", attachment_id=att_id
+        ))
+    except ValueError as e:
+        flash(str(e), "warning")
+    except Exception as e:
+        flash(f"Could not issue certificate: {e}", "danger")
+    return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+
+@liaison_officer_bp.route("/attachments/<att_id>/upload-stamped-certificate", methods=["POST"])
+@login_required
+@liaison_officer_required
+def upload_stamped_certificate(att_id):
+    """Record scanned company-stamped certificate (physical stamp done off-portal)."""
+    db = get_service_client()
+    user = current_user()
+    cert = get_certificate_for_attachment(db, att_id)
+    if not cert:
+        flash("No certificate found for this attachment.", "warning")
+        return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+    att = (db.table("industrial_attachments")
+           .select("student_id")
+           .eq("id", att_id)
+           .limit(1)
+           .execute().data or [])
+    if not att:
+        flash("Attachment not found.", "warning")
+        return redirect(url_for("liaison_officer.attachments"))
+
+    signed_file = request.files.get("signed_certificate")
+    if not signed_file or not signed_file.filename:
+        flash("Please upload the stamped certificate scan.", "error")
+        return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+    try:
+        url, path = upload_placement_document(
+            signed_file, att[0]["student_id"], "company_signed_certificate"
+        )
+        db.table("attachment_certificates").update({
+            "company_signed_url": url,
+            "company_signed_path": path,
+            "company_signed_uploaded_at": datetime.utcnow().isoformat(),
+            "company_confirmed_at": datetime.utcnow().isoformat(),
+            "company_confirmed_by": user["id"],
+            "company_certification_status": "company_stamped",
+        }).eq("id", cert["id"]).execute()
+        write_audit_log(
+            "upload_ia_stamped_certificate",
+            target=f"certificate:{cert.get('certificate_number')}",
+        )
+        flash("Stamped copy saved. Status: Company Stamped. You can now mark it Verified.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        flash(f"Upload failed: {e}", "danger")
+    return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+
+@liaison_officer_bp.route("/attachments/<att_id>/verify-company-certificate", methods=["POST"])
+@login_required
+@liaison_officer_required
+def verify_company_certificate(att_id):
+    """Mark company-stamped certificate as institution-verified."""
+    db = get_service_client()
+    user = current_user()
+    cert = get_certificate_for_attachment(db, att_id)
+    if not cert:
+        flash("No certificate found for this attachment.", "warning")
+        return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+    status = cert.get("company_certification_status")
+    if status not in ("company_stamped", "verified"):
+        flash("Company must upload the signed/stamped copy before verification.", "warning")
+        return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
+
+    notes = (request.form.get("verification_notes") or "").strip()
+    try:
+        db.table("attachment_certificates").update({
+            "company_certification_status": "verified",
+            "verified_at": datetime.utcnow().isoformat(),
+            "verified_by": user["id"],
+            "verification_notes": notes or None,
+        }).eq("id", cert["id"]).execute()
+        write_audit_log(
+            "verify_ia_company_certificate",
+            target=f"certificate:{cert.get('certificate_number')}",
+        )
+        flash("Certificate marked as Company Verified.", "success")
+    except Exception as e:
+        flash(f"Verification failed: {e}", "danger")
+    return redirect(url_for("liaison_officer.placement_detail", att_id=att_id))
 
 
 @liaison_officer_bp.route("/attachments/<att_id>/review", methods=["POST"])

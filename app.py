@@ -96,6 +96,7 @@ from routes.service_dept import service_dept_bp
 from routes.academic_trips import academic_trips_bp
 from routes.summative import summative_bp
 from routes.api_v1 import api_v1_bp
+from routes.attachment_certificate import attachment_certificate_bp
 
 app.register_blueprint(main_bp)
 app.register_blueprint(api_v1_bp)
@@ -117,6 +118,7 @@ app.register_blueprint(biometric_bp, url_prefix="/biometric")
 app.register_blueprint(service_dept_bp, url_prefix="/service-dept")
 app.register_blueprint(academic_trips_bp)
 app.register_blueprint(summative_bp)
+app.register_blueprint(attachment_certificate_bp, url_prefix="/attachment")
 
 # Device hardware callbacks use a shared secret, not browser CSRF cookies.
 from routes.biometric_attendance import device_scan, device_enroll

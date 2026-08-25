@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IA Completion Certificate — {{ cert.certificate_number }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+    .page { max-width: 860px; margin: 20px auto; background: #fff; }
+    .print-bar {
+      background: #0f2c54; color: #fff; padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+    .print-bar span { font-size: 13px; opacity: .85; }
+    .btn {
+      padding: 8px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 700;
+      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+      color: #fff;
+    }
+    .btn-green { background: #16a34a; }
+    .btn-blue { background: #2563eb; }
+    .cert { padding: 36px 44px; }
+    .cert-header {
+      display: flex; align-items: center; gap: 16px;
+      border-bottom: 3px solid #006600; padding-bottom: 18px; margin-bottom: 22px;
+    }
+    .cert-logo { width: 76px; height: 76px; object-fit: contain; flex-shrink: 0; }
+    .cert-school { flex: 1; text-align: center; }
+    .cert-school h1 { font-size: 17px; font-weight: 800; color: #006600; text-transform: uppercase; line-height: 1.2; }
+    .cert-school p  { font-size: 11px; color: #6b7280; margin-top: 3px; }
+    .cert-title { text-align: center; margin: 10px 0 18px; }
+    .cert-title h2 { font-size: 14px; font-weight: 800; color: #1e3a5f; text-transform: uppercase; }
+
+    .serial-qr-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 22px; gap: 20px;
+    }
+    .serial-block h3 { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+    .serial-num {
+      font-family: monospace; font-size: 20px; font-weight: 800; color: #15803d;
+      letter-spacing: .06em; margin: 4px 0;
+    }
+    .status-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .pill {
+      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+    }
+    .pill-ok { background: #dcfce7; color: #166534; }
+    .pill-warn { background: #fef3c7; color: #92400e; }
+    #qrcode { width: 90px; height: 90px; flex-shrink: 0; }
+
+    .intro { font-size: 14px; color: #334155; margin-bottom: 14px; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+    .info-table td { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+    .info-table .lbl { color: #64748b; font-weight: 600; width: 38%; }
+    .body-text { font-size: 13.5px; color: #334155; line-height: 1.6; margin: 14px 0 22px; }
+
+    .section-title {
+      font-size: 13px; font-weight: 800; color: #0f2c54; text-transform: uppercase;
+      letter-spacing: .04em; border-bottom: 2px solid #0f2c54; padding-bottom: 6px; margin: 20px 0 12px;
+    }
+    .sig-row { display: flex; gap: 18px; flex-wrap: wrap; }
+    .sig-block {
+      flex: 1; min-width: 240px; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 14px; background: #fafafa;
+    }
+    .sig-role { font-size: 11px; font-weight: 800; color: #0F2744; text-transform: uppercase; margin-bottom: 12px; }
+    .sig-field { font-size: 12px; color: #374151; margin: 10px 0; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+    .stamp-box {
+      margin-top: 14px; border: 1.5px dashed #94a3b8; border-radius: 6px; min-height: 56px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #94a3b8; font-style: italic;
+    }
+    .footer-note { margin-top: 24px; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }
+
+    @media print {
+      .print-bar { display: none !important; }
+      body { background: #fff; }
+      .page { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="print-bar">
+    <span>{{ cert.certificate_number }} · Industrial Attachment Completion</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn btn-green" href="{{ url_for('attachment_certificate.certificate_pdf', attachment_id=att.id) }}">
+        Download PDF
+      </a>
+      <button class="btn btn-blue" type="button" onclick="window.print()">Print</button>
+    </div>
+  </div>
+
+  <div class="cert">
+    <div class="cert-header">
+      <img class="cert-logo" src="/static/assets/KENYACOATOFARMS.png" alt="">
+      <div class="cert-school">
+        <h1>Thika Technical Training Institute</h1>
+        <p>Ministry of Education · State Department for Technical, Vocational Education &amp; Training</p>
+      </div>
+      <img class="cert-logo" src="/static/assets/THIKATTILOGO.jpg" alt="TTTI">
+    </div>
+
+    <div class="cert-title">
+      <h2>Industrial Attachment Certificate of Completion</h2>
+    </div>
+
+    <div class="serial-qr-row">
+      <div class="serial-block">
+        <h3>Certificate Number</h3>
+        <div class="serial-num">{{ cert.certificate_number }}</div>
+        <div class="status-pills">
+          <span class="pill pill-ok">System: Attachment Completed</span>
+          {% set cs = cert.company_certification_status or 'pending_company_stamp' %}
+          <span class="pill {{ 'pill-ok' if cs == 'verified' else 'pill-warn' }}">
+            Company: {{ company_cert_label(cs) }}
+          </span>
+        </div>
+      </div>
+      <div id="qrcode"></div>
+    </div>
+
+    <p class="intro">This is to certify that:</p>
+    <table class="info-table">
+      <tr><td class="lbl">Trainee Name</td><td><strong>{{ cert.trainee_name }}</strong></td></tr>
+      <tr><td class="lbl">Admission No.</td><td>{{ cert.admission_no or '—' }}</td></tr>
+      <tr><td class="lbl">Programme</td><td>{{ cert.programme or '—' }}</td></tr>
+      <tr><td class="lbl">Department</td><td>{{ cert.department_name or '—' }}</td></tr>
+      <tr><td class="lbl">Institution</td><td>{{ cert.institution_name or 'Thika Technical Training Institute' }}</td></tr>
+    </table>
+
+    <p class="intro">has successfully completed the required industrial attachment at:</p>
+    <table class="info-table">
+      <tr><td class="lbl">Company</td><td><strong>{{ cert.company_name }}</strong></td></tr>
+      <tr><td class="lbl">Department/Section</td><td>{{ cert.company_department or '—' }}</td></tr>
+      <tr><td class="lbl">Attachment Period</td><td>
+        {{ format_cert_date(cert.attachment_start) }} – {{ format_cert_date(cert.attachment_end) }}
+      </td></tr>
+    </table>
+
+    <p class="body-text">
+      During the attachment, the trainee participated in relevant industrial activities and
+      acquired practical skills and competencies related to the programme.
+    </p>
+
+    <div class="section-title">Company Certification</div>
+    <div class="sig-row">
+      <div class="sig-block">
+        <div class="sig-role">Company Supervisor</div>
+        <div class="sig-field">Name: {{ cert.supervisor_name or '__________________' }}</div>
+        <div class="sig-field">Signature: __________________</div>
+        <div class="sig-field">Date: __________________</div>
+        <div class="stamp-box">Company Stamp</div>
+      </div>
+    </div>
+
+    <div class="section-title">Institution Verification</div>
+    <div class="sig-row">
+      <div class="sig-block">
+        <div class="sig-role">Industrial Liaison Officer</div>
+        <div class="sig-field">Name: {{ cert.liaison_officer_name or '__________________' }}</div>
+        <div class="sig-field">Signature: __________________</div>
+        <div class="sig-field">Date: __________________</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      System-generated certificate. Company certification remains
+      <strong>{{ company_cert_label(cert.company_certification_status) }}</strong>
+      until the printed certificate is stamped and the scan is uploaded for liaison verification.<br>
+      Verify at: {{ verify_url }}
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+  QRCode.toCanvas(document.createElement('canvas'), {{ verify_url|tojson }}, {
+    width: 90, margin: 1
+  }, function (err, canvas) {
+    if (!err) document.getElementById('qrcode').appendChild(canvas);
+    else document.getElementById('qrcode').innerHTML = '<small>QR unavailable</small>';
+  });
+</script>
+</body>
+</html>

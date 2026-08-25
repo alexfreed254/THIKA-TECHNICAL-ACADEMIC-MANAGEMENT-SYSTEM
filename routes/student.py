@@ -127,6 +127,7 @@ def get_filename_from_url(url):
 from routes.attachment_helpers import (
     student_can_submit_placement, get_open_period, upload_placement_document,
     notify_liaison_officers, placement_status_label, attachment_periods_exist,
+    get_certificate_for_attachment, company_cert_label, certificates_table_ok,
 )
 
 
@@ -2706,12 +2707,28 @@ def industrial_attachment():
     # Current attachment = most recent attachment still in the approval / activity lifecycle
     current_attachment = None
     for att in all_attachments:
-        if att.get("status") in ("active", "pending", "approved", "rejected"):
+        if att.get("status") in ("active", "pending", "approved", "rejected", "completed"):
+            current_attachment = att
+            break
+    # Prefer active over completed when both exist
+    for att in all_attachments:
+        if att.get("status") == "active":
             current_attachment = att
             break
     # Fall back to most recent of any status
     if not current_attachment and all_attachments:
         current_attachment = all_attachments[0]
+
+    # Completion certificate (if issued)
+    attachment_certificate = None
+    if current_attachment and certificates_table_ok(db):
+        attachment_certificate = get_certificate_for_attachment(db, current_attachment["id"])
+    if not attachment_certificate:
+        for att in all_attachments:
+            if certificates_table_ok(db):
+                attachment_certificate = get_certificate_for_attachment(db, att["id"])
+                if attachment_certificate:
+                    break
 
     # Get today's check-in logs for active attachment
     today_logs = []
@@ -2752,7 +2769,81 @@ def industrial_attachment():
                           open_period=open_period,
                           can_submit_placement=can_submit,
                           submit_block_msg=submit_block_msg,
-                          placement_status_label=placement_status_label)
+                          placement_status_label=placement_status_label,
+                          attachment_certificate=attachment_certificate,
+                          company_cert_label=company_cert_label)
+
+
+@student_bp.route("/industrial-attachment/<att_id>/upload-stamped-certificate", methods=["POST"])
+@student_required
+def upload_stamped_ia_certificate(att_id):
+    """Trainee uploads scan of physically stamped completion certificate."""
+    db = get_service_client()
+    user = current_user()
+    student_id = user["id"]
+
+    att = (db.table("industrial_attachments")
+           .select("id, student_id")
+           .eq("id", att_id)
+           .eq("student_id", student_id)
+           .limit(1)
+           .execute().data or [])
+    if not att:
+        flash("Attachment not found.", "error")
+        return redirect(url_for("student.industrial_attachment"))
+
+    cert = get_certificate_for_attachment(db, att_id)
+    if not cert:
+        flash("No completion certificate has been issued yet.", "warning")
+        return redirect(url_for("student.industrial_attachment"))
+
+    if cert.get("company_certification_status") == "verified":
+        flash("This certificate is already company verified.", "info")
+        return redirect(url_for("student.industrial_attachment"))
+
+    signed_file = request.files.get("signed_certificate")
+    if not signed_file or not signed_file.filename:
+        flash("Please choose the scanned stamped certificate file.", "error")
+        return redirect(url_for("student.industrial_attachment"))
+
+    try:
+        url, path = upload_placement_document(
+            signed_file, student_id, "company_signed_certificate"
+        )
+        db.table("attachment_certificates").update({
+            "company_signed_url": url,
+            "company_signed_path": path,
+            "company_signed_uploaded_at": datetime.utcnow().isoformat(),
+            "company_confirmed_at": datetime.utcnow().isoformat(),
+            "company_confirmed_by": student_id,
+            "company_certification_status": "company_stamped",
+        }).eq("id", cert["id"]).execute()
+        write_audit_log(
+            "trainee_upload_ia_stamped_certificate",
+            target=f"certificate:{cert.get('certificate_number')}",
+        )
+        try:
+            notify_liaison_officers(
+                db,
+                title="Stamped IA certificate uploaded",
+                message=(
+                    f"{user.get('full_name') or 'A trainee'} uploaded a company-stamped "
+                    f"completion certificate ({cert.get('certificate_number')})."
+                ),
+                action_url=f"/liaison-officer/attachments/{att_id}",
+            )
+        except Exception:
+            pass
+        flash(
+            "Stamped certificate uploaded. Status: Company Stamped. "
+            "Awaiting Industrial Liaison Officer verification.",
+            "success",
+        )
+    except ValueError as e:
+        flash(str(e), "error")
+    except Exception as e:
+        flash(f"Upload failed: {e}", "danger")
+    return redirect(url_for("student.industrial_attachment"))
 
 
 @student_bp.route("/industrial-attachment/request", methods=["POST"])

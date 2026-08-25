@@ -1,37 +1,33 @@
 """
-Clearance Blueprint — Parallel Stage 1 + Sequential Stage 2
+Clearance Blueprint — Digital clearances → Final Clearance Form → Physical sign-off
 
 Flow:
   Stage 1 (ALL in parallel on initiation):
-    - trainer        : all trainers who taught the student
-    - tech_1 / tech_2: first & second workshop technician in home dept
-    - svc_library    : Institute Library
-    - svc_ict        : ICT Department
-    - svc_games      : Games Department
-    - svc_kitchen    : Kitchen / Cafeteria
-    - svc_store      : Store Department
-    - ext_knls       : Kenya National Library Service
-    - ext_community  : Community / County Library
-    - hod_other      : ALL dept_admin users in other departments
-
-  Stage 1 complete when:
-    - >= min(7, total_active_trainers) trainers approved (waived count as approved)
-    - all workshop technicians in home dept approved or waived by HOD
-    - all service dept approvals approved
-    - all external service approvals approved
-    - all hod_other approvals approved
+    - trainer, workshop technicians, service depts, external, hod_other
 
   Stage 2 (unlocked by Stage 1):
-    - hod_home: home dept HOD final review → approve / reject / return for correction
+    - hod_home: home dept HOD review → approve / reject / return
 
-  Stage 3 (completed):
-    - certificate available for download with serial number + QR code
+  When Stage 2 approved (ALL DIGITAL CLEARANCE COMPLETE):
+    - status → digital_complete (NOT fully "completed")
+    - Final Clearance Form PDF unlocks for trainee download/print
+    - form_generated_at set; seed final_clearance_approvals rows
+
+  Physical / senior offices (off-portal stamp on printed form):
+    - Dean of Students
+    - Finance
+    - Principal / Deputy Principal Academics
+    Registrar (or authorized admin) records these in the system.
+
+  Only after all physical offices approved:
+    - status → completed
+    - final_status → final_clearance_approved
 """
 
 import uuid as _uuid
 from datetime import datetime
 from flask import (Blueprint, render_template, request, flash,
-                   redirect, url_for, abort, jsonify)
+                   redirect, url_for, abort, jsonify, make_response)
 from auth_utils import login_required, student_required, current_user, write_audit_log
 from db import get_service_client
 from notifications import create_notification
@@ -39,7 +35,7 @@ from notifications import create_notification
 clearance_bp = Blueprint("clearance", __name__)
 
 # Trainee-owned clearance lifecycle helpers
-_ACTIVE_CLEARANCE = ("pending", "in_progress", "returned")
+_ACTIVE_CLEARANCE = ("pending", "in_progress", "returned", "digital_complete")
 _STOPPABLE_CLEARANCE = ("pending", "in_progress", "returned", "rejected")
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -72,7 +68,29 @@ CATEGORY_LABELS = {
     "ext_knls":     "Kenya National Library Service",
     "ext_community":"Community / County Library",
     "hod_other":    "Other Department HOD",
-    "hod_home":     "Home Department HOD (Final)",
+    "hod_home":     "Home Department HOD",
+}
+
+# Physical / senior offices on the printed Final Clearance Form
+FINAL_OFFICES = [
+    ("dean_of_students", "Dean of Students"),
+    ("finance", "Finance"),
+    ("principal", "Principal / Deputy Principal Academics"),
+]
+FINAL_OFFICE_LABELS = dict(FINAL_OFFICES)
+
+FINAL_STATUS_LABELS = {
+    None: "In progress",
+    "form_generated": "Form ready",
+    "form_downloaded": "Form downloaded",
+    "physical_in_progress": "Final offices in progress",
+    "final_clearance_approved": "Final clearance approved",
+}
+
+# Roles allowed to record physical final-office approvals
+FINAL_RECORD_ROLES = {
+    "registrar", "super_admin", "deputy_principal",
+    "dean_students", "finance_officer",
 }
 
 # Portal base template per role (clearance pages reuse the role's sidebar/layout)
@@ -301,10 +319,10 @@ def _check_stage1_and_advance(db, request_id: str):
             sname = (sp or {}).get("full_name", "A trainee")
             create_notification(
                 user_id=hod["id"],
-                title="Stage 1 Complete — Final Clearance Review Needed",
+                title="Stage 1 Complete — Home HOD Review Needed",
                 message=(
                     f"{sname} has completed all Stage 1 clearances. "
-                    "Please review and issue the final clearance."
+                    "Please review and approve so the Final Clearance Form can be generated."
                 ),
                 notification_type="info",
                 action_url="/clearance/approver",
@@ -313,11 +331,70 @@ def _check_stage1_and_advance(db, request_id: str):
             pass
 
 
+def _final_approvals_table_ok(db) -> bool:
+    try:
+        db.table("final_clearance_approvals").select("id").limit(1).execute()
+        return True
+    except Exception:
+        return False
+
+
+def _seed_final_office_rows(db, request_id: str):
+    """Create pending physical office rows once digital clearance is complete."""
+    if not _final_approvals_table_ok(db):
+        return
+    for office, _label in FINAL_OFFICES:
+        existing = (db.table("final_clearance_approvals")
+                    .select("id")
+                    .eq("clearance_request_id", request_id)
+                    .eq("office", office)
+                    .limit(1)
+                    .execute().data or [])
+        if existing:
+            continue
+        try:
+            db.table("final_clearance_approvals").insert({
+                "clearance_request_id": request_id,
+                "office": office,
+                "approved": False,
+            }).execute()
+        except Exception:
+            # Unique conflict or missing table — ignore
+            pass
+
+
+def _fetch_final_approvals(db, request_id: str) -> list:
+    if not _final_approvals_table_ok(db):
+        return []
+    try:
+        rows = (db.table("final_clearance_approvals")
+                .select("*")
+                .eq("clearance_request_id", request_id)
+                .execute().data or [])
+    except Exception:
+        return []
+    by_office = {r.get("office"): r for r in rows}
+    ordered = []
+    for office, label in FINAL_OFFICES:
+        row = by_office.get(office) or {
+            "office": office, "approved": False, "officer_name": None,
+            "comment": None, "approved_at": None,
+        }
+        row["_label"] = label
+        ordered.append(row)
+    return ordered
+
+
+def _all_final_offices_approved(final_rows: list) -> bool:
+    if not final_rows:
+        return False
+    return all(bool(r.get("approved")) for r in final_rows)
+
+
 def _check_clearance_completion(db, request_id: str):
     """
-    Check if Stage 2 hod_home approval is done.
-    If approved → mark clearance completed and issue certificate.
-    If rejected → mark rejected.
+    When Home HOD (Stage 2) approves → DIGITAL CLEARANCE COMPLETE.
+    Unlocks Final Clearance Form. Does NOT mark overall status as completed.
     """
     approvals = _fetch_all_approvals(db, request_id)
     s2 = [a for a in approvals if _get_category(a) == "hod_home"]
@@ -330,41 +407,176 @@ def _check_clearance_completion(db, request_id: str):
 
     if any_rejected:
         db.table("clearance_requests").update({"status": "rejected"}).eq("id", request_id).execute()
-    elif all_approved:
-        serial = _serial(request_id)
-        update = {
-            "status":       "completed",
-            "completed_at": datetime.now().isoformat(),
-        }
+        return
+
+    if not all_approved:
+        return
+
+    serial = _serial(request_id)
+    now = datetime.now().isoformat()
+    update = {
+        "status": "digital_complete",
+        "form_generated_at": now,
+        "final_status": "form_generated",
+        "serial_number": serial,
+        # Do NOT set completed_at — that waits for physical final offices
+    }
+    try:
+        db.table("clearance_requests").update(update).eq("id", request_id).execute()
+    except Exception:
+        # Column or status constraint not migrated yet — fall back carefully
         try:
             db.table("clearance_requests").update({
-                **update, "serial_number": serial
+                "status": "digital_complete",
+                "serial_number": serial,
             }).eq("id", request_id).execute()
         except Exception:
-            db.table("clearance_requests").update(update).eq("id", request_id).execute()
+            # Last resort: keep old behaviour only if digital_complete not allowed
+            db.table("clearance_requests").update({
+                "status": "completed",
+                "completed_at": now,
+                "serial_number": serial,
+            }).eq("id", request_id).execute()
+            try:
+                cr = (db.table("clearance_requests")
+                      .select("student_id")
+                      .eq("id", request_id)
+                      .single()
+                      .execute().data)
+                if cr:
+                    create_notification(
+                        user_id=cr["student_id"],
+                        title="Clearance Complete!",
+                        message=(
+                            f"All stages approved. Serial: {serial}. "
+                            "Download your clearance form now."
+                        ),
+                        notification_type="success",
+                        action_url="/clearance",
+                    )
+            except Exception:
+                pass
+            write_audit_log("clearance_completed", target=f"request:{request_id}")
+            return
 
-        # Notify student
+    _seed_final_office_rows(db, request_id)
+
+    try:
+        cr = (db.table("clearance_requests")
+              .select("student_id")
+              .eq("id", request_id)
+              .single()
+              .execute().data)
+        if cr:
+            create_notification(
+                user_id=cr["student_id"],
+                title="Digital Clearance Complete",
+                message=f"Final Clearance Form ready (Serial: {serial}).",
+                notification_type="success",
+                action_url="/clearance",
+            )
+    except Exception:
+        pass
+
+    write_audit_log("clearance_digital_complete", target=f"request:{request_id}",
+                    detail={"serial": serial})
+
+
+def _mark_form_downloaded(db, request_id: str):
+    try:
+        cr = (db.table("clearance_requests")
+              .select("id, form_downloaded_at, final_status, status")
+              .eq("id", request_id)
+              .limit(1)
+              .execute().data or [])
+        if not cr:
+            return
+        row = cr[0]
+        if row.get("status") not in ("digital_complete", "completed"):
+            return
+        payload = {}
+        if not row.get("form_downloaded_at"):
+            payload["form_downloaded_at"] = datetime.now().isoformat()
+        if (row.get("final_status") or "") == "form_generated":
+            payload["final_status"] = "form_downloaded"
+        if payload:
+            db.table("clearance_requests").update(payload).eq("id", request_id).execute()
+    except Exception:
+        pass
+
+
+def _record_final_office(db, request_id: str, office: str, officer_name: str,
+                         comment: str, recorded_by: str, approved: bool = True):
+    """Record one physical office approval; complete clearance if all done."""
+    if office not in FINAL_OFFICE_LABELS:
+        raise ValueError("Invalid final office.")
+    if not _final_approvals_table_ok(db):
+        raise ValueError("Final approvals module unavailable.")
+
+    _seed_final_office_rows(db, request_id)
+    now = datetime.now().isoformat()
+    payload = {
+        "approved": bool(approved),
+        "officer_name": (officer_name or "").strip() or None,
+        "comment": (comment or "").strip() or None,
+        "approved_at": now if approved else None,
+        "recorded_by": recorded_by,
+    }
+    existing = (db.table("final_clearance_approvals")
+                .select("id")
+                .eq("clearance_request_id", request_id)
+                .eq("office", office)
+                .limit(1)
+                .execute().data or [])
+    if existing:
+        db.table("final_clearance_approvals").update(payload).eq("id", existing[0]["id"]).execute()
+    else:
+        db.table("final_clearance_approvals").insert({
+            **payload,
+            "clearance_request_id": request_id,
+            "office": office,
+        }).execute()
+
+    finals = _fetch_final_approvals(db, request_id)
+    if _all_final_offices_approved(finals):
+        db.table("clearance_requests").update({
+            "status": "completed",
+            "final_status": "final_clearance_approved",
+            "completed_at": now,
+            "certificate_issued": True,
+            "certificate_issued_at": now,
+        }).eq("id", request_id).execute()
         try:
             cr = (db.table("clearance_requests")
-                  .select("student_id")
+                  .select("student_id, serial_number")
                   .eq("id", request_id)
                   .single()
                   .execute().data)
             if cr:
                 create_notification(
                     user_id=cr["student_id"],
-                    title="Clearance Complete!",
+                    title="Final Clearance Approved",
                     message=(
-                        f"All stages approved. Serial: {serial}. "
-                        "Download your clearance certificate now."
+                        f"All senior offices have signed off "
+                        f"(Serial: {cr.get('serial_number') or _serial(request_id)}). "
+                        "Your clearance is fully complete."
                     ),
                     notification_type="success",
                     action_url="/clearance",
                 )
         except Exception:
             pass
+        write_audit_log("clearance_final_approved", target=f"request:{request_id}")
+        return "completed"
 
-        write_audit_log("clearance_completed", target=f"request:{request_id}")
+    # Partial physical progress
+    try:
+        db.table("clearance_requests").update({
+            "final_status": "physical_in_progress",
+        }).eq("id", request_id).execute()
+    except Exception:
+        pass
+    return "physical_in_progress"
 
 
 # ── Student: clearance dashboard ──────────────────────────────────────────────
@@ -399,7 +611,12 @@ def dashboard():
         (r for r in req_rows if (r.get("status") or "") == "completed"),
         None,
     )
-    cr = active_cr or completed_cr
+    # Prefer digital_complete over older completed when both somehow exist
+    digital_cr = next(
+        (r for r in req_rows if (r.get("status") or "") == "digital_complete"),
+        None,
+    )
+    cr = digital_cr or active_cr or completed_cr
 
     if not cr:
         return render_template(
@@ -411,15 +628,20 @@ def dashboard():
             stage1_sections=[],
             stage2_approval=None,
             serial=None,
+            final_approvals=[],
+            form_unlocked=False,
             last_cancelled=next(
                 (r for r in req_rows if (r.get("status") or "") in ("cancelled", "rejected")),
                 None,
             ),
+            FINAL_STATUS_LABELS=FINAL_STATUS_LABELS,
         )
 
     serial = cr.get("serial_number") or _serial(cr["id"])
     approvals = _fetch_all_approvals(db, cr["id"])
     can_stop = (cr.get("status") or "") in _STOPPABLE_CLEARANCE
+    final_approvals = _fetch_final_approvals(db, cr["id"])
+    form_unlocked = (cr.get("status") or "") in ("digital_complete", "completed")
 
     # ── Attach approver names to all approval records ────────────────────────
     approver_ids = [a["approver_id"] for a in approvals if a.get("approver_id")]
@@ -476,9 +698,7 @@ def dashboard():
     stage2_approval = stage2_items[0] if stage2_items else None
 
     # Compute stage 1 overall completion
-    stage1_done = (cr.get("stage", 1) >= 2) or (
-        cr.get("status") == "completed"
-    )
+    stage1_done = (cr.get("stage", 1) >= 2) or form_unlocked
 
     return render_template(
         "clearance/student_dashboard.html",
@@ -494,6 +714,10 @@ def dashboard():
         low_trainers=low_trainers,
         MIN_TRAINERS=MIN_TRAINERS,
         CATEGORY_LABELS=CATEGORY_LABELS,
+        final_approvals=final_approvals,
+        form_unlocked=form_unlocked,
+        FINAL_STATUS_LABELS=FINAL_STATUS_LABELS,
+        FINAL_OFFICE_LABELS=FINAL_OFFICE_LABELS,
     )
 
 
@@ -750,6 +974,13 @@ def stop_clearance(request_id):
         status = cr.get("status") or ""
         if status == "completed":
             flash("A completed clearance with an issued certificate cannot be stopped.", "error")
+            return redirect(url_for("clearance.dashboard"))
+        if status == "digital_complete":
+            flash(
+                "Digital clearance is complete and the Final Clearance Form has been issued. "
+                "This process can no longer be stopped.",
+                "error",
+            )
             return redirect(url_for("clearance.dashboard"))
         if status not in _STOPPABLE_CLEARANCE:
             flash("This clearance cannot be stopped in its current state.", "warning")
@@ -1124,7 +1355,7 @@ def approve_clearance(approval_id):
         if approval.get("status") != "pending":
             flash("This clearance step is no longer pending.", "warning")
             return redirect(_approver_back(role))
-        if (req.get("status") or "") in ("completed", "cancelled", "rejected"):
+        if (req.get("status") or "") in ("completed", "digital_complete", "cancelled", "rejected"):
             flash("This clearance request can no longer be changed.", "warning")
             return redirect(_approver_back(role))
 
@@ -1164,8 +1395,8 @@ def approve_clearance(approval_id):
             if student_id:
                 create_notification(
                     user_id=student_id,
-                    title="HOD Final Clearance Approved",
-                    message="Your home department HOD has approved your clearance. Certificate ready!",
+                    title="Home HOD Approved",
+                    message="Digital clearance complete. Final Clearance Form is ready.",
                     notification_type="success",
                     action_url="/clearance",
                 )
@@ -1224,7 +1455,7 @@ def reject_clearance(approval_id):
         if approval.get("status") != "pending":
             flash("This clearance step is no longer pending.", "warning")
             return redirect(_approver_back(role))
-        if (req.get("status") or "") in ("completed", "cancelled", "rejected"):
+        if (req.get("status") or "") in ("completed", "digital_complete", "cancelled", "rejected"):
             flash("This clearance request can no longer be changed.", "warning")
             return redirect(_approver_back(role))
 
@@ -1513,12 +1744,17 @@ def certificate(request_id):
         if not acted:
             abort(403)
 
-    if cr.get("status") != "completed":
-        flash("Clearance certificate is only available after all stages are approved.", "warning")
+    if cr.get("status") not in ("digital_complete", "completed"):
+        flash(
+            "The Final Clearance Form is only available after all digital clearances "
+            "(including Home HOD) are approved.",
+            "warning",
+        )
         return redirect(url_for("clearance.dashboard"))
 
     serial    = cr.get("serial_number") or _serial(cr["id"])
     approvals = _fetch_all_approvals(db, request_id)
+    final_approvals = _fetch_final_approvals(db, request_id)
 
     # Attach approver names
     approver_ids = [a["approver_id"] for a in approvals if a.get("approver_id")]
@@ -1564,8 +1800,11 @@ def certificate(request_id):
         serial=serial,
         verify_url=verify_url,
         approvals=approvals,
+        final_approvals=final_approvals,
         lost_items=lost_items,
         CATEGORY_LABELS=CATEGORY_LABELS,
+        FINAL_OFFICE_LABELS=FINAL_OFFICE_LABELS,
+        form_is_final=(cr.get("status") == "completed"),
     )
 
 
@@ -1619,12 +1858,18 @@ def certificate_pdf(request_id):
                  .execute().data or [])
         if not acted:
             abort(403)
-    if cr.get("status") != "completed":
-        flash("The clearance certificate is only available once all stages are approved.", "warning")
+    if cr.get("status") not in ("digital_complete", "completed"):
+        flash(
+            "The Final Clearance Form is only available after all digital clearances "
+            "are approved.",
+            "warning",
+        )
         return redirect(url_for("clearance.dashboard"))
 
     serial    = cr.get("serial_number") or _serial(cr["id"])
     approvals = _fetch_all_approvals(db, request_id)
+    final_approvals = _fetch_final_approvals(db, request_id)
+    _mark_form_downloaded(db, request_id)
 
     approver_ids = [a["approver_id"] for a in approvals if a.get("approver_id")]
     approver_map = {}
@@ -1712,7 +1957,7 @@ def certificate_pdf(request_id):
         hdr = Table([[
             govt_logo_cell,
             [Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", ctr14b),
-             Paragraph("CLEARANCE CERTIFICATE", ctr11b),
+             Paragraph("FINAL CLEARANCE FORM", ctr11b),
              Paragraph("Academic Management System", ctr9),
              Paragraph(f"Serial No: {serial}", ctr9)],
             ttti_logo_cell,
@@ -1749,7 +1994,10 @@ def certificate_pdf(request_id):
         story.append(_info_row("Course:",       course.get("name", "—"),
                                "Course Code:",  course.get("code", "—")))
         story.append(_info_row("Department:",   dept.get("name", "—"),
-                               "Completed:",    (cr.get("completed_at") or "")[:10] or "—"))
+                               "Form status:",  (
+                                   "FINAL APPROVED" if cr.get("status") == "completed"
+                                   else "DIGITAL COMPLETE — AWAITING PHYSICAL STAMPS"
+                               )))
         story.append(Spacer(1, 8))
         story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=5))
 
@@ -1877,57 +2125,53 @@ def certificate_pdf(request_id):
                                textColor=colors.grey, italics=1)))
             story.append(Spacer(1, 10))
 
-        # Manual signature blocks
+        # Physical senior-office signature blocks (manual stamp on printed form)
         story.append(HRFlowable(width="100%", thickness=1, color=DARK, spaceAfter=8))
-        story.append(Paragraph("OFFICIAL SIGN-OFF", lft10b))
-        story.append(Paragraph(
-            "The following officials must sign and stamp this form to complete clearance.",
-            lft9))
+        story.append(Paragraph("FINAL INSTITUTIONAL CLEARANCE", lft10b))
         story.append(Spacer(1, 8))
 
-        officials = [
-            "HOME DEPARTMENT HOD",
-            "FINANCE DEPARTMENT",
-            "DEAN OF STUDENTS",
-            "REGISTRAR",
-            "CHIEF PRINCIPAL",
+        line = "_" * 28
+        final_hdr = [
+            Paragraph("Final Office", tbl_h),
+            Paragraph("Signature", tbl_h),
+            Paragraph("Date", tbl_h),
+            Paragraph("Official Stamp", tbl_h),
         ]
-        line = "_" * 34
-
-        def _sig_block(title):
-            half = W / 2 - 5*mm
-            rows = [
-                [Paragraph(f"<b>{title}</b>", lft9b)],
-                [Spacer(1,4)],
-                [Paragraph(f"Name:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
-                [Spacer(1,3)],
-                [Paragraph(f"Signature: {line}", lft9)],
-                [Spacer(1,3)],
-                [Paragraph(f"Date:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
-                [Spacer(1,3)],
-                [Paragraph(f"Stamp:&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
-            ]
-            t = Table(rows, colWidths=[half])
-            t.setStyle(TableStyle([
-                ("TOPPADDING",    (0,0), (-1,-1), 2),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 2),
-                ("BOX",           (0,0), (-1,-1), 0.5, BORDER),
-                ("BACKGROUND",    (0,0), (0,0),   LGREY),
-            ]))
-            return t
-
-        half = W / 2 - 5*mm
-        for i in range(0, len(officials), 2):
-            left  = _sig_block(officials[i])
-            right = _sig_block(officials[i+1]) if i+1 < len(officials) else Paragraph("", lft9)
-            row_tbl = Table([[left, Spacer(10*mm, 1), right]],
-                            colWidths=[half, 10*mm, half])
-            row_tbl.setStyle(TableStyle([
-                ("VALIGN",        (0,0), (-1,-1), "TOP"),
-                ("TOPPADDING",    (0,0), (-1,-1), 0),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 8),
-            ]))
-            story.append(row_tbl)
+        final_data = [final_hdr]
+        fa_map = {r.get("office"): r for r in (final_approvals or [])}
+        for office, label in FINAL_OFFICES:
+            fa = fa_map.get(office) or {}
+            if fa.get("approved"):
+                sig = fa.get("officer_name") or "Recorded"
+                dt = (fa.get("approved_at") or "")[:10] or "—"
+                stamp = "Recorded in AMS"
+            else:
+                sig = line
+                dt = line
+                stamp = line
+            final_data.append([
+                Paragraph(f"<b>{label}</b>", tbl_l),
+                Paragraph(sig, tbl_c),
+                Paragraph(dt, tbl_c),
+                Paragraph(stamp, tbl_c),
+            ])
+        final_tbl = Table(
+            final_data,
+            colWidths=[55*mm, (W - 55*mm) / 3, (W - 55*mm) / 3, (W - 55*mm) / 3],
+        )
+        final_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), MID),
+            ("TEXTCOLOR", (0, 0), (-1, 0), HDRTXT),
+            ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LGREY]),
+        ]))
+        story.append(final_tbl)
+        story.append(Spacer(1, 8))
 
         # Footer
         import os as _os2
@@ -1948,7 +2192,7 @@ def certificate_pdf(request_id):
             canvas_obj.setFillColorRGB(0.75, 0.75, 0.75, alpha=0.15)
             canvas_obj.translate(A4[0]/2, A4[1]/2)
             canvas_obj.rotate(45)
-            canvas_obj.drawCentredString(0, 20,  "TTTI CLEARANCE CERTIFICATE")
+            canvas_obj.drawCentredString(0, 20,  "TTTI FINAL CLEARANCE FORM")
             canvas_obj.drawCentredString(0, -30, _serial_wm)
             canvas_obj.restoreState()
 
@@ -1960,7 +2204,7 @@ def certificate_pdf(request_id):
         resp.headers["Content-Type"] = "application/pdf"
         safe = serial.replace("/", "-")
         resp.headers["Content-Disposition"] = (
-            f'attachment; filename="Clearance_{safe}_{student.get("admission_no","")}.pdf"'
+            f'attachment; filename="Final_Clearance_Form_{safe}_{student.get("admission_no","")}.pdf"'
         )
         return resp
 
@@ -1999,15 +2243,15 @@ def verify(serial_number=None):
         except Exception:
             pass
 
-        # Fallback: scan completed requests and derive serial
+        # Fallback: scan digitally complete / completed and derive serial
         if not rows:
             try:
                 completed = (db.table("clearance_requests")
-                             .select("id, status, completed_at, serial_number, "
+                             .select("id, status, completed_at, serial_number, final_status, "
                                      "courses(name, code), departments(name), "
                                      "user_profiles:user_profiles!clearance_requests_student_id_fkey"
                                      "(full_name, admission_no)")
-                             .eq("status", "completed")
+                             .in_("status", ["completed", "digital_complete"])
                              .execute().data or [])
                 for row in completed:
                     if _serial(row["id"]) == serial_number:
@@ -2018,13 +2262,18 @@ def verify(serial_number=None):
 
         if rows:
             cr = rows[0]
-            if cr.get("status") == "completed":
+            st = cr.get("status") or ""
+            if st in ("completed", "digital_complete"):
                 result = cr
                 result["_serial"] = cr.get("serial_number") or _serial(cr["id"])
+                result["_phase"] = (
+                    "FINAL CLEARANCE APPROVED" if st == "completed"
+                    else "DIGITAL COMPLETE — AWAITING PHYSICAL STAMPS"
+                )
             else:
-                error = f"Clearance with serial {serial_number} exists but is not yet completed."
+                error = f"Clearance with serial {serial_number} exists but is not yet ready for verification."
         else:
-            error = f"No completed clearance found with serial number '{serial_number}'."
+            error = f"No clearance found with serial number '{serial_number}'."
 
     return render_template(
         "clearance/verify.html",
@@ -2047,6 +2296,106 @@ def clearance_form(request_id):
 def issue_certificate(request_id):
     """Legacy: mark certificate as issued (now handled automatically)."""
     return redirect(url_for("clearance.certificate", request_id=request_id))
+
+
+# ── Registrar / admin: record physical final-office approvals ─────────────────
+
+@clearance_bp.route("/final-approvals")
+@login_required
+def final_approvals_list():
+    """List clearances awaiting or undergoing physical senior-office sign-off."""
+    db = get_service_client()
+    user = current_user()
+    if user.get("role") not in FINAL_RECORD_ROLES:
+        abort(403)
+
+    rows = (db.table("clearance_requests")
+            .select("id, status, final_status, serial_number, form_generated_at, "
+                    "form_downloaded_at, completed_at, initiated_at, "
+                    "courses(name, code), departments(name), "
+                    "user_profiles:user_profiles!clearance_requests_student_id_fkey"
+                    "(full_name, admission_no)")
+            .in_("status", ["digital_complete", "completed"])
+            .order("form_generated_at", desc=True)
+            .limit(200)
+            .execute().data or [])
+
+    for r in rows:
+        r["_finals"] = _fetch_final_approvals(db, r["id"])
+        r["_final_done"] = _all_final_offices_approved(r["_finals"])
+
+    return render_template(
+        "clearance/final_approvals.html",
+        rows=rows,
+        portal_base=_portal_base_template(user["role"]),
+        FINAL_STATUS_LABELS=FINAL_STATUS_LABELS,
+        user_role=user.get("role"),
+    )
+
+
+@clearance_bp.route("/final-approvals/<request_id>", methods=["GET", "POST"])
+@login_required
+def final_approvals_detail(request_id):
+    """Record Dean / Finance / Principal physical approvals for one clearance."""
+    db = get_service_client()
+    user = current_user()
+    if user.get("role") not in FINAL_RECORD_ROLES:
+        abort(403)
+
+    cr = (db.table("clearance_requests")
+          .select("*, courses(name, code), departments(name), "
+                  "user_profiles:user_profiles!clearance_requests_student_id_fkey"
+                  "(full_name, admission_no)")
+          .eq("id", request_id)
+          .single()
+          .execute().data)
+    if not cr:
+        abort(404)
+    if cr.get("status") not in ("digital_complete", "completed"):
+        flash("Physical final approvals unlock only after digital clearance is complete.", "warning")
+        return redirect(url_for("clearance.final_approvals_list"))
+
+    if request.method == "POST":
+        office = (request.form.get("office") or "").strip()
+        officer_name = (request.form.get("officer_name") or "").strip()
+        comment = (request.form.get("comment") or "").strip()
+        approved = request.form.get("approved") == "1"
+        if not office or office not in FINAL_OFFICE_LABELS:
+            flash("Select a valid final office.", "error")
+            return redirect(url_for("clearance.final_approvals_detail", request_id=request_id))
+        if approved and not officer_name:
+            flash("Enter the officer name as written on the stamped form.", "error")
+            return redirect(url_for("clearance.final_approvals_detail", request_id=request_id))
+        try:
+            result = _record_final_office(
+                db, request_id, office, officer_name, comment, user["id"], approved=approved
+            )
+            write_audit_log(
+                "record_final_clearance_office",
+                target=f"request:{request_id}",
+                detail={"office": office, "approved": approved, "result": result},
+            )
+            if result == "completed":
+                flash("All final offices recorded — Final Clearance Approved.", "success")
+            else:
+                flash(f"{FINAL_OFFICE_LABELS[office]} recorded.", "success")
+        except ValueError as e:
+            flash(str(e), "warning")
+        except Exception as e:
+            flash(f"Could not save: {e}", "danger")
+        return redirect(url_for("clearance.final_approvals_detail", request_id=request_id))
+
+    finals = _fetch_final_approvals(db, request_id)
+    serial = cr.get("serial_number") or _serial(request_id)
+    return render_template(
+        "clearance/final_approvals_detail.html",
+        cr=cr,
+        serial=serial,
+        final_approvals=finals,
+        portal_base=_portal_base_template(user["role"]),
+        FINAL_OFFICE_LABELS=FINAL_OFFICE_LABELS,
+        FINAL_STATUS_LABELS=FINAL_STATUS_LABELS,
+    )
 
 
 # ── HOD: Manage trainer waivers page ─────────────────────────────────────────

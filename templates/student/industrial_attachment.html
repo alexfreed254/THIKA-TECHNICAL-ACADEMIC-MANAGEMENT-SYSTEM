@@ -264,12 +264,7 @@
   <div style="padding:24px">
     <div class="flow-note">
       <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <div>
-          <div style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:6px">{{ co.get('name','Current attachment') }}</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.6;max-width:760px">
-            Your placement is verified by the <strong>Industrial Liaison Officer</strong> after you secure a company externally and upload acceptance documents.
-          </div>
-        </div>
+        <div style="font-size:18px;font-weight:800;color:#0f172a">{{ co.get('name','Current attachment') }}</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <span class="pill pill-{{ st if st in ('active','pending','completed','approved','rejected') else 'pending' }}">
             {{ st|replace('_',' ')|title }}
@@ -277,33 +272,6 @@
           <span class="letter-pill {{ letter_status }}">
             <i class="fas fa-file-signature"></i> Letter {{ letter_status|title }}
           </span>
-        </div>
-      </div>
-      <div class="flow-steps">
-        <div class="flow-step">
-          <div class="flow-step-num">1</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Get Company Letter</div>
-          <div style="font-size:12.5px;color:#64748b">Receive the official acceptance / placement letter from the host company.</div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-step-num">2</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Find Placement Externally</div>
-          <div style="font-size:12.5px;color:#64748b">Visit companies, apply by email/phone, or use referrals — <strong>not through this portal</strong>.</div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-step-num">3</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Company Accepts You</div>
-          <div style="font-size:12.5px;color:#64748b">Obtain acceptance/offer letter, supervisor details, and reporting date.</div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-step-num">4</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Submit Placement Here</div>
-          <div style="font-size:12.5px;color:#64748b">Upload company details and documents for liaison verification.</div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-step-num">5</div>
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:5px">Liaison Activates</div>
-          <div style="font-size:12.5px;color:#64748b">After approval, GPS attendance and digital logbook are enabled.</div>
         </div>
       </div>
     </div>
@@ -322,6 +290,59 @@
     {% endif %}
   </div>
 </div>
+
+{% if attachment_certificate %}
+<div class="ia-card">
+  <div class="ia-card-head"><i class="fas fa-certificate"></i> Completion Certificate</div>
+  <div style="padding:24px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
+      <span class="pill pill-completed">System: Attachment Completed</span>
+      <span class="pill pill-pending">
+        Company: {{ company_cert_label(attachment_certificate.company_certification_status) }}
+      </span>
+      <span style="font-family:ui-monospace,monospace;font-weight:800;color:#15803d;font-size:14px">
+        {{ attachment_certificate.certificate_number }}
+      </span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <a class="btn-primary" href="{{ url_for('attachment_certificate.certificate_pdf', attachment_id=attachment_certificate.attachment_id) }}">
+        <i class="fas fa-file-pdf"></i> Download PDF
+      </a>
+      <a class="btn-logbook" href="{{ url_for('attachment_certificate.certificate_view', attachment_id=attachment_certificate.attachment_id) }}">
+        <i class="fas fa-eye"></i> View Certificate
+      </a>
+      <a class="btn-logbook" href="{{ url_for('attachment_certificate.verify', certificate_number=attachment_certificate.certificate_number) }}" target="_blank">
+        <i class="fas fa-qrcode"></i> Verify Online
+      </a>
+      {% if attachment_certificate.company_signed_url %}
+      <a class="btn-logbook" href="{{ attachment_certificate.company_signed_url }}" target="_blank">
+        <i class="fas fa-stamp"></i> Uploaded Stamped Copy
+      </a>
+      {% endif %}
+    </div>
+    {% if attachment_certificate.company_certification_status == 'pending_company_stamp' %}
+    <form method="POST" enctype="multipart/form-data"
+          action="{{ url_for('student.upload_stamped_ia_certificate', att_id=attachment_certificate.attachment_id) }}"
+          style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;max-width:560px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="f-label" style="margin-bottom:8px">Upload scanned company-stamped certificate</div>
+      <input class="f-input" type="file" name="signed_certificate" accept=".pdf,.jpg,.jpeg,.png" required>
+      <button type="submit" class="btn-primary" style="margin-top:14px">
+        <i class="fas fa-upload"></i> Upload Stamped Copy
+      </button>
+    </form>
+    {% elif attachment_certificate.company_certification_status == 'company_stamped' %}
+    <p style="font-size:13px;color:#b45309;font-weight:600">
+      Awaiting verification
+    </p>
+    {% elif attachment_certificate.company_certification_status == 'verified' %}
+    <p style="font-size:13px;color:#15803d;font-weight:700">
+      <i class="fas fa-check-circle"></i> Verified
+    </p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 
 {% if st == 'active' %}
 <div class="ia-card">
@@ -638,10 +659,6 @@
         </div>
       </div>
 
-      <div style="margin-bottom:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;font-size:13px;color:#334155">
-        Upload documents after securing placement externally. The liaison officer verifies them — not a company search in this portal.
-      </div>
-
       {# ── GPS LOCATION ── #}
       <div class="form-section-hdr">
         <i class="fas fa-map-marker-alt"></i> Company / Site GPS Location
@@ -664,10 +681,6 @@
         </div>
         <div id="regGpsStatus" style="font-size:13px;color:#64748b;margin-bottom:12px"></div>
         <div id="regMap" class="map-container"></div>
-        <div class="map-instructions">
-          <i class="fas fa-info-circle" style="color:#0891b2"></i>
-          Click the map to pin the company location, or use the Detect GPS button above.
-        </div>
       </div>
 
       {# ── SUPERVISOR DETAILS ── #}

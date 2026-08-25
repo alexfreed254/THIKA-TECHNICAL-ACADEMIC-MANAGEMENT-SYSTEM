@@ -76,10 +76,9 @@
   <div class="wt-banner">
     <div>
       <h1><i class="fas fa-tools" style="color:#f97316;margin-right:8px"></i>
-        Workshop Technician Portal
+        Workshop Technician
         {% if dept_name %}<span style="font-size:14px;font-weight:500;opacity:.7;margin-left:8px">— {{ dept_name }}</span>{% endif %}
       </h1>
-      <p>Manage workshop equipment inventory and approve trainee clearances for your department.</p>
     </div>
     <div style="background:rgba(249,115,22,.2);color:#f97316;border:1px solid rgba(249,115,22,.3);padding:7px 18px;border-radius:99px;font-size:13px;font-weight:700">
       <i class="fas fa-calendar-day" style="margin-right:5px"></i>
@@ -95,7 +94,7 @@
     </div>
     <div class="stat-card">
       <div class="stat-icon" style="background:#fef3c7"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i></div>
-      <div><div class="stat-num">{{ inv_low }}</div><div class="stat-lbl">Low Stock (qty &lt; 3)</div></div>
+      <div><div class="stat-num">{{ inv_low }}</div><div class="stat-lbl">Low Stock</div></div>
     </div>
     <div class="stat-card">
       <div class="stat-icon" style="background:#fee2e2"><i class="fas fa-times-circle" style="color:#b91c1c"></i></div>
@@ -154,7 +153,7 @@
     {% else %}
     <div class="empty-box">
       <i class="fas fa-boxes"></i>
-      <p>No inventory items yet. <a href="/workshop-technician/inventory" style="color:#f97316;font-weight:600">Add the first item</a></p>
+      <p>No inventory items. <a href="/workshop-technician/inventory" style="color:#f97316;font-weight:600">Add item</a></p>
     </div>
     {% endif %}
   </div>

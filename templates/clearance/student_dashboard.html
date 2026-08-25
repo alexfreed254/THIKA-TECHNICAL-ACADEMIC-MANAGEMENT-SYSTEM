@@ -35,7 +35,20 @@
   .sb-rejected    { background: #fee2e2; border-left: 4px solid #b91c1c; }
   .sb-returned    { background: #fef3c7; border-left: 4px solid #b45309; }
   .sb-pending     { background: #fef3c7; border-left: 4px solid #b45309; }
-  .sb-cancelled   { background: #f3f4f6; border-left: 4px solid #6b7280; }
+  .sb-digital_complete { background: #dbeafe; border-left: 4px solid #1565c0; }
+  .final-track {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 24px;
+  }
+  .final-track h3 { font-size: 14px; font-weight: 800; color: #0f172a; margin: 0 0 12px; }
+  .final-steps { display: flex; flex-wrap: wrap; gap: 8px; }
+  .final-step {
+    flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 10px;
+    background: #f8fafc; border: 1px solid #e2e8f0; font-size: 12px;
+  }
+  .final-step.ok { background: #f0fdf4; border-color: #bbf7d0; }
+  .final-step .ttl { font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+  .final-step .sub { color: #64748b; }
   .sb-icon { font-size: 24px; }
   .sb-info { flex: 1; }
   .sb-title { font-size: 15px; font-weight: 700; color: #111827; }
@@ -268,19 +281,11 @@
 {% if not has_request %}
 <!-- ── INITIATE ── -->
 <div class="initiate-card">
-  <h2><i class="fas fa-graduation-cap"></i> Start Your Course Clearance</h2>
-  <p>
-    Initiate clearance when you have completed your course requirements.
-    All Stage 1 approvals run in parallel — trainers, technicians, service departments
-    and other HODs are notified simultaneously.
-    When Stage 1 is fully complete, your Home HOD reviews and issues the final clearance.
-  </p>
+  <h2><i class="fas fa-graduation-cap"></i> Course Clearance</h2>
   {% if last_cancelled %}
   <div style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.5">
-    <i class="fas fa-info-circle"></i>
-    Your previous clearance was
+    Previous clearance was
     {% if last_cancelled.get('status') == 'rejected' %}rejected{% else %}stopped{% endif %}.
-    You can start a new clearance process below.
   </div>
   {% endif %}
   {% if enrollments %}
@@ -297,34 +302,12 @@
       {% endfor %}
     </select>
     <button type="submit" class="btn-initiate">
-      <i class="fas fa-play-circle"></i> Start Clearance Process
+      <i class="fas fa-play-circle"></i> Start Clearance
     </button>
   </form>
   {% else %}
-  <div class="empty-enroll">
-    <i class="fas fa-info-circle" style="display:block;font-size:22px;margin-bottom:8px;opacity:.9"></i>
-    No enrolled course is available to start clearance. Contact your department if this looks wrong.
-  </div>
+  <div class="empty-enroll">No enrolled course available for clearance.</div>
   {% endif %}
-</div>
-
-<!-- Explainer -->
-<div class="flow-card">
-  <p class="flow-title"><i class="fas fa-route" style="color:#1565c0"></i> How Clearance Works</p>
-  <div style="display:grid;gap:12px;font-size:13px;color:#374151">
-    <div style="display:flex;align-items:flex-start;gap:10px">
-      <span style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
-      <div><strong>Stage 1 — All Parallel:</strong> Trainers, Technicians, Service Depts, Other HODs — all run simultaneously from day one.</div>
-    </div>
-    <div style="display:flex;align-items:flex-start;gap:10px">
-      <span style="width:28px;height:28px;border-radius:50%;background:#dcfce7;color:#15803d;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
-      <div><strong>Stage 2 — Home HOD Final Review:</strong> Once Stage 1 is complete, your department HOD is notified and does the final sign-off.</div>
-    </div>
-    <div style="display:flex;align-items:flex-start;gap:10px">
-      <span style="width:28px;height:28px;border-radius:50%;background:#f0fdf4;color:#15803d;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">&#10003;</span>
-      <div><strong>Certificate Issued:</strong> Download your official clearance certificate with a unique serial number and QR code.</div>
-    </div>
-  </div>
 </div>
 
 {% else %}
@@ -334,86 +317,57 @@
 <div class="status-banner sb-{{ cr_status }}" role="status" aria-live="polite">
   <span class="sb-icon" aria-hidden="true">
     {% if cr_status == 'completed' %}<i class="fas fa-graduation-cap" style="color:#15803d"></i>
+    {% elif cr_status == 'digital_complete' %}<i class="fas fa-file-signature" style="color:#1565c0"></i>
     {% elif cr_status == 'rejected' %}<i class="fas fa-times-circle" style="color:#b91c1c"></i>
     {% elif cr_status == 'returned' %}<i class="fas fa-undo" style="color:#b45309"></i>
     {% else %}<i class="fas fa-hourglass-half" style="color:#1565c0"></i>{% endif %}
   </span>
   <div class="sb-info">
     <div class="sb-title">
-      {% if cr_status == 'completed' %}Clearance Complete — Certificate Ready
+      {% if cr_status == 'completed' %}Final Clearance Approved
+      {% elif cr_status == 'digital_complete' %}Digital Clearance Complete
       {% elif cr_status == 'rejected' %}Clearance Rejected
       {% elif cr_status == 'returned' %}Returned for Correction
       {% else %}Clearance In Progress{% endif %}
     </div>
     <div class="sb-sub">
-      Course: {{ (clearance_request.get('courses') or {}).get('name','—') }}
-      &nbsp;&middot;&nbsp; Initiated: {{ clearance_request.get('initiated_at','')[:10] or clearance_request.get('created_at','')[:10] }}
+      {{ (clearance_request.get('courses') or {}).get('name','—') }}
+      &nbsp;&middot;&nbsp; {{ clearance_request.get('initiated_at','')[:10] or clearance_request.get('created_at','')[:10] }}
     </div>
   </div>
-  <span class="sb-serial" title="Clearance serial number">{{ serial }}</span>
+  <span class="sb-serial">{{ serial }}</span>
   {% if can_stop %}
   <div class="sb-actions">
     <form method="post"
           action="{{ url_for('clearance.stop_clearance', request_id=clearance_request.id) }}"
-          onsubmit="return confirm('Stop and remove this clearance process? Pending approvals will be cancelled. You can start a new clearance afterwards.');">
-      <button type="submit" class="btn-stop-clearance" title="Stop / delete this clearance">
-        <i class="fas fa-ban"></i> Stop / Delete Clearance
+          onsubmit="return confirm('Stop this clearance?');">
+      <button type="submit" class="btn-stop-clearance">
+        <i class="fas fa-ban"></i> Stop Clearance
       </button>
     </form>
   </div>
   {% endif %}
 </div>
 
-<!-- ── NEXT STEP HINT ── -->
-{% if cr_status == 'completed' %}
-<div class="next-step ns-ok">
-  <i class="fas fa-check-circle"></i>
-  <div><strong>Next step:</strong> Download your PDF certificate and keep the serial number for verification.</div>
-</div>
-{% elif cr_status == 'returned' %}
-<div class="next-step ns-warn">
-  <i class="fas fa-exclamation-triangle"></i>
-  <div><strong>Next step:</strong> Address the correction notes below, then resubmit for your Home HOD’s final review.</div>
-</div>
-{% elif cr_status == 'rejected' %}
-<div class="next-step ns-warn">
-  <i class="fas fa-info-circle"></i>
-  <div><strong>Next step:</strong> Contact your Home Department HOD for guidance on resolving the rejection.</div>
-</div>
-{% elif stage1_done %}
-<div class="next-step">
-  <i class="fas fa-arrow-right"></i>
-  <div><strong>Next step:</strong> Stage 1 is complete. Your Home HOD is reviewing for final clearance (Stage 2).</div>
-</div>
-{% else %}
-<div class="next-step">
-  <i class="fas fa-arrow-right"></i>
-  <div><strong>Next step:</strong> Wait for Stage 1 approvals (trainers, workshop, services, other HODs). They run in parallel — track progress below.</div>
-</div>
-{% endif %}
-
-<!-- ── RETURNED REASON ── -->
 {% if cr_status == 'returned' and clearance_request.get('return_reason') %}
 <div class="return-box">
-  <strong><i class="fas fa-exclamation-triangle"></i> Returned for Correction</strong>
+  <strong>Returned for Correction</strong>
   {{ clearance_request.return_reason }}
   <form method="post" action="{{ url_for('clearance.resubmit_clearance', request_id=clearance_request.id) }}"
         style="margin-top:12px"
-        onsubmit="return confirm('Confirm that you have made the required corrections and want to resubmit for final HOD review?');">
+        onsubmit="return confirm('Resubmit for HOD review?');">
     <button type="submit"
             style="display:inline-flex;align-items:center;gap:7px;padding:9px 20px;background:#b45309;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
-      <i class="fas fa-paper-plane"></i> I Have Corrected — Resubmit for Review
+      <i class="fas fa-paper-plane"></i> Resubmit
     </button>
   </form>
 </div>
 {% endif %}
 
-<!-- ── DOWNLOAD BLOCK ── -->
-{% if cr_status == 'completed' %}
+{% if form_unlocked %}
 <div class="download-block">
-  <h3><i class="fas fa-certificate"></i> Your Clearance is Approved!</h3>
+  <h3><i class="fas fa-file-pdf"></i> Final Clearance Form</h3>
   <div class="serial-display">{{ serial }}</div>
-  <p>All stages approved. Download your official clearance certificate below.</p>
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
     <a href="/clearance/certificate/{{ clearance_request.id }}/pdf" class="btn-download"
        style="background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 4px 14px rgba(22,163,74,.35)">
@@ -421,25 +375,39 @@
     </a>
     <a href="/clearance/certificate/{{ clearance_request.id }}" target="_blank" class="btn-download"
        style="background:linear-gradient(135deg,#1e5a9f,#154070);box-shadow:0 4px 14px rgba(30,90,159,.3)">
-      <i class="fas fa-eye"></i> View Certificate
+      <i class="fas fa-eye"></i> View
     </a>
     <a href="/clearance/verify/{{ serial }}" target="_blank" class="btn-download"
        style="background:linear-gradient(135deg,#0f766e,#0d9488);box-shadow:0 4px 14px rgba(15,118,110,.3)">
-      <i class="fas fa-qrcode"></i> Verify Serial
+      <i class="fas fa-qrcode"></i> Verify
     </a>
   </div>
 </div>
+
+{% if final_approvals %}
+<div class="final-track">
+  <h3>Final offices</h3>
+  <div class="final-steps">
+    {% for f in final_approvals %}
+    <div class="final-step {{ 'ok' if f.get('approved') else '' }}">
+      <div class="ttl">{{ f.get('_label') }}</div>
+      <div class="sub">
+        {% if f.get('approved') %}
+        {{ f.get('officer_name') or 'Approved' }} · {{ (f.get('approved_at') or '')[:10] }}
+        {% else %}
+        Pending
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% else %}
 <div class="locked-download">
   <i class="fas fa-lock" aria-hidden="true"></i>
-  <p style="font-size:13px;font-weight:600;margin:0 0 4px;color:#6b7280">Download Not Yet Available</p>
-  <p style="font-size:12px;margin:0">
-    {% if stage1_done %}
-    Waiting for Home HOD final approval (Stage 2) to unlock your certificate.
-    {% else %}
-    Complete all Stage 1 sections, then Stage 2 HOD review, to unlock your certificate.
-    {% endif %}
-  </p>
+  <p style="font-size:13px;font-weight:600;margin:0;color:#6b7280">Final Clearance Form unavailable</p>
 </div>
 {% endif %}
 
@@ -473,13 +441,13 @@
   <div class="stage-section">
     <div class="section-heading">
       <span class="s1-badge"><i class="fas fa-layer-group"></i> Stage 1</span>
-      Preliminary Clearance — All Running in Parallel
+      Preliminary Clearance
     </div>
 
     {% if low_trainers %}
     <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#92400e;display:flex;align-items:flex-start;gap:8px">
       <i class="fas fa-exclamation-triangle" style="margin-top:2px;flex-shrink:0"></i>
-      <span>Only <strong>{{ stage1_sections | selectattr('category','eq','trainer') | list | map(attribute='total') | first | default(0) }}</strong> trainer(s) identified from attendance records (minimum <strong>{{ MIN_TRAINERS }}</strong> required). Your Home Department HOD can waive remaining trainer approvals on your behalf if a trainer is inactive, retired, or unavailable.</span>
+      <span>{{ stage1_sections | selectattr('category','eq','trainer') | list | map(attribute='total') | first | default(0) }} trainer(s) identified (minimum {{ MIN_TRAINERS }}).</span>
     </div>
     {% endif %}
 
@@ -600,7 +568,7 @@
             {% elif s2_status == 'rejected' %}
               Rejected — {{ stage2_approval.get('comments','') }}
             {% else %}
-              Your department HOD has been notified and is reviewing.
+              Pending
             {% endif %}
           </div>
         </div>
@@ -612,15 +580,14 @@
       </div>
       {% else %}
       <div style="color:#15803d;font-size:13px">
-        <i class="fas fa-check-circle"></i> Stage 1 complete — HOD will be notified shortly.
+        <i class="fas fa-check-circle"></i> Stage 1 complete
       </div>
       {% endif %}
     </div>
     {% else %}
     <div class="stage2-locked">
       <i class="fas fa-lock"></i>
-      <p style="font-size:13px;font-weight:600;margin:0 0 4px">Stage 2 Locked</p>
-      <p style="font-size:12px;margin:0">Complete all Stage 1 sections to unlock the HOD final review.</p>
+      <p style="font-size:13px;font-weight:600;margin:0">Stage 2 Locked</p>
     </div>
     {% endif %}
   </div>
@@ -630,8 +597,7 @@
   <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-top:1px solid #bbf7d0;padding:16px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span style="font-size:22px;color:#15803d" aria-hidden="true"><i class="fas fa-certificate"></i></span>
     <div style="flex:1;min-width:160px">
-      <div style="font-size:14px;font-weight:800;color:#15803d">Clearance Issued!</div>
-      <div style="font-size:12px;color:#16a34a;margin-top:2px">Certificate ready with serial number and QR code.</div>
+      <div style="font-size:14px;font-weight:800;color:#15803d">Clearance Issued</div>
     </div>
     <span class="sub-pill pill-approved"><i class="fas fa-check"></i> Issued</span>
   </div>

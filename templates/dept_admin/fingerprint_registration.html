@@ -240,42 +240,6 @@
     {% endif %}
   </div>
 
-  <!-- How It Works -->
-  <div class="fp-how">
-    <div class="fp-how-icon"><i class="fas fa-info-circle"></i></div>
-    <div>
-      <div style="font-size:14px;font-weight:800;color:#0369a1;margin-bottom:8px">
-        How Fingerprint Registration Works
-      </div>
-      <div class="fp-how-steps">
-        <div class="fp-step">
-          <span class="fp-step-num">1</span>
-          <span><strong>Live Enroll:</strong> Click <em>Live Enroll</em> next to a trainee — the system waits for the scanner</span>
-        </div>
-        <div class="fp-step">
-          <span class="fp-step-num">2</span>
-          <span>Ask the trainee to <strong>place their finger</strong> on the BioEntry W sensor</span>
-        </div>
-        <div class="fp-step">
-          <span class="fp-step-num">3</span>
-          <span>The scanner captures the print, assigns an ID, and the system <strong>auto-links</strong> it</span>
-        </div>
-        <div class="fp-step">
-          <span class="fp-step-num">4</span>
-          <span><strong>Manual option:</strong> Enter the fingerprint ID directly from the device's user list</span>
-        </div>
-      </div>
-      <div style="font-size:12px;color:#0369a1;margin-top:10px">
-        <i class="fas fa-plug"></i>
-        <strong>Device API endpoint:</strong>
-        <code style="background:#dbeafe;padding:2px 8px;border-radius:5px;font-size:11.5px">
-          POST /biometric/api/enroll
-        </code>
-        — configure your BioEntry W sensors to POST to this URL when a user is enrolled.
-      </div>
-    </div>
-  </div>
-
   <!-- Active Enrollment Banner -->
   <div id="enrollBanner" style="display:none">
     <div id="enrollBannerInner" class="enroll-banner waiting">

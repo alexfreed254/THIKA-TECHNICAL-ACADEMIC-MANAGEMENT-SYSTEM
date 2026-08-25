@@ -160,8 +160,6 @@
       </div>
       <div>
         <h1>{{ config.label }}</h1>
-        <p>Review and clear trainees assigned to your department.<br>
-           Approved clearances automatically update trainee progress.</p>
       </div>
     </div>
     <div class="sd-hero-stat">
@@ -360,8 +358,7 @@
   {% else %}
   <div class="sd-empty">
     <span class="icon" style="color:#16a34a"><i class="fas fa-check-circle"></i></span>
-    <h3>All Clear!</h3>
-    <p>No trainees are waiting for clearance from {{ config.label }}.</p>
+    <h3>No pending clearances</h3>
   </div>
   {% endif %}
 

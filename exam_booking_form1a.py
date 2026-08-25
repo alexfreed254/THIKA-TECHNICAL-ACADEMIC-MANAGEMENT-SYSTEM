@@ -161,13 +161,7 @@ def build_exam_booking_form1a_pdf(
     story.append(meta_tbl)
     story.append(HRFlowable(width="100%", thickness=2.2, color=navy, spaceBefore=2, spaceAfter=6))
 
-    # ── Instructions + Attachments side by side ──────────────────────────────
-    instr_lines = [
-        Paragraph("INSTRUCTIONS", box_h),
-        Paragraph("• Register on the student portal before filling this form.", box_b),
-        Paragraph("• Attach all required documents listed.", box_b),
-        Paragraph("• Submit to the departmental HOD before the deadline.", box_b),
-    ]
+    # ── Required attachments ─────────────────────────────────────────────────
     attach_lines = [
         Paragraph("REQUIRED ATTACHMENTS", box_h),
         Paragraph("[ ]  Copy of National ID / Passport", box_b),
@@ -185,19 +179,9 @@ def build_exam_booking_form1a_pdf(
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ])
-    half = (W - 6) / 2
-    left_box = Table([[instr_lines]], colWidths=[half])
-    left_box.setStyle(box_style)
-    right_box = Table([[attach_lines]], colWidths=[half])
-    right_box.setStyle(box_style)
-    boxes = Table([[left_box, right_box]], colWidths=[half + 3, half + 3])
-    boxes.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (0, 0), 3),
-        ("LEFTPADDING", (1, 0), (1, 0), 3),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-    story.append(boxes)
+    attach_box = Table([[attach_lines]], colWidths=[W])
+    attach_box.setStyle(box_style)
+    story.append(attach_box)
     story.append(Spacer(1, 8))
 
     def section_bar(text: str):

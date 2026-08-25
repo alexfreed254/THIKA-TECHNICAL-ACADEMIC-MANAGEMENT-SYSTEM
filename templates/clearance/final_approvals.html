@@ -1,0 +1,78 @@
+{% extends portal_base %}
+{% block title %}Final Clearance Approvals{% endblock %}
+{% block page_title %}Final Clearance Approvals{% endblock %}
+
+{% block extra_style %}
+<style>
+  .page-wrap{padding:24px;max-width:1100px;margin:0 auto}
+  .hint{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;font-size:13px;color:#1e3a5f;margin-bottom:18px;line-height:1.55}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+  table{width:100%;border-collapse:collapse}
+  th{background:#f8fafc;padding:10px 14px;text-align:left;font-size:12px;color:#475569;border-bottom:2px solid #e2e8f0}
+  td{padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:top}
+  .badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+  .badge-digital_complete{background:#dbeafe;color:#1d4ed8}
+  .badge-completed{background:#dcfce7;color:#166534}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:#0f2c54;color:#fff;text-decoration:none;font-size:12px;font-weight:700}
+  .dots{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .dot{font-size:11px;padding:2px 8px;border-radius:99px;background:#f1f5f9;color:#64748b}
+  .dot.ok{background:#dcfce7;color:#166534}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Trainee</th>
+          <th>Course / Dept</th>
+          <th>Serial</th>
+          <th>Status</th>
+          <th>Physical offices</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {% set st = r.get('user_profiles') or {} %}
+        <tr>
+          <td>
+            <strong>{{ st.get('full_name','—') }}</strong><br>
+            <small style="color:#94a3b8">{{ st.get('admission_no','') }}</small>
+          </td>
+          <td>
+            {{ (r.get('courses') or {}).get('name','—') }}<br>
+            <small style="color:#94a3b8">{{ (r.get('departments') or {}).get('name','') }}</small>
+          </td>
+          <td style="font-family:ui-monospace,monospace;font-weight:700;font-size:12px">
+            {{ r.get('serial_number') or '—' }}
+          </td>
+          <td>
+            <span class="badge badge-{{ r.get('status','') }}">{{ (r.get('status') or '')|replace('_',' ')|title }}</span>
+            <div style="font-size:11px;color:#64748b;margin-top:4px">
+              {{ FINAL_STATUS_LABELS.get(r.get('final_status'), r.get('final_status') or '—') }}
+            </div>
+          </td>
+          <td>
+            <div class="dots">
+              {% for f in r.get('_finals') or [] %}
+              <span class="dot {{ 'ok' if f.get('approved') else '' }}">{{ f.get('_label') }}</span>
+              {% endfor %}
+            </div>
+          </td>
+          <td>
+            <a class="btn" href="{{ url_for('clearance.final_approvals_detail', request_id=r.id) }}">
+              {% if r.get('_final_done') %}View{% else %}Record stamps{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:36px">No digitally complete clearances yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

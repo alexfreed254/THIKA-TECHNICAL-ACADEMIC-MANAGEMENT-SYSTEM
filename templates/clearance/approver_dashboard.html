@@ -143,45 +143,20 @@
 {% block content %}
 <div class="ap-wrap">
 
-  <!-- Role banner -->
   <div class="role-banner">
     <div class="role-banner-icon" aria-hidden="true"><i class="fas fa-clipboard-check"></i></div>
     <div>
-      <h2>Clearance Approvals — {{ user_role|replace('_',' ')|title }}</h2>
-      <p>
-        <strong>Stage 1</strong> approvals (Trainers, Technicians, Service Depts, Other HODs) run
-        <strong>in parallel</strong> — all active from day one.<br>
-        <strong>Stage 2</strong> (Home HOD final review) unlocks automatically once Stage 1 is complete.
-      </p>
+      <h2>Clearance Approvals</h2>
     </div>
   </div>
 
   {% set _s1 = stage1_pending | length if stage1_pending else 0 %}
   {% set _s2 = stage2_pending | length if stage2_pending else 0 %}
   {% set _hod = home_stage1_requests | length if home_stage1_requests else 0 %}
-  {% if _s1 or _s2 or _hod %}
-  <div class="next-hint" role="status">
-    <i class="fas fa-lightbulb"></i>
-    <div>
-      {% if _s2 %}
-      <strong>Action needed:</strong> {{ _s2 }} Stage 2 final review{{ 's' if _s2 != 1 else '' }} awaiting your decision
-      {% if _s1 %} · {{ _s1 }} Stage 1 item{{ 's' if _s1 != 1 else '' }} also pending{% endif %}.
-      {% elif _s1 %}
-      <strong>Action needed:</strong> Review and approve or reject the {{ _s1 }} Stage 1 clearance{{ 's' if _s1 != 1 else '' }} below.
-      {% else %}
-      <strong>HOD tip:</strong> You can manage or waive trainer approvals for trainees still in Stage 1.
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
 
-  <!-- ══════════════════════════════════════════════
-       STAGE 1 PENDING — for trainers, techs, service depts, other HODs
-  ══════════════════════════════════════════════ -->
   {% if stage1_pending %}
   <div class="sec-heading">
     <span class="s1-chip"><i class="fas fa-layer-group"></i> Stage 1</span>
-    Preliminary Clearance — Parallel
   </div>
 
   {% for a in stage1_pending %}

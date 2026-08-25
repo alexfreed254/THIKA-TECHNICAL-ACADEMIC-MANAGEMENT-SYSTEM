@@ -1,0 +1,78 @@
+{% extends portal_base %}
+{% block title %}Record Final Clearance{% endblock %}
+{% block page_title %}Final Offices{% endblock %}
+
+{% block extra_style %}
+<style>
+  .page-wrap{padding:24px;max-width:820px;margin:0 auto}
+  .back{font-size:13px;font-weight:700;color:#1565c0;text-decoration:none;display:inline-block;margin-bottom:14px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px 22px;margin-bottom:16px}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px}
+  .meta .lbl{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase}
+  .meta .val{font-weight:700;color:#0f172a;margin-top:2px}
+  .office{border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;background:#f8fafc}
+  .office.ok{background:#f0fdf4;border-color:#bbf7d0}
+  .office h3{margin:0 0 8px;font-size:14px}
+  .f{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+  .f label{font-size:11px;font-weight:700;color:#475569}
+  .f input,.f textarea,.f select{padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}
+  .btn{padding:9px 16px;border:none;border-radius:8px;background:#15803d;color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+  .serial{font-family:ui-monospace,monospace;font-weight:800;color:#15803d}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <a class="back" href="{{ url_for('clearance.final_approvals_list') }}"><i class="fas fa-arrow-left"></i> Back to list</a>
+
+  {% set st = cr.get('user_profiles') or {} %}
+  <div class="card">
+    <div class="meta">
+      <div><div class="lbl">Trainee</div><div class="val">{{ st.get('full_name','—') }}</div></div>
+      <div><div class="lbl">Admission No.</div><div class="val">{{ st.get('admission_no','—') }}</div></div>
+      <div><div class="lbl">Programme</div><div class="val">{{ (cr.get('courses') or {}).get('name','—') }}</div></div>
+      <div><div class="lbl">Department</div><div class="val">{{ (cr.get('departments') or {}).get('name','—') }}</div></div>
+      <div><div class="lbl">Serial</div><div class="val serial">{{ serial }}</div></div>
+      <div><div class="lbl">Overall status</div><div class="val">{{ (cr.get('status') or '')|replace('_',' ')|title }}</div></div>
+    </div>
+    <p style="margin-top:14px;font-size:12px;color:#64748b">
+      {{ FINAL_STATUS_LABELS.get(cr.get('final_status'), cr.get('final_status') or '—') }}
+      {% if cr.get('form_downloaded_at') %} · Form downloaded {{ cr.form_downloaded_at[:10] }}{% endif %}
+    </p>
+    <a href="{{ url_for('clearance.certificate_pdf', request_id=cr.id) }}" style="font-size:13px;font-weight:700;color:#1565c0">
+      Download Final Clearance Form PDF
+    </a>
+  </div>
+
+  {% for f in final_approvals %}
+  <div class="office {{ 'ok' if f.get('approved') else '' }}">
+    <h3>
+      {% if f.get('approved') %}<i class="fas fa-check-circle" style="color:#16a34a"></i>{% else %}<i class="fas fa-stamp" style="color:#b45309"></i>{% endif %}
+      {{ f.get('_label') or FINAL_OFFICE_LABELS.get(f.office, f.office) }}
+    </h3>
+    {% if f.get('approved') %}
+    <p style="font-size:13px;margin:0">
+      Officer: <strong>{{ f.get('officer_name') or '—' }}</strong>
+      · Date: {{ (f.get('approved_at') or '')[:10] or '—' }}
+      {% if f.get('comment') %}<br>Note: {{ f.comment }}{% endif %}
+    </p>
+    {% else %}
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="office" value="{{ f.office }}">
+      <input type="hidden" name="approved" value="1">
+      <div class="f">
+        <label>Officer name (as on stamped form)</label>
+        <input type="text" name="officer_name" required placeholder="Full name">
+      </div>
+      <div class="f">
+        <label>Comment (optional)</label>
+        <textarea name="comment" rows="2" placeholder="Stamp verified / date on form…"></textarea>
+      </div>
+      <button type="submit" class="btn">Record {{ f.get('_label') }} Approved</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

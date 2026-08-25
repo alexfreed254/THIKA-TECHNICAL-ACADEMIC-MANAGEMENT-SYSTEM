@@ -36,7 +36,6 @@
         <span class="text-2xl font-bold text-purple-600">{{ stats.total or 0 }}</span>
       </div>
       <h3 class="text-gray-600 text-sm font-medium mb-1">Total Assessments</h3>
-      <p class="text-gray-900 text-lg font-semibold">All Submissions</p>
     </div>
 
     <!-- Pending Assessments -->
@@ -48,7 +47,6 @@
         <span class="text-2xl font-bold text-orange-600">{{ stats.pending or 0 }}</span>
       </div>
       <h3 class="text-gray-600 text-sm font-medium mb-1">Pending Review</h3>
-      <p class="text-gray-900 text-lg font-semibold">Awaiting Action</p>
     </div>
 
     <!-- Approved Assessments -->
@@ -60,7 +58,6 @@
         <span class="text-2xl font-bold text-green-600">{{ stats.approved or 0 }}</span>
       </div>
       <h3 class="text-gray-600 text-sm font-medium mb-1">Approved</h3>
-      <p class="text-gray-900 text-lg font-semibold">Completed</p>
     </div>
 
     <!-- Rejected Assessments -->
@@ -72,7 +69,6 @@
         <span class="text-2xl font-bold text-red-600">{{ stats.rejected or 0 }}</span>
       </div>
       <h3 class="text-gray-600 text-sm font-medium mb-1">Rejected</h3>
-      <p class="text-gray-900 text-lg font-semibold">Needs Revision</p>
     </div>
 
   </div>
@@ -135,7 +131,7 @@
     {% else %}
     <div class="px-6 py-12 text-center">
       <i class="fas fa-clipboard-check text-gray-300 text-5xl mb-4"></i>
-      <p class="text-gray-500">No pending assessments. Great job!</p>
+      <p class="text-gray-500">No pending assessments.</p>
     </div>
     {% endif %}
   </div>

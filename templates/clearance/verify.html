@@ -137,7 +137,7 @@
   <div class="result-err" role="alert">
     <div class="err-title"><i class="fas fa-times-circle" aria-hidden="true"></i> Verification Failed</div>
     <div class="err-msg">{{ error }}</div>
-    <div class="err-hint">Double-check the serial for typos, then try again. Only completed clearances can be verified.</div>
+    <div class="err-hint">Check the serial and try again.</div>
   </div>
   {% endif %}
 
@@ -173,18 +173,24 @@
         <div class="info-val">{{ (result.get('departments') or {}).get('name','—') }}</div>
       </div>
       <div class="info-cell">
-        <div class="info-label">Clearance Date</div>
-        <div class="info-val">{{ (result.get('completed_at') or '')[:10] or '—' }}</div>
+        <div class="info-label">Phase</div>
+        <div class="info-val">{{ result.get('_phase') or (result.get('status') or '')|replace('_',' ')|title }}</div>
       </div>
       <div class="info-cell">
-        <div class="info-label">Issued By</div>
-        <div class="info-val">TTTI Academic System</div>
+        <div class="info-label">Clearance Date</div>
+        <div class="info-val">{{ (result.get('completed_at') or result.get('form_generated_at') or '')[:10] or '—' }}</div>
       </div>
     </div>
 
+    {% if result.get('status') == 'completed' %}
     <span class="cleared-badge">
-      <i class="fas fa-check-circle" aria-hidden="true"></i> CLEARED — All stages approved
+      <i class="fas fa-check-circle" aria-hidden="true"></i> FINAL CLEARANCE APPROVED
     </span>
+    {% else %}
+    <span class="cleared-badge" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd">
+      <i class="fas fa-file-signature" aria-hidden="true"></i> DIGITAL COMPLETE — AWAITING PHYSICAL STAMPS
+    </span>
+    {% endif %}
   </div>
   {% endif %}
 

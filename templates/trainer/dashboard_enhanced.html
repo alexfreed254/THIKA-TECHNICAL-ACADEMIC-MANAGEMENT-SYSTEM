@@ -125,12 +125,8 @@
   <!-- Header Section -->
   <div class="mb-8">
     <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome back, {{ current_user.full_name if current_user and current_user.full_name else 'Trainer' }}!</h1>
-    <p class="text-gray-600">{{ current_month or '' }} &nbsp;·&nbsp;
-      {% if stats.pending %}
-        <span class="text-orange-600 font-semibold">{{ stats.pending }} assessment{{ 's' if stats.pending != 1 else '' }} awaiting review</span>
-      {% else %}
-        <span class="text-green-600 font-semibold">Review queue is clear — great work!</span>
-      {% endif %}
+    <p class="text-gray-600">{{ current_month or '' }}{% if stats.pending %} &nbsp;·&nbsp;
+        <span class="text-orange-600 font-semibold">{{ stats.pending }} pending</span>{% endif %}
     </p>
   </div>
 
@@ -153,7 +149,6 @@
         </div>
         <div class="kpi-value">{{ _total }}</div>
         <div class="kpi-label">Total Assessments</div>
-        <div class="kpi-hint">All trainee POE submissions</div>
         <div class="kpi-bar"><span style="width:100%;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></span></div>
       </div>
 
@@ -164,7 +159,6 @@
         </div>
         <div class="kpi-value" style="color:#c2410c">{{ _pending }}</div>
         <div class="kpi-label">Pending Review</div>
-        <div class="kpi-hint">Awaiting your decision</div>
         <div class="kpi-bar"><span style="width:{{ _p_pct }}%;background:linear-gradient(90deg,#f59e0b,#fb923c)"></span></div>
       </a>
 
@@ -174,7 +168,6 @@
         </div>
         <div class="kpi-value" style="color:#047857">{{ _approved }}</div>
         <div class="kpi-label">Approved</div>
-        <div class="kpi-hint">{{ _a_pct }}% of all submissions</div>
         <div class="kpi-bar"><span style="width:{{ _a_pct }}%;background:linear-gradient(90deg,#10b981,#34d399)"></span></div>
       </div>
 
@@ -184,20 +177,12 @@
         </div>
         <div class="kpi-value" style="color:#b91c1c">{{ _rejected }}</div>
         <div class="kpi-label">Returned</div>
-        <div class="kpi-hint">Needs trainee revision</div>
         <div class="kpi-bar"><span style="width:{{ _r_pct }}%;background:linear-gradient(90deg,#ef4444,#f87171)"></span></div>
       </a>
     </div>
 
     <div class="kpi-foot">
-      <div class="kpi-foot-text">
-        {% if _pending %}
-          Focus on the review queue first — {{ _pending }} file{{ 's' if _pending != 1 else '' }} still open.
-        {% else %}
-          POE review queue is clear. Keep Marks Entry and attendance up to date.
-        {% endif %}
-      </div>
-      <a href="/trainer/assessments">Open Trainee POE Review <i class="fas fa-arrow-right"></i></a>
+      <a href="/trainer/assessments">Trainee POE Review <i class="fas fa-arrow-right"></i></a>
     </div>
   </div>
 
@@ -207,7 +192,6 @@
       <div class="action-tile-body">
         <div class="action-tile-value">{{ stats.trips_uploaded or 0 }}</div>
         <div class="action-tile-label">My Trip Reports</div>
-        <div class="action-tile-hint">Academic trips uploaded by you</div>
       </div>
       <div class="action-tile-go"><i class="fas fa-chevron-right text-xs"></i></div>
     </a>
@@ -217,7 +201,6 @@
       <div class="action-tile-body">
         <div class="action-tile-value">{{ stats.clearance_pending or 0 }}</div>
         <div class="action-tile-label">Clearance Pending</div>
-        <div class="action-tile-hint">Approvals waiting on you</div>
       </div>
       <div class="action-tile-go"><i class="fas fa-chevron-right text-xs"></i></div>
     </a>

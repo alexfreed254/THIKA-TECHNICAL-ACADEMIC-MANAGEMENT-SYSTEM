@@ -58,6 +58,7 @@
       <a href="/admin-oversight/registrar/admissions"><i class="fas fa-user-plus fa-fw"></i> Admission Requests</a>
       <div class="menu-section">Clearance</div>
       <a href="/admin-oversight/registrar/clearances"><i class="fas fa-clipboard-check fa-fw"></i> Clearance Requests</a>
+      <a href="/clearance/final-approvals"><i class="fas fa-stamp fa-fw"></i> Final Physical Approvals</a>
       {% endif %}
 
       {% if current_user and current_user.role == 'deputy_principal' %}
@@ -65,6 +66,7 @@
       <a href="/admin-oversight/deputy-principal/academic"><i class="fas fa-graduation-cap fa-fw"></i> Academic Overview</a>
       <div class="menu-section">Clearance</div>
       <a href="/admin-oversight/deputy-principal/clearances"><i class="fas fa-clipboard-list fa-fw"></i> Clearance Oversight</a>
+      <a href="/clearance/final-approvals"><i class="fas fa-stamp fa-fw"></i> Final Physical Approvals</a>
       {% endif %}
 
       {% if current_user and current_user.role == 'quality_assurance_officer' %}

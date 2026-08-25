@@ -16,8 +16,9 @@ td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
 .badge-pending{background:#fff3e0;color:#e65100}
 .badge-in_progress{background:#e3f2fd;color:#1565c0}
-.badge-completed{background:#e8f5e9;color:#2e7d32}
-.badge-rejected{background:#ffebee;color:#c62828}
+.badge-digital_complete{background:#e3f2fd;color:#1565c0}
+.badge-returned{background:#fff8e1;color:#f57f17}
+.badge-cancelled{background:#eceff1;color:#546e7a}
 {% endblock %}
 {% block content %}
 <div class="page-wrap">
@@ -31,7 +32,7 @@ td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
     <div><label>Status</label>
       <select name="status">
         <option value="">All Statuses</option>
-        {% for s in ['pending','in_progress','completed','rejected'] %}<option value="{{ s }}" {% if s == status_filter %}selected{% endif %}>{{ s|replace('_',' ')|title }}</option>{% endfor %}
+        {% for s in ['pending','in_progress','digital_complete','completed','rejected','returned','cancelled'] %}<option value="{{ s }}" {% if s == status_filter %}selected{% endif %}>{{ s|replace('_',' ')|title }}</option>{% endfor %}
       </select>
     </div>
     <button type="submit" class="btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button>
