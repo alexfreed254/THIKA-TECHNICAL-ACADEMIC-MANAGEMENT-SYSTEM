@@ -817,15 +817,37 @@ def api_student_dashboard():
                   .eq("student_id", student_id)
                   .order("uploaded_at", desc=True).limit(6).execute().data or [])
 
-        cl = (db.table("clearance_requests").select("status, stage")
-                .eq("student_id", student_id).order("created_at", desc=True).limit(8).execute().data or [])
+        cl = (db.table("clearance_requests")
+                .select("id, status, stage, serial_number, final_status")
+                .eq("student_id", student_id)
+                .order("initiated_at", desc=True)
+                .limit(10)
+                .execute().data or [])
         active = next(
             (r for r in cl if (r.get("status") or "") in
-             ("pending", "in_progress", "returned", "completed")),
+             ("pending", "in_progress", "returned", "digital_complete")),
             None,
         )
-        stats["clearance_status"] = active.get("status", "") if active else ""
-        stats["clearance_stage"] = active.get("stage", 0) if active else 0
+        completed = next(
+            (r for r in cl if (r.get("status") or "") == "completed"),
+            None,
+        )
+        row = active or completed
+        if row:
+            st = row.get("status") or ""
+            stats["clearance_status"] = st
+            stats["clearance_stage"] = row.get("stage") or 0
+            stats["clearance_request_id"] = row.get("id") or ""
+            stats["clearance_serial"] = row.get("serial_number") or ""
+            stats["clearance_final_status"] = row.get("final_status") or ""
+            stats["clearance_form_ready"] = st in ("digital_complete", "completed")
+        else:
+            stats["clearance_status"] = ""
+            stats["clearance_stage"] = 0
+            stats["clearance_request_id"] = ""
+            stats["clearance_serial"] = ""
+            stats["clearance_final_status"] = ""
+            stats["clearance_form_ready"] = False
 
         attachments = (db.table("industrial_attachments")
                       .select("status").eq("student_id", student_id).execute().data or [])

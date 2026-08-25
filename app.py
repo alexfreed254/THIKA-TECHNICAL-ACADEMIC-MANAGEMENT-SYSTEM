@@ -135,6 +135,7 @@ def inject_globals():
     user = current_user()
     unread_count = 0
     dept_name = None
+    student_ia_certificate = None
 
     if user:
         unread_count = get_unread_count(user["id"])
@@ -157,6 +158,17 @@ def inject_globals():
                     dept_name = dept_row.get("name")
             except Exception:
                 pass
+
+        # Trainee sidebar: IA completion certificate download link
+        if user.get("role") == "student":
+            try:
+                from db import get_service_client
+                from routes.attachment_helpers import get_latest_student_ia_certificate
+                student_ia_certificate = get_latest_student_ia_certificate(
+                    get_service_client(), user["id"]
+                )
+            except Exception:
+                student_ia_certificate = None
 
     # Helper to map notification types to Tailwind alert classes
     def get_alert_classes(ntype):
@@ -204,6 +216,7 @@ def inject_globals():
         "current_user": user,
         "department_name": dept_name,
         "unread_notification_count": unread_count,
+        "student_ia_certificate": student_ia_certificate,
         "get_alert_classes": get_alert_classes,
         "get_file_icon_class": get_file_icon_class,
         "get_filename_from_url": get_filename_from_url,

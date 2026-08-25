@@ -15,6 +15,10 @@ export interface StudentDashboardData {
     attendance_percent?: number
     clearance_status?: string
     clearance_stage?: number
+    clearance_request_id?: string
+    clearance_serial?: string
+    clearance_final_status?: string
+    clearance_form_ready?: boolean
     attachment_active?: number
     attachment_total?: number
     logbook_entries?: number

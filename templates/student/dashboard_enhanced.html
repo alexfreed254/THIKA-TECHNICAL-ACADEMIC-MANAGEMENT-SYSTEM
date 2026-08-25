@@ -677,6 +677,69 @@
 }
 .btn-cert-view:hover { border-color: #94a3b8; color: #0f172a; }
 
+.clr-dash-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+.clr-dash-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.clr-dash-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.clr-dash-serial {
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e5a9f;
+  margin-top: 4px;
+}
+.clr-dash-status {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.clr-st-progress { background: #dbeafe; color: #1d4ed8; }
+.clr-st-digital { background: #dbeafe; color: #1565c0; }
+.clr-st-done { background: #dcfce7; color: #15803d; }
+.clr-st-warn { background: #fef3c7; color: #b45309; }
+.clr-st-bad { background: #fee2e2; color: #b91c1c; }
+.clr-offices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 14px;
+}
+.clr-office {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 11.5px;
+}
+.clr-office.ok { background: #f0fdf4; border-color: #bbf7d0; }
+.clr-office .ttl { font-weight: 800; color: #0f172a; margin-bottom: 2px; }
+.clr-office .sub { color: #64748b; }
+.clr-dash-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 /* --- Map Container --- */
 .map-box {
   height: 320px;
@@ -1086,38 +1149,31 @@
 
     <div class="d-stat">
       <div class="d-stat-top">
-        <span class="d-stat-label">Clearance Status</span>
+        <span class="d-stat-label">Clearance</span>
       </div>
       <div>
+        {% set cl_status = stats.get('clearance_status', '') %}
         <div class="d-stat-value" style="font-size: 1.75rem;">
-          {% set cl_status = stats.get('clearance_status', '') %}
-          {% set cl_stage = stats.get('clearance_stage', 0) %}
-          {% if cl_status == 'completed' %}Cleared
-          {% elif cl_status in ('in_progress', 'pending') %}In Progress
+          {% if cl_status == 'completed' %}Approved
+          {% elif cl_status == 'digital_complete' %}Form Ready
           {% elif cl_status == 'returned' %}Returned
           {% elif cl_status == 'rejected' %}Rejected
+          {% elif cl_status in ('in_progress', 'pending') %}In Progress
           {% elif clearance_eligible %}Eligible
-          {% else %}Pending{% endif %}
+          {% else %}—{% endif %}
         </div>
         <div class="d-stat-sub">
-          {% if cl_status == 'completed' %}Certificate ready
-          {% elif cl_status in ('in_progress', 'pending') %}Stage {{ cl_stage or 1 }} of 2
-          {% elif cl_status == 'returned' %}Correction required
-          {% elif cl_status == 'rejected' %}Rejected
-          {% elif clearance_eligible %}Eligible
-          {% else %}Incomplete{% endif %}
+          {% if stats.get('clearance_serial') %}{{ stats.clearance_serial }}
+          {% elif cl_status == 'digital_complete' %}Final Clearance Form
+          {% elif cl_status in ('in_progress', 'pending') %}Digital clearances
+          {% elif clearance_eligible %}Ready to start
+          {% else %}Not started{% endif %}
         </div>
       </div>
-      {% if cl_status %}
+      {% if cl_status or clearance_eligible %}
       <div class="d-stat-footer-btn">
         <a href="/clearance/" class="d-stat-action-link">
-          View Clearance <i class="fas fa-arrow-right"></i>
-        </a>
-      </div>
-      {% elif clearance_eligible %}
-      <div class="d-stat-footer-btn">
-        <a href="/clearance/" class="d-stat-action-link">
-          Start Clearance <i class="fas fa-arrow-right"></i>
+          Open Clearance <i class="fas fa-arrow-right"></i>
         </a>
       </div>
       {% endif %}
@@ -1249,6 +1305,65 @@
          href="{{ url_for('attachment_certificate.certificate_view', attachment_id=attachment_certificate.attachment_id) }}">
         <i class="fas fa-eye"></i> View
       </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% set cl_status = stats.get('clearance_status', '') %}
+  {% if cl_status or clearance_eligible %}
+  <div class="clr-dash-card">
+    <div class="clr-dash-top">
+      <div>
+        <div class="clr-dash-title"><i class="fas fa-clipboard-check" style="color:#1e5a9f;margin-right:6px"></i>Student Clearance</div>
+        {% if stats.get('clearance_serial') %}
+        <div class="clr-dash-serial">{{ stats.clearance_serial }}</div>
+        {% endif %}
+      </div>
+      <span class="clr-dash-status
+        {% if cl_status == 'completed' %}clr-st-done
+        {% elif cl_status == 'digital_complete' %}clr-st-digital
+        {% elif cl_status == 'returned' %}clr-st-warn
+        {% elif cl_status == 'rejected' %}clr-st-bad
+        {% elif cl_status %}clr-st-progress
+        {% else %}clr-st-progress{% endif %}">
+        {% if cl_status == 'completed' %}Final Clearance Approved
+        {% elif cl_status == 'digital_complete' %}Digital Complete — Form Ready
+        {% elif cl_status == 'returned' %}Returned
+        {% elif cl_status == 'rejected' %}Rejected
+        {% elif cl_status in ('in_progress', 'pending') %}Digital Clearance In Progress
+        {% else %}Eligible to Start{% endif %}
+      </span>
+    </div>
+
+    {% if stats.get('clearance_form_ready') and clearance_final_approvals %}
+    <div class="clr-offices">
+      {% for f in clearance_final_approvals %}
+      <div class="clr-office {{ 'ok' if f.get('approved') else '' }}">
+        <div class="ttl">{{ f.get('_label') }}</div>
+        <div class="sub">{% if f.get('approved') %}{{ f.get('officer_name') or 'Approved' }}{% else %}Pending{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="clr-dash-actions">
+      {% if stats.get('clearance_form_ready') and stats.get('clearance_request_id') %}
+      <a class="btn-cert-dl"
+         href="/clearance/certificate/{{ stats.clearance_request_id }}/pdf">
+        <i class="fas fa-file-pdf"></i> Download Final Clearance Form
+      </a>
+      <a class="btn-cert-view" href="/clearance/">
+        <i class="fas fa-eye"></i> Open Clearance
+      </a>
+      {% elif cl_status %}
+      <a class="btn-cert-view" href="/clearance/" style="background:linear-gradient(135deg,#1e5a9f,#154070);color:#fff;border:none">
+        <i class="fas fa-clipboard-list"></i> Continue Clearance
+      </a>
+      {% else %}
+      <a class="btn-cert-view" href="/clearance/" style="background:linear-gradient(135deg,#1e5a9f,#154070);color:#fff;border:none">
+        <i class="fas fa-play"></i> Start Clearance
+      </a>
+      {% endif %}
     </div>
   </div>
   {% endif %}

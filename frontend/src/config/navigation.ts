@@ -76,12 +76,13 @@ const studentNav: NavSection[] = [
       { label: 'Digital Logbook', to: '/student/logbook', icon: 'book' },
       { label: 'My Attachment Marks', to: '/student/attachment-marks', icon: 'star-half-alt' },
       { label: 'Mentoring Tool / Logbook', to: '/student/mentoring-tool', icon: 'file-pdf' },
+      { label: 'Download Completion Certificate', to: '/student/industrial-attachment', icon: 'certificate', external: true },
     ],
   },
   {
     title: 'Services',
     items: [
-      { label: 'Course Clearance', to: '/clearance/', icon: 'clipboard-check', external: true },
+      { label: 'Student Clearance', to: '/clearance/', icon: 'clipboard-check', external: true },
       { label: 'Employment Status', to: '/student/employment-status', icon: 'user-tie' },
     ],
   },

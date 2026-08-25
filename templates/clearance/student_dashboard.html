@@ -1,6 +1,6 @@
 {% extends "student/base.html" %}
 {% block title %}Clearance{% endblock %}
-{% block page_title %}Course Clearance{% endblock %}
+{% block page_title %}Student Clearance{% endblock %}
 
 {% block extra_style %}
 <style>
@@ -281,7 +281,7 @@
 {% if not has_request %}
 <!-- ── INITIATE ── -->
 <div class="initiate-card">
-  <h2><i class="fas fa-graduation-cap"></i> Course Clearance</h2>
+  <h2><i class="fas fa-graduation-cap"></i> Student Clearance</h2>
   {% if last_cancelled %}
   <div style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.5">
     Previous clearance was

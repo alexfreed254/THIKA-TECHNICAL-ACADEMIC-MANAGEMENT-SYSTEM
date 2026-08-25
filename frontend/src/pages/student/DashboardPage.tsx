@@ -78,10 +78,25 @@ export default function StudentDashboardPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Clearance</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Student Clearance</div>
             <div className="mt-2 text-xl font-black text-slate-900">
-              {stats.clearance_status || 'Not started'}
+              {stats.clearance_status === 'completed'
+                ? 'Final Clearance Approved'
+                : stats.clearance_status === 'digital_complete'
+                  ? 'Form Ready'
+                  : stats.clearance_status === 'in_progress' || stats.clearance_status === 'pending'
+                    ? 'Digital In Progress'
+                    : stats.clearance_status || 'Not started'}
             </div>
+            {stats.clearance_form_ready && stats.clearance_request_id ? (
+              <a
+                href={`/clearance/certificate/${stats.clearance_request_id}/pdf`}
+                className="mt-3 mr-3 inline-block text-sm font-bold"
+                style={{ color: '#15803d' }}
+              >
+                Download Final Form →
+              </a>
+            ) : null}
             <a href="/clearance/" className="mt-3 inline-block text-sm font-bold" style={{ color: '#2563eb' }}>
               Open clearance →
             </a>
@@ -102,7 +117,7 @@ export default function StudentDashboardPage() {
               ['My Bookings', '/student/exam-bookings', 'calendar-check'],
               ['Attachment', '/student/industrial-attachment', 'industry'],
               ['Logbook', '/student/logbook', 'book'],
-              ['Clearance', '/clearance/', 'clipboard-check', true],
+              ['Student Clearance', '/clearance/', 'clipboard-check', true],
               ['Employment', '/student/employment-status', 'user-tie'],
             ].map(([label, to, icon, external]) =>
               external ? (

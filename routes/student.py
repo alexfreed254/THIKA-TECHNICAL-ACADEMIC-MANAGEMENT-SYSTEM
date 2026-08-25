@@ -243,7 +243,13 @@ def dashboard():
         "summative_nyc": 0,
         "clearance_status": "",
         "clearance_stage": 0,
+        "clearance_final_status": "",
+        "clearance_request_id": "",
+        "clearance_serial": "",
+        "clearance_form_ready": False,
     }
+    clearance_request = None
+    clearance_final_approvals = []
     unread_notifications = []
     recent_assessments = []
     recent_attendance = []
@@ -443,28 +449,65 @@ def dashboard():
         except Exception:
             stats['summative_nyc'] = 0
 
-        # Active clearance status (ignore cancelled so trainee can start again)
+        # Clearance — new digital → final form → physical offices flow
         try:
+            from routes.clearance import (
+                _serial as _clr_serial,
+                _fetch_final_approvals,
+            )
             cl = (db.table("clearance_requests")
-                    .select("id, status, stage")
+                    .select(
+                        "id, status, stage, serial_number, final_status, "
+                        "form_downloaded_at, initiated_at, created_at"
+                    )
                     .eq("student_id", student_id)
-                    .order("created_at", desc=True)
-                    .limit(8)
+                    .order("initiated_at", desc=True)
+                    .limit(10)
                     .execute().data or [])
             active = next(
                 (r for r in cl if (r.get("status") or "") in
-                 ("pending", "in_progress", "returned", "completed")),
+                 ("pending", "in_progress", "returned", "digital_complete")),
                 None,
             )
-            if active:
-                stats['clearance_status'] = active.get("status", "")
-                stats['clearance_stage'] = active.get("stage", 1)
+            completed = next(
+                (r for r in cl if (r.get("status") or "") == "completed"),
+                None,
+            )
+            clearance_request = active or completed
+            if clearance_request:
+                st = clearance_request.get("status") or ""
+                stats["clearance_status"] = st
+                stats["clearance_stage"] = clearance_request.get("stage") or 1
+                stats["clearance_final_status"] = clearance_request.get("final_status") or ""
+                stats["clearance_request_id"] = clearance_request.get("id") or ""
+                stats["clearance_serial"] = (
+                    clearance_request.get("serial_number")
+                    or _clr_serial(clearance_request["id"])
+                )
+                stats["clearance_form_ready"] = st in ("digital_complete", "completed")
+                if stats["clearance_form_ready"]:
+                    try:
+                        clearance_final_approvals = _fetch_final_approvals(
+                            db, clearance_request["id"]
+                        )
+                    except Exception:
+                        clearance_final_approvals = []
             else:
-                stats['clearance_status'] = ""
-                stats['clearance_stage'] = 0
+                stats["clearance_status"] = ""
+                stats["clearance_stage"] = 0
+                stats["clearance_final_status"] = ""
+                stats["clearance_request_id"] = ""
+                stats["clearance_serial"] = ""
+                stats["clearance_form_ready"] = False
         except Exception:
-            stats['clearance_status'] = ""
-            stats['clearance_stage'] = 0
+            stats["clearance_status"] = ""
+            stats["clearance_stage"] = 0
+            stats["clearance_final_status"] = ""
+            stats["clearance_request_id"] = ""
+            stats["clearance_serial"] = ""
+            stats["clearance_form_ready"] = False
+            clearance_request = None
+            clearance_final_approvals = []
 
         # Add attachment stats to main stats
         stats['attachment_active'] = attachment_stats['active']
@@ -504,7 +547,9 @@ def dashboard():
                           recent_logbook_entries=recent_logbook_entries,
                           pending_competencies=pending_competencies,
                           attachment_certificate=attachment_certificate,
-                          company_cert_label=company_cert_label)
+                          company_cert_label=company_cert_label,
+                          clearance_request=clearance_request,
+                          clearance_final_approvals=clearance_final_approvals or [])
 
 
 # ── Profile Management ───────────────────────────────────────────────────────

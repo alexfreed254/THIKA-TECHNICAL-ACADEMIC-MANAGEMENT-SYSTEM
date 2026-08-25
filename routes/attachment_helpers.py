@@ -450,6 +450,37 @@ def get_certificate_for_attachment(db, attachment_id: str):
         return None
 
 
+def get_latest_student_ia_certificate(db, student_id: str):
+    """Latest issued IA completion certificate for a trainee, or None."""
+    if not student_id or not certificates_table_ok(db):
+        return None
+    try:
+        rows = (db.table("attachment_certificates")
+                .select("*")
+                .eq("student_id", student_id)
+                .order("issued_at", desc=True)
+                .limit(1)
+                .execute().data or [])
+        if rows:
+            return rows[0]
+    except Exception:
+        pass
+    try:
+        atts = (db.table("industrial_attachments")
+                .select("id")
+                .eq("student_id", student_id)
+                .order("created_at", desc=True)
+                .limit(20)
+                .execute().data or [])
+        for att in atts:
+            cert = get_certificate_for_attachment(db, att["id"])
+            if cert:
+                return cert
+    except Exception:
+        pass
+    return None
+
+
 def get_certificate_by_number(db, certificate_number: str):
     if not certificates_table_ok(db):
         return None
