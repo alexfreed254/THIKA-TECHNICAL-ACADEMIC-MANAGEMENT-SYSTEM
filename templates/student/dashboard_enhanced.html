@@ -1060,30 +1060,6 @@
     transition-duration: 0.01ms !important;
   }
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-light: #1e293b;
-    --color-bg-white: #0f172a;
-    --color-border: #334155;
-    --color-border-light: #1e293b;
-    --color-text-dark: #f1f5f9;
-    --color-text-base: #e2e8f0;
-    --color-text-muted: #cbd5e1;
-    --color-text-light: #94a3b8;
-  }
-
-  .dash {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  }
-
-  .welcome-name {
-    background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-}
 {% endblock %}
 
 {% block content %}

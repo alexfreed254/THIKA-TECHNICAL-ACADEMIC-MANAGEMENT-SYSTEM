@@ -1,8 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="color-scheme: light;">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>{% block title %}Student{% endblock %} | TTTI Academic Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
@@ -235,7 +236,6 @@
         <span class="nav-badge">{{ unread_notification_count }}</span>
         {% endif %}
       </a>
-      <a href="#" onclick="toggleTheme(); return false"><i class="fas fa-moon fa-fw"></i><span class="nav-label" id="themeLabel">Dark Mode</span></a>
 
     </div>
 
@@ -314,6 +314,9 @@
 <div id="spa-page-scripts">{% block extra_script %}{% endblock %}</div>
 
 <script>
+  document.body.classList.remove('dark-mode');
+  try { localStorage.removeItem('ttti_theme'); } catch (e) {}
+
   const toggle  = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
