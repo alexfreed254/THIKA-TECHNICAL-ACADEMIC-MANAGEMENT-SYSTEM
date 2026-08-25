@@ -187,6 +187,111 @@ def _map_stage_name_to_category(name: str, dept_name: str) -> str:
     return ""
 
 
+
+def _build_category_stage_ids(db) -> dict:
+    """
+    Map approver_category → clearance_stages.id.
+    Required because clearance_approvals.clearance_stage_id is NOT NULL in older schemas.
+    """
+    mapping = {}
+    fallback = None
+    try:
+        rows = (db.table("clearance_stages")
+                .select(
+                    "id, stage_name, approver_role, "
+                    "clearance_departments(name, clearance_type, code)"
+                )
+                .execute().data or [])
+    except Exception:
+        rows = []
+
+    for row in rows:
+        sid = row.get("id")
+        if not sid:
+            continue
+        if not fallback:
+            fallback = sid
+
+        cd = row.get("clearance_departments") or {}
+        code = (cd.get("code") or "").upper()
+        ctype = (cd.get("clearance_type") or "").lower()
+        name = row.get("stage_name") or ""
+        role = (row.get("approver_role") or "").lower()
+        dname = cd.get("name") or ""
+        nlow = name.lower()
+
+        if code == "DEPT" or ctype == "department":
+            if "technician" in nlow or role == "workshop_technician":
+                mapping.setdefault("tech_1", sid)
+                mapping.setdefault("tech_2", sid)
+            elif role == "dept_admin" or "hod" in nlow or "department" in nlow:
+                mapping.setdefault("hod_home", sid)
+                mapping.setdefault("hod_other", sid)
+            elif role == "trainer":
+                mapping.setdefault("trainer", sid)
+            continue
+
+        cat = _map_stage_name_to_category(name, dname)
+        if cat:
+            mapping.setdefault(cat, sid)
+
+        role_map = {
+            "library_hod": "svc_library",
+            "sports_hod": "svc_games",
+            "environment_hod": "svc_store",
+            "dean_students": "ext_community",
+        }
+        if role in role_map:
+            mapping.setdefault(role_map[role], sid)
+
+    if not fallback:
+        fallback = _ensure_fallback_stage_id(db)
+
+    for cat in STAGE1_CATEGORIES | STAGE2_CATEGORIES:
+        mapping.setdefault(cat, fallback)
+    return mapping
+
+
+def _ensure_fallback_stage_id(db):
+    """Return any clearance_stages.id, creating a DEPT placeholder if needed."""
+    try:
+        rows = (db.table("clearance_stages")
+                .select("id")
+                .limit(1)
+                .execute().data or [])
+        if rows:
+            return rows[0]["id"]
+    except Exception:
+        pass
+
+    try:
+        depts = (db.table("clearance_departments")
+                 .select("id")
+                 .eq("code", "DEPT")
+                 .limit(1)
+                 .execute().data or [])
+        if not depts:
+            ins = db.table("clearance_departments").insert({
+                "name": "Academic Department",
+                "code": "DEPT",
+                "clearance_type": "department",
+            }).execute()
+            dept_id = (ins.data or [{}])[0].get("id")
+        else:
+            dept_id = depts[0]["id"]
+        if not dept_id:
+            return None
+        st = db.table("clearance_stages").insert({
+            "clearance_department_id": dept_id,
+            "stage_order": 99,
+            "stage_name": "Parallel Clearance",
+            "approver_role": "trainer",
+        }).execute()
+        return ((st.data or [{}])[0].get("id"))
+    except Exception:
+        return None
+
+
 def _fetch_all_approvals(db, request_id: str) -> list:
     """Return all approval rows for a request (with stage info)."""
     return (db.table("clearance_approvals")
@@ -301,9 +406,13 @@ def _check_stage1_and_advance(db, request_id: str):
         if existing:
             continue
 
+        stage_ids = _build_category_stage_ids(db)
+        stage_id = stage_ids.get("hod_home")
+        if not stage_id:
+            raise ValueError("Clearance stages are not configured.")
         db.table("clearance_approvals").insert({
             "clearance_request_id": request_id,
-            "clearance_stage_id":   None,
+            "clearance_stage_id":   stage_id,
             "approver_id":          hod["id"],
             "approver_category":    "hod_home",
             "clearance_stage":      2,
@@ -749,7 +858,7 @@ def initiate_clearance():
         if (db.table("clearance_requests")
               .select("id")
               .eq("student_id", student_id)
-              .in_("status", ["pending", "in_progress", "returned"])
+              .in_("status", ["pending", "in_progress", "returned", "digital_complete"])
               .execute().data):
             flash("You already have an active clearance request.", "warning")
             return redirect(url_for("clearance.dashboard"))
@@ -835,25 +944,31 @@ def initiate_clearance():
                 svc_approver_map[cat] = None  # no assigned approver yet
 
         # ── Insert all Stage 1 approval records ───────────────────────────
+        stage_ids = _build_category_stage_ids(db)
+        if not any(stage_ids.values()):
+            raise ValueError("Clearance stages are not configured in the database.")
 
         def _insert(approver_id=None, category="", stage_num=1):
+            stage_id = stage_ids.get(category) or next(
+                (v for v in stage_ids.values() if v), None
+            )
+            if not stage_id:
+                raise ValueError("Missing clearance_stage_id for approval rows.")
+            payload = {
+                "clearance_request_id": request_id,
+                "clearance_stage_id": stage_id,
+                "approver_id": approver_id,
+                "status": "pending",
+            }
             try:
                 db.table("clearance_approvals").insert({
-                    "clearance_request_id": request_id,
-                    "clearance_stage_id":   None,
-                    "approver_id":          approver_id,
-                    "approver_category":    category,
-                    "clearance_stage":      stage_num,
-                    "status":               "pending",
+                    **payload,
+                    "approver_category": category,
+                    "clearance_stage": stage_num,
                 }).execute()
             except Exception:
-                # Fallback: without new columns
-                db.table("clearance_approvals").insert({
-                    "clearance_request_id": request_id,
-                    "clearance_stage_id":   None,
-                    "approver_id":          approver_id,
-                    "status":               "pending",
-                }).execute()
+                # Fallback: without newer optional columns
+                db.table("clearance_approvals").insert(payload).execute()
 
         # Trainers — flag if fewer than 7 identified
         if trainer_ids:
@@ -939,7 +1054,24 @@ def initiate_clearance():
         )
 
     except Exception as e:
-        flash(f"Error initiating clearance: {e}", "error")
+        # Remove half-created request with no approval rows
+        try:
+            if "request_id" in locals() and request_id:
+                rows = (db.table("clearance_approvals")
+                        .select("id")
+                        .eq("clearance_request_id", request_id)
+                        .limit(1)
+                        .execute().data or [])
+                if not rows:
+                    db.table("clearance_requests").delete().eq("id", request_id).execute()
+        except Exception:
+            pass
+        msg = str(e)
+        if "clearance_stage_id" in msg or "23502" in msg:
+            flash("Could not start clearance — clearance stages are not set up. Contact the administrator.", "error")
+        else:
+            flash("Could not start clearance. Please try again.", "error")
+        print(f"[clearance] initiate error: {e}")
 
     return redirect(url_for("clearance.dashboard"))
 
@@ -1793,6 +1925,8 @@ def certificate(request_id):
     base_url   = os.environ.get("APP_BASE_URL", request.host_url.rstrip("/"))
     verify_url = f"{base_url}/clearance/verify/{serial}"
 
+    final_approval_map = {r.get("office"): r for r in (final_approvals or [])}
+
     return render_template(
         "clearance/clearance_certificate.html",
         cr=cr,
@@ -1801,8 +1935,10 @@ def certificate(request_id):
         verify_url=verify_url,
         approvals=approvals,
         final_approvals=final_approvals,
+        final_approval_map=final_approval_map,
         lost_items=lost_items,
         CATEGORY_LABELS=CATEGORY_LABELS,
+        FINAL_OFFICES=FINAL_OFFICES,
         FINAL_OFFICE_LABELS=FINAL_OFFICE_LABELS,
         form_is_final=(cr.get("status") == "completed"),
     )
@@ -1897,41 +2033,47 @@ def certificate_pdf(request_id):
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
                                         Table, TableStyle, HRFlowable,
-                                        Image as RLImage, KeepTogether)
+                                        Image as RLImage)
 
         buf = _io.BytesIO()
         pdf = SimpleDocTemplate(buf, pagesize=A4,
-                                leftMargin=18*mm, rightMargin=18*mm,
-                                topMargin=14*mm,  bottomMargin=14*mm)
-        W = A4[0] - 36*mm
+                                leftMargin=16*mm, rightMargin=16*mm,
+                                topMargin=12*mm,  bottomMargin=12*mm)
+        W = A4[0] - 32*mm
 
         base   = getSampleStyleSheet()
-        DARK   = colors.HexColor("#0f2c54")
-        MID    = colors.HexColor("#DCE6F4")   # light visible header fill
-        HDRTXT = colors.HexColor("#0F2744")   # dark text on light header
-        BORDER = colors.HexColor("#e2e8f0")
-        LGREY  = colors.HexColor("#f8fafc")
-        GTEXT  = colors.HexColor("#15803d")
+        DARK   = colors.HexColor("#111111")
+        MAROON = colors.HexColor("#7f1d1d")
+        MID    = colors.HexColor("#f0f0f0")
+        HDRTXT = colors.HexColor("#111111")
+        BORDER = colors.HexColor("#111111")
+        LGREY  = colors.HexColor("#fafafa")
+        GTEXT  = colors.HexColor("#166534")
 
-        ctr14b = ParagraphStyle("c14", parent=base["Normal"], fontSize=14,
-                                fontName="Helvetica-Bold", alignment=TA_CENTER, spaceAfter=2)
+        ctr14b = ParagraphStyle("c14", parent=base["Normal"], fontSize=13,
+                                fontName="Times-Bold", alignment=TA_CENTER, spaceAfter=2)
         ctr11b = ParagraphStyle("c11", parent=base["Normal"], fontSize=11,
-                                fontName="Helvetica-Bold", alignment=TA_CENTER, spaceAfter=2)
-        ctr9   = ParagraphStyle("c9",  parent=base["Normal"], fontSize=9,
-                                fontName="Helvetica", alignment=TA_CENTER, spaceAfter=1)
-        lft10b = ParagraphStyle("l10", parent=base["Normal"], fontSize=10,
-                                fontName="Helvetica-Bold")
+                                fontName="Times-Bold", alignment=TA_CENTER, spaceAfter=2)
+        ctr9   = ParagraphStyle("c9",  parent=base["Normal"], fontSize=8,
+                                fontName="Times-Roman", alignment=TA_CENTER, spaceAfter=1,
+                                textColor=colors.HexColor("#444444"))
+        lft10b = ParagraphStyle("l10", parent=base["Normal"], fontSize=9,
+                                fontName="Times-Bold", alignment=TA_CENTER)
         lft9b  = ParagraphStyle("l9b", parent=base["Normal"], fontSize=9,
-                                fontName="Helvetica-Bold")
+                                fontName="Times-Bold")
         lft9   = ParagraphStyle("l9",  parent=base["Normal"], fontSize=9,
-                                fontName="Helvetica")
-        tbl_h  = ParagraphStyle("th",  parent=base["Normal"], fontSize=8,
-                                fontName="Helvetica-Bold", alignment=TA_CENTER,
+                                fontName="Times-Roman")
+        mono_maroon = ParagraphStyle(
+            "mono_m", parent=base["Normal"], fontSize=12, fontName="Courier-Bold",
+            textColor=MAROON, spaceAfter=2,
+        )
+        tbl_h  = ParagraphStyle("th",  parent=base["Normal"], fontSize=7.5,
+                                fontName="Times-Bold", alignment=TA_CENTER,
                                 textColor=HDRTXT)
-        tbl_c  = ParagraphStyle("tc",  parent=base["Normal"], fontSize=8,
-                                fontName="Helvetica", alignment=TA_CENTER)
-        tbl_l  = ParagraphStyle("tl",  parent=base["Normal"], fontSize=8,
-                                fontName="Helvetica", alignment=TA_LEFT)
+        tbl_c  = ParagraphStyle("tc",  parent=base["Normal"], fontSize=7.5,
+                                fontName="Times-Roman", alignment=TA_CENTER)
+        tbl_l  = ParagraphStyle("tl",  parent=base["Normal"], fontSize=7.5,
+                                fontName="Times-Roman", alignment=TA_LEFT)
 
         story = []
 
@@ -1941,7 +2083,7 @@ def certificate_pdf(request_id):
         ttti_logo_cell = Paragraph("", lft9)
         if _os.path.exists(ttti_logo_path):
             try:
-                ttti_logo_cell = RLImage(ttti_logo_path, width=22*mm, height=22*mm)
+                ttti_logo_cell = RLImage(ttti_logo_path, width=20*mm, height=20*mm)
             except Exception:
                 pass
 
@@ -1950,7 +2092,7 @@ def certificate_pdf(request_id):
         govt_logo_cell = Paragraph("", lft9)
         if _os.path.exists(govt_logo_path):
             try:
-                govt_logo_cell = RLImage(govt_logo_path, width=22*mm, height=22*mm)
+                govt_logo_cell = RLImage(govt_logo_path, width=20*mm, height=20*mm)
             except Exception:
                 pass
 
@@ -1958,10 +2100,10 @@ def certificate_pdf(request_id):
             govt_logo_cell,
             [Paragraph("THIKA TECHNICAL TRAINING INSTITUTE", ctr14b),
              Paragraph("FINAL CLEARANCE FORM", ctr11b),
-             Paragraph("Academic Management System", ctr9),
-             Paragraph(f"Serial No: {serial}", ctr9)],
+             Paragraph("Ministry of Education · State Department for TVET", ctr9),
+             Paragraph("TTTI/ADM/CLEAR/F1", ctr9)],
             ttti_logo_cell,
-        ]], colWidths=[24*mm, W - 48*mm, 24*mm])
+        ]], colWidths=[22*mm, W - 44*mm, 22*mm])
         hdr.setStyle(TableStyle([
             ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
             ("ALIGN",         (1,0), (1,0),   "CENTER"),
@@ -1971,7 +2113,7 @@ def certificate_pdf(request_id):
         story.append(hdr)
         story.append(HRFlowable(width="100%", thickness=2, color=DARK, spaceAfter=6))
 
-        # Student details
+        # Student details — no printed workflow status (lives on verify page)
         course = cr.get("courses")    or {}
         dept   = cr.get("departments") or {}
 
@@ -1981,49 +2123,44 @@ def certificate_pdf(request_id):
                   Paragraph(l2, lft9b), Paragraph(str(v2), lft9)]],
                 colWidths=[28*mm, W/2-28*mm, 28*mm, W/2-28*mm])
             t.setStyle(TableStyle([
-                ("TOPPADDING",    (0,0), (-1,-1), 3),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 3),
-                ("LINEBELOW",     (1,0), (1,0),   0.5, colors.grey),
-                ("LINEBELOW",     (3,0), (3,0),   0.5, colors.grey),
-                ("VALIGN",        (0,0), (-1,-1), "BOTTOM"),
+                ("TOPPADDING",    (0,0), (-1,-1), 2),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+                ("BOX",           (0,0), (-1,-1), 0.5, DARK),
+                ("INNERGRID",     (0,0), (-1,-1), 0.4, DARK),
+                ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+                ("LEFTPADDING",   (0,0), (-1,-1), 4),
             ]))
             return t
 
-        story.append(_info_row("Student Name:", student.get("full_name", "—"),
+        story.append(_info_row("Full Name:", student.get("full_name", "—"),
                                "Admission No:", student.get("admission_no", "—")))
-        story.append(_info_row("Course:",       course.get("name", "—"),
-                               "Course Code:",  course.get("code", "—")))
-        story.append(_info_row("Department:",   dept.get("name", "—"),
-                               "Form status:",  (
-                                   "FINAL APPROVED" if cr.get("status") == "completed"
-                                   else "DIGITAL COMPLETE — AWAITING PHYSICAL STAMPS"
-                               )))
+        story.append(Spacer(1, 3))
+        story.append(_info_row("Programme:", course.get("name", "—"),
+                               "Department:", dept.get("name", "—")))
         story.append(Spacer(1, 8))
-        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=5))
 
-        # Approvals table
-        story.append(Paragraph("DIGITAL CLEARANCE APPROVALS", lft10b))
-        story.append(Spacer(1, 5))
+        # Compact digital approvals table
+        story.append(Paragraph("DIGITAL CLEARANCE RECORD", lft10b))
+        story.append(Spacer(1, 3))
 
         appr_hdr = [
             Paragraph("#",           tbl_h),
             Paragraph("Category",    tbl_h),
-            Paragraph("Approved By", tbl_l),
-            Paragraph("Date",        tbl_c),
-            Paragraph("Status",      tbl_c),
+            Paragraph("Approved By", tbl_h),
+            Paragraph("Date",        tbl_h),
+            Paragraph("Status",      tbl_h),
         ]
         appr_data  = [appr_hdr]
         appr_style = [
             ("BACKGROUND",    (0,0), (-1,0), MID),
             ("TEXTCOLOR",     (0,0), (-1,0), HDRTXT),
-            ("FONTNAME",      (0,0), (-1,0), "Helvetica-Bold"),
-            ("LINEBELOW",     (0,0), (-1,0), 0.8, HDRTXT),
-            ("FONTSIZE",      (0,0), (-1,-1), 8),
-            ("GRID",          (0,0), (-1,-1), 0.4, BORDER),
-            ("TOPPADDING",    (0,0), (-1,-1), 3),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 3),
-            ("LEFTPADDING",   (0,0), (-1,-1), 4),
-            ("RIGHTPADDING",  (0,0), (-1,-1), 4),
+            ("FONTNAME",      (0,0), (-1,0), "Times-Bold"),
+            ("FONTSIZE",      (0,0), (-1,-1), 7.5),
+            ("GRID",          (0,0), (-1,-1), 0.5, DARK),
+            ("TOPPADDING",    (0,0), (-1,-1), 2),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+            ("LEFTPADDING",   (0,0), (-1,-1), 3),
+            ("RIGHTPADDING",  (0,0), (-1,-1), 3),
             ("ALIGN",         (0,0), (-1,-1), "CENTER"),
             ("ALIGN",         (1,0), (2,-1),  "LEFT"),
             ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
@@ -2053,19 +2190,18 @@ def certificate_pdf(request_id):
             ])
             if status == "approved":
                 appr_style.append(("TEXTCOLOR", (4,ri), (4,ri), GTEXT))
-                appr_style.append(("FONTNAME",  (4,ri), (4,ri), "Helvetica-Bold"))
+                appr_style.append(("FONTNAME",  (4,ri), (4,ri), "Times-Bold"))
 
         appr_tbl = Table(
             appr_data,
-            colWidths=[8*mm, 52*mm, W-8*mm-52*mm-28*mm-22*mm, 28*mm, 22*mm],
+            colWidths=[8*mm, 48*mm, W-8*mm-48*mm-26*mm-20*mm, 26*mm, 20*mm],
             repeatRows=1,
         )
         appr_tbl.setStyle(TableStyle(appr_style))
-        story += [appr_tbl, Spacer(1, 12)]
+        story += [appr_tbl, Spacer(1, 8)]
 
         # Lost / Missing Items section
         lost_items = locals().get("lost_items") or []
-        # Re-fetch if not already in scope (called from certificate_pdf route)
         if not lost_items:
             try:
                 _aid_list = [a["id"] for a in approvals]
@@ -2079,60 +2215,86 @@ def certificate_pdf(request_id):
                 lost_items = []
 
         if lost_items:
-            AMBER = colors.HexColor("#b45309")
-            AMBER_BG = colors.HexColor("#fef3c7")
-            story.append(HRFlowable(width="100%", thickness=1, color=AMBER, spaceAfter=5))
-            story.append(Paragraph("LOST / MISSING ITEMS", ParagraphStyle(
-                "amber_hdr", parent=base["Normal"], fontSize=10,
-                fontName="Helvetica-Bold", textColor=AMBER)))
-            story.append(Spacer(1, 4))
-
+            story.append(Paragraph("LOST / MISSING ITEMS", lft10b))
+            story.append(Spacer(1, 3))
             li_hdr = [
-                Paragraph("#",       tbl_h),
-                Paragraph("Item",    tbl_h),
-                Paragraph("Qty",     tbl_h),
-                Paragraph("Notes",   tbl_h),
+                Paragraph("#", tbl_h),
+                Paragraph("Item", tbl_h),
+                Paragraph("Qty", tbl_h),
+                Paragraph("Notes", tbl_h),
             ]
             li_data = [li_hdr]
-            li_style = [
-                ("BACKGROUND",    (0,0), (-1,0), AMBER_BG),
-                ("TEXTCOLOR",     (0,0), (-1,0), AMBER),
-                ("FONTSIZE",      (0,0), (-1,-1), 8),
-                ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#fde68a")),
-                ("TOPPADDING",    (0,0), (-1,-1), 3),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 3),
-                ("LEFTPADDING",   (0,0), (-1,-1), 4),
-                ("RIGHTPADDING",  (0,0), (-1,-1), 4),
-                ("ALIGN",         (0,0), (-1,-1), "CENTER"),
-                ("ALIGN",         (1,0), (3,-1),  "LEFT"),
-                ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
-                ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#fffbeb")]),
-            ]
             for i, li in enumerate(lost_items, 1):
                 li_data.append([
-                    Paragraph(str(i),                     tbl_c),
-                    Paragraph(li.get("item_name", "—"),   tbl_l),
+                    Paragraph(str(i), tbl_c),
+                    Paragraph(li.get("item_name", "—"), tbl_l),
                     Paragraph(str(li.get("quantity", 1)), tbl_c),
-                    Paragraph(li.get("notes") or "—",     tbl_l),
+                    Paragraph(li.get("notes") or "—", tbl_l),
                 ])
-            li_tbl = Table(li_data, colWidths=[8*mm, 80*mm, 20*mm, W-108*mm], repeatRows=1)
-            li_tbl.setStyle(TableStyle(li_style))
-            story += [li_tbl, Spacer(1, 4)]
-            story.append(Paragraph(
-                "The above items were reported lost/missing by the department during clearance. "
-                "The trainee is responsible for settlement before issuance of academic documents.",
-                ParagraphStyle("li_note", parent=base["Normal"], fontSize=7,
-                               textColor=colors.grey, italics=1)))
-            story.append(Spacer(1, 10))
+            li_tbl = Table(li_data, colWidths=[8*mm, 70*mm, 16*mm, W-94*mm], repeatRows=1)
+            li_tbl.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), MID),
+                ("GRID", (0, 0), (-1, -1), 0.5, DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                ("ALIGN", (2, 0), (2, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]))
+            story += [li_tbl, Spacer(1, 6)]
 
-        # Physical senior-office signature blocks (manual stamp on printed form)
-        story.append(HRFlowable(width="100%", thickness=1, color=DARK, spaceAfter=8))
-        story.append(Paragraph("FINAL INSTITUTIONAL CLEARANCE", lft10b))
+        # QR + reference ABOVE physical signature table
+        import os as _os2
+        base_url   = _os2.environ.get("APP_BASE_URL", "") or request.host_url.rstrip("/")
+        verify_url = f"{base_url}/clearance/verify/{serial}"
+
+        qr_cell = Paragraph("Scan to verify", ctr9)
+        try:
+            import qrcode
+            qr = qrcode.QRCode(version=1, box_size=4, border=1)
+            qr.add_data(verify_url)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            qr_buf = _io.BytesIO()
+            img.save(qr_buf, format="PNG")
+            qr_buf.seek(0)
+            qr_cell = RLImage(qr_buf, width=26*mm, height=26*mm)
+        except Exception:
+            pass
+
+        verify_block = [
+            Paragraph("REFERENCE NUMBER", ParagraphStyle(
+                "refh", parent=lft9b, fontSize=8, textColor=colors.HexColor("#444444"))),
+            Paragraph(serial, mono_maroon),
+            Paragraph("Scan QR before stamping to confirm authenticity.", ctr9),
+            Paragraph(verify_url, ParagraphStyle(
+                "vu", parent=ctr9, fontName="Courier", fontSize=7)),
+        ]
+        verify_tbl = Table([[verify_block, qr_cell]], colWidths=[W - 30*mm, 30*mm])
+        verify_tbl.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.8, DARK),
+            ("BACKGROUND", (0, 0), (-1, -1), LGREY),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("ALIGN", (1, 0), (1, 0), "CENTER"),
+        ]))
+        story.append(Paragraph("VERIFICATION", lft10b))
+        story.append(Spacer(1, 3))
+        story.append(verify_tbl)
         story.append(Spacer(1, 8))
 
-        line = "_" * 28
+        # Physical senior-office signature blocks — generous pen room
+        story.append(Paragraph("FINAL INSTITUTIONAL CLEARANCE (PHYSICAL)", lft10b))
+        story.append(Spacer(1, 3))
+
+        line = "_" * 22
         final_hdr = [
-            Paragraph("Final Office", tbl_h),
+            Paragraph("Office", tbl_h),
             Paragraph("Signature", tbl_h),
             Paragraph("Date", tbl_h),
             Paragraph("Official Stamp", tbl_h),
@@ -2148,7 +2310,7 @@ def certificate_pdf(request_id):
             else:
                 sig = line
                 dt = line
-                stamp = line
+                stamp = "[ Stamp ]"
             final_data.append([
                 Paragraph(f"<b>{label}</b>", tbl_l),
                 Paragraph(sig, tbl_c),
@@ -2157,43 +2319,43 @@ def certificate_pdf(request_id):
             ])
         final_tbl = Table(
             final_data,
-            colWidths=[55*mm, (W - 55*mm) / 3, (W - 55*mm) / 3, (W - 55*mm) / 3],
+            colWidths=[52*mm, (W - 52*mm) / 3, (W - 52*mm) / 3, (W - 52*mm) / 3],
         )
         final_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), MID),
             ("TEXTCOLOR", (0, 0), (-1, 0), HDRTXT),
-            ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+            ("GRID", (0, 0), (-1, -1), 0.6, DARK),
             ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LGREY]),
+            ("TOPPADDING", (0, 0), (-1, 0), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+            ("TOPPADDING", (0, 1), (-1, -1), 14),
+            ("BOTTOMPADDING", (0, 1), (-1, -1), 16),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         story.append(final_tbl)
         story.append(Spacer(1, 8))
 
-        # Footer
-        import os as _os2
-        base_url   = _os2.environ.get("APP_BASE_URL", "")
-        verify_url = f"{base_url}/clearance/verify/{serial}" if base_url else f"/clearance/verify/{serial}"
-        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=3))
+        story.append(HRFlowable(width="100%", thickness=0.6, color=DARK, spaceAfter=3))
         story.append(Paragraph(
-            f"Generated: {datetime.now().strftime('%d %B %Y %H:%M')}  "
-            f"Serial: {serial}  Verify at: {verify_url}",
+            f"Generated: {datetime.now().strftime('%d %B %Y')}  ·  "
+            f"Live clearance status is shown only on the verify page.",
             ctr9))
 
-        # Watermark
+        # Watermark: CLEARED only when fully approved; otherwise subtle form mark
         _serial_wm = serial
+        _is_final = cr.get("status") == "completed"
+        _wm_label = "CLEARED" if _is_final else "TTTI FINAL CLEARANCE FORM"
 
         def _wm(canvas_obj, doc_obj):
             canvas_obj.saveState()
-            canvas_obj.setFont("Helvetica-Bold", 40)
-            canvas_obj.setFillColorRGB(0.75, 0.75, 0.75, alpha=0.15)
+            canvas_obj.setFont("Helvetica-Bold", 48 if _is_final else 28)
+            canvas_obj.setFillColorRGB(0.55, 0.55, 0.55, alpha=0.10 if _is_final else 0.08)
             canvas_obj.translate(A4[0]/2, A4[1]/2)
             canvas_obj.rotate(45)
-            canvas_obj.drawCentredString(0, 20,  "TTTI FINAL CLEARANCE FORM")
-            canvas_obj.drawCentredString(0, -30, _serial_wm)
+            canvas_obj.drawCentredString(0, 12, _wm_label)
+            canvas_obj.setFont("Helvetica", 11)
+            canvas_obj.drawCentredString(0, -22, _serial_wm)
             canvas_obj.restoreState()
 
         pdf.build(story, onFirstPage=_wm, onLaterPages=_wm)

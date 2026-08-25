@@ -83,11 +83,11 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import mm
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.platypus import (
         SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-        HRFlowable, Image as RLImage, KeepTogether,
+        HRFlowable, Image as RLImage,
     )
 
     buf = io.BytesIO()
@@ -180,7 +180,6 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
     qr_cell = Paragraph("", lft9)
     try:
         import qrcode
-        from PIL import Image as PILImage
         qr = qrcode.QRCode(version=1, box_size=4, border=1)
         qr.add_data(verify_url)
         qr.make(fit=True)
@@ -192,18 +191,16 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
     except Exception:
         qr_cell = Paragraph("Scan to verify<br/>(see URL below)", ctr9)
 
-    co_status = company_cert_label(cert.get("company_certification_status"))
     serial_block = [
         Paragraph("CERTIFICATE NUMBER", lft9b),
         Paragraph(cert_no, mono),
         Spacer(1, 4),
-        Paragraph("System status: <b>Attachment Completed</b>", lft9),
-        Paragraph(f"Company certification: <b>{co_status}</b>", lft9),
+        Paragraph("Scan QR to view live verification status.", lft9),
     ]
     serial_tbl = Table([[serial_block, qr_cell]], colWidths=[W - 34 * mm, 34 * mm])
     serial_tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f0fdf4")),
-        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#86efac")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#166534")),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (-1, -1), 10),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -256,28 +253,28 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
         body,
     ))
     story.append(Spacer(1, 14))
-    story.append(HRFlowable(width="100%", thickness=1, color=DARK, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1, color=GREEN, spaceAfter=8))
 
     line = "_" * 28
 
-    def _sig_box(title, name_prefill=""):
+    def _sig_box(title, name_prefill="", stamp=False):
         half = W / 2 - 4 * mm
         name_line = name_prefill or line
         rows = [
             [Paragraph(f"<b>{title}</b>", lft9b)],
-            [Spacer(1, 6)],
+            [Spacer(1, 8)],
             [Paragraph(f"Name:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{name_line}", lft9)],
-            [Spacer(1, 4)],
+            [Spacer(1, 8)],
             [Paragraph(f"Signature:&nbsp;{line}", lft9)],
-            [Spacer(1, 4)],
+            [Spacer(1, 8)],
             [Paragraph(f"Date:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{line}", lft9)],
         ]
-        if "Company" in title:
+        if stamp:
             rows += [
-                [Spacer(1, 6)],
+                [Spacer(1, 8)],
                 [Paragraph("Company Stamp", lft9b)],
                 [Paragraph(
-                    "<font color='#94a3b8'>[ Stamp area ]</font>",
+                    "<font color='#64748b'>[ Stamp area ]</font>",
                     ParagraphStyle("stamp", parent=lft9, alignment=TA_CENTER),
                 )],
             ]
@@ -285,8 +282,8 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
         t.setStyle(TableStyle([
             ("TOPPADDING", (0, 0), (-1, -1), 2),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-            ("BOX", (0, 0), (-1, -1), 0.6, BORDER),
-            ("BACKGROUND", (0, 0), (0, 0), MID),
+            ("BOX", (0, 0), (-1, -1), 0.7, GREEN),
+            ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#f0fdf4")),
             ("LEFTPADDING", (0, 0), (-1, -1), 8),
             ("RIGHTPADDING", (0, 0), (-1, -1), 8),
             ("TOPPADDING", (0, 0), (0, 0), 6),
@@ -294,22 +291,25 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
         ]))
         return t
 
-    story.append(Paragraph("COMPANY CERTIFICATION", lft10b))
-    story.append(Spacer(1, 6))
     company_box = _sig_box(
         "Company Supervisor",
         cert.get("supervisor_name") or line,
+        stamp=True,
     )
-    story.append(company_box)
-    story.append(Spacer(1, 12))
-
-    story.append(Paragraph("INSTITUTION VERIFICATION", lft10b))
-    story.append(Spacer(1, 6))
     liaison_box = _sig_box(
         "Industrial Liaison Officer",
         cert.get("liaison_officer_name") or line,
+        stamp=False,
     )
-    story.append(liaison_box)
+    dual = Table([[company_box, liaison_box]], colWidths=[W / 2 - 2 * mm, W / 2 - 2 * mm])
+    dual.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(Paragraph("COMPANY CERTIFICATION &amp; INSTITUTION VERIFICATION", lft10b))
+    story.append(Spacer(1, 6))
+    story.append(dual)
     story.append(Spacer(1, 12))
 
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=4))
@@ -319,8 +319,7 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
         ctr9,
     ))
     story.append(Paragraph(
-        "This document is system-generated. Company certification status is shown separately "
-        "and becomes Verified only after the signed/stamped copy is recorded.",
+        "System-generated certificate. Live company certification status is shown only on the verify page.",
         ctr9,
     ))
 
@@ -328,8 +327,8 @@ def build_certificate_pdf_bytes(cert: dict) -> bytes:
 
     def _wm(canvas_obj, doc_obj):
         canvas_obj.saveState()
-        canvas_obj.setFont("Helvetica-Bold", 28)
-        canvas_obj.setFillColorRGB(0.75, 0.75, 0.75, alpha=0.12)
+        canvas_obj.setFont("Helvetica-Bold", 30)
+        canvas_obj.setFillColorRGB(0.0, 0.4, 0.0, alpha=0.07)
         canvas_obj.translate(A4[0] / 2, A4[1] / 2)
         canvas_obj.rotate(45)
         canvas_obj.drawCentredString(0, 20, "TTTI IA CERTIFICATE")

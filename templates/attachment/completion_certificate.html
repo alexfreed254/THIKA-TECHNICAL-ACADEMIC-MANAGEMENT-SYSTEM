@@ -4,81 +4,190 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IA Completion Certificate — {{ cert.certificate_number }}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
-    .page { max-width: 860px; margin: 20px auto; background: #fff; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      background: #e5e5e5;
+      color: #111;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .page {
+      max-width: 820px;
+      margin: 20px auto;
+      background: #fff;
+      box-shadow: 0 2px 14px rgba(0,0,0,.12);
+    }
     .print-bar {
-      background: #0f2c54; color: #fff; padding: 12px 24px;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-    }
-    .print-bar span { font-size: 13px; opacity: .85; }
-    .btn {
-      padding: 8px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 700;
-      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #14532d;
       color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
     }
-    .btn-green { background: #16a34a; }
-    .btn-blue { background: #2563eb; }
-    .cert { padding: 36px 44px; }
-    .cert-header {
-      display: flex; align-items: center; gap: 16px;
-      border-bottom: 3px solid #006600; padding-bottom: 18px; margin-bottom: 22px;
+    .print-bar span { font-size: 12px; opacity: .9; }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #14532d;
+      background: #fff;
     }
-    .cert-logo { width: 76px; height: 76px; object-fit: contain; flex-shrink: 0; }
-    .cert-school { flex: 1; text-align: center; }
-    .cert-school h1 { font-size: 17px; font-weight: 800; color: #006600; text-transform: uppercase; line-height: 1.2; }
-    .cert-school p  { font-size: 11px; color: #6b7280; margin-top: 3px; }
-    .cert-title { text-align: center; margin: 10px 0 18px; }
-    .cert-title h2 { font-size: 14px; font-weight: 800; color: #1e3a5f; text-transform: uppercase; }
-
-    .serial-qr-row {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
-      padding: 14px 18px; margin-bottom: 22px; gap: 20px;
+    .screen-status {
+      font-family: Arial, Helvetica, sans-serif;
+      padding: 8px 20px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 1px solid #d1d5db;
+      background: #f0fdf4;
     }
-    .serial-block h3 { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
-    .serial-num {
-      font-family: monospace; font-size: 20px; font-weight: 800; color: #15803d;
-      letter-spacing: .06em; margin: 4px 0;
-    }
-    .status-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .pill {
-      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 4px;
     }
     .pill-ok { background: #dcfce7; color: #166534; }
     .pill-warn { background: #fef3c7; color: #92400e; }
-    #qrcode { width: 90px; height: 90px; flex-shrink: 0; }
 
-    .intro { font-size: 14px; color: #334155; margin-bottom: 14px; }
-    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
-    .info-table td { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
-    .info-table .lbl { color: #64748b; font-weight: 600; width: 38%; }
-    .body-text { font-size: 13.5px; color: #334155; line-height: 1.6; margin: 14px 0 22px; }
-
-    .section-title {
-      font-size: 13px; font-weight: 800; color: #0f2c54; text-transform: uppercase;
-      letter-spacing: .04em; border-bottom: 2px solid #0f2c54; padding-bottom: 6px; margin: 20px 0 12px;
+    .cert { padding: 28px 36px 32px; }
+    .cert-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 2.5px solid #006600;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
     }
-    .sig-row { display: flex; gap: 18px; flex-wrap: wrap; }
+    .cert-logo { width: 68px; height: 68px; object-fit: contain; flex-shrink: 0; }
+    .cert-school { flex: 1; text-align: center; }
+    .cert-school h1 {
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #006600;
+      letter-spacing: .04em;
+    }
+    .cert-school p { font-size: 10px; color: #444; margin-top: 2px; }
+    .cert-title { text-align: center; margin: 8px 0 16px; }
+    .cert-title h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #111;
+    }
+
+    .serial-qr-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border: 1px solid #166534;
+      background: #f0fdf4;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+    }
+    .serial-block h3 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #444;
+      font-weight: 700;
+    }
+    .serial-num {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #166534;
+      letter-spacing: .06em;
+      margin: 4px 0;
+    }
+    .verify-hint { font-size: 10px; color: #555; }
+    #qrcode { width: 88px; height: 88px; flex-shrink: 0; }
+
+    .intro { font-size: 12.5px; margin-bottom: 10px; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+    .info-table td {
+      padding: 6px 8px;
+      font-size: 12px;
+      border: 1px solid #111;
+    }
+    .info-table .lbl { width: 34%; font-weight: 700; color: #333; background: #f7f7f7; }
+    .body-text { font-size: 12px; line-height: 1.55; margin: 12px 0 18px; }
+
+    .sig-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
     .sig-block {
-      flex: 1; min-width: 240px; border: 1px solid #e5e7eb; border-radius: 8px;
-      padding: 14px; background: #fafafa;
+      flex: 1;
+      min-width: 240px;
+      border: 1px solid #166534;
+      padding: 14px 14px 18px;
+      background: #fff;
     }
-    .sig-role { font-size: 11px; font-weight: 800; color: #0F2744; text-transform: uppercase; margin-bottom: 12px; }
-    .sig-field { font-size: 12px; color: #374151; margin: 10px 0; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+    .sig-role {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #14532d;
+      background: #f0fdf4;
+      margin: -14px -14px 14px;
+      padding: 8px 14px;
+      border-bottom: 1px solid #166534;
+    }
+    .sig-field {
+      font-size: 12px;
+      margin: 14px 0;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+      min-height: 22px;
+    }
     .stamp-box {
-      margin-top: 14px; border: 1.5px dashed #94a3b8; border-radius: 6px; min-height: 56px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; color: #94a3b8; font-style: italic;
+      margin-top: 16px;
+      border: 1px dashed #666;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #666;
+      font-style: italic;
     }
-    .footer-note { margin-top: 24px; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }
+    .footer-note {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid #111;
+      font-size: 10px;
+      color: #555;
+      text-align: center;
+      line-height: 1.5;
+    }
 
     @media print {
-      .print-bar { display: none !important; }
+      .print-bar, .screen-status { display: none !important; }
       body { background: #fff; }
-      .page { margin: 0; box-shadow: none; }
+      .page { margin: 0; box-shadow: none; max-width: none; }
+      .cert { padding: 12mm 14mm; }
+      .serial-num { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
@@ -87,11 +196,20 @@
   <div class="print-bar">
     <span>{{ cert.certificate_number }} · Industrial Attachment Completion</span>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a class="btn btn-green" href="{{ url_for('attachment_certificate.certificate_pdf', attachment_id=att.id) }}">
+      <a class="btn" href="{{ url_for('attachment_certificate.certificate_pdf', attachment_id=att.id) }}">
         Download PDF
       </a>
-      <button class="btn btn-blue" type="button" onclick="window.print()">Print</button>
+      <button class="btn" type="button" onclick="window.print()">Print</button>
     </div>
+  </div>
+
+  {# Status strip — screen / admin preview only; stripped from print & PDF #}
+  <div class="screen-status">
+    <span class="pill pill-ok">System: Attachment Completed</span>
+    {% set cs = cert.company_certification_status or 'pending_company_stamp' %}
+    <span class="pill {{ 'pill-ok' if cs == 'verified' else 'pill-warn' }}">
+      Company: {{ company_cert_label(cs) }}
+    </span>
   </div>
 
   <div class="cert">
@@ -112,13 +230,7 @@
       <div class="serial-block">
         <h3>Certificate Number</h3>
         <div class="serial-num">{{ cert.certificate_number }}</div>
-        <div class="status-pills">
-          <span class="pill pill-ok">System: Attachment Completed</span>
-          {% set cs = cert.company_certification_status or 'pending_company_stamp' %}
-          <span class="pill {{ 'pill-ok' if cs == 'verified' else 'pill-warn' }}">
-            Company: {{ company_cert_label(cs) }}
-          </span>
-        </div>
+        <div class="verify-hint">Scan QR for live verification status.</div>
       </div>
       <div id="qrcode"></div>
     </div>
@@ -146,7 +258,6 @@
       acquired practical skills and competencies related to the programme.
     </p>
 
-    <div class="section-title">Company Certification</div>
     <div class="sig-row">
       <div class="sig-block">
         <div class="sig-role">Company Supervisor</div>
@@ -155,10 +266,6 @@
         <div class="sig-field">Date: __________________</div>
         <div class="stamp-box">Company Stamp</div>
       </div>
-    </div>
-
-    <div class="section-title">Institution Verification</div>
-    <div class="sig-row">
       <div class="sig-block">
         <div class="sig-role">Industrial Liaison Officer</div>
         <div class="sig-field">Name: {{ cert.liaison_officer_name or '__________________' }}</div>
@@ -168,9 +275,7 @@
     </div>
 
     <p class="footer-note">
-      System-generated certificate. Company certification remains
-      <strong>{{ company_cert_label(cert.company_certification_status) }}</strong>
-      until the printed certificate is stamped and the scan is uploaded for liaison verification.<br>
+      System-generated certificate. Live company certification status is shown only on the verify page.<br>
       Verify at: {{ verify_url }}
     </p>
   </div>
@@ -178,11 +283,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
-  QRCode.toCanvas(document.createElement('canvas'), {{ verify_url|tojson }}, {
-    width: 90, margin: 1
-  }, function (err, canvas) {
+  QRCode.toCanvas(document.createElement('canvas'), "{{ verify_url | safe }}", {
+    width: 88, margin: 1, color: { dark: '#14532d', light: '#ffffff' }
+  }, function(err, canvas) {
     if (!err) document.getElementById('qrcode').appendChild(canvas);
-    else document.getElementById('qrcode').innerHTML = '<small>QR unavailable</small>';
   });
 </script>
 </body>
