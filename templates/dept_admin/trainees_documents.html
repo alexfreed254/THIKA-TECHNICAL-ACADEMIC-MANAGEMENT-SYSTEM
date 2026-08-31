@@ -6,8 +6,8 @@
 <style>
   /* Modern SaaS / Glassmorphism Design System */
   :root {
-    --brand-50: #f0f7ff;
-    --brand-100: #e0effe;
+    --brand-50: #eff6ff;
+    --brand-100: #dbeafe;
     --brand-500: #3b82f6;
     --brand-600: #2563eb;
     --brand-700: #1d4ed8;
@@ -89,7 +89,7 @@
   .search-card label {
     font-size: 11px;
     font-weight: 700;
-    color: var(--slate-500);
+    color: var(--slate-600);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     display: flex;
@@ -118,7 +118,7 @@
 
   .btn-search {
     padding: 10px 20px;
-    background: var(--slate-900);
+    background: var(--brand-600);
     color: #ffffff;
     border: none;
     border-radius: var(--radius-md);
@@ -133,7 +133,7 @@
   }
 
   .btn-search:hover {
-    background: var(--brand-600);
+    background: var(--brand-700);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
   }
@@ -161,7 +161,7 @@
 
   .page-summary {
     font-size: 13.5px;
-    color: var(--slate-500);
+    color: var(--slate-600);
     margin-bottom: 20px;
   }
 
@@ -188,7 +188,7 @@
   .student-card:hover {
     box-shadow: var(--shadow-hover);
     transform: translateY(-4px);
-    border-color: var(--brand-200, #bfdbfe);
+    border-color: var(--brand-500);
   }
 
   .student-card-hdr {
@@ -202,7 +202,7 @@
     width: 46px;
     height: 46px;
     border-radius: 50%;
-    background: var(--slate-100);
+    background: var(--brand-50);
     color: var(--brand-600);
     border: 2px solid var(--brand-100);
     font-size: 18px;
@@ -223,7 +223,7 @@
 
   .student-adm {
     font-size: 12px;
-    color: var(--slate-500);
+    color: var(--slate-600);
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -231,7 +231,7 @@
 
   .student-class {
     font-size: 12px;
-    color: var(--slate-500);
+    color: var(--slate-600);
     margin-top: 2px;
     display: flex;
     align-items: center;
@@ -261,7 +261,7 @@
 
   .fill-complete { background: var(--emerald-500); }
   .fill-partial  { background: var(--amber-500); }
-  .fill-empty    { background: var(--slate-200); }
+  .fill-empty    { background: var(--slate-300); }
 
   .progress-label {
     font-size: 12px;
@@ -278,16 +278,16 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 3px 10px;
+    padding: 4px 10px;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
   }
 
-  .s-pending  { background: var(--amber-50); color: var(--amber-700); border: 1px solid rgba(245, 158, 11, 0.2); }
-  .s-approved { background: var(--emerald-50); color: var(--emerald-700); border: 1px solid rgba(16, 185, 129, 0.2); }
-  .s-rejected { background: var(--rose-50); color: var(--rose-700); border: 1px solid rgba(244, 63, 94, 0.2); }
+  .s-pending  { background: var(--amber-50); color: var(--amber-700); border: 1px solid rgba(245, 158, 11, 0.3); }
+  .s-approved { background: var(--emerald-50); color: var(--emerald-700); border: 1px solid rgba(16, 185, 129, 0.3); }
+  .s-rejected { background: var(--rose-50); color: var(--rose-700); border: 1px solid rgba(244, 63, 94, 0.3); }
 
   /* Action Buttons */
   .btn-view-student {
@@ -296,21 +296,23 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 10px;
-    background: var(--slate-900);
-    color: #ffffff;
+    padding: 11px;
+    background: var(--brand-600);
+    color: #ffffff !important;
     border-radius: var(--radius-md);
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 600;
     text-decoration: none;
     margin-top: 6px;
     box-sizing: border-box;
     transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
   }
 
   .btn-view-student:hover {
-    background: var(--brand-600);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    background: var(--brand-700);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
   }
 
   /* Empty State */
@@ -325,7 +327,7 @@
   .empty-state i {
     font-size: 44px;
     margin-bottom: 12px;
-    color: var(--slate-300);
+    color: var(--slate-400);
     display: block;
   }
 
@@ -345,7 +347,7 @@
     <h1 style="font-size:22px;font-weight:800;color:var(--slate-900);margin:0 0 6px;display:flex;align-items:center;gap:10px;letter-spacing:-0.02em">
       <i class="fas fa-file-alt" style="color:var(--brand-600)"></i>Trainees Documents
     </h1>
-    <p style="color:var(--slate-500);font-size:13.5px;margin:0">
+    <p style="color:var(--slate-600);font-size:13.5px;margin:0">
       Click on a trainee to view and verify their uploaded registration documents.
     </p>
   </div>
@@ -396,7 +398,7 @@
         </div>
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <span style="font-size:12px;color:var(--slate-500);font-weight:500">
+          <span style="font-size:12px;color:var(--slate-600);font-weight:500">
             {{ s.uploaded }} doc{{ 's' if s.uploaded != 1 else '' }} uploaded
           </span>
           <span class="status-pill s-{{ s.overall_status }}">
