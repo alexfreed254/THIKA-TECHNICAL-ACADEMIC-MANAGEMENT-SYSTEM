@@ -4,175 +4,842 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Dept Admin{% endblock %} | TTTI Department Portal</title>
+
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/base.css">
+
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Your external base CSS (optional) -->
+  <link rel="stylesheet" href="/static/css/base.css">
+
+  <!-- CSRF Token -->
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+
   {% block extra_head %}{% endblock %}
+  {% block extra_style %}{% endblock %}
+
   <style>
-    /* ── Dept Admin: deep royal blue ─────────────────────────── */
-    .sidebar {
-      background: linear-gradient(180deg, #0a0f1e 0%, #0f1f40 45%, #0d1b35 100%);
-      /* One scroll: logo + institute + dept + role move with the menu */
-      overflow-y: auto;
-      overflow-x: hidden;
+    /* ============================================================
+       1. CSS CUSTOM PROPERTIES (Theming)
+       ============================================================ */
+    :root {
+      /* Sidebar */
+      --sidebar-bg-start: #080d1a;
+      --sidebar-bg-mid:   #0e1b38;
+      --sidebar-bg-end:   #0a1428;
+      --sidebar-link-color:        rgba(243, 244, 246, 0.85);
+      --sidebar-link-hover-bg:    linear-gradient(90deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.02) 100%);
+      --sidebar-link-active-bg:   linear-gradient(90deg, rgba(251, 191, 36, 0.22) 0%, rgba(251, 191, 36, 0.05) 100%);
+      --sidebar-link-active-color: #ffffff;
+      --sidebar-link-icon-bg:     rgba(255, 255, 255, 0.08);
+      --sidebar-link-icon-border: rgba(255, 255, 255, 0.12);
+      --sidebar-link-icon-color:  inherit;
+      --sidebar-section-color:    #fbbf24;
+      --sidebar-section-opacity:  0.95;
+      --sidebar-footer-border:    rgba(255, 255, 255, 0.1);
+
+      /* Top bar */
+      --topbar-border: #f1f5f9;
+      --topbar-title:  #0f172a;
+
+      /* Flash messages */
+      --flash-success-bg:   #f0fdf4;
+      --flash-success-text: #15803d;
+      --flash-success-border: #16a34a;
+      --flash-error-bg:     #fef2f2;
+      --flash-error-text:   #991b1b;
+      --flash-error-border: #dc2626;
+      --flash-warning-bg:   #fffbeb;
+      --flash-warning-text: #92400e;
+      --flash-warning-border:#d97706;
+      --flash-info-bg:      #f0f9ff;
+      --flash-info-text:    #0e7490;
+      --flash-info-border:  #0891b2;
+
+      /* Notification panel */
+      --notif-panel-bg:        #ffffff;
+      --notif-panel-border:    #e2e8f0;
+      --notif-unread-bg:       #f0f9ff;
+      --notif-unread-border:   #2563eb;
+      --notif-hover-bg:        #f8fafc;
+      --notif-title-color:     #0f172a;
+      --notif-msg-color:       #64748b;
+      --notif-time-color:      #94a3b8;
+      --notif-link-color:      #2563eb;
+
+      /* General */
+      --body-bg: #f8fafc;
+      --main-bg: #ffffff;
+      --transition-curve: cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Branding block — scrolls away with nav (not sticky/pinned) */
+    /* Dark mode overrides */
+    body.dark-mode {
+      --sidebar-bg-start: #060a12;
+      --sidebar-bg-mid:   #0a1324;
+      --sidebar-bg-end:   #070d18;
+      --sidebar-link-color: rgba(243, 244, 246, 0.8);
+      --topbar-border: #1e293b;
+      --topbar-title:  #f8fafc;
+      --body-bg: #0f172a;
+      --main-bg: #1e293b;
+      --flash-success-bg:   #14231a;
+      --flash-success-text: #86efac;
+      --flash-error-bg:     #2c1517;
+      --flash-error-text:   #fca5a5;
+      --flash-warning-bg:   #2a2012;
+      --flash-warning-text: #fcd34d;
+      --flash-info-bg:      #112534;
+      --flash-info-text:    #7dd3fc;
+      --notif-panel-bg:     #1e293b;
+      --notif-panel-border: #334155;
+      --notif-unread-bg:    #172a46;
+      --notif-unread-border:#3b82f6;
+      --notif-hover-bg:     #273549;
+      --notif-title-color:  #f8fafc;
+      --notif-msg-color:    #94a3b8;
+      --notif-time-color:   #64748b;
+      --notif-link-color:   #60a5fa;
+    }
+
+    /* ============================================================
+       2. RESET & BASE LAYOUT
+       ============================================================ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--body-bg);
+      color: #334155;
+      transition: background 0.25s var(--transition-curve), color 0.25s var(--transition-curve);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+    body.dark-mode {
+      color: #cbd5e1;
+    }
+
+    /* Custom Scrollbar for Sidebar */
+    .sidebar::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+    }
+    .sidebar::-webkit-scrollbar-thumb:hover {
+      background: rgba(251, 191, 36, 0.4);
+    }
+
+    /* ============================================================
+       3. SIDEBAR
+       ============================================================ */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 280px;
+      background: linear-gradient(180deg,
+      var(--sidebar-bg-start) 0%,
+      var(--sidebar-bg-mid) 45%,
+      var(--sidebar-bg-end) 100%);
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      transition: transform 0.3s var(--transition-curve);
+      transform: translateX(-100%);
+      box-shadow: 4px 0 25px rgba(0,0,0,0.25);
+      will-change: transform;
+    }
+    /* open state (mobile) */
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    /* Sidebar header */
     .sidebar-header {
-      position: static;
       flex-shrink: 0;
-      padding: 22px 18px 16px;
+      padding: 24px 18px 18px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0, 0, 0, 0.12);
     }
     .sidebar-header img {
-      height: 64px;
-      width: 64px;
+      height: 68px;
+      width: 68px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(251,191,36,0.4);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: transform 0.3s var(--transition-curve);
+    }
+    .sidebar-header img:hover {
+      transform: scale(1.05);
     }
     .sidebar-header h2 {
+      font-family: 'Poppins', sans-serif;
       font-size: 12px;
-      letter-spacing: .04em;
-      margin: 0;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #ffffff;
+      margin: 10px 0 0;
+      line-height: 1.35;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
     .sidebar-header .dept-label {
       font-size: 11px;
       font-weight: 700;
-      color: #fbbf24;
+      color: var(--sidebar-section-color);
       margin-top: 8px;
       text-transform: uppercase;
-      letter-spacing: .5px;
+      letter-spacing: 0.6px;
       line-height: 1.35;
     }
     .sidebar-header .role-badge {
       margin-top: 10px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: inline-block;
+      backdrop-filter: blur(4px);
     }
 
-    /* Section labels — brighter, clearly separated */
+    /* Sidebar menu container */
+    .sidebar-menu {
+      flex: 1 0 auto;
+      padding: 12px 12px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow: visible;
+    }
+
+    /* Section headings */
     .menu-section {
-      padding: 18px 10px 7px;
+      padding: 20px 12px 6px;
       font-size: 9.5px;
       font-weight: 800;
       letter-spacing: 1.8px;
       text-transform: uppercase;
-      color: #fbbf24;
-      opacity: .85;
+      color: var(--sidebar-section-color);
+      opacity: var(--sidebar-section-opacity);
+      position: relative;
     }
     .menu-section::after {
-      background: linear-gradient(90deg, rgba(251,191,36,.35), rgba(255,255,255,.04));
+      content: '';
+      display: block;
+      height: 1px;
+      margin-top: 8px;
+      background: linear-gradient(90deg, rgba(251,191,36,0.4), rgba(255,255,255,0.02));
     }
 
-    /* Menu items — no nested scroll so header moves with sidebar */
-    .sidebar-menu {
-      padding: 10px 10px 28px;
-      gap: 8px;
-      overflow: visible;
-      flex: 1 0 auto;
-    }
+    /* Individual menu items */
     .sidebar-menu a {
-      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
       font-size: 13.5px;
       font-weight: 500;
-      color: rgba(255,255,255,.85);
+      color: var(--sidebar-link-color);
+      text-decoration: none;
       border-radius: 10px;
-      letter-spacing: .01em;
-      align-items: flex-start;
-      line-height: 1.45;
-      min-height: 48px;
-      overflow: visible;
+      line-height: 1.4;
+      min-height: 46px;
       white-space: normal;
-      gap: 12px;
+      word-break: break-word;
+      transition: all 0.2s var(--transition-curve);
+      border-left: 3px solid transparent;
+      background: transparent;
+      position: relative;
     }
-
-    /* Icon badges — stay top-aligned when label wraps */
+    /* Icon wrapper */
     .sidebar-menu a i {
-      width: 32px;
-      height: 32px;
-      min-width: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
       font-size: 13px;
       border-radius: 8px;
-      background: rgba(255,255,255,.1);
-      border: 1px solid rgba(255,255,255,.1);
-      margin-top: 1px;
+      background: var(--sidebar-link-icon-bg);
+      border: 1px solid var(--sidebar-link-icon-border);
+      color: var(--sidebar-link-icon-color);
+      transition: all 0.2s var(--transition-curve);
     }
-
-    /* Extra breathing room under Industrial Attachment heading */
-    .sidebar-menu .menu-section.menu-section-attachments {
-      margin-top: 6px;
-      margin-bottom: 4px;
-      padding-bottom: 10px;
+    /* Hover & active states */
+    .sidebar-menu a:hover {
+      background: var(--sidebar-link-hover-bg);
+      border-left-color: rgba(251,191,36,0.5);
+      color: #ffffff;
+      transform: translateX(3px);
     }
-    .sidebar-menu .menu-section.menu-section-attachments ~ a {
-      margin-bottom: 2px;
-    }
-
-    /* Hover / active */
-    .sidebar-menu a:hover,
     .sidebar-menu a.active {
-      background: rgba(251,191,36,.13);
-      border-left-color: #fbbf24;
-      color: #fff;
+      background: var(--sidebar-link-active-bg);
+      border-left-color: var(--sidebar-section-color);
+      color: var(--sidebar-link-active-color);
+      font-weight: 600;
+      box-shadow: inset 1px 0 0 rgba(251,191,36,0.3);
     }
     .sidebar-menu a:hover i,
     .sidebar-menu a.active i {
-      background: rgba(251,191,36,.25);
-      border-color: rgba(251,191,36,.4);
-      color: #fbbf24;
+      background: rgba(251,191,36,0.25);
+      border-color: rgba(251,191,36,0.5);
+      color: var(--sidebar-section-color);
+      transform: scale(1.05);
     }
 
-    .topbar { border-bottom: 2px solid #fef3c7; }
-    .topbar-title { color: #111827; }
+    /* Footer (clearance form) */
+    .sidebar-footer {
+      flex-shrink: 0;
+      padding: 12px 14px 12px;
+      border-top: 1px solid var(--sidebar-footer-border);
+      background: rgba(0, 0, 0, 0.15);
+      margin-top: auto;
+    }
+    .sidebar-footer .clearance-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sidebar-footer .clearance-form {
+      display: flex;
+      gap: 6px;
+    }
+    .sidebar-footer .clearance-form input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      font-size: 11px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .sidebar-footer .clearance-form input:focus {
+      border-color: var(--sidebar-section-color);
+      background: rgba(0, 0, 0, 0.4);
+    }
+    .sidebar-footer .clearance-form input::placeholder {
+      color: rgba(255,255,255,0.35);
+    }
+    .sidebar-footer .clearance-form button {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 7px;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s var(--transition-curve);
+    }
+    .sidebar-footer .clearance-form button:hover {
+      background: rgba(251,191,36,0.25);
+      border-color: var(--sidebar-section-color);
+      color: var(--sidebar-section-color);
+    }
 
+    /* Sidebar toggle & overlay */
+    .sidebar-toggle {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 1100;
+      background: var(--sidebar-bg-mid);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      transition: all 0.2s var(--transition-curve);
+      display: none;
+    }
+    .sidebar-toggle:hover {
+      background: #1a2a4a;
+      transform: scale(1.05);
+    }
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 999;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s var(--transition-curve);
+    }
+    .sidebar-overlay.open {
+      display: block;
+      opacity: 1;
+    }
+
+    /* ============================================================
+       4. MAIN CONTENT
+       ============================================================ */
+    .main-content {
+      margin-left: 280px;
+      min-height: 100vh;
+      background: var(--main-bg);
+      transition: background 0.25s var(--transition-curve), margin-left 0.3s var(--transition-curve);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      background: var(--main-bg);
+      border-bottom: 1px solid var(--topbar-border);
+      flex-wrap: wrap;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    }
+    .topbar-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--topbar-title);
+      letter-spacing: -0.025em;
+    }
+    .topbar-user {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--topbar-title);
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.03);
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+    body.dark-mode .topbar-user {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .topbar-logout {
+      color: var(--topbar-title);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      opacity: 0.7;
+      transition: all 0.2s var(--transition-curve);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    .topbar-logout:hover {
+      opacity: 1;
+      color: #dc2626;
+      background: rgba(220, 38, 38, 0.08);
+    }
+
+    /* Flash messages */
     .flash-success, .flash-error, .flash-warning, .flash-info {
-      display: flex; align-items: center; gap: 12px;
-      padding: 13px 22px; font-size: 13.5px; font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      margin: 20px 32px 0;
+      font-size: 13.5px;
+      font-weight: 500;
       border-left: 4px solid;
+      border-radius: 8px;
+      background: var(--flash-success-bg);
+      color: var(--flash-success-text);
+      border-left-color: var(--flash-success-border);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      animation: fadeInAlert 0.3s var(--transition-curve);
     }
-    .flash-success { background:#f0fdf4;color:#15803d;border-left-color:#16a34a; }
-    .flash-error   { background:#fef2f2;color:#991b1b;border-left-color:#dc2626; }
-    .flash-warning { background:#fffbeb;color:#92400e;border-left-color:#d97706; }
-    .flash-info    { background:#f0f9ff;color:#0e7490;border-left-color:#0891b2; }
+    .flash-error {
+      background: var(--flash-error-bg);
+      color: var(--flash-error-text);
+      border-left-color: var(--flash-error-border);
+    }
+    .flash-warning {
+      background: var(--flash-warning-bg);
+      color: var(--flash-warning-text);
+      border-left-color: var(--flash-warning-border);
+    }
+    .flash-info {
+      background: var(--flash-info-bg);
+      color: var(--flash-info-text);
+      border-left-color: var(--flash-info-border);
+    }
+    @keyframes fadeInAlert {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-    /* ── Notification dropdown ───────────────────────── */
-    .notif-wrapper { position:relative; }
+    /* Main content */
+    main {
+      flex: 1;
+      padding: 28px 32px 48px;
+    }
+
+    /* ============================================================
+       5. NOTIFICATION DROPDOWN
+       ============================================================ */
+    .notif-wrapper {
+      position: relative;
+    }
+    .notification-bell {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: var(--topbar-title);
+      cursor: pointer;
+      position: relative;
+      padding: 8px;
+      border-radius: 50%;
+      transition: background 0.2s var(--transition-curve);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .notification-bell:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    body.dark-mode .notification-bell:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .notification-badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: #ef4444;
+      color: #ffffff;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 0 5px;
+      min-width: 17px;
+      height: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-shadow: 0 0 0 2px var(--main-bg);
+    }
     .notif-panel {
-      position:absolute; right:0; top:calc(100% + 10px);
-      width:340px; background:#fff;
-      border:1px solid #e5e7eb; border-radius:14px;
-      box-shadow:0 12px 40px rgba(0,0,0,0.18); z-index:9999; overflow:hidden;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 12px);
+      width: 360px;
+      background: var(--notif-panel-bg);
+      border: 1px solid var(--notif-panel-border);
+      border-radius: 14px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      z-index: 9999;
+      overflow: hidden;
+      animation: dropIn 0.2s var(--transition-curve);
     }
-    .notif-panel-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 12px; border-bottom:1px solid #f3f4f6; }
-    .notif-panel-ttl { font-weight:700; color:#111827; font-size:14px; }
-    .notif-mark-all-btn { font-size:12px; color:#1565c0; background:none; border:none; cursor:pointer; font-weight:600; padding:0; }
-    .notif-mark-all-btn:hover { text-decoration:underline; }
-    .notif-list { max-height:360px; overflow-y:auto; }
-    .notif-item { display:flex; gap:10px; padding:11px 14px; border-bottom:1px solid #f9fafb; cursor:pointer; transition:background .15s; text-decoration:none; color:inherit; }
-    .notif-item:hover { background:#eff6ff; }
-    .notif-item.unread { background:#dbeafe; border-left:3px solid #1565c0; }
-    .notif-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; }
-    .notif-icon.info    { background:#dbeafe; color:#1d4ed8; }
-    .notif-icon.success { background:#dcfce7; color:#15803d; }
-    .notif-icon.warning { background:#fef3c7; color:#b45309; }
-    .notif-icon.error   { background:#fee2e2; color:#b91c1c; }
-    .notif-body { flex:1; min-width:0; }
-    .notif-title { font-size:13px; font-weight:600; color:#111827; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .notif-msg   { font-size:12px; color:#6b7280; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .notif-time  { font-size:11px; color:#9ca3af; margin-top:3px; }
-    .notif-dot   { width:8px; height:8px; background:#1565c0; border-radius:50%; flex-shrink:0; margin-top:4px; }
-    .notif-view-all-link { display:block; text-align:center; padding:11px; font-size:13px; font-weight:600; color:#1565c0; border-top:1px solid #f3f4f6; text-decoration:none; }
-    .notif-view-all-link:hover { background:#eff6ff; }
-    .notif-empty  { padding:28px 16px; text-align:center; color:#9ca3af; font-size:13px; }
-    .notif-loading { padding:20px; text-align:center; color:#9ca3af; font-size:13px; }
+    @keyframes dropIn {
+      from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .notif-panel-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--notif-panel-border);
+      background: rgba(0,0,0,0.01);
+    }
+    .notif-panel-ttl {
+      font-weight: 700;
+      color: var(--notif-title-color);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .notif-mark-all-btn {
+      font-size: 12px;
+      color: var(--notif-link-color);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .notif-mark-all-btn:hover {
+      background: rgba(37, 99, 235, 0.08);
+      text-decoration: none;
+    }
+    .notif-list {
+      max-height: 360px;
+      overflow-y: auto;
+    }
+    .notif-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--notif-panel-border);
+      cursor: pointer;
+      transition: background 0.15s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .notif-item:hover {
+      background: var(--notif-hover-bg);
+    }
+    .notif-item.unread {
+      background: var(--notif-unread-bg);
+      border-left: 3px solid var(--notif-unread-border);
+    }
+    .notif-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+    .notif-icon.info    { background: #dbeafe; color: #1d4ed8; }
+    .notif-icon.success { background: #dcfce7; color: #15803d; }
+    .notif-icon.warning { background: #fef3c7; color: #b45309; }
+    .notif-icon.error   { background: #fee2e2; color: #b91c1c; }
+    .notif-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .notif-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--notif-title-color);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .notif-msg {
+      font-size: 12px;
+      color: var(--notif-msg-color);
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .notif-time {
+      font-size: 11px;
+      color: var(--notif-time-color);
+      margin-top: 4px;
+    }
+    .notif-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--notif-unread-border);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .notif-view-all-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--notif-link-color);
+      border-top: 1px solid var(--notif-panel-border);
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .notif-view-all-link:hover {
+      background: var(--notif-hover-bg);
+    }
+    .notif-empty {
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--notif-time-color);
+      font-size: 13px;
+    }
+    .notif-loading {
+      padding: 24px;
+      text-align: center;
+      color: var(--notif-time-color);
+      font-size: 14px;
+    }
 
-    {% block extra_style %}{% endblock %}
+    /* ============================================================
+       6. TOAST CONTAINER
+       ============================================================ */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 380px;
+      width: calc(100% - 48px);
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 14px 18px;
+      border-radius: 10px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+      animation: slideIn 0.3s var(--transition-curve);
+      font-size: 13.5px;
+      border-left: 4px solid #3b82f6;
+    }
+    .toast-success { border-left-color: #22c55e; }
+    .toast-error   { border-left-color: #ef4444; }
+    .toast-warning { border-left-color: #f59e0b; }
+    .toast-info    { border-left-color: #3b82f6; }
+    .toast-msg {
+      flex: 1;
+      line-height: 1.4;
+    }
+    .toast-close {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.5);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .toast-close:hover {
+      color: #ffffff;
+    }
+    .toast-out {
+      opacity: 0;
+      transform: translateX(30px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       7. RESPONSIVE
+       ============================================================ */
+    @media (max-width: 768px) {
+      .sidebar-toggle {
+        display: block;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+      }
+      .topbar {
+        padding: 12px 16px;
+      }
+      .topbar-title {
+        font-size: 17px;
+      }
+      .topbar-user {
+        font-size: 12px;
+        padding: 4px 8px;
+      }
+      .topbar-logout-label {
+        display: none;
+      }
+      main {
+        padding: 18px 16px;
+      }
+      .flash-success, .flash-error, .flash-warning, .flash-info {
+        margin: 12px 16px 0;
+      }
+      .notif-panel {
+        width: calc(100vw - 32px);
+        right: -50px;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .sidebar {
+        transform: translateX(0) !important;
+      }
+      .sidebar-overlay {
+        display: none !important;
+      }
+      .sidebar-toggle {
+        display: none !important;
+      }
+    }
+
+    /* ============================================================
+       8. UTILITY & SAFETY
+       ============================================================ */
+    .sidebar-menu .sub-menu {
+      background: transparent;
+    }
+    .sidebar-menu .sub-menu a {
+      background: transparent;
+      padding-left: 48px;
+    }
+    .sidebar-menu .sub-menu a:hover,
+    .sidebar-menu .sub-menu a.active {
+      background: var(--sidebar-link-hover-bg);
+    }
   </style>
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-  <script src="/static/js/secure-dom.js" defer></script>
-  <script src="/static/js/csrf.js" defer></script>
 </head>
+
 <body>
 {% include 'partials/official_header.html' %}
 
 <div id="toast-container"></div>
-<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">
+  <i class="fas fa-bars"></i>
+</button>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="dashboard-container">
@@ -186,15 +853,18 @@
         <i class="fas fa-sitemap" aria-hidden="true"></i> {{ department_name }}
       </div>
       {% endif %}
-      <div class="role-badge"><i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp; Dept Admin / HOD</div>
+      <div class="role-badge">
+        <i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp; Dept Admin / HOD
+      </div>
     </div>
 
     <div class="sidebar-menu">
-
+      <!-- Overview -->
       <div class="menu-section">Overview</div>
       <a href="/dept-admin/welcome"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
       <a href="/dept-admin/trainees-documents"><i class="fas fa-file-alt fa-fw"></i> Trainee Documents</a>
 
+      <!-- Department Management -->
       <div class="menu-section">Department Management</div>
       <a href="/dept-admin/courses"><i class="fas fa-graduation-cap fa-fw"></i> Courses</a>
       <a href="/dept-admin/classes"><i class="fas fa-door-open fa-fw"></i> Classes</a>
@@ -204,18 +874,21 @@
       <a href="/dept-admin/assign-units"><i class="fas fa-link fa-fw"></i> Assign Units</a>
       <a href="/dept-admin/credentials"><i class="fas fa-key fa-fw"></i> Manage Credentials</a>
 
+      <!-- Attendance & Assessment -->
       <div class="menu-section">Attendance &amp; Assessment</div>
       <a href="/dept-admin/attendance"><i class="fas fa-calendar-check fa-fw"></i> Unit Attendance</a>
       <a href="/dept-admin/class-list"><i class="fas fa-list-ol fa-fw"></i> Class List</a>
       <a href="/dept-admin/trainee-search"><i class="fas fa-search fa-fw"></i> Attendance Search</a>
       <a href="/dept-admin/assessment-sheet"><i class="fas fa-file-alt fa-fw"></i> Assessment Sheets</a>
 
+      <!-- Exams & Results -->
       <div class="menu-section">Exams &amp; Results</div>
       <a href="/dept-admin/exam-bookings"><i class="fas fa-calendar-alt fa-fw"></i> Exam Booking Approvals</a>
       <a href="/dept-admin/marks"><i class="fas fa-chart-line fa-fw"></i> Marks Reports</a>
       <a href="/dept-admin/trainer-documents"><i class="fas fa-folder-open fa-fw"></i> Trainer POE</a>
       <a href="/dept-admin/trainee-poe"><i class="fas fa-folder-open fa-fw"></i> Trainee POE</a>
 
+      <!-- Summative Assessment -->
       <div class="menu-section">Summative Assessment</div>
       <a href="/summative/"><i class="fas fa-th-large fa-fw"></i> Overview</a>
       <a href="/summative/entry"><i class="fas fa-edit fa-fw"></i> Competence Entry</a>
@@ -223,43 +896,42 @@
       <a href="/summative/reports"><i class="fas fa-download fa-fw"></i> Reports &amp; Downloads</a>
       <a href="/summative/graduation-list"><i class="fas fa-user-graduate fa-fw"></i> Graduation List</a>
 
+      <!-- Academic Trips -->
       <div class="menu-section">Academic Trips</div>
       <a href="/academic-trips"><i class="fas fa-bus fa-fw"></i> Trip Reports</a>
 
+      <!-- Industrial Attachment -->
       <div class="menu-section menu-section-attachments">Industrial Attachment</div>
-      <a href="/dept-admin/attachments"><i class="fas fa-file-signature fa-fw"></i> <span>Attachment Approvals</span></a>
-      <a href="/dept-admin/attachment-marks"><i class="fas fa-star-half-alt fa-fw"></i> <span>Attachment Marks</span></a>
-      <a href="/dept-admin/mentoring-tools"><i class="fas fa-file-pdf fa-fw"></i> <span>Mentoring Tool / Logbooks</span></a>
-      <a href="/dept-admin/gis-tracking"><i class="fas fa-map-marked-alt fa-fw"></i> <span>GIS &amp; Tracking</span></a>
-      <a href="/dept-admin/logbooks"><i class="fas fa-book-open fa-fw"></i> <span>Digital Logbooks</span></a>
-      <a href="/dept-admin/companies"><i class="fas fa-building fa-fw"></i> <span>Industry Partners</span></a>
-      <a href="/dept-admin/fingerprint-registration"><i class="fas fa-fingerprint fa-fw"></i> <span>Fingerprint Registration</span></a>
+      <a href="/dept-admin/attachments"><i class="fas fa-file-signature fa-fw"></i> Attachment Approvals</a>
+      <a href="/dept-admin/attachment-marks"><i class="fas fa-star-half-alt fa-fw"></i> Attachment Marks</a>
+      <a href="/dept-admin/mentoring-tools"><i class="fas fa-file-pdf fa-fw"></i> Mentoring Tool / Logbooks</a>
+      <a href="/dept-admin/gis-tracking"><i class="fas fa-map-marked-alt fa-fw"></i> GIS &amp; Tracking</a>
+      <a href="/dept-admin/logbooks"><i class="fas fa-book-open fa-fw"></i> Digital Logbooks</a>
+      <a href="/dept-admin/companies"><i class="fas fa-building fa-fw"></i> Industry Partners</a>
+      <a href="/dept-admin/fingerprint-registration"><i class="fas fa-fingerprint fa-fw"></i> Fingerprint Registration</a>
 
+      <!-- Administration -->
       <div class="menu-section">Administration</div>
       <a href="/clearance/approver"><i class="fas fa-clipboard-check fa-fw"></i> Clearance Approvals</a>
       <a href="/dept-admin/notices"><i class="fas fa-bullhorn fa-fw"></i> Send Notice / Memo</a>
       <a href="/dept-admin/import"><i class="fas fa-file-excel fa-fw"></i> Import Data</a>
 
+      <!-- Account -->
       <div class="menu-section">Account</div>
       <a href="/auth/profile"><i class="fas fa-user-circle fa-fw"></i> My Profile</a>
       <a href="#" onclick="toggleTheme();return false"><i class="fas fa-moon fa-fw"></i> <span id="themeLabel">Dark Mode</span></a>
-
     </div>
 
     <div class="sidebar-footer">
       {% include 'partials/sidebar_zoom.html' %}
-      <div style="padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px">
-        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+      <div style="padding:10px 0 8px; border-bottom:1px solid var(--sidebar-footer-border); margin-bottom:8px;">
+        <div class="clearance-label">
           <i class="fas fa-shield-halved"></i> Verify Clearance
         </div>
-        <form action="/clearance/verify" method="post" style="display:flex;gap:5px">
+        <form action="/clearance/verify" method="post" class="clearance-form">
           <input type="text" name="serial_number"
-                 style="flex:1;padding:6px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:11px;font-family:monospace;outline:none"
                  placeholder="Serial no…" autocomplete="off" autocapitalize="characters">
-          <button type="submit"
-                  style="padding:6px 10px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:7px;color:#fff;cursor:pointer;font-size:12px">
-            <i class="fas fa-search"></i>
-          </button>
+          <button type="submit"><i class="fas fa-search"></i></button>
         </form>
       </div>
     </div>
@@ -268,7 +940,7 @@
   <div class="main-content">
     <header class="topbar">
       <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
-      <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         {% include 'partials/digital_clock.html' %}
         <div class="notif-wrapper" id="notifWrapper">
           <button class="notification-bell" id="notifBell" title="Notifications" aria-expanded="false" aria-haspopup="true">
@@ -277,11 +949,11 @@
           </button>
           <div class="notif-panel" id="notifPanel" hidden>
             <div class="notif-panel-hdr">
-              <span class="notif-panel-ttl"><i class="fas fa-bell" style="color:#1565c0;margin-right:6px;font-size:13px;"></i>Notifications</span>
+              <span class="notif-panel-ttl"><i class="fas fa-bell" style="color:var(--notif-link-color);font-size:13px;"></i>Notifications</span>
               <button class="notif-mark-all-btn" id="notifMarkAll">Mark all read</button>
             </div>
             <div class="notif-list" id="notifList">
-              <div class="notif-loading"><i class="fas fa-spinner fa-spin"></i></div>
+              <div class="notif-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
             </div>
             <a href="/notifications" class="notif-view-all-link">View all notifications <i class="fas fa-arrow-right" style="font-size:11px;"></i></a>
           </div>
@@ -298,12 +970,12 @@
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for cat, msg in messages %}
-      <div class="flash-{{ 'success' if cat == 'success' else 'error' if cat in ('error','danger') else 'warning' if cat == 'warning' else 'info' }}">
-        <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat in ('error','danger') %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
-        {{ msg }}
-      </div>
-      {% endfor %}
+    {% for cat, msg in messages %}
+    <div class="flash-{{ 'success' if cat == 'success' else 'error' if cat in ('error','danger') else 'warning' if cat == 'warning' else 'info' }}">
+      <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat in ('error','danger') %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+      {{ msg }}
+    </div>
+    {% endfor %}
     {% endwith %}
 
     <main>{% block content %}{% endblock %}</main>
@@ -313,99 +985,115 @@
 <div id="spa-page-scripts">{% block scripts %}{% endblock %}</div>
 
 <script>
-  const toggle  = document.getElementById('sidebarToggle');
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('open');    toggle.innerHTML = '<i class="fas fa-times"></i>'; }
-  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); toggle.innerHTML = '<i class="fas fa-bars"></i>'; }
-  toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
-  overlay.addEventListener('click', closeSidebar);
+  // ── Sidebar toggle ──────────────────────────────────────────────────────
+  (function() {
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
 
-  const path = window.location.pathname;
-  let activeLink = null;
-  document.querySelectorAll('.sidebar-menu a').forEach(a => {
-    a.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
-    const href = a.getAttribute('href');
-    if (!href || href === '#') return;
-    const linkUrl = new URL(href, window.location.origin);
-    const samePath = path === linkUrl.pathname;
-    const pathStarts = linkUrl.pathname.length > 1 && path.startsWith(linkUrl.pathname);
-    const queryMatches = !linkUrl.search || window.location.search === linkUrl.search;
-    if ((samePath || pathStarts) && queryMatches) {
-      a.classList.add('active');
-      activeLink = activeLink || a;
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('open');
+      toggle.innerHTML = '<i class="fas fa-times"></i>';
     }
-  });
-  if (activeLink) activeLink.scrollIntoView({ block: 'nearest' });
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+      toggle.innerHTML = '<i class="fas fa-bars"></i>';
+    }
 
+    toggle.addEventListener('click', () => {
+      sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    });
+    overlay.addEventListener('click', closeSidebar);
+
+    // Auto-close on mobile after link click
+    document.querySelectorAll('.sidebar-menu a').forEach(a => {
+      a.addEventListener('click', () => {
+        if (window.innerWidth <= 768) closeSidebar();
+      });
+    });
+  })();
+
+  // ── Active link highlight ──────────────────────────────────────────────
+  (function() {
+    const path = window.location.pathname;
+    let activeLink = null;
+    document.querySelectorAll('.sidebar-menu a').forEach(a => {
+      const href = a.getAttribute('href');
+      if (!href || href === '#') return;
+      const linkUrl = new URL(href, window.location.origin);
+      const samePath = path === linkUrl.pathname;
+      const pathStarts = linkUrl.pathname.length > 1 && path.startsWith(linkUrl.pathname);
+      const queryMatches = !linkUrl.search || window.location.search === linkUrl.search;
+      if ((samePath || pathStarts) && queryMatches) {
+        a.classList.add('active');
+        activeLink = activeLink || a;
+      }
+    });
+    if (activeLink) activeLink.scrollIntoView({ block: 'nearest' });
+  })();
+
+  // ── Theme toggle ────────────────────────────────────────────────────────
   function toggleTheme() {
     const isDark = document.body.classList.toggle('dark-mode');
-    document.getElementById('themeLabel').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    const themeLabel = document.getElementById('themeLabel');
+    if (themeLabel) themeLabel.textContent = isDark ? 'Light Mode' : 'Dark Mode';
     localStorage.setItem('ttti_theme', isDark ? 'dark' : 'light');
   }
+  // Restore saved theme
   if (localStorage.getItem('ttti_theme') === 'dark') {
     document.body.classList.add('dark-mode');
     const lbl = document.getElementById('themeLabel');
     if (lbl) lbl.textContent = 'Light Mode';
   }
 
+  // ── Toast system ─────────────────────────────────────────────────────────
   window.showToast = function(msg, type = 'info', duration = 4000) {
     const icons = { success:'check-circle', error:'exclamation-circle', warning:'exclamation-triangle', info:'info-circle' };
     const t = document.createElement('div');
     t.className = `toast toast-${type}`;
-    t.innerHTML = `<i class="fas fa-${icons[type]||icons.info}"></i><span class="toast-msg">${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
-    document.getElementById('toast-container').appendChild(t);
-    setTimeout(() => { t.classList.add('toast-out'); setTimeout(() => t.remove(), 300); }, duration);
+    t.innerHTML = `
+        <i class="fas fa-${icons[type] || icons.info}"></i>
+        <span class="toast-msg">${msg}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+      `;
+    const container = document.getElementById('toast-container');
+    if (container) container.appendChild(t);
+    setTimeout(() => {
+      t.classList.add('toast-out');
+      setTimeout(() => t.remove(), 300);
+    }, duration);
   };
 
-  // ── Notification dropdown ──────────────────────────────────────────────────
-  (function () {
-    const bell       = document.getElementById('notifBell');
-    const panel      = document.getElementById('notifPanel');
-    const badge      = document.getElementById('notifBadge');
-    const list       = document.getElementById('notifList');
-    const markAllBtn = document.getElementById('notifMarkAll');
-    if (!bell) return;
-    const ICONS = { info:'info-circle', success:'check-circle', warning:'exclamation-triangle', error:'exclamation-circle' };
-    function timeAgo(iso) {
-      if (!iso) return '';
-      const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
-      if (diff < 60) return 'just now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
+  // ── Notification dropdown ───────────────────────────────────────────────
+  (function() {
+    const bell = document.getElementById('notifBell');
+    const panel = document.getElementById('notifPanel');
+    const wrapper = document.getElementById('notifWrapper');
+
+    if (!bell || !panel) return;
+
+    function toggleNotifications(e) {
+      e.stopPropagation();
+      const isHidden = panel.hasAttribute('hidden');
+      if (isHidden) {
+        panel.removeAttribute('hidden');
+        bell.setAttribute('aria-expanded', 'true');
+      } else {
+        panel.setAttribute('hidden', '');
+        bell.setAttribute('aria-expanded', 'false');
+      }
     }
-    function setBadge(count) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = count > 0 ? '' : 'none'; }
-    function renderList(items) {
-      if (!items || !items.length) { list.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:22px;margin-bottom:6px;display:block;"></i>No notifications yet</div>'; return; }
-      list.innerHTML = items.map(n => {
-        const icon = ICONS[n.type] || 'info-circle';
-        const url = safeUrl(n.action_url);
-        const uc   = n.is_read ? '' : 'unread';
-        const dot  = n.is_read ? '' : '<div class="notif-dot"></div>';
-        const title = escHtml(n.title||'');
-        const msg   = escHtml(n.message||'');
-        return `<a href="${url}" class="notif-item ${uc}" data-id="${n.id}">
-          <div class="notif-icon ${n.type||'info'}"><i class="fas fa-${icon}"></i></div>
-          <div class="notif-body"><div class="notif-title">${title}</div><div class="notif-msg">${msg}</div><div class="notif-time">${timeAgo(n.created_at)}</div></div>${dot}</a>`;
-      }).join('');
-      list.querySelectorAll('.notif-item').forEach(item => {
-        item.addEventListener('click', function () {
-          if (!this.classList.contains('unread')) return;
-          fetch('/notifications/' + this.dataset.id + '/read', { method:'POST', headers:{'Content-Type':'application/json'} })
-            .then(r => r.json()).then(d => { if (d.success) { this.classList.remove('unread'); const dot = this.querySelector('.notif-dot'); if (dot) dot.remove(); setBadge(Math.max(0, (parseInt(badge.textContent)||0)-1)); }}).catch(()=>{});
-        });
-      });
-    }
-    function loadRecent() {
-      list.innerHTML = '<div class="notif-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
-      fetch('/notifications/recent').then(r=>r.json()).then(data=>{renderList(data.notifications);setBadge(data.unread_count);}).catch(()=>{list.innerHTML='<div class="notif-empty">Could not load notifications.</div>';});
-    }
-    bell.addEventListener('click', function(e) { e.stopPropagation(); const nowOpen=panel.hidden; panel.hidden=!nowOpen; bell.setAttribute('aria-expanded',nowOpen); if(nowOpen)loadRecent(); });
-    markAllBtn.addEventListener('click', function() { fetch('/notifications/mark-all-read',{method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).then(()=>{setBadge(0);loadRecent();}).catch(()=>{}); });
-    document.addEventListener('click', function(e) { if(!panel.hidden&&!document.getElementById('notifWrapper').contains(e.target)){panel.hidden=true;bell.setAttribute('aria-expanded','false');} });
-    let lastCount = parseInt(badge.textContent)||0;
-    setInterval(function() { fetch('/notifications/count').then(r=>r.json()).then(d=>{const nc=d.count||0;if(nc>lastCount)showToast('You have '+nc+' unread notification'+(nc>1?'s':'')+'.','info',5000);lastCount=nc;setBadge(nc);if(!panel.hidden)loadRecent();}).catch(()=>{}); }, 30000);
+
+    bell.addEventListener('click', toggleNotifications);
+
+    document.addEventListener('click', function(e) {
+      if (wrapper && !wrapper.contains(e.target)) {
+        panel.setAttribute('hidden', '');
+        bell.setAttribute('aria-expanded', 'false');
+      }
+    });
   })();
 </script>
 </body>
