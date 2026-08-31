@@ -6,21 +6,32 @@
 :root {
 --primary: #0f2c54;
 --primary-hover: #1e40af;
+--primary-light: #3b82f6;
 --accent: #f59e0b;
 --accent-light: rgba(245, 158, 11, 0.15);
+--accent-glow: rgba(245, 158, 11, 0.4);
 --surface: #ffffff;
+--surface-elevated: #fafbfc;
 --background: #f8fafc;
+--background-subtle: #f1f5f9;
 --border: #e2e8f0;
 --border-subtle: #f1f5f9;
+--border-strong: #cbd5e1;
 --text-main: #0f172a;
+--text-secondary: #334155;
 --text-muted: #64748b;
+--text-light: #94a3b8;
 --ring-color: rgba(59, 130, 246, 0.25);
 
 --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
 --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
---shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
---shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+--shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+--shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+--shadow-xl: 0 20px 50px -12px rgb(0 0 0 / 0.15);
+--shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+
 --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+--transition-slow: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .am-wrap {
@@ -32,17 +43,17 @@ color: var(--text-main);
 box-sizing: border-box;
 }
 
-/* Modern Glass Hero Header */
+/* Premium Glass Hero Header */
 .am-hero {
-background: linear-gradient(135deg, #0b1f3a 0%, #0f2c54 45%, #1e40af 100%);
-border-radius: 20px;
-padding: 32px;
-margin-bottom: 24px;
+background: linear-gradient(135deg, #0a1e3d 0%, #0f2c54 40%, #1e40af 100%);
+border-radius: 24px;
+padding: 40px;
+margin-bottom: 28px;
 color: #ffffff;
 position: relative;
 overflow: hidden;
-box-shadow: 0 12px 24px -6px rgba(15, 44, 84, 0.25);
-border: 1px solid rgba(255, 255, 255, 0.1);
+box-shadow: 0 20px 40px -10px rgba(15, 44, 84, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .am-hero::before {
@@ -50,9 +61,20 @@ content: '';
 position: absolute;
 inset: 0;
 background:
-radial-gradient(circle at 90% 10%, rgba(245, 158, 11, 0.18), transparent 40%),
-radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.15), transparent 40%);
+radial-gradient(circle at 85% 15%, rgba(245, 158, 11, 0.2), transparent 45%),
+radial-gradient(circle at 15% 85%, rgba(59, 130, 246, 0.18), transparent 45%),
+radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03), transparent 70%);
 pointer-events: none;
+}
+
+.am-hero::after {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 1px;
+background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
 }
 
 .am-hero-top {
@@ -61,87 +83,113 @@ align-items: center;
 justify-content: space-between;
 flex-wrap: wrap;
 gap: 16px;
-margin-bottom: 28px;
+margin-bottom: 32px;
 position: relative;
 z-index: 1;
 }
 
 .am-hero h1 {
-font-size: 24px;
+font-size: 26px;
 font-weight: 800;
 margin: 0;
 display: flex;
 align-items: center;
-gap: 12px;
+gap: 14px;
 color: #ffffff;
-letter-spacing: -0.025em;
+letter-spacing: -0.03em;
+text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .am-hero h1 i {
 color: var(--accent);
-filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.3));
+filter: drop-shadow(0 2px 8px rgba(245, 158, 11, 0.4));
+animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+0%, 100% { filter: drop-shadow(0 2px 8px rgba(245, 158, 11, 0.4)); }
+50% { filter: drop-shadow(0 2px 12px rgba(245, 158, 11, 0.6)); }
 }
 
 .am-hero p {
-font-size: 14px;
+font-size: 14.5px;
 color: #93c5fd;
-margin: 6px 0 0 0;
+margin: 8px 0 0 0;
 font-weight: 400;
 letter-spacing: -0.01em;
 }
 
-/* KPI Cards Structure */
+/* Enhanced KPI Cards */
 .am-kpis {
 display: grid;
-grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 gap: 16px;
 position: relative;
 z-index: 1;
 }
 
 .am-kpi {
-background: rgba(255, 255, 255, 0.07);
-backdrop-filter: blur(12px);
--webkit-backdrop-filter: blur(12px);
-border: 1px solid rgba(255, 255, 255, 0.14);
-border-radius: 14px;
-padding: 16px 20px;
+background: rgba(255, 255, 255, 0.08);
+backdrop-filter: blur(16px);
+-webkit-backdrop-filter: blur(16px);
+border: 1px solid rgba(255, 255, 255, 0.15);
+border-radius: 16px;
+padding: 20px 24px;
+transition: var(--transition);
+position: relative;
+overflow: hidden;
+}
+
+.am-kpi::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 2px;
+background: linear-gradient(90deg, var(--accent), var(--primary-light));
+opacity: 0;
 transition: var(--transition);
 }
 
 .am-kpi:hover {
-transform: translateY(-3px);
+transform: translateY(-4px);
 background: rgba(255, 255, 255, 0.12);
 border-color: rgba(255, 255, 255, 0.25);
-box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.am-kpi:hover::before {
+opacity: 1;
 }
 
 .am-kpi-num {
-font-size: 30px;
+font-size: 32px;
 font-weight: 800;
 color: #ffffff;
 line-height: 1;
 letter-spacing: -0.03em;
+text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .am-kpi-lbl {
-font-size: 11px;
-color: rgba(255, 255, 255, 0.75);
-margin-top: 8px;
+font-size: 11.5px;
+color: rgba(255, 255, 255, 0.8);
+margin-top: 10px;
 font-weight: 700;
 text-transform: uppercase;
-letter-spacing: 0.08em;
+letter-spacing: 0.1em;
 }
 
-/* Weight Legend Section */
+/* Refined Weight Legend */
 .wt-legend {
 display: flex;
 gap: 12px;
 flex-wrap: wrap;
-font-size: 12px;
+font-size: 12.5px;
 color: rgba(255, 255, 255, 0.95);
-margin-top: 24px;
-padding-top: 20px;
+margin-top: 28px;
+padding-top: 24px;
 border-top: 1px solid rgba(255, 255, 255, 0.12);
 position: relative;
 z-index: 1;
@@ -151,140 +199,167 @@ z-index: 1;
 display: inline-flex;
 align-items: center;
 gap: 8px;
-background: rgba(0, 0, 0, 0.22);
-padding: 5px 12px;
-border-radius: 20px;
-border: 1px solid rgba(255, 255, 255, 0.08);
-backdrop-filter: blur(4px);
-font-weight: 500;
+background: rgba(0, 0, 0, 0.25);
+padding: 6px 14px;
+border-radius: 24px;
+border: 1px solid rgba(255, 255, 255, 0.1);
+backdrop-filter: blur(6px);
+font-weight: 600;
+transition: var(--transition);
+}
+
+.wt-item:hover {
+background: rgba(0, 0, 0, 0.35);
+border-color: rgba(255, 255, 255, 0.2);
+transform: translateY(-1px);
 }
 
 .wt-dot {
 width: 8px;
 height: 8px;
 border-radius: 50%;
-box-shadow: 0 0 6px currentColor;
+box-shadow: 0 0 8px currentColor;
 }
 
-/* Enhanced Toolbar */
+/* Premium Toolbar */
 .am-toolbar {
 background: var(--surface);
-border-radius: 16px;
+border-radius: 18px;
 border: 1px solid var(--border);
 box-shadow: var(--shadow-sm);
-padding: 14px 18px;
-margin-bottom: 24px;
+padding: 16px 20px;
+margin-bottom: 28px;
 display: flex;
 align-items: center;
 gap: 16px;
 flex-wrap: wrap;
+transition: var(--transition);
+}
+
+.am-toolbar:hover {
+box-shadow: var(--shadow-md);
 }
 
 .am-search-wrap {
 position: relative;
 flex: 1;
-min-width: 260px;
+min-width: 280px;
 }
 
 .am-search-wrap i {
 position: absolute;
-left: 14px;
+left: 16px;
 top: 50%;
 transform: translateY(-50%);
 color: var(--text-muted);
 font-size: 14px;
 transition: var(--transition);
+pointer-events: none;
 }
 
 .am-search {
 width: 100%;
-padding: 10px 14px 10px 40px;
-border: 1px solid var(--border);
-border-radius: 10px;
-font-size: 13.5px;
+padding: 12px 16px 12px 44px;
+border: 2px solid var(--border);
+border-radius: 12px;
+font-size: 14px;
 outline: none;
 color: var(--text-main);
 background: var(--background);
 transition: var(--transition);
 box-sizing: border-box;
+font-weight: 500;
+}
+
+.am-search::placeholder {
+color: var(--text-light);
+font-weight: 400;
 }
 
 .am-search:focus {
 background: #ffffff;
-border-color: #3b82f6;
-box-shadow: 0 0 0 4px var(--ring-color);
+border-color: var(--primary-light);
+box-shadow: 0 0 0 4px var(--ring-color), var(--shadow-glow);
 }
 
 .am-search:focus + i {
-color: #3b82f6;
+color: var(--primary-light);
 }
 
 .am-chips {
 display: flex;
 gap: 4px;
-background: #f1f5f9;
-padding: 4px;
-border-radius: 10px;
-border: 1px solid var(--border-subtle);
+background: var(--background-subtle);
+padding: 5px;
+border-radius: 12px;
+border: 1px solid var(--border);
 }
 
 .am-chip {
-padding: 7px 16px;
-border-radius: 8px;
-font-size: 12.5px;
-font-weight: 600;
+padding: 8px 18px;
+border-radius: 10px;
+font-size: 13px;
+font-weight: 700;
 cursor: pointer;
 border: none;
 background: transparent;
 color: var(--text-muted);
 transition: var(--transition);
+position: relative;
 }
 
 .am-chip:hover {
 color: var(--text-main);
+background: rgba(255, 255, 255, 0.5);
 }
 
 .am-chip.active {
 background: var(--surface);
 color: var(--primary);
-box-shadow: var(--shadow-xs);
+box-shadow: var(--shadow-sm);
 }
 
-/* Card & Dynamic Table */
+/* Enhanced Card Design */
 .am-card {
 background: var(--surface);
-border-radius: 16px;
+border-radius: 20px;
 border: 1px solid var(--border);
 box-shadow: var(--shadow-sm);
 overflow: hidden;
+transition: var(--transition);
+}
+
+.am-card:hover {
+box-shadow: var(--shadow-md);
 }
 
 .am-card-head {
-background: var(--surface);
+background: var(--surface-elevated);
 border-bottom: 1px solid var(--border);
 color: var(--text-main);
-padding: 18px 24px;
-font-size: 15px;
-font-weight: 700;
+padding: 20px 28px;
+font-size: 16px;
+font-weight: 800;
 display: flex;
 align-items: center;
-gap: 10px;
+gap: 12px;
 letter-spacing: -0.01em;
 }
 
 .am-card-head i {
 color: var(--primary);
+font-size: 18px;
 }
 
 .am-card-head .row-count {
 margin-left: auto;
-font-size: 12px;
-font-weight: 600;
+font-size: 12.5px;
+font-weight: 700;
 color: var(--text-muted);
-background: #f1f5f9;
-border-radius: 20px;
-padding: 4px 12px;
-border: 1px solid var(--border-subtle);
+background: var(--background-subtle);
+border-radius: 24px;
+padding: 6px 14px;
+border: 1px solid var(--border);
 }
 
 .am-tbl-wrap {
@@ -297,16 +372,19 @@ border-collapse: collapse;
 }
 
 .am-tbl thead th {
-background: #f8fafc;
-padding: 14px 16px;
+background: var(--background-subtle);
+padding: 16px 18px;
 text-align: left;
-font-size: 11px;
-font-weight: 700;
+font-size: 11.5px;
+font-weight: 800;
 color: var(--text-muted);
 text-transform: uppercase;
-letter-spacing: 0.06em;
-border-bottom: 1px solid var(--border);
+letter-spacing: 0.08em;
+border-bottom: 2px solid var(--border);
 white-space: nowrap;
+position: sticky;
+top: 0;
+z-index: 10;
 }
 
 .am-tbl thead th.ctr {
@@ -314,9 +392,9 @@ text-align: center;
 }
 
 .am-tbl tbody td {
-padding: 16px;
+padding: 18px;
 border-bottom: 1px solid var(--border-subtle);
-font-size: 13.5px;
+font-size: 14px;
 color: var(--text-main);
 vertical-align: middle;
 }
@@ -326,11 +404,11 @@ border-bottom: none;
 }
 
 .am-tbl tbody tr {
-transition: background-color 0.15s ease;
+transition: var(--transition);
 }
 
 .am-tbl tbody tr:hover td {
-background: #f8fafc;
+background: var(--background-subtle);
 }
 
 .am-tbl tbody tr[data-hidden="1"] {
@@ -341,76 +419,134 @@ display: none;
 font-weight: 700;
 color: var(--text-main);
 letter-spacing: -0.01em;
+font-size: 14.5px;
 }
 
 .stu-adm {
-font-size: 12px;
+font-size: 12.5px;
 color: var(--text-muted);
-margin-top: 2px;
-font-family: monospace, ui-monospace, sans-serif;
-}
-
-.co-name {
-font-size: 13px;
-color: #334155;
+margin-top: 3px;
+font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
 font-weight: 500;
 }
 
-/* Status Badges */
-.status-pill {
-display: inline-flex;
-align-items: center;
-gap: 6px;
-padding: 4px 12px;
-border-radius: 20px;
-font-size: 11.5px;
-font-weight: 700;
-letter-spacing: 0.01em;
-}
-
-.sp-active { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-.sp-pending { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
-.sp-completed { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.sp-other { background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); }
-
-.score-cell {
-text-align: center;
-font-size: 13px;
+.co-name {
+font-size: 13.5px;
+color: var(--text-secondary);
 font-weight: 600;
 }
 
-.score-val { color: var(--text-main); font-variant-numeric: tabular-nums; }
-.score-dash { color: #cbd5e1; font-weight: 400; }
+/* Premium Status Badges */
+.status-pill {
+display: inline-flex;
+align-items: center;
+gap: 7px;
+padding: 5px 14px;
+border-radius: 24px;
+font-size: 12px;
+font-weight: 800;
+letter-spacing: 0.02em;
+text-transform: capitalize;
+}
 
-/* Grade Indicators */
+.sp-active {
+background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+color: #15803d;
+border: 1px solid #86efac;
+box-shadow: 0 2px 4px rgba(22, 163, 74, 0.1);
+}
+.sp-pending {
+background: linear-gradient(135deg, #fef9c3, #fef08a);
+color: #a16207;
+border: 1px solid #fde047;
+box-shadow: 0 2px 4px rgba(161, 98, 7, 0.1);
+}
+.sp-completed {
+background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+color: #1d4ed8;
+border: 1px solid #93c5fd;
+box-shadow: 0 2px 4px rgba(29, 78, 216, 0.1);
+}
+.sp-other {
+background: var(--background-subtle);
+color: var(--text-muted);
+border: 1px solid var(--border);
+}
+
+.score-cell {
+text-align: center;
+font-size: 13.5px;
+font-weight: 700;
+}
+
+.score-val {
+color: var(--text-main);
+font-variant-numeric: tabular-nums;
+font-family: 'SF Mono', Monaco, monospace;
+}
+.score-dash {
+color: var(--text-light);
+font-weight: 400;
+}
+
+/* Refined Grade Indicators */
 .grade-badge {
 display: inline-flex;
 align-items: center;
 justify-content: center;
-width: 36px;
-height: 36px;
-border-radius: 10px;
-font-size: 13px;
-font-weight: 800;
-box-shadow: var(--shadow-xs);
+width: 40px;
+height: 40px;
+border-radius: 12px;
+font-size: 14px;
+font-weight: 900;
+box-shadow: var(--shadow-sm);
+transition: var(--transition);
 }
 
-.gb-M { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-.gb-P { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
-.gb-C { background: #fef3c7; color: #b45309; border: 1px solid #fde047; }
-.gb-NYC { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
-.gb-nil { background: #f1f5f9; color: #94a3b8; font-size: 12px; border: 1px solid var(--border); }
+.grade-badge:hover {
+transform: scale(1.1);
+box-shadow: var(--shadow-md);
+}
+
+.gb-M {
+background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+color: #15803d;
+border: 2px solid #86efac;
+}
+.gb-P {
+background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+color: #1d4ed8;
+border: 2px solid #93c5fd;
+}
+.gb-C {
+background: linear-gradient(135deg, #fef3c7, #fde047);
+color: #b45309;
+border: 2px solid #fbbf24;
+}
+.gb-NYC {
+background: linear-gradient(135deg, #fee2e2, #fca5a5);
+color: #dc2626;
+border: 2px solid #f87171;
+}
+.gb-nil {
+background: var(--background-subtle);
+color: var(--text-light);
+font-size: 13px;
+border: 2px solid var(--border);
+}
 
 .total-pill {
 display: inline-block;
-padding: 5px 12px;
-border-radius: 8px;
-font-size: 12px;
-font-weight: 700;
-background: #f1f5f9;
-color: #334155;
-border: 1px solid var(--border-subtle);
+padding: 6px 14px;
+border-radius: 10px;
+font-size: 12.5px;
+font-weight: 800;
+background: linear-gradient(135deg, var(--background-subtle), #ffffff);
+color: var(--text-secondary);
+border: 1px solid var(--border);
 font-variant-numeric: tabular-nums;
+font-family: 'SF Mono', Monaco, monospace;
+box-shadow: var(--shadow-xs);
 }
 
 /* Modern Action Buttons */
@@ -418,64 +554,88 @@ font-variant-numeric: tabular-nums;
 display: inline-flex;
 align-items: center;
 gap: 8px;
-padding: 8px 16px;
-border-radius: 10px;
-font-size: 12.5px;
-font-weight: 700;
+padding: 9px 18px;
+border-radius: 12px;
+font-size: 13px;
+font-weight: 800;
 cursor: pointer;
 transition: var(--transition);
 white-space: nowrap;
+position: relative;
+overflow: hidden;
+}
+
+.btn-enter::before, .btn-edit::before {
+content: '';
+position: absolute;
+top: 50%;
+left: 50%;
+width: 0;
+height: 0;
+border-radius: 50%;
+background: rgba(255, 255, 255, 0.2);
+transform: translate(-50%, -50%);
+transition: width 0.6s, height 0.6s;
+}
+
+.btn-enter:hover::before, .btn-edit:hover::before {
+width: 300px;
+height: 300px;
 }
 
 .btn-enter {
-background: var(--primary);
+background: linear-gradient(135deg, var(--primary), var(--primary-hover));
 color: #ffffff;
 border: none;
-box-shadow: 0 2px 4px rgba(15, 44, 84, 0.15);
+box-shadow: 0 4px 12px rgba(15, 44, 84, 0.2);
 }
 
 .btn-enter:hover {
-background: var(--primary-hover);
-transform: translateY(-1px);
-box-shadow: 0 4px 10px rgba(15, 44, 84, 0.25);
+background: linear-gradient(135deg, var(--primary-hover), var(--primary-light));
+transform: translateY(-2px);
+box-shadow: 0 8px 20px rgba(15, 44, 84, 0.3);
 }
 
-.btn-enter i { color: var(--accent); }
+.btn-enter i {
+color: var(--accent);
+filter: drop-shadow(0 1px 2px rgba(245, 158, 11, 0.3));
+}
 
 .btn-edit {
-background: #eff6ff;
+background: linear-gradient(135deg, #eff6ff, #dbeafe);
 color: #1d4ed8;
-border: 1px solid #bfdbfe;
+border: 2px solid #bfdbfe;
 }
 
 .btn-edit:hover {
-background: #dbeafe;
+background: linear-gradient(135deg, #dbeafe, #bfdbfe);
 border-color: #93c5fd;
 color: #1e40af;
-transform: translateY(-1px);
+transform: translateY(-2px);
+box-shadow: 0 6px 16px rgba(29, 78, 216, 0.2);
 }
 
 .empty-row td {
 text-align: center;
-padding: 64px 24px;
+padding: 80px 24px;
 color: var(--text-muted);
 }
 
 .empty-row td i {
-font-size: 48px;
+font-size: 56px;
 display: block;
-margin-bottom: 14px;
-color: #cbd5e1;
+margin-bottom: 16px;
+color: var(--border-strong);
 }
 
-/* Modal Styling */
+/* Premium Modal Styling */
 .am-modal-bg {
 display: none;
 position: fixed;
 inset: 0;
-background: rgba(15, 23, 42, 0.65);
-backdrop-filter: blur(6px);
--webkit-backdrop-filter: blur(6px);
+background: rgba(15, 23, 42, 0.7);
+backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
 z-index: 3000;
 align-items: center;
 justify-content: center;
@@ -488,25 +648,31 @@ display: flex;
 
 .am-modal {
 background: var(--surface);
-border-radius: 20px;
+border-radius: 24px;
 width: 100%;
-max-width: 520px;
+max-width: 540px;
 max-height: 90vh;
 overflow-y: auto;
-box-shadow: var(--shadow-lg);
+box-shadow: var(--shadow-xl);
 border: 1px solid var(--border);
-animation: amSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+animation: amSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes amSlide {
-from { transform: translateY(20px) scale(0.97); opacity: 0; }
-to { transform: translateY(0) scale(1); opacity: 1; }
+from {
+transform: translateY(30px) scale(0.95);
+opacity: 0;
+}
+to {
+transform: translateY(0) scale(1);
+opacity: 1;
+}
 }
 
 .am-modal-head {
-background: var(--surface);
+background: var(--surface-elevated);
 color: var(--text-main);
-padding: 20px 24px;
+padding: 24px 28px;
 border-bottom: 1px solid var(--border);
 display: flex;
 align-items: center;
@@ -514,28 +680,32 @@ justify-content: space-between;
 position: sticky;
 top: 0;
 z-index: 2;
+backdrop-filter: blur(12px);
 }
 
 .am-modal-head h3 {
-font-size: 17px;
-font-weight: 800;
+font-size: 18px;
+font-weight: 900;
 margin: 0;
 display: flex;
 align-items: center;
-gap: 10px;
-letter-spacing: -0.01em;
+gap: 12px;
+letter-spacing: -0.02em;
 }
 
-.am-modal-head h3 i { color: var(--primary); }
+.am-modal-head h3 i {
+color: var(--primary);
+font-size: 20px;
+}
 
 .am-modal-close {
-width: 32px;
-height: 32px;
+width: 36px;
+height: 36px;
 border-radius: 50%;
-background: #f1f5f9;
-border: none;
+background: var(--background-subtle);
+border: 1px solid var(--border);
 color: var(--text-muted);
-font-size: 14px;
+font-size: 15px;
 cursor: pointer;
 display: flex;
 align-items: center;
@@ -544,174 +714,238 @@ transition: var(--transition);
 }
 
 .am-modal-close:hover {
-background: #e2e8f0;
+background: var(--border);
 color: var(--text-main);
-transform: rotate(90deg);
+transform: rotate(90deg) scale(1.1);
+box-shadow: var(--shadow-sm);
 }
 
 .am-modal-body {
-padding: 24px;
+padding: 28px;
 }
 
 .am-student-card {
-background: #f8fafc;
-border: 1px solid var(--border);
-border-radius: 14px;
-padding: 16px 18px;
-margin-bottom: 24px;
-font-size: 14px;
+background: linear-gradient(135deg, var(--background-subtle), #ffffff);
+border: 2px solid var(--border);
+border-radius: 16px;
+padding: 18px 22px;
+margin-bottom: 28px;
+font-size: 14.5px;
+box-shadow: var(--shadow-xs);
 }
 
-.am-student-card strong { color: var(--text-main); font-weight: 700; }
-.am-student-card span { color: var(--text-muted); margin-left: 6px; }
+.am-student-card strong {
+color: var(--text-main);
+font-weight: 800;
+font-size: 15px;
+}
+.am-student-card span {
+color: var(--text-muted);
+margin-left: 8px;
+font-weight: 500;
+}
 
-/* Score Input Layout */
+/* Enhanced Score Input Layout */
 .score-row {
 display: grid;
-grid-template-columns: 1fr 90px 60px;
+grid-template-columns: 1fr 100px 70px;
 align-items: center;
-gap: 12px;
-padding: 14px 0;
+gap: 14px;
+padding: 16px 0;
 border-bottom: 1px solid var(--border-subtle);
+transition: var(--transition);
 }
 
-.score-row:last-of-type { border-bottom: none; }
+.score-row:hover {
+background: var(--background-subtle);
+margin: 0 -12px;
+padding-left: 12px;
+padding-right: 12px;
+border-radius: 12px;
+}
+
+.score-row:last-of-type {
+border-bottom: none;
+margin-bottom: 8px;
+}
 
 .score-label {
-font-size: 13.5px;
-font-weight: 600;
+font-size: 14px;
+font-weight: 700;
 color: var(--text-main);
 }
 
 .score-label small {
 display: block;
-font-size: 11.5px;
-font-weight: 400;
+font-size: 12px;
+font-weight: 500;
 color: var(--text-muted);
-margin-top: 2px;
+margin-top: 3px;
 }
 
 .score-inp {
 width: 100%;
-padding: 10px;
-border: 1px solid var(--border);
-border-radius: 10px;
-font-size: 15px;
-font-weight: 700;
+padding: 12px;
+border: 2px solid var(--border);
+border-radius: 12px;
+font-size: 16px;
+font-weight: 800;
 text-align: center;
 outline: none;
 color: var(--text-main);
 background: var(--background);
 transition: var(--transition);
 box-sizing: border-box;
+font-family: 'SF Mono', Monaco, monospace;
 }
 
 .score-inp:focus {
 background: #ffffff;
-border-color: #3b82f6;
-box-shadow: 0 0 0 4px var(--ring-color);
+border-color: var(--primary-light);
+box-shadow: 0 0 0 4px var(--ring-color), var(--shadow-glow);
+transform: scale(1.02);
 }
 
 .score-wt {
-font-size: 11.5px;
-font-weight: 700;
+font-size: 12px;
+font-weight: 800;
 color: var(--text-muted);
 text-align: center;
-background: #f1f5f9;
-padding: 8px;
-border-radius: 8px;
-border: 1px solid var(--border-subtle);
+background: linear-gradient(135deg, var(--background-subtle), #ffffff);
+padding: 10px;
+border-radius: 10px;
+border: 1px solid var(--border);
+font-family: 'SF Mono', Monaco, monospace;
 }
 
-/* Modal Live Result Footer */
+/* Premium Live Result Footer */
 .am-result {
-background: linear-gradient(135deg, #0f2c54 0%, #1e40af 100%);
-border-radius: 14px;
-padding: 18px 22px;
-margin: 24px 0 24px;
+background: linear-gradient(135deg, #0a1e3d 0%, #0f2c54 40%, #1e40af 100%);
+border-radius: 18px;
+padding: 22px 26px;
+margin: 28px 0;
 display: flex;
 align-items: center;
 justify-content: space-between;
-gap: 12px;
+gap: 16px;
 color: #ffffff;
-box-shadow: 0 8px 16px -4px rgba(15, 44, 84, 0.25);
+box-shadow: 0 12px 24px -6px rgba(15, 44, 84, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+position: relative;
+overflow: hidden;
+}
+
+.am-result::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 1px;
+background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
 }
 
 .am-result-score {
-font-size: 28px;
+font-size: 32px;
 font-weight: 900;
 line-height: 1;
-letter-spacing: -0.02em;
+letter-spacing: -0.03em;
+text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+font-family: 'SF Mono', Monaco, monospace;
 }
 
 .am-result-lbl {
-font-size: 11px;
-color: rgba(255, 255, 255, 0.75);
-font-weight: 700;
+font-size: 11.5px;
+color: rgba(255, 255, 255, 0.8);
+font-weight: 800;
 text-transform: uppercase;
-letter-spacing: 0.06em;
-margin-top: 6px;
+letter-spacing: 0.08em;
+margin-top: 8px;
 }
 
 .am-result-grade {
-width: 52px;
-height: 52px;
-border-radius: 14px;
+width: 58px;
+height: 58px;
+border-radius: 16px;
 display: flex;
 align-items: center;
 justify-content: center;
-font-size: 20px;
+font-size: 22px;
 font-weight: 900;
-border: 2px solid rgba(255, 255, 255, 0.25);
-background: rgba(255, 255, 255, 0.12);
+border: 2px solid rgba(255, 255, 255, 0.3);
+background: rgba(255, 255, 255, 0.15);
 color: #ffffff;
-box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2);
 transition: var(--transition);
+backdrop-filter: blur(8px);
 }
 
 .am-save-btn {
 width: 100%;
-padding: 14px;
-background: var(--primary);
+padding: 16px;
+background: linear-gradient(135deg, var(--primary), var(--primary-hover));
 color: #ffffff;
 border: none;
-border-radius: 12px;
-font-size: 14.5px;
-font-weight: 700;
+border-radius: 14px;
+font-size: 15px;
+font-weight: 800;
 cursor: pointer;
 display: flex;
 align-items: center;
 justify-content: center;
-gap: 10px;
+gap: 12px;
 transition: var(--transition);
-box-shadow: 0 4px 12px rgba(15, 44, 84, 0.2);
+box-shadow: 0 6px 16px rgba(15, 44, 84, 0.25);
+position: relative;
+overflow: hidden;
+}
+
+.am-save-btn::before {
+content: '';
+position: absolute;
+top: 50%;
+left: 50%;
+width: 0;
+height: 0;
+border-radius: 50%;
+background: rgba(255, 255, 255, 0.2);
+transform: translate(-50%, -50%);
+transition: width 0.6s, height 0.6s;
+}
+
+.am-save-btn:hover::before {
+width: 400px;
+height: 400px;
 }
 
 .am-save-btn:hover {
-background: var(--primary-hover);
-transform: translateY(-1px);
-box-shadow: 0 6px 16px rgba(15, 44, 84, 0.3);
+background: linear-gradient(135deg, var(--primary-hover), var(--primary-light));
+transform: translateY(-2px);
+box-shadow: 0 10px 24px rgba(15, 44, 84, 0.35);
 }
 
-.am-save-btn i { color: var(--accent); }
+.am-save-btn i {
+color: var(--accent);
+filter: drop-shadow(0 1px 2px rgba(245, 158, 11, 0.4));
+}
 
 .am-toast {
 position: fixed;
-bottom: 24px;
-right: 24px;
-background: #0f172a;
+bottom: 28px;
+right: 28px;
+background: linear-gradient(135deg, #0f172a, #1e293b);
 color: #ffffff;
-padding: 14px 22px;
-border-radius: 12px;
-font-size: 13.5px;
-font-weight: 600;
+padding: 16px 24px;
+border-radius: 14px;
+font-size: 14px;
+font-weight: 700;
 z-index: 9999;
 opacity: 0;
-transform: translateY(12px);
-transition: var(--transition);
+transform: translateY(16px);
+transition: var(--transition-slow);
 pointer-events: none;
-box-shadow: var(--shadow-lg);
+box-shadow: var(--shadow-xl);
 border: 1px solid rgba(255, 255, 255, 0.1);
+backdrop-filter: blur(12px);
 }
 
 .am-toast.show {
@@ -719,233 +953,247 @@ opacity: 1;
 transform: translateY(0);
 }
 
-@media (max-width: 640px) {
-.am-wrap { padding: 16px; }
-.am-hero { padding: 24px 20px; }
-.am-kpis { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.score-row { grid-template-columns: 1fr 80px 50px; }
+@media (max-width: 768px) {
+.am-wrap { padding: 20px 16px; }
+.am-hero { padding: 28px 24px; border-radius: 20px; }
+.am-kpis { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.am-kpi { padding: 16px 18px; }
+.am-kpi-num { font-size: 26px; }
+.score-row { grid-template-columns: 1fr 85px 55px; gap: 10px; }
+.am-modal { max-width: 100%; border-radius: 20px; }
+.am-modal-body { padding: 20px; }
+}
+
+@media (max-width: 480px) {
+.am-hero h1 { font-size: 22px; }
+.am-hero-top { margin-bottom: 24px; }
+.am-toolbar { padding: 12px 16px; }
+.am-search { padding: 10px 14px 10px 40px; font-size: 13px; }
+.am-chip { padding: 7px 14px; font-size: 12px; }
+.score-row { grid-template-columns: 1fr 75px 50px; }
+.score-inp { padding: 10px; font-size: 14px; }
 }
 {% endblock %}
 
 {% block content %}
 <div class="am-wrap">
 
-  <!-- Hero Header -->
-  <div class="am-hero">
-    <div class="am-hero-top">
-      <div>
-        <h1><i class="fas fa-star-half-alt"></i> Industrial Attachment Marks</h1>
-        <p>Enter and manage grading scores for trainees on industrial attachment.</p>
-      </div>
+    <!-- Hero Header -->
+    <div class="am-hero">
+        <div class="am-hero-top">
+            <div>
+                <h1><i class="fas fa-star-half-alt"></i> Industrial Attachment Marks</h1>
+                <p>Enter and manage grading scores for trainees on industrial attachment.</p>
+            </div>
+        </div>
+
+        <div class="am-kpis">
+            <div class="am-kpi">
+                <div class="am-kpi-num">{{ stats.total }}</div>
+                <div class="am-kpi-lbl">Total Trainees</div>
+            </div>
+            <div class="am-kpi">
+                <div class="am-kpi-num">{{ stats.graded }}</div>
+                <div class="am-kpi-lbl">Graded</div>
+            </div>
+            <div class="am-kpi">
+                <div class="am-kpi-num">{{ stats.pending }}</div>
+                <div class="am-kpi-lbl">Pending</div>
+            </div>
+            <div class="am-kpi">
+                <div class="am-kpi-num">{{ stats.avg }}%</div>
+                <div class="am-kpi-lbl">Avg Score</div>
+            </div>
+        </div>
+
+        <div class="wt-legend">
+            <span style="font-weight: 700; align-self: center;">Max marks:</span>
+            <span class="wt-item"><span class="wt-dot" style="background:#f59e0b"></span> GPS Attendance /{{ (config.weight_gps_attendance or 10)|int }}</span>
+            <span class="wt-item"><span class="wt-dot" style="background:#60a5fa"></span> Logbook /{{ (config.weight_logbook or 20)|int }}</span>
+            <span class="wt-item"><span class="wt-dot" style="background:#a78bfa"></span> Mentor Eval /{{ (config.weight_mentor_eval or 30)|int }}</span>
+            <span class="wt-item"><span class="wt-dot" style="background:#34d399"></span> Trainer Assessment /{{ (config.weight_trainer_assessment or 30)|int }}</span>
+            <span class="wt-item"><span class="wt-dot" style="background:#fb7185"></span> Final Report /{{ (config.weight_final_report or 10)|int }}</span>
+        </div>
     </div>
 
-    <div class="am-kpis">
-      <div class="am-kpi">
-        <div class="am-kpi-num">{{ stats.total }}</div>
-        <div class="am-kpi-lbl">Total Trainees</div>
-      </div>
-      <div class="am-kpi">
-        <div class="am-kpi-num">{{ stats.graded }}</div>
-        <div class="am-kpi-lbl">Graded</div>
-      </div>
-      <div class="am-kpi">
-        <div class="am-kpi-num">{{ stats.pending }}</div>
-        <div class="am-kpi-lbl">Pending</div>
-      </div>
-      <div class="am-kpi">
-        <div class="am-kpi-num">{{ stats.avg }}%</div>
-        <div class="am-kpi-lbl">Avg Score</div>
-      </div>
+    <!-- Search & Controls Toolbar -->
+    <div class="am-toolbar">
+        <div class="am-search-wrap">
+            <i class="fas fa-search"></i>
+            <input class="am-search" type="text" id="amSearch"
+                   placeholder="Search trainee name, admission number, or company..."
+                   oninput="amSearch(this.value)" autocomplete="off">
+        </div>
+
+        <div class="am-chips">
+            <button type="button" class="am-chip active" onclick="amFilter('all', this)">All</button>
+            <button type="button" class="am-chip" onclick="amFilter('graded', this)">Graded</button>
+            <button type="button" class="am-chip" onclick="amFilter('pending', this)">Pending</button>
+        </div>
     </div>
 
-    <div class="wt-legend">
-      <span style="font-weight: 700; align-self: center;">Max marks:</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#f59e0b"></span> GPS Attendance /{{ (config.weight_gps_attendance or 10)|int }}</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#60a5fa"></span> Logbook /{{ (config.weight_logbook or 20)|int }}</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#a78bfa"></span> Mentor Eval /{{ (config.weight_mentor_eval or 30)|int }}</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#34d399"></span> Trainer Assessment /{{ (config.weight_trainer_assessment or 30)|int }}</span>
-      <span class="wt-item"><span class="wt-dot" style="background:#fb7185"></span> Final Report /{{ (config.weight_final_report or 10)|int }}</span>
-    </div>
-  </div>
+    <!-- Main Marks Register Table Card -->
+    <div class="am-card">
+        <div class="am-card-head">
+            <i class="fas fa-list-check"></i> Attachment Grading Register
+            <span class="row-count" id="rowCount">{{ attachments|length }} records</span>
+        </div>
 
-  <!-- Search & Controls Toolbar -->
-  <div class="am-toolbar">
-    <div class="am-search-wrap">
-      <i class="fas fa-search"></i>
-      <input class="am-search" type="text" id="amSearch"
-             placeholder="Search trainee name, admission number, or company..."
-             oninput="amSearch(this.value)" autocomplete="off">
-    </div>
-
-    <div class="am-chips">
-      <button type="button" class="am-chip active" onclick="amFilter('all', this)">All</button>
-      <button type="button" class="am-chip" onclick="amFilter('graded', this)">Graded</button>
-      <button type="button" class="am-chip" onclick="amFilter('pending', this)">Pending</button>
-    </div>
-  </div>
-
-  <!-- Main Marks Register Table Card -->
-  <div class="am-card">
-    <div class="am-card-head">
-      <i class="fas fa-list-check"></i> Attachment Grading Register
-      <span class="row-count" id="rowCount">{{ attachments|length }} records</span>
-    </div>
-
-    <div class="am-tbl-wrap">
-      <table class="am-tbl" id="amTable">
-        <thead>
-        <tr>
-          <th>Student</th>
-          <th>Company</th>
-          <th>Period</th>
-          <th class="ctr">Status</th>
-          <th class="ctr">GPS<br><small style="font-weight:400">/{{ (config.weight_gps_attendance or 10)|int }}</small></th>
-          <th class="ctr">Logbook<br><small style="font-weight:400">/{{ (config.weight_logbook or 20)|int }}</small></th>
-          <th class="ctr">Mentor<br><small style="font-weight:400">/{{ (config.weight_mentor_eval or 30)|int }}</small></th>
-          <th class="ctr">Trainer<br><small style="font-weight:400">/{{ (config.weight_trainer_assessment or 30)|int }}</small></th>
-          <th class="ctr">Report<br><small style="font-weight:400">/{{ (config.weight_final_report or 10)|int }}</small></th>
-          <th class="ctr">Total<br><small style="font-weight:400">/100</small></th>
-          <th class="ctr">Grade</th>
-          <th class="ctr">Action</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for a in attachments %}
-        {% set g = a.get('_grade') %}
-        {% set stu = a.get('student') or {} %}
-        {% set co  = a.get('companies') or {} %}
-        {% set att_status = (a.get('status') or 'pending').lower() %}
-        <tr data-grade="{{ 'graded' if g else 'pending' }}"
-            data-search="{{ ((stu.get('full_name') or '') ~ ' ' ~ (stu.get('admission_no') or '') ~ ' ' ~ (co.get('name') or ''))|lower }}"
-            id="row-{{ a.id }}">
-          <td>
-            <div class="stu-name">{{ stu.get('full_name') or '—' }}</div>
-            <div class="stu-adm">{{ stu.get('admission_no') or '' }}</div>
-          </td>
-          <td><div class="co-name">{{ co.get('name') or '—' }}</div></td>
-          <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">
-            {% if a.get('start_date') %}{{ a.start_date }} → {{ a.end_date or '?' }}{% else %}—{% endif %}
-          </td>
-          <td class="ctr">
+        <div class="am-tbl-wrap">
+            <table class="am-tbl" id="amTable">
+                <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Company</th>
+                    <th>Period</th>
+                    <th class="ctr">Status</th>
+                    <th class="ctr">GPS<br><small style="font-weight:400">/{{ (config.weight_gps_attendance or 10)|int }}</small></th>
+                    <th class="ctr">Logbook<br><small style="font-weight:400">/{{ (config.weight_logbook or 20)|int }}</small></th>
+                    <th class="ctr">Mentor<br><small style="font-weight:400">/{{ (config.weight_mentor_eval or 30)|int }}</small></th>
+                    <th class="ctr">Trainer<br><small style="font-weight:400">/{{ (config.weight_trainer_assessment or 30)|int }}</small></th>
+                    <th class="ctr">Report<br><small style="font-weight:400">/{{ (config.weight_final_report or 10)|int }}</small></th>
+                    <th class="ctr">Total<br><small style="font-weight:400">/100</small></th>
+                    <th class="ctr">Grade</th>
+                    <th class="ctr">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for a in attachments %}
+                {% set g = a.get('_grade') %}
+                {% set stu = a.get('student') or {} %}
+                {% set co  = a.get('companies') or {} %}
+                {% set att_status = (a.get('status') or 'pending').lower() %}
+                <tr data-grade="{{ 'graded' if g else 'pending' }}"
+                    data-search="{{ ((stu.get('full_name') or '') ~ ' ' ~ (stu.get('admission_no') or '') ~ ' ' ~ (co.get('name') or ''))|lower }}"
+                    id="row-{{ a.id }}">
+                    <td>
+                        <div class="stu-name">{{ stu.get('full_name') or '—' }}</div>
+                        <div class="stu-adm">{{ stu.get('admission_no') or '' }}</div>
+                    </td>
+                    <td><div class="co-name">{{ co.get('name') or '—' }}</div></td>
+                    <td style="font-size:12.5px;color:var(--text-muted);white-space:nowrap">
+                        {% if a.get('start_date') %}{{ a.start_date }} → {{ a.end_date or '?' }}{% else %}—{% endif %}
+                    </td>
+                    <td class="ctr">
               <span class="status-pill {{ 'sp-active' if att_status == 'active' else 'sp-completed' if att_status == 'completed' else 'sp-pending' }}">
                 {{ att_status|title }}
               </span>
-          </td>
-          <td class="score-cell">
-            {% if g %}<span class="score-val">{{ g.score_gps_attendance|round(1) }} / {{ (config.weight_gps_attendance or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-          </td>
-          <td class="score-cell">
-            {% if g %}<span class="score-val">{{ g.score_logbook|round(1) }} / {{ (config.weight_logbook or 20)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-          </td>
-          <td class="score-cell">
-            {% if g %}<span class="score-val">{{ g.score_mentor_eval|round(1) }} / {{ (config.weight_mentor_eval or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-          </td>
-          <td class="score-cell">
-            {% if g %}<span class="score-val">{{ g.score_trainer_assessment|round(1) }} / {{ (config.weight_trainer_assessment or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-          </td>
-          <td class="score-cell">
-            {% if g %}<span class="score-val">{{ g.score_final_report|round(1) }} / {{ (config.weight_final_report or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-          </td>
-          <td class="ctr">
-            {% if g and g.get('weighted_total') is not none %}
-            <span class="total-pill">{{ g.weighted_total|round(1) }} / 100 ({{ g.weighted_total|round(1) }}%)</span>
-            {% else %}<span class="score-dash">—</span>{% endif %}
-          </td>
-          <td class="ctr">
-            {% if g and g.get('final_grade') %}
-            <span class="grade-badge gb-{{ g.final_grade }}">{{ g.final_grade }}</span>
-            {% else %}
-            <span class="grade-badge gb-nil">?</span>
-            {% endif %}
-          </td>
-          <td class="ctr">
-            <button type="button" class="{{ 'btn-edit' if g else 'btn-enter' }}"
-                    onclick="openMarks('{{ a.id }}','{{ stu.get('full_name','') }}','{{ co.get('name','') }}',
+                    </td>
+                    <td class="score-cell">
+                        {% if g %}<span class="score-val">{{ g.score_gps_attendance|round(1) }} / {{ (config.weight_gps_attendance or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+                    </td>
+                    <td class="score-cell">
+                        {% if g %}<span class="score-val">{{ g.score_logbook|round(1) }} / {{ (config.weight_logbook or 20)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+                    </td>
+                    <td class="score-cell">
+                        {% if g %}<span class="score-val">{{ g.score_mentor_eval|round(1) }} / {{ (config.weight_mentor_eval or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+                    </td>
+                    <td class="score-cell">
+                        {% if g %}<span class="score-val">{{ g.score_trainer_assessment|round(1) }} / {{ (config.weight_trainer_assessment or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+                    </td>
+                    <td class="score-cell">
+                        {% if g %}<span class="score-val">{{ g.score_final_report|round(1) }} / {{ (config.weight_final_report or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+                    </td>
+                    <td class="ctr">
+                        {% if g and g.get('weighted_total') is not none %}
+                        <span class="total-pill">{{ g.weighted_total|round(1) }} / 100 ({{ g.weighted_total|round(1) }}%)</span>
+                        {% else %}<span class="score-dash">—</span>{% endif %}
+                    </td>
+                    <td class="ctr">
+                        {% if g and g.get('final_grade') %}
+                        <span class="grade-badge gb-{{ g.final_grade }}">{{ g.final_grade }}</span>
+                        {% else %}
+                        <span class="grade-badge gb-nil">?</span>
+                        {% endif %}
+                    </td>
+                    <td class="ctr">
+                        <button type="button" class="{{ 'btn-edit' if g else 'btn-enter' }}"
+                                onclick="openMarks('{{ a.id }}','{{ stu.get('full_name','') }}','{{ co.get('name','') }}',
                         {{ (g.score_gps_attendance or 0) if g else 0 }},
                         {{ (g.score_logbook or 0) if g else 0 }},
                         {{ (g.score_mentor_eval or 0) if g else 0 }},
                         {{ (g.score_trainer_assessment or 0) if g else 0 }},
                         {{ (g.score_final_report or 0) if g else 0 }})">
-              <i class="fas {{ 'fa-pen-to-square' if g else 'fa-plus' }}"></i>
-              {{ 'Edit' if g else 'Enter Marks' }}
-            </button>
-          </td>
-        </tr>
-        {% else %}
-        <tr class="empty-row">
-          <td colspan="12">
-            <i class="fas fa-folder-open"></i>
-            No attachment records found for your department.
-          </td>
-        </tr>
-        {% endfor %}
-        </tbody>
-      </table>
+                            <i class="fas {{ 'fa-pen-to-square' if g else 'fa-plus' }}"></i>
+                            {{ 'Edit' if g else 'Enter Marks' }}
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row">
+                    <td colspan="12">
+                        <i class="fas fa-folder-open"></i>
+                        No attachment records found for your department.
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-  </div>
 
 </div>
 
 <!-- Marks Input Modal -->
 <div class="am-modal-bg" id="amModalBg" onclick="bgClose(event)">
-  <div class="am-modal" id="amModal">
-    <div class="am-modal-head">
-      <h3><i class="fas fa-edit"></i> <span id="modalTitle">Enter Attachment Marks</span></h3>
-      <button type="button" class="am-modal-close" onclick="closeMarks()"><i class="fas fa-xmark"></i></button>
+    <div class="am-modal" id="amModal">
+        <div class="am-modal-head">
+            <h3><i class="fas fa-edit"></i> <span id="modalTitle">Enter Attachment Marks</span></h3>
+            <button type="button" class="am-modal-close" onclick="closeMarks()"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="am-modal-body">
+            <div class="am-student-card" id="modalInfo">
+                <strong id="modalStu">—</strong><span id="modalCo">—</span>
+            </div>
+
+            <form id="marksForm">
+                <input type="hidden" id="currentAttId" value="">
+
+                <div class="score-row">
+                    <div class="score-label">GPS Attendance<small>Marks out of {{ (config.weight_gps_attendance or 10)|int }}</small></div>
+                    <input class="score-inp" type="number" id="s_gps" name="score_gps_attendance" min="0" max="{{ (config.weight_gps_attendance or 10)|int }}" step="0.5" value="0" oninput="calcTotal()">
+                    <div class="score-wt">/{{ (config.weight_gps_attendance or 10)|int }}</div>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-label">Digital Logbook<small>Marks out of {{ (config.weight_logbook or 20)|int }}</small></div>
+                    <input class="score-inp" type="number" id="s_log" name="score_logbook" min="0" max="{{ (config.weight_logbook or 20)|int }}" step="0.5" value="0" oninput="calcTotal()">
+                    <div class="score-wt">/{{ (config.weight_logbook or 20)|int }}</div>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-label">Mentor Evaluation<small>Marks out of {{ (config.weight_mentor_eval or 30)|int }}</small></div>
+                    <input class="score-inp" type="number" id="s_men" name="score_mentor_eval" min="0" max="{{ (config.weight_mentor_eval or 30)|int }}" step="0.5" value="0" oninput="calcTotal()">
+                    <div class="score-wt">/{{ (config.weight_mentor_eval or 30)|int }}</div>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-label">Trainer Assessment<small>Marks out of {{ (config.weight_trainer_assessment or 30)|int }}</small></div>
+                    <input class="score-inp" type="number" id="s_tra" name="score_trainer_assessment" min="0" max="{{ (config.weight_trainer_assessment or 30)|int }}" step="0.5" value="0" oninput="calcTotal()">
+                    <div class="score-wt">/{{ (config.weight_trainer_assessment or 30)|int }}</div>
+                </div>
+
+                <div class="score-row">
+                    <div class="score-label">Final Report<small>Marks out of {{ (config.weight_final_report or 10)|int }}</small></div>
+                    <input class="score-inp" type="number" id="s_rep" name="score_final_report" min="0" max="{{ (config.weight_final_report or 10)|int }}" step="0.5" value="0" oninput="calcTotal()">
+                    <div class="score-wt">/{{ (config.weight_final_report or 10)|int }}</div>
+                </div>
+
+                <!-- Live Score Summary Box -->
+                <div class="am-result">
+                    <div>
+                        <div class="am-result-score"><span id="livePct">0.0</span> / 100</div>
+                        <div class="am-result-lbl">Overall Total</div>
+                    </div>
+                    <div id="liveGrade" class="am-result-grade">?</div>
+                </div>
+
+                <button type="button" class="am-save-btn" id="saveBtn" onclick="saveMarks()">
+                    <i class="fas fa-check"></i> Save Marks
+                </button>
+            </form>
+        </div>
     </div>
-    <div class="am-modal-body">
-      <div class="am-student-card" id="modalInfo">
-        <strong id="modalStu">—</strong><span id="modalCo">—</span>
-      </div>
-
-      <form id="marksForm">
-        <input type="hidden" id="currentAttId" value="">
-
-        <div class="score-row">
-          <div class="score-label">GPS Attendance<small>Marks out of {{ (config.weight_gps_attendance or 10)|int }}</small></div>
-          <input class="score-inp" type="number" id="s_gps" name="score_gps_attendance" min="0" max="{{ (config.weight_gps_attendance or 10)|int }}" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">/{{ (config.weight_gps_attendance or 10)|int }}</div>
-        </div>
-
-        <div class="score-row">
-          <div class="score-label">Digital Logbook<small>Marks out of {{ (config.weight_logbook or 20)|int }}</small></div>
-          <input class="score-inp" type="number" id="s_log" name="score_logbook" min="0" max="{{ (config.weight_logbook or 20)|int }}" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">/{{ (config.weight_logbook or 20)|int }}</div>
-        </div>
-
-        <div class="score-row">
-          <div class="score-label">Mentor Evaluation<small>Marks out of {{ (config.weight_mentor_eval or 30)|int }}</small></div>
-          <input class="score-inp" type="number" id="s_men" name="score_mentor_eval" min="0" max="{{ (config.weight_mentor_eval or 30)|int }}" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">/{{ (config.weight_mentor_eval or 30)|int }}</div>
-        </div>
-
-        <div class="score-row">
-          <div class="score-label">Trainer Assessment<small>Marks out of {{ (config.weight_trainer_assessment or 30)|int }}</small></div>
-          <input class="score-inp" type="number" id="s_tra" name="score_trainer_assessment" min="0" max="{{ (config.weight_trainer_assessment or 30)|int }}" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">/{{ (config.weight_trainer_assessment or 30)|int }}</div>
-        </div>
-
-        <div class="score-row">
-          <div class="score-label">Final Report<small>Marks out of {{ (config.weight_final_report or 10)|int }}</small></div>
-          <input class="score-inp" type="number" id="s_rep" name="score_final_report" min="0" max="{{ (config.weight_final_report or 10)|int }}" step="0.5" value="0" oninput="calcTotal()">
-          <div class="score-wt">/{{ (config.weight_final_report or 10)|int }}</div>
-        </div>
-
-        <!-- Live Score Summary Box -->
-        <div class="am-result">
-          <div>
-            <div class="am-result-score"><span id="livePct">0.0</span> / 100</div>
-            <div class="am-result-lbl">Overall Total</div>
-          </div>
-          <div id="liveGrade" class="am-result-grade">?</div>
-        </div>
-
-        <button type="button" class="am-save-btn" id="saveBtn" onclick="saveMarks()">
-          <i class="fas fa-check"></i> Save Marks
-        </button>
-      </form>
-    </div>
-  </div>
 </div>
 
 <div class="am-toast" id="amToast"></div>
@@ -953,128 +1201,128 @@ transform: translateY(0);
 
 {% block scripts %}
 <script>
-  var WEIGHTS = {
-    gps: {{ (config.weight_gps_attendance or 10)|float }},
-  log: {{ (config.weight_logbook or 20)|float }},
-  men: {{ (config.weight_mentor_eval or 30)|float }},
-  tra: {{ (config.weight_trainer_assessment or 30)|float }},
-  rep: {{ (config.weight_final_report or 10)|float }},
-  };
-
-  function _cap(val, max) {
-    return Math.min(Math.max(val || 0, 0), max || 0);
-  }
-
-  function calcTotal() {
-    var gps = _cap(parseFloat(document.getElementById('s_gps').value), WEIGHTS.gps);
-    var log = _cap(parseFloat(document.getElementById('s_log').value), WEIGHTS.log);
-    var men = _cap(parseFloat(document.getElementById('s_men').value), WEIGHTS.men);
-    var tra = _cap(parseFloat(document.getElementById('s_tra').value), WEIGHTS.tra);
-    var rep = _cap(parseFloat(document.getElementById('s_rep').value), WEIGHTS.rep);
-
-    var pct = Math.round((gps + log + men + tra + rep) * 10) / 10;
-    document.getElementById('livePct').textContent = pct.toFixed(1);
-
-    var g = pct >= 80 ? 'M' : pct >= 65 ? 'P' : pct >= 50 ? 'C' : 'NYC';
-    var el = document.getElementById('liveGrade');
-    el.textContent = g;
-
-    var bgColors = {
-      M: 'rgba(22, 163, 74, 0.4)',
-      P: 'rgba(29, 78, 216, 0.4)',
-      C: 'rgba(217, 119, 6, 0.4)',
-      NYC: 'rgba(220, 38, 38, 0.4)'
+    var WEIGHTS = {
+        gps: {{ (config.weight_gps_attendance or 10)|float }},
+    log: {{ (config.weight_logbook or 20)|float }},
+    men: {{ (config.weight_mentor_eval or 30)|float }},
+    tra: {{ (config.weight_trainer_assessment or 30)|float }},
+    rep: {{ (config.weight_final_report or 10)|float }},
     };
-    el.style.background = bgColors[g] || 'rgba(255, 255, 255, 0.1)';
-  }
 
-  function openMarks(id, stu, co, gps, log, men, tra, rep) {
-    document.getElementById('currentAttId').value = id;
-    document.getElementById('modalStu').textContent = stu;
-    document.getElementById('modalCo').textContent  = co ? ' — ' + co : '';
-    document.getElementById('s_gps').value = gps;
-    document.getElementById('s_log').value = log;
-    document.getElementById('s_men').value = men;
-    document.getElementById('s_tra').value = tra;
-    document.getElementById('s_rep').value = rep;
-    calcTotal();
-    document.getElementById('amModalBg').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
+    function _cap(val, max) {
+        return Math.min(Math.max(val || 0, 0), max || 0);
+    }
 
-  function closeMarks() {
-    document.getElementById('amModalBg').classList.remove('open');
-    document.body.style.overflow = '';
-  }
+    function calcTotal() {
+        var gps = _cap(parseFloat(document.getElementById('s_gps').value), WEIGHTS.gps);
+        var log = _cap(parseFloat(document.getElementById('s_log').value), WEIGHTS.log);
+        var men = _cap(parseFloat(document.getElementById('s_men').value), WEIGHTS.men);
+        var tra = _cap(parseFloat(document.getElementById('s_tra').value), WEIGHTS.tra);
+        var rep = _cap(parseFloat(document.getElementById('s_rep').value), WEIGHTS.rep);
 
-  function bgClose(e) {
-    if (e.target === document.getElementById('amModalBg')) closeMarks();
-  }
+        var pct = Math.round((gps + log + men + tra + rep) * 10) / 10;
+        document.getElementById('livePct').textContent = pct.toFixed(1);
 
-  function saveMarks() {
-    var id  = document.getElementById('currentAttId').value;
-    var btn = document.getElementById('saveBtn');
-    var fd  = new FormData(document.getElementById('marksForm'));
+        var g = pct >= 80 ? 'M' : pct >= 65 ? 'P' : pct >= 50 ? 'C' : 'NYC';
+        var el = document.getElementById('liveGrade');
+        el.textContent = g;
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+        var bgColors = {
+            M: 'rgba(22, 163, 74, 0.4)',
+            P: 'rgba(29, 78, 216, 0.4)',
+            C: 'rgba(217, 119, 6, 0.4)',
+            NYC: 'rgba(220, 38, 38, 0.4)'
+        };
+        el.style.background = bgColors[g] || 'rgba(255, 255, 255, 0.1)';
+    }
 
-    fetch('/dept-admin/attachment-marks/' + id + '/save', { method: 'POST', body: fd })
+    function openMarks(id, stu, co, gps, log, men, tra, rep) {
+        document.getElementById('currentAttId').value = id;
+        document.getElementById('modalStu').textContent = stu;
+        document.getElementById('modalCo').textContent  = co ? ' — ' + co : '';
+        document.getElementById('s_gps').value = gps;
+        document.getElementById('s_log').value = log;
+        document.getElementById('s_men').value = men;
+        document.getElementById('s_tra').value = tra;
+        document.getElementById('s_rep').value = rep;
+        calcTotal();
+        document.getElementById('amModalBg').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMarks() {
+        document.getElementById('amModalBg').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function bgClose(e) {
+        if (e.target === document.getElementById('amModalBg')) closeMarks();
+    }
+
+    function saveMarks() {
+        var id  = document.getElementById('currentAttId').value;
+        var btn = document.getElementById('saveBtn');
+        var fd  = new FormData(document.getElementById('marksForm'));
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+        fetch('/dept-admin/attachment-marks/' + id + '/save', { method: 'POST', body: fd })
             .then(function(r){ return r.json(); })
             .then(function(d) {
-              btn.disabled = false;
-              btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
-              if (d.ok) {
-                closeMarks();
-                showToast('Marks saved — Grade: ' + d.grade + ' (' + d.total.toFixed(1) + '%)');
-                setTimeout(function(){ location.reload(); }, 1200);
-              } else {
-                showToast((d.error || 'Save failed'), true);
-              }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
+                if (d.ok) {
+                    closeMarks();
+                    showToast('Marks saved — Grade: ' + d.grade + ' (' + d.total.toFixed(1) + '%)');
+                    setTimeout(function(){ location.reload(); }, 1200);
+                } else {
+                    showToast((d.error || 'Save failed'), true);
+                }
             })
             .catch(function(){
-              btn.disabled = false;
-              btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
-              showToast('Network error', true);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
+                showToast('Network error', true);
             });
-  }
+    }
 
-  function showToast(msg, err) {
-    var t = document.getElementById('amToast');
-    t.textContent = msg;
-    t.style.background = err ? '#dc2626' : '#0f172a';
-    t.classList.add('show');
-    setTimeout(function(){ t.classList.remove('show'); }, 3000);
-  }
+    function showToast(msg, err) {
+        var t = document.getElementById('amToast');
+        t.textContent = msg;
+        t.style.background = err ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #0f172a, #1e293b)';
+        t.classList.add('show');
+        setTimeout(function(){ t.classList.remove('show'); }, 3000);
+    }
 
-  /* ── Live Filtering ── */
-  function applyFilters() {
-    var q = (document.getElementById('amSearch').value || '').toLowerCase();
-    var rows = document.querySelectorAll('#amTable tbody tr[data-search]');
-    var n = 0;
+    /* ── Live Filtering ── */
+    function applyFilters() {
+        var q = (document.getElementById('amSearch').value || '').toLowerCase();
+        var rows = document.querySelectorAll('#amTable tbody tr[data-search]');
+        var n = 0;
 
-    rows.forEach(function(r) {
-      var matchesSearch = r.dataset.search.includes(q);
-      var matchesFilter = (_filterMode === 'all') || (r.dataset.grade === _filterMode);
-      var show = matchesSearch && matchesFilter;
+        rows.forEach(function(r) {
+            var matchesSearch = r.dataset.search.includes(q);
+            var matchesFilter = (_filterMode === 'all') || (r.dataset.grade === _filterMode);
+            var show = matchesSearch && matchesFilter;
 
-      r.setAttribute('data-hidden', show ? '0' : '1');
-      if (show) n++;
-    });
+            r.setAttribute('data-hidden', show ? '0' : '1');
+            if (show) n++;
+        });
 
-    document.getElementById('rowCount').textContent = n + ' records';
-  }
+        document.getElementById('rowCount').textContent = n + ' records';
+    }
 
-  function amSearch(q) {
-    applyFilters();
-  }
+    function amSearch(q) {
+        applyFilters();
+    }
 
-  var _filterMode = 'all';
-  function amFilter(mode, el) {
-    _filterMode = mode;
-    document.querySelectorAll('.am-chip').forEach(function(c){ c.classList.remove('active'); });
-    el.classList.add('active');
-    applyFilters();
-  }
+    var _filterMode = 'all';
+    function amFilter(mode, el) {
+        _filterMode = mode;
+        document.querySelectorAll('.am-chip').forEach(function(c){ c.classList.remove('active'); });
+        el.classList.add('active');
+        applyFilters();
+    }
 </script>
 {% endblock %}
