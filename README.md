@@ -323,3 +323,5 @@ flask run
 3. Render auto-detects `render.yaml`
 4. Set environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SECRET_KEY`
 # THIKATECHNICALELECTRICAL
+#   T H I K A T E C H N I C A L E L E C T R I C A L  
+ 
