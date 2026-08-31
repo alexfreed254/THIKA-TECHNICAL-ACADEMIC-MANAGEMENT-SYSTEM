@@ -1,112 +1,598 @@
 {% extends "dept_admin/base.html" %}
-{% block title %}Students{% endblock %}
+{% block title %}Students Management{% endblock %}
 {% block page_title %}Manage Students{% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
-.card-body{padding:20px}
-.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px}
-.form-group input,.form-group select{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px}
-.btn{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
-.btn-primary{background:#1565c0;color:#fff}
-.btn-danger{background:#c62828;color:#fff;padding:5px 12px;font-size:12px}
-.error-box{background:#ffebee;color:#c62828;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px}
-.search-bar{display:flex;gap:8px;margin-bottom:0}
-.search-bar input{padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;flex:1}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:11px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:11px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+/* CSS Variables & Theme Foundations */
+:root {
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --danger-color: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: #fef2f2;
+  --success-color: #10b981;
+  --success-light: #ecfdf5;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --bg-surface: #ffffff;
+  --bg-app: #f8fafc;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-wrap {
+  padding: 32px 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-app);
+}
+
+/* Base Card Styling */
+.card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 32px;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  padding: 20px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  gap: 16px;
+}
+
+.card-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-header-title i {
+  color: var(--primary-color);
+}
+
+.card-body {
+  padding: 24px;
+}
+
+/* Form Controls & Layout */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.form-group input, 
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: #fff;
+  transition: var(--transition);
+  box-sizing: border-box;
+}
+
+.form-group input:focus, 
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Actions & Buttons */
+.form-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--transition);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-danger-ghost {
+  background: transparent;
+  color: var(--danger-color);
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+}
+
+.btn-danger-ghost:hover {
+  background: var(--danger-light);
+  color: var(--danger-hover);
+}
+
+.btn-icon-only {
+  padding: 8px 12px;
+}
+
+/* Alert Boxes */
+.alert-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.alert-danger {
+  background: var(--danger-light);
+  color: var(--danger-hover);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Credentials Container */
+.credentials-banner {
+  background: var(--success-light);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.credentials-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: #065f46;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.credentials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  background: #ffffff;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.credential-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.credential-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.credential-value {
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.password-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-code {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  color: #0f172a;
+  border: 1px solid var(--border-color);
+}
+
+.credentials-footer {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #047857;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Search Bar */
+.search-form {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  width: 100%;
+  max-width: 320px;
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.search-input-wrap i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.search-input-wrap input {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  transition: var(--transition);
+  box-sizing: border-box;
+}
+
+.search-input-wrap input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* Modern Data Table */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.modern-table th {
+  background: #f8fafc;
+  padding: 14px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modern-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.modern-table tbody tr {
+  transition: var(--transition);
+}
+
+.modern-table tbody tr:hover {
+  background-color: var(--primary-light);
+}
+
+.modern-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.student-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: 12px;
+}
+
+.student-info {
+  display: flex;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: var(--text-muted);
+}
+
+.badge-class {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px !important;
+  color: var(--text-muted);
+}
+
+.empty-state i {
+  font-size: 32px;
+  margin-bottom: 12px;
+  display: block;
+  opacity: 0.5;
+}
 {% endblock %}
+
 {% block content %}
 <div class="page-wrap">
+
+  <!-- Add Student Section -->
   <div class="card">
-    <div class="card-header"><i class="fas fa-plus"></i> Add Student</div>
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-user-plus"></i>
+        <span>Add New Student</span>
+      </div>
+    </div>
+    
     <div class="card-body">
-      {% if error %}<div class="error-box"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
-      
+      {% if error %}
+      <div class="alert-box alert-danger">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
       {% if new_creds %}
-      <div style="background:#e8f5e9; border:1px solid #c8e6c9; border-radius:10px; padding:20px; margin-bottom:20px; color:#2e7d32; box-shadow: 0 4px 12px rgba(46,125,50,0.08)">
-        <h4 style="margin:0 0 10px 0; font-size:16px; font-weight:700;"><i class="fas fa-key"></i> Credentials Generated Successfully</h4>
-        <table style="width:auto; margin:0; border:none; border-collapse:collapse;">
-          <tr style="background:transparent;"><td style="padding:4px 12px 4px 0; border:none; font-weight:600; font-size:13px; color:#1b5e20;">Full Name:</td><td style="border:none; font-size:13px; color:#1b5e20;">{{ new_creds.full_name }}</td></tr>
-          <tr style="background:transparent;"><td style="padding:4px 12px 4px 0; border:none; font-weight:600; font-size:13px; color:#1b5e20;">Admission No / Login:</td><td style="border:none; font-size:13px; color:#1b5e20;">{{ new_creds.admission_no }}</td></tr>
-          <tr style="background:transparent;"><td style="padding:4px 12px 4px 0; border:none; font-weight:600; font-size:13px; color:#1b5e20;">Email Address:</td><td style="border:none; font-size:13px; color:#1b5e20;">{{ new_creds.email }}</td></tr>
-          <tr style="background:transparent;"><td style="padding:4px 12px 4px 0; border:none; font-weight:600; font-size:13px; color:#1b5e20;">Password:</td><td style="border:none;"><code style="background:#c8e6c9; padding:3px 8px; border-radius:4px; font-weight:700; font-size:14px; color:#1b5e20; border: 1px solid #a5d6a7;">{{ new_creds.password }}</code></td></tr>
-        </table>
-        <p style="margin:12px 0 0 0; font-size:11px; opacity:0.85; color:#1b5e20;"><i class="fas fa-exclamation-triangle"></i> For security, this password is shown only once. Please copy it now and share it with the student.</p>
+      <div class="credentials-banner">
+        <div class="credentials-header">
+          <i class="fas fa-check-circle"></i>
+          <span>Credentials Generated Successfully</span>
+        </div>
+        
+        <div class="credentials-grid">
+          <div class="credential-item">
+            <span class="credential-label">Full Name</span>
+            <span class="credential-value">{{ new_creds.full_name }}</span>
+          </div>
+          <div class="credential-item">
+            <span class="credential-label">Admission No</span>
+            <span class="credential-value">{{ new_creds.admission_no }}</span>
+          </div>
+          <div class="credential-item">
+            <span class="credential-label">Email Address</span>
+            <span class="credential-value">{{ new_creds.email }}</span>
+          </div>
+          <div class="credential-item">
+            <span class="credential-label">Password</span>
+            <div class="password-wrapper">
+              <code class="password-code" id="raw-password">{{ new_creds.password }}</code>
+              <button class="btn btn-danger-ghost btn-icon-only" onclick="copyPassword()" title="Copy Password">
+                <i class="fas fa-copy" id="copy-icon"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="credentials-footer">
+          <i class="fas fa-shield-alt"></i>
+          <span>For security reasons, this password will only be displayed once. Please store it securely.</span>
+        </div>
       </div>
       {% endif %}
 
       <form method="post">
         <input type="hidden" name="action" value="create">
-        <div class="form-row">
-          <div class="form-group"><label>Admission No. *</label><input type="text" name="admission_no" placeholder="e.g. ADM-5678" required></div>
-          <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" placeholder="e.g. Jane Doe" required></div>
-          <div class="form-group"><label>Email Address *</label><input type="email" name="email" placeholder="e.g. student@example.com" required></div>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Admission No. *</label>
+            <input type="text" name="admission_no" placeholder="e.g. ADM-5678" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" name="full_name" placeholder="e.g. Jane Doe" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Email Address *</label>
+            <input type="email" name="email" placeholder="e.g. student@example.com" required>
+          </div>
+          
           <div class="form-group">
             <label>Class *</label>
             <select name="class_id" required>
               <option value="">-- Select Class --</option>
-              {% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+              {% for c in classes %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+              {% endfor %}
             </select>
           </div>
         </div>
-        <div style="margin-top:14px">
-          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Student</button>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            <span>Add Student</span>
+          </button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Student Directory Section -->
   <div class="card">
     <div class="card-header">
-      <span><i class="fas fa-list"></i> Students ({{ students|length }})</span>
-      <form method="get" class="search-bar" style="margin:0">
-        <input type="text" name="q" value="{{ search or '' }}" placeholder="Search by name...">
-        <button type="submit" class="btn btn-primary" style="padding:6px 14px">
+      <div class="card-header-title">
+        <i class="fas fa-users"></i>
+        <span>Student Directory ({{ students|length }})</span>
+      </div>
+      
+      <form method="get" class="search-form">
+        <div class="search-input-wrap">
           <i class="fas fa-search"></i>
+          <input type="text" name="q" value="{{ search or '' }}" placeholder="Search by name or email...">
+        </div>
+        <button type="submit" class="btn btn-primary btn-icon-only" title="Search">
+          <i class="fas fa-arrow-right"></i>
         </button>
       </form>
     </div>
-    <table>
-      <thead><tr><th>#</th><th>Adm No.</th><th>Full Name</th><th>Class</th><th>Email</th><th>Action</th></tr></thead>
-      <tbody>
-        {% for s in students %}
-        <tr>
-          <td style="color:#aaa">{{ loop.index }}</td>
-          {% if s.user_profiles %}
-            <td>{{ s.user_profiles.admission_no }}</td>
-            <td><strong>{{ s.user_profiles.full_name }}</strong></td>
-            <td>{{ s.classes.name if s.classes else '—' }}</td>
-            <td>{{ s.user_profiles.email }}</td>
-            <td>
-              <form method="post" style="display:inline" onsubmit="return confirm('Delete {{ s.user_profiles.full_name }}?')">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="student_id" value="{{ s.user_profiles.id }}">
-                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
-              </form>
-            </td>
+
+    <div class="table-responsive">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th style="width: 60px;">#</th>
+            <th>Adm No.</th>
+            <th>Student Name</th>
+            <th>Class</th>
+            <th>Email</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td style="color: var(--text-muted); font-weight: 500;">{{ loop.index }}</td>
+            
+            {% if s.user_profiles %}
+              <td><span class="badge">{{ s.user_profiles.admission_no }}</span></td>
+              <td>
+                <div class="student-info">
+                  <div class="student-avatar">{{ s.user_profiles.full_name[:1] }}</div>
+                  <strong>{{ s.user_profiles.full_name }}</strong>
+                </div>
+              </td>
+              <td>
+                {% if s.classes %}
+                  <span class="badge badge-class">{{ s.classes.name }}</span>
+                {% else %}
+                  <span class="badge">—</span>
+                {% endif %}
+              </td>
+              <td style="color: var(--text-muted);">{{ s.user_profiles.email }}</td>
+              <td style="text-align: right;">
+                <form method="post" style="display:inline" onsubmit="return confirm('Delete {{ s.user_profiles.full_name }}?')">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="student_id" value="{{ s.user_profiles.id }}">
+                  <button type="submit" class="btn btn-danger-ghost">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Delete</span>
+                  </button>
+                </form>
+              </td>
+            {% else %}
+              <td><span class="badge">{{ s.admission_no }}</span></td>
+              <td>
+                <div class="student-info">
+                  <div class="student-avatar">{{ s.full_name[:1] }}</div>
+                  <strong>{{ s.full_name }}</strong>
+                </div>
+              </td>
+              <td><span class="badge">—</span></td>
+              <td style="color: var(--text-muted);">{{ s.email }}</td>
+              <td style="text-align: right;">
+                <form method="post" style="display:inline" onsubmit="return confirm('Delete {{ s.full_name }}?')">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="student_id" value="{{ s.id }}">
+                  <button type="submit" class="btn btn-danger-ghost">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Delete</span>
+                  </button>
+                </form>
+              </td>
+            {% endif %}
+          </tr>
           {% else %}
-            <td>{{ s.admission_no }}</td>
-            <td><strong>{{ s.full_name }}</strong></td>
-            <td>—</td>
-            <td>{{ s.email }}</td>
-            <td>
-              <form method="post" style="display:inline" onsubmit="return confirm('Delete {{ s.full_name }}?')">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="student_id" value="{{ s.id }}">
-                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
-              </form>
+          <tr>
+            <td colspan="6" class="empty-state">
+              <i class="fas fa-user-slash"></i>
+              <p style="margin:0;">No students found in the directory.</p>
             </td>
-          {% endif %}
-        </tr>
-        {% else %}
-        <tr><td colspan="5" style="text-align:center;color:#aaa;padding:32px">No students yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
 </div>
+
+<script>
+function copyPassword() {
+  const pwd = document.getElementById('raw-password').innerText;
+  const icon = document.getElementById('copy-icon');
+  
+  navigator.clipboard.writeText(pwd).then(() => {
+    icon.className = 'fas fa-check';
+    setTimeout(() => {
+      icon.className = 'fas fa-copy';
+    }, 2000);
+  });
+}
+</script>
 {% endblock %}

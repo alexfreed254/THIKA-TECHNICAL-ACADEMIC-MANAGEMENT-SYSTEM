@@ -1,194 +1,594 @@
 {% extends "dept_admin/base.html" %}
 {% block title %}Assign Units{% endblock %}
 {% block page_title %}Assign Units to Trainers{% endblock %}
+
 {% block extra_style %}
-:root{--blue:#1565c0;--blue-dark:#0d47a1;--red:#c62828;--green:#2e7d32;--amber:#f57f17}
-.page-wrap{padding:24px}
-.dept-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:20px}
-.card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
-.card-header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:16px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
-.card-body{padding:22px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:end}
-.form-group label{display:block;font-size:11px;font-weight:700;color:#555;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.form-group select{width:100%;padding:10px 13px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fafafa;transition:border .2s,box-shadow .2s;box-sizing:border-box}
-.form-group select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.1);background:#fff}
-.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff}
-.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,101,192,.3)}
-.btn-danger{background:var(--red);color:#fff;padding:7px 14px;font-size:12px}
-.btn-danger:hover{opacity:.85}
-.error-box{background:#ffebee;color:var(--red);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--red)}
-.empty-warn{background:#fff8e1;color:#f57f17;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--amber)}
-table{width:100%;border-collapse:collapse}
-thead tr{background:#f5f7fa}
-th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#667;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e8ecf0}
-td{padding:12px 16px;border-bottom:1px solid #f0f4f8;font-size:13px;vertical-align:middle}
-tr:hover td{background:#f9fafb}
-.trainer-chip{display:inline-flex;align-items:center;gap:6px;background:#e3f2fd;color:#1565c0;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
-.trainer-chip i{font-size:11px}
-code{background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700}
+<style>
+  :root {
+    --primary-hue: 220;
+    --primary: hsl(var(--primary-hue), 85%, 57%);
+    --primary-hover: hsl(var(--primary-hue), 85%, 48%);
+    --primary-light: hsl(var(--primary-hue), 100%, 97%);
+    --primary-border: hsl(var(--primary-hue), 80%, 90%);
+    
+    --success: hsl(152, 69%, 31%);
+    --success-bg: hsl(145, 63%, 97%);
+    --success-border: hsl(145, 60%, 86%);
+    
+    --danger: hsl(354, 70%, 54%);
+    --danger-bg: hsl(354, 100%, 97%);
+    --danger-border: hsl(354, 80%, 90%);
+
+    --warning: hsl(38, 92%, 50%);
+    --warning-bg: hsl(48, 100%, 96%);
+    --warning-border: hsl(48, 90%, 88%);
+    
+    --surface-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+  }
+
+  .page-wrap {
+    padding: 32px 24px;
+    background-color: var(--surface-bg);
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* Department Header Badge */
+  .dept-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .dept-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    color: var(--text-main);
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+  }
+
+  .dept-badge i {
+    color: var(--primary);
+  }
+
+  /* Cards Setup */
+  .ui-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 28px;
+    transition: box-shadow 0.3s ease;
+  }
+
+  .ui-card:hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ui-card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .card-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .card-header-title .icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background: var(--primary-light);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  .card-header-title .icon-box.green {
+    background: var(--success-bg);
+    color: var(--success);
+  }
+
+  .ui-card-body {
+    padding: 24px;
+  }
+
+  /* Grid & Inputs */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    align-items: end;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+
+  .form-group label span {
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .select-wrapper {
+    position: relative;
+  }
+
+  .form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--text-main);
+    background-color: #f8fafc;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  .select-wrapper::after {
+    content: "\f078";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    font-size: 11px;
+    color: var(--text-muted);
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.12);
+  }
+
+  .form-group select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Buttons */
+  .btn-ui {
+    padding: 11px 20px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-ui-primary {
+    background: var(--primary);
+    color: #ffffff;
+    width: 100%;
+    box-shadow: 0 2px 6px rgba(21, 101, 192, 0.25);
+  }
+
+  .btn-ui-primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(21, 101, 192, 0.35);
+  }
+
+  .btn-ui-danger {
+    background: #ffffff;
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+
+  .btn-ui-danger:hover {
+    background: var(--danger-bg);
+    border-color: var(--danger);
+  }
+
+  /* Feedback Alerts */
+  .alert-box {
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .alert-box.error {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+  }
+
+  .alert-box.warning {
+    background: var(--warning-bg);
+    color: #b45309;
+    border: 1px solid var(--warning-border);
+  }
+
+  /* Table UI */
+  .table-container {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
+  thead tr {
+    background: #f8fafc;
+  }
+
+  th {
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    color: var(--text-main);
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  tbody tr:hover {
+    background-color: #f8fafc;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Component Chips */
+  .badge-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid var(--primary-border);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .badge-chip.green {
+    background: var(--success-bg);
+    color: var(--success);
+    border-color: var(--success-border);
+  }
+
+  .code-tag {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+    display: block;
+  }
+
+  .empty-state p {
+    margin: 0;
+    font-size: 14px;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="page-wrap">
 
   {% if department_name %}
-  <div class="dept-badge"><i class="fas fa-sitemap"></i> {{ department_name | upper }}</div>
+  <div class="dept-header">
+    <div class="dept-badge">
+      <i class="fas fa-sitemap"></i>
+      <span>{{ department_name | upper }}</span>
+    </div>
+  </div>
   {% endif %}
 
-  <!-- Assign Form -->
-  <div class="card">
-    <div class="card-header"><i class="fas fa-link"></i> Assign Unit to Trainer</div>
-    <div class="card-body">
-      {% if error %}<div class="error-box"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
+  <!-- Form Card -->
+  <div class="ui-card">
+    <div class="ui-card-header">
+      <div class="card-header-title">
+        <div class="icon-box">
+          <i class="fas fa-link"></i>
+        </div>
+        <span>Assign Unit to Trainer</span>
+      </div>
+    </div>
+    <div class="ui-card-body">
+      {% if error %}
+      <div class="alert-box error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
 
       {% if not trainers %}
-      <div class="empty-warn"><i class="fas fa-exclamation-triangle"></i> No trainers found in your department. Please add trainers first.</div>
+      <div class="alert-box warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>No trainers found in your department. Please add trainers first.</span>
+      </div>
       {% endif %}
+
       {% if not units %}
-      <div class="empty-warn"><i class="fas fa-exclamation-triangle"></i> No units found in your department. Please add units first.</div>
+      <div class="alert-box warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>No units found in your department. Please add units first.</span>
+      </div>
       {% endif %}
 
       <form method="post">
         <input type="hidden" name="action" value="assign">
         <div class="form-grid">
+          
           <div class="form-group">
             <label>Trainer *</label>
-            <select name="trainer_id" required {% if not trainers %}disabled{% endif %}>
-              <option value="">— Select Trainer —</option>
-              {% for t in trainers %}
-              <option value="{{ t.id }}">{{ t.full_name }}{% if t.staff_no %} ({{ t.staff_no }}){% endif %}</option>
-              {% endfor %}
-            </select>
+            <div class="select-wrapper">
+              <select name="trainer_id" required {% if not trainers %}disabled{% endif %}>
+                <option value="">Select Trainer</option>
+                {% for t in trainers %}
+                <option value="{{ t.id }}">{{ t.full_name }}{% if t.staff_no %} ({{ t.staff_no }}){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
+
           <div class="form-group">
             <label>Unit *</label>
-            <select name="unit_id" required {% if not units %}disabled{% endif %}>
-              <option value="">— Select Unit —</option>
-              {% for u in units %}
-              <option value="{{ u.id }}">{{ u.code }} — {{ u.name }}</option>
-              {% endfor %}
-            </select>
+            <div class="select-wrapper">
+              <select name="unit_id" required {% if not units %}disabled{% endif %}>
+                <option value="">Select Unit</option>
+                {% for u in units %}
+                <option value="{{ u.id }}">{{ u.code }} — {{ u.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
+
           <div class="form-group">
-            <label>Class <span style="font-weight:400;text-transform:none">(links unit to class for attendance)</span></label>
-            <select name="class_id">
-              <option value="">— Optional —</option>
-              {% for c in classes %}
-              <option value="{{ c.id }}">{{ c.name }}</option>
-              {% endfor %}
-            </select>
+            <label>Class <span>(attendance tracking)</span></label>
+            <div class="select-wrapper">
+              <select name="class_id">
+                <option value="">Optional</option>
+                {% for c in classes %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
+
           <div class="form-group">
             <label>Year</label>
-            <select name="year">
-              {% for y in range(2024, 2030) %}
-              <option value="{{ y }}" {% if y == active_year %}selected{% endif %}>{{ y }}</option>
-              {% endfor %}
-            </select>
+            <div class="select-wrapper">
+              <select name="year">
+                {% for y in range(2024, 2030) %}
+                <option value="{{ y }}" {% if y == active_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
+
           <div class="form-group">
             <label>Term</label>
-            <select name="term">
-              <option value="1">Term 1 (Jan–Apr)</option>
-              <option value="2">Term 2 (May–Aug)</option>
-              <option value="3">Term 3 (Sep–Dec)</option>
-            </select>
+            <div class="select-wrapper">
+              <select name="term">
+                <option value="1">Term 1 (Jan–Apr)</option>
+                <option value="2">Term 2 (May–Aug)</option>
+                <option value="3">Term 3 (Sep–Dec)</option>
+              </select>
+            </div>
           </div>
-          <div class="form-group" style="display:flex;align-items:flex-end">
-            <button type="submit" class="btn btn-primary" {% if not trainers or not units %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}>
-              <i class="fas fa-link"></i> Assign Unit
+
+          <div class="form-group">
+            <button type="submit" class="btn-ui btn-ui-primary" {% if not trainers or not units %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}>
+              <i class="fas fa-plus-circle"></i> Assign Unit
             </button>
           </div>
+
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Trainer–Unit Assignments -->
-  <div class="card">
-    <div class="card-header"><i class="fas fa-users-cog"></i> Trainer ↔ Unit Assignments ({{ assignments|length }})</div>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Trainer</th>
-          <th>Unit Name</th>
-          <th>Unit Code</th>
-          <th>Assigned</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for a in assignments %}
-        <tr>
-          <td style="color:#bbb;font-size:12px">{{ loop.index }}</td>
-          <td>
-            <span class="trainer-chip">
-              <i class="fas fa-chalkboard-teacher"></i>
-              {{ (a.user_profiles or {}).get('full_name', '—') }}
-            </span>
-          </td>
-          <td><strong>{{ (a.units or {}).get('name', '—') }}</strong></td>
-          <td><code>{{ (a.units or {}).get('code', '—') }}</code></td>
-          <td style="font-size:12px;color:#888">{{ a.assigned_at | to_eat('%d %b %Y') if a.assigned_at else '—' }}</td>
-          <td>
-            <form method="post" style="display:inline" class="unassign-form"
-                  data-trainer="{{ (a.user_profiles or {}).get('full_name', 'this trainer') }}"
-                  data-unit="{{ (a.units or {}).get('code', '') }}">
-              <input type="hidden" name="action" value="unassign">
-              <input type="hidden" name="assign_id" value="{{ a.id }}">
-              <button type="submit" class="btn btn-danger"><i class="fas fa-unlink"></i> Remove</button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="6" style="text-align:center;color:#bbb;padding:40px">
-            <i class="fas fa-link" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
-            No assignments yet.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- Trainer - Unit Assignments Table Card -->
+  <div class="ui-card">
+    <div class="ui-card-header">
+      <div class="card-header-title">
+        <div class="icon-box">
+          <i class="fas fa-users-cog"></i>
+        </div>
+        <span>Trainer Assignments ({{ assignments|length }})</span>
+      </div>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 60px;">#</th>
+            <th>Trainer</th>
+            <th>Unit Name</th>
+            <th>Unit Code</th>
+            <th>Assigned Date</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in assignments %}
+          <tr>
+            <td style="color: var(--text-muted); font-size: 13px;">{{ loop.index }}</td>
+            <td>
+              <span class="badge-chip">
+                <i class="fas fa-user-circle"></i>
+                {{ (a.user_profiles or {}).get('full_name', '—') }}
+              </span>
+            </td>
+            <td><strong>{{ (a.units or {}).get('name', '—') }}</strong></td>
+            <td><span class="code-tag">{{ (a.units or {}).get('code', '—') }}</span></td>
+            <td style="font-size: 13px; color: var(--text-muted);">
+              {{ a.assigned_at | to_eat('%d %b %Y') if a.assigned_at else '—' }}
+            </td>
+            <td style="text-align: right;">
+              <form method="post" style="display:inline" class="unassign-form"
+                    data-trainer="{{ (a.user_profiles or {}).get('full_name', 'this trainer') }}"
+                    data-unit="{{ (a.units or {}).get('code', '') }}">
+                <input type="hidden" name="action" value="unassign">
+                <input type="hidden" name="assign_id" value="{{ a.id }}">
+                <button type="submit" class="btn-ui btn-ui-danger">
+                  <i class="fas fa-trash-alt"></i> Remove
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No assignments recorded yet.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Class–Unit–Trainer Assignments (for attendance) -->
-  <div class="card">
-    <div class="card-header" style="background:linear-gradient(135deg,#2e7d32,#1b5e20)"><i class="fas fa-school"></i> Class ↔ Unit ↔ Trainer (Attendance Linking)</div>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Class</th>
-          <th>Unit</th>
-          <th>Trainer</th>
-          <th>Year</th>
-          <th>Term</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for ca in class_assignments %}
-        <tr>
-          <td style="color:#bbb;font-size:12px">{{ loop.index }}</td>
-          <td><span class="trainer-chip" style="background:#e8f5e9;color:#2e7d32"><i class="fas fa-door-open"></i> {{ (ca.classes or {}).get('name', '—') }}</span></td>
-          <td><strong>{{ (ca.units or {}).get('name', '—') }}</strong> <code>{{ (ca.units or {}).get('code', '—') }}</code></td>
-          <td>{{ (ca.user_profiles or {}).get('full_name', '—') }}</td>
-          <td>{{ ca.year }}</td>
-          <td>Term {{ ca.term }}</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="6" style="text-align:center;color:#bbb;padding:40px">
-            <i class="fas fa-school" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
-            No class-linked assignments yet. Use the <strong>Class</strong> dropdown in the form above to link units to classes for attendance tracking.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- Class - Unit - Trainer Assignments Card -->
+  <div class="ui-card">
+    <div class="ui-card-header">
+      <div class="card-header-title">
+        <div class="icon-box green">
+          <i class="fas fa-school"></i>
+        </div>
+        <span>Class & Attendance Linkings</span>
+      </div>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 60px;">#</th>
+            <th>Class</th>
+            <th>Unit Details</th>
+            <th>Trainer</th>
+            <th>Year</th>
+            <th>Term</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ca in class_assignments %}
+          <tr>
+            <td style="color: var(--text-muted); font-size: 13px;">{{ loop.index }}</td>
+            <td>
+              <span class="badge-chip green">
+                <i class="fas fa-door-open"></i> {{ (ca.classes or {}).get('name', '—') }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ (ca.units or {}).get('name', '—') }}</strong>
+              <span class="code-tag" style="margin-left: 6px;">{{ (ca.units or {}).get('code', '—') }}</span>
+            </td>
+            <td>{{ (ca.user_profiles or {}).get('full_name', '—') }}</td>
+            <td>{{ ca.year }}</td>
+            <td>Term {{ ca.term }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <i class="fas fa-folder-open"></i>
+                <p>No class-linked assignments yet. Use the Class dropdown in the form above to link units for attendance tracking.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
 </div>
 {% endblock %}
 

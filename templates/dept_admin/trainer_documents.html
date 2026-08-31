@@ -4,100 +4,202 @@
 
 {% block extra_style %}
 <style>
-  .filter-section {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  :root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+    --primary-text: #1e40af;
+    --bg-main: #f8fafc;
+    --card-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
+
+  .filter-section {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .section-title {
+    margin: 0 0 20px 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .filter-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
   }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+  }
+
   .filter-group label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    color: #333;
-    font-size: 14px;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--text-main);
+    font-size: 0.875rem;
   }
+
   .filter-group input,
   .filter-group select {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .btn-filter {
-    background: #1976d2;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .btn-filter:hover { background: #0d47a1; }
-  .documents-table {
-    background: white;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 0.875rem;
+    background-color: #f8fafc;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  .filter-group input:focus,
+  .filter-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+
+  .btn-filter {
+    background: var(--primary);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .btn-filter:hover {
+    background: var(--primary-hover);
+  }
+
+  .documents-table {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
     overflow-x: auto;
   }
+
   .documents-table table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     min-width: 1000px;
   }
-  .documents-table th,
-  .documents-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-  }
+
   .documents-table th {
-    background: #f5f5f5;
+    background: #f8fafc;
     font-weight: 600;
-    color: #333;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
   }
+
+  .documents-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 0.875rem;
+  }
+
+  .documents-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .documents-table tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  .documents-table tbody tr:hover {
+    background-color: #f8fafc;
+  }
+
   .type-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
-    background: #e3f2fd;
-    color: #1565c0;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--primary-light);
+    color: var(--primary-text);
   }
+
   .btn-view {
-    background: #1565c0;
+    background: var(--primary);
     color: white;
-    padding: 6px 12px;
+    padding: 6px 14px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
     text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease;
   }
+
+  .btn-view:hover {
+    background: var(--primary-hover);
+  }
+
   .empty-state {
     text-align: center;
     padding: 60px 20px;
-    color: #999;
+    color: var(--text-muted);
   }
+
   .empty-state i {
     font-size: 48px;
     margin-bottom: 16px;
+    color: #cbd5e1;
+  }
+
+  .empty-state p {
+    margin: 0;
+    font-size: 0.95rem;
   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="filter-section">
-  <h3 style="margin: 0 0 15px 0;">Filter Trainer POE</h3>
+  <h3 class="section-title">Filter Trainer POE</h3>
   <form method="GET">
     <div class="filter-row">
       <div class="filter-group">
@@ -151,9 +253,9 @@
           {% endfor %}
         </select>
       </div>
-      <div class="filter-group" style="display: flex; align-items: flex-end;">
+      <div class="filter-group" style="display: flex; justify-content: flex-end;">
         <button type="submit" class="btn-filter">
-          <i class="fas fa-filter"></i> Apply
+          <i class="fas fa-filter"></i> Apply Filters
         </button>
       </div>
     </div>
@@ -161,7 +263,7 @@
 </div>
 
 <div class="documents-table">
-  <h3 style="margin: 0 0 20px 0;">Trainer POE (Read-Only)</h3>
+  <h3 class="section-title">Trainer POE (Read-Only)</h3>
   {% if not documents %}
   <div class="empty-state">
     <i class="fas fa-folder-open"></i>

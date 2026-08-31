@@ -2,34 +2,286 @@
 {% block title %}Manage Units{% endblock %}
 {% block page_title %}Manage Units{% endblock %}
 {% block extra_style %}
-:root{--blue:#1565c0;--blue-dark:#0d47a1;--red:#c62828;--green:#2e7d32;--amber:#f57f17}
-.page-wrap{padding:24px}
-.dept-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:20px}
-.card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
-.card-header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:16px 22px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
-.card-body{padding:22px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
-.form-group label{display:block;font-size:11px;font-weight:700;color:#555;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.form-group input,.form-group select{width:100%;padding:10px 13px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fafafa;transition:border .2s,box-shadow .2s;box-sizing:border-box}
-.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.1);background:#fff}
-.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff}
-.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,101,192,.3)}
-.btn-danger{background:var(--red);color:#fff;padding:6px 13px;font-size:12px}
-.btn-danger:hover{opacity:.85}
-.btn-edit{background:var(--amber);color:#fff;padding:6px 13px;font-size:12px}
-.btn-edit:hover{opacity:.85}
-.error-box{background:#ffebee;color:var(--red);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-left:4px solid var(--red)}
-table{width:100%;border-collapse:collapse}
-thead tr{background:#f5f7fa}
-th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#667;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e8ecf0}
-td{padding:12px 16px;border-bottom:1px solid #f0f4f8;font-size:13px;vertical-align:middle}
-tr:hover td{background:#f9fafb}
-code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex}
-.modal-box{background:#fff;border-radius:14px;padding:28px;width:90%;max-width:580px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
-.modal-title{font-size:16px;font-weight:800;color:#1a1a2e;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e8ecf0;display:flex;align-items:center;gap:8px}
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --primary-text: #3730a3;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: #fef2f2;
+  --danger-text: #991b1b;
+  --warning: #f59e0b;
+  --warning-hover: #d97706;
+  --warning-light: #fffbeb;
+  --warning-text: #92400e;
+  --bg-main: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.page-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-main);
+}
+
+.dept-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary-light);
+  color: var(--primary-text);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 28px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  background: #ffffff;
+  color: var(--text-main);
+  padding: 20px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header i {
+  color: var(--primary);
+}
+
+.card-body {
+  padding: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-main);
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+
+.btn {
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.btn-danger {
+  background: var(--danger-light);
+  color: var(--danger-text);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.btn-edit {
+  background: var(--warning-light);
+  color: var(--warning-text);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.btn-edit:hover {
+  background: var(--warning);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+  color: var(--text-main);
+}
+
+.error-box {
+  background: var(--danger-light);
+  color: var(--danger-text);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead tr {
+  background: #f8fafc;
+}
+
+th {
+  padding: 14px 24px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+td {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover td {
+  background: #f8fafc;
+}
+
+code {
+  background: var(--primary-light);
+  color: var(--primary-text);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay.open {
+  display: flex;
+  opacity: 1;
+}
+
+.modal-box {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 28px;
+  width: 90%;
+  max-width: 560px;
+  box-shadow: var(--shadow-xl);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  transform: translateY(10px);
+  transition: transform 0.2s ease;
+}
+
+.modal-overlay.open .modal-box {
+  transform: translateY(0);
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 {% endblock %}
 
 {% block content %}
@@ -39,7 +291,6 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
   <div class="dept-badge"><i class="fas fa-sitemap"></i> {{ department_name | upper }}</div>
   {% endif %}
 
-  <!-- Add Unit Card -->
   <div class="card">
     <div class="card-header"><i class="fas fa-plus-circle"></i> Add New Unit</div>
     <div class="card-body">
@@ -65,14 +316,13 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
             </select>
           </div>
         </div>
-        <div style="margin-top:18px">
+        <div style="margin-top:20px">
           <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Unit</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Units List -->
   <div class="card">
     <div class="card-header"><i class="fas fa-list"></i> Units ({{ units|length }})</div>
     <table>
@@ -82,18 +332,18 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
           <th>Code</th>
           <th>Unit Name</th>
           <th>Course</th>
-          <th>Actions</th>
+          <th style="text-align: right;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for u in units %}
         <tr>
-          <td style="color:#bbb;font-size:12px">{{ loop.index }}</td>
+          <td style="color:var(--text-muted);font-size:13px">{{ loop.index }}</td>
           <td><code>{{ u.code }}</code></td>
-          <td><strong>{{ u.name }}</strong></td>
-          <td>{{ u.courses.name if u.courses else '—' }}</td>
-          <td>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <td><strong style="color:var(--text-main)">{{ u.name }}</strong></td>
+          <td style="color:var(--text-muted)">{{ u.courses.name if u.courses else '—' }}</td>
+          <td style="text-align: right;">
+            <div style="display:inline-flex;gap:8px;justify-content:flex-end">
               <button type="button" class="btn btn-edit edit-unit-btn"
                 data-id="{{ u.id }}" data-code="{{ u.code }}"
                 data-name="{{ u.name }}" data-course="{{ u.course_id or '' }}"
@@ -107,17 +357,16 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;color:#bbb;padding:40px"><i class="fas fa-book" style="font-size:28px;display:block;margin-bottom:8px"></i>No units yet. Add one above.</td></tr>
+        <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:48px 24px"><i class="fas fa-book" style="font-size:32px;display:block;margin-bottom:12px;color:var(--border-color)"></i>No units yet. Add one above.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
   <div class="modal-box">
-    <div class="modal-title"><i class="fas fa-edit" style="color:#1565c0"></i> Edit Unit</div>
+    <div class="modal-title"><i class="fas fa-edit" style="color:var(--primary)"></i> Edit Unit</div>
     <form method="post">
       <input type="hidden" name="action" value="edit">
       <input type="hidden" name="unit_id" id="edit_unit_id">
@@ -140,9 +389,9 @@ code{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:5px;font-siz
           </select>
         </div>
       </div>
-      <div style="margin-top:22px;display:flex;gap:10px">
+      <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
+        <button type="button" class="btn btn-secondary" onclick="closeEditModal()"><i class="fas fa-times"></i> Cancel</button>
         <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
-        <button type="button" class="btn" style="background:#e0e0e0;color:#555" onclick="closeEditModal()"><i class="fas fa-times"></i> Cancel</button>
       </div>
     </form>
   </div>

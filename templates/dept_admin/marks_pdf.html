@@ -2,546 +2,655 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Marks Report — {{ dept_name }} — {{ year }}</title>
   <style>
-    /* ── Print settings ── */
+    /* ── Root Theme Variables ── */
+    :root {
+      --primary: #0f172a;
+      --primary-accent: #1e3a8a;
+      --surface: #ffffff;
+      --surface-subtle: #f8fafc;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* ── Print Settings ── */
     @page {
       size: A4 landscape;
-      margin: 15mm 18mm 20mm 18mm;
+      margin: 12mm 15mm 15mm 15mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: var(--font-stack);
+        font-size: 8pt;
+        color: var(--text-muted);
+      }
     }
     @media print {
       .no-print { display: none !important; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+        padding-top: 0 !important;
+      }
+      tr { page-break-inside: avoid; }
+      .sig-section { page-break-inside: avoid; }
     }
 
+    /* ── Reset & Base ── */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Arial', 'Helvetica', sans-serif;
-      font-size: 10pt;
-      color: #0a0f1e;
-      background: #fff;
+      font-family: var(--font-stack);
+      font-size: 9.5pt;
+      color: var(--text-main);
+      background: #f1f5f9;
       line-height: 1.4;
+      padding: 0;
     }
 
-    /* ── Letterhead ── */
+    body.has-toolbar {
+      padding-top: 54px;
+    }
+
+    /* Main Container (Simulates sheet on screen) */
+    .document-container {
+      max-width: 1100px;
+      margin: 20px auto;
+      background: var(--surface);
+      padding: 24px 28px;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01);
+    }
+
+    @media print {
+      .document-container {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+    }
+
+    /* ── Letterhead Header ── */
     .letterhead {
       display: flex;
       align-items: center;
-      gap: 18px;
-      padding-bottom: 10px;
-      border-bottom: 4px solid #0a0f1e;
-      margin-bottom: 4px;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid var(--primary);
+      margin-bottom: 12px;
+    }
+    .lh-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
     .letterhead img {
-      width: 72px;
-      height: 72px;
+      width: 68px;
+      height: 68px;
       object-fit: contain;
       flex-shrink: 0;
     }
-    .letterhead-text { flex: 1; }
     .lh-title {
-      font-size: 17pt;
-      font-weight: 900;
-      color: #0a0f1e;
-      letter-spacing: 0.06em;
+      font-size: 16pt;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.01em;
       text-transform: uppercase;
-      line-height: 1.1;
+      line-height: 1.15;
     }
     .lh-sub {
-      font-size: 9pt;
-      color: #374151;
-      margin-top: 3px;
-      letter-spacing: 0.03em;
+      font-size: 8.5pt;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
     }
     .lh-right {
       text-align: right;
       font-size: 8pt;
-      color: #6b7280;
-      line-height: 1.7;
-      flex-shrink: 0;
+      color: var(--text-muted);
+      line-height: 1.5;
+      background: var(--surface-subtle);
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
     }
 
-    /* ── Report title band ── */
+    /* ── Report Title Band ── */
     .report-band {
-      background: #DCE6F4;
-      color: #0F2744;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      color: #ffffff;
       text-align: center;
-      padding: 8px 16px;
-      margin: 8px 0;
-      border-radius: 4px;
-      border-bottom: 2px solid #0F2744;
+      padding: 10px 16px;
+      margin: 12px 0 16px 0;
+      border-radius: 6px;
     }
     .report-band h2 {
-      font-size: 13pt;
-      font-weight: 800;
-      letter-spacing: 0.08em;
+      font-size: 12pt;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: #0F2744;
+      color: #ffffff;
     }
     .report-band p {
-      font-size: 9pt;
-      color: #374151;
+      font-size: 8.5pt;
+      color: #93c5fd;
       margin-top: 2px;
+      font-weight: 500;
     }
 
-    /* ── Meta grid ── */
+    /* ── Metadata Grid ── */
     .meta-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
     }
     .meta-box {
-      background: #f8f9fb;
-      border: 1px solid #e5e7eb;
-      border-radius: 5px;
-      padding: 7px 10px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
     }
-    .meta-lbl { font-size: 7.5pt; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
-    .meta-val { font-size: 10pt; font-weight: 700; color: #0a0f1e; margin-top: 2px; }
+    .meta-lbl { 
+      font-size: 7pt; 
+      font-weight: 700; 
+      color: var(--text-muted); 
+      text-transform: uppercase; 
+      letter-spacing: .05em; 
+    }
+    .meta-val { 
+      font-size: 9pt; 
+      font-weight: 700; 
+      color: var(--text-main); 
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-    /* ── Stats row ── */
+    /* ── Stats Metric Cards ── */
     .stats-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 16px;
     }
     .stat-box {
-      flex: 1;
-      border-radius: 5px;
-      padding: 8px 12px;
-      text-align: center;
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid var(--border);
     }
-    .sb-total    { background: #dbeafe; border: 1px solid #93c5fd; }
-    .sb-pass     { background: #dcfce7; border: 1px solid #86efac; }
-    .sb-rate     { background: #fef3c7; border: 1px solid #fde68a; }
-    .sb-avg      { background: #ede9fe; border: 1px solid #c4b5fd; }
-    .stat-num    { font-size: 16pt; font-weight: 900; color: #0a0f1e; }
-    .stat-lbl    { font-size: 7pt;  font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+    .sb-total { background: #f0f9ff; border-color: #bae6fd; }
+    .sb-pass  { background: #f0fdf4; border-color: #bbf7d0; }
+    .sb-rate  { background: #fffbeb; border-color: #fde68a; }
+    .sb-avg   { background: #faf5ff; border-color: #e9d5ff; }
 
-    /* ── Marks table ── */
+    .stat-box .info { display: flex; flex-direction: column; }
+    .stat-num { font-size: 16pt; font-weight: 800; color: var(--text-main); line-height: 1; }
+    .stat-lbl { font-size: 7pt; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+
+    /* ── Marks Table ── */
     table.marks-tbl {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       margin-bottom: 14px;
-      font-size: 9pt;
-    }
-    table.marks-tbl thead tr {
-      background: #DCE6F4;
+      font-size: 8.5pt;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
     }
     table.marks-tbl th {
-      padding: 7px 8px;
+      background: #f1f5f9;
+      padding: 8px 10px;
       text-align: left;
-      color: #0F2744;
+      color: #334155;
       font-weight: 700;
-      font-size: 8pt;
+      font-size: 7.5pt;
       text-transform: uppercase;
       letter-spacing: .04em;
-      border: 1px solid #B9C9DE;
-      border-bottom: 2px solid #0F2744;
+      border-bottom: 1px solid var(--border-dark);
       white-space: nowrap;
     }
     table.marks-tbl td {
-      padding: 6px 8px;
-      border: 1px solid #e5e7eb;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
       vertical-align: middle;
+      background: var(--surface);
+    }
+    table.marks-tbl tbody tr:last-child td {
+      border-bottom: none;
     }
     table.marks-tbl tbody tr:nth-child(even) td {
-      background: #f8f9fb;
+      background: #f8fafc;
     }
-    table.marks-tbl tbody tr:hover td {
-      background: #eff6ff;
-    }
-    .row-num   { color: #9ca3af; font-size: 8pt; }
-    .adm-no    { font-family: monospace; font-size: 8.5pt; color: #374151; }
-    .stu-name  { font-weight: 700; color: #0a0f1e; }
-    .unit-code { display: inline-block; background: #dbeafe; color: #1d4ed8; font-size: 7.5pt; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
-    .score     { font-weight: 800; color: #0a0f1e; }
-    .score-max { color: #9ca3af; font-size: 8pt; }
+    
+    .row-num   { color: var(--text-muted); font-size: 8pt; font-weight: 600; }
+    .adm-no    { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 8pt; color: #334155; font-weight: 600; }
+    .stu-name  { font-weight: 700; color: var(--text-main); }
+    .unit-code { display: inline-block; background: #e0e7ff; color: #3730a3; font-size: 7.5pt; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+    .score     { font-weight: 800; color: var(--text-main); }
+    .score-max { color: var(--text-muted); font-size: 7.5pt; }
 
-    /* ── Progress mini-bar ── */
-    .pct-wrap  { display: flex; align-items: center; gap: 5px; }
-    .pct-bar   { width: 44px; height: 5px; background: #e5e7eb; border-radius: 9999px; overflow: hidden; flex-shrink: 0; }
+    /* Progress Mini Bars */
+    .pct-wrap  { display: flex; align-items: center; gap: 6px; }
+    .pct-bar   { width: 44px; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; flex-shrink: 0; }
     .pct-fill  { height: 100%; border-radius: 9999px; }
-    .pf-4 { background: #22c55e; }
-    .pf-3 { background: #3b82f6; }
-    .pf-2 { background: #f59e0b; }
-    .pf-1 { background: #ef4444; }
-    .pct-num   { font-size: 8.5pt; font-weight: 700; }
+    .pf-4 { background: #16a34a; }
+    .pf-3 { background: #2563eb; }
+    .pf-2 { background: #d97706; }
+    .pf-1 { background: #dc2626; }
+    .pct-num   { font-size: 8pt; font-weight: 700; color: #334155; }
 
-    /* ── Grade badges ── */
+    /* Grade Badges */
     .grade-badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 2px 8px;
-      border-radius: 9999px;
-      font-size: 8pt;
+      border-radius: 12px;
+      font-size: 7.5pt;
       font-weight: 800;
+      min-width: 32px;
       text-align: center;
-      min-width: 28px;
     }
-    .gb-M   { background: #ede9fe; color: #5b21b6; }
-    .gb-P   { background: #dcfce7; color: #15803d; }
-    .gb-C   { background: #dbeafe; color: #1d4ed8; }
-    .gb-NYC { background: #fee2e2; color: #b91c1c; }
-    .gb-CRNM{ background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
-    /* legacy numeric codes */
-    .gb-4 { background: #ede9fe; color: #5b21b6; }
-    .gb-3 { background: #dcfce7; color: #15803d; }
-    .gb-2 { background: #dbeafe; color: #1d4ed8; }
-    .gb-1 { background: #fee2e2; color: #b91c1c; }
+    .gb-M   { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+    .gb-P   { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .gb-C   { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .gb-NYC { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
+    .gb-CRNM{ background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    
+    /* Legacy numerical codes support */
+    .gb-4 { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+    .gb-3 { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .gb-2 { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .gb-1 { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
 
-    /* ── Grade scale legend ── */
+    /* ── Legend Section ── */
     .grade-legend {
       display: flex;
-      gap: 14px;
+      gap: 12px;
       flex-wrap: wrap;
       padding: 8px 12px;
-      background: #f8f9fb;
-      border: 1px solid #e5e7eb;
-      border-radius: 5px;
-      margin-bottom: 18px;
-      font-size: 8pt;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 7.5pt;
+      color: #334155;
     }
-    .gl-item { display: flex; align-items: center; gap: 6px; }
-    .gl-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .gd-M   { background: #7c3aed; }
-    .gd-P   { background: #22c55e; }
-    .gd-C   { background: #3b82f6; }
-    .gd-NYC { background: #ef4444; }
-    .gd-CRNM{ background: #6b7280; }
+    .gl-title {
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      margin-right: 4px;
+    }
+    .gl-item { display: flex; align-items: center; gap: 4px; }
+    .gl-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .gd-M   { background: #9333ea; }
+    .gd-P   { background: #16a34a; }
+    .gd-C   { background: #2563eb; }
+    .gd-NYC { background: #e11d48; }
+    .gd-CRNM{ background: #64748b; }
 
-    /* ── Signature section ── */
+    /* ── Signatures ── */
     .sig-section {
-      margin-top: 24px;
+      margin-top: 18px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      gap: 20px;
-      page-break-inside: avoid;
+      gap: 24px;
     }
     .sig-block {
       flex: 1;
-      max-width: 240px;
+      max-width: 260px;
     }
     .sig-name-box {
-      background: #f8f9fb;
-      border: 1px solid #e5e7eb;
-      border-radius: 5px;
-      padding: 8px 14px;
-      margin-bottom: 6px;
-      font-size: 9pt;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      margin-bottom: 8px;
+      font-size: 8.5pt;
       font-weight: 700;
-      color: #0a0f1e;
+      color: var(--text-main);
+    }
+    .sig-role {
+      font-size: 7pt;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: block;
+      text-transform: uppercase;
+      margin-bottom: 2px;
     }
     .sig-line {
-      border-top: 1.5px solid #0a0f1e;
-      padding-top: 5px;
-      font-size: 8pt;
+      border-top: 1.5px solid var(--primary);
+      padding-top: 4px;
+      font-size: 7.5pt;
       font-weight: 700;
-      color: #374151;
+      color: var(--text-muted);
       letter-spacing: .04em;
       text-transform: uppercase;
     }
     .sig-date-line {
-      border-top: 1.5px solid #0a0f1e;
-      padding-top: 5px;
-      font-size: 8pt;
+      border-top: 1.5px solid var(--primary);
+      padding-top: 4px;
+      font-size: 7.5pt;
       font-weight: 700;
-      color: #374151;
+      color: var(--text-muted);
     }
     .sig-stamp {
       flex: 1;
-      max-width: 160px;
-      border: 2px dashed #d1d5db;
+      max-width: 140px;
+      border: 2px dashed #cbd5e1;
       border-radius: 8px;
-      height: 80px;
+      height: 75px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #9ca3af;
-      font-size: 8pt;
+      color: #94a3b8;
+      font-size: 7.5pt;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .06em;
       text-align: center;
+      line-height: 1.3;
     }
 
     /* ── Footer ── */
     .pdf-footer {
-      margin-top: 14px;
+      margin-top: 16px;
       padding-top: 8px;
-      border-top: 2px solid #0a0f1e;
+      border-top: 1px solid var(--border-dark);
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 7.5pt;
-      color: #6b7280;
+      color: var(--text-muted);
     }
     .footer-center { text-align: center; flex: 1; }
 
-    /* ── Print button (no-print) ── */
+    /* ── Print Action Toolbar ── */
     .print-bar {
       position: fixed;
       top: 0; left: 0; right: 0;
-      background: #0a0f1e;
-      color: #fff;
-      padding: 10px 20px;
+      height: 54px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 0 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
       z-index: 999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
-    .print-bar span { font-size: 13px; font-weight: 700; }
+    .print-bar span { font-size: 13px; font-weight: 600; }
     .btn-print {
-      padding: 8px 24px;
-      background: #fbbf24;
-      color: #0a0f1e;
+      padding: 7px 18px;
+      background: #3b82f6;
+      color: #ffffff;
       border: none;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 800;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .btn-print:hover { opacity: .9; }
-    .btn-close {
-      padding: 8px 16px;
-      background: rgba(255,255,255,.15);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,.25);
-      border-radius: 8px;
+      border-radius: 6px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s ease;
     }
-    @media print { .print-bar { display: none !important; } }
-
-    body.has-toolbar { padding-top: 50px; }
+    .btn-print:hover { background: #2563eb; }
+    .btn-close {
+      padding: 7px 14px;
+      background: rgba(255,255,255,0.1);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+    .btn-close:hover { background: rgba(255,255,255,0.2); }
   </style>
 </head>
 <body class="has-toolbar">
 
-  <!-- ── Print toolbar (hidden on print) ── -->
+  <!-- Print Toolbar -->
   <div class="print-bar no-print">
-    <span>&#128462; Marks Report — {{ dept_name }}{% if term %}, Term {{ term }}{% endif %} {{ year }}</span>
-    <div style="display:flex;gap:8px">
+    <span>Marks Report — {{ dept_name }}{% if term %}, Term {{ term }}{% endif %} {{ year }}</span>
+    <div style="display:flex; gap:10px;">
       <button class="btn-print" onclick="window.print()">
-        &#128424; Download / Print PDF
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Download / Print PDF
       </button>
       <a href="javascript:history.back()" class="btn-close">&#8592; Back</a>
     </div>
   </div>
 
-  <!-- ══════════════════════════ DOCUMENT ══════════════════════════ -->
+  <div class="document-container">
 
-  <!-- Letterhead -->
-  <div class="letterhead">
-    <img src="{{ LOGO_URL }}" alt="TTTI Logo">
-    <div class="letterhead-text">
-      <div class="lh-title">Thika Technical Training Institute</div>
-      <div class="lh-sub">
-        P.O. Box 93 – 01000, Thika, Kenya &nbsp;|&nbsp;
-        Tel: +254 (0)67 22147 &nbsp;|&nbsp;
-        Accredited by TVET Authority of Kenya
-      </div>
-    </div>
-    <div class="lh-right">
-      <strong>{{ dept_name | upper }}</strong><br>
-      DEPARTMENT<br>
-      Academic Year: {{ year }}
-    </div>
-  </div>
-
-  <!-- Report title band -->
-  <div class="report-band">
-    <h2>&#9679; Formative Assessment — Marks Report &#9679;</h2>
-    <p>
-      {% if term %}Term {{ term }} &bull; {% endif %}
-      {% if class_name %}{{ class_name }} &bull; {% endif %}
-      {% if unit_name %}{{ unit_name }} &bull; {% endif %}
-      Academic Year {{ year }}
-    </p>
-  </div>
-
-  <!-- Metadata grid -->
-  <div class="meta-grid">
-    <div class="meta-box">
-      <div class="meta-lbl">Department</div>
-      <div class="meta-val">{{ dept_name or '—' }}</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-lbl">Academic Year</div>
-      <div class="meta-val">{{ year }}</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-lbl">Term</div>
-      <div class="meta-val">{% if term %}Term {{ term }}{% else %}All Terms{% endif %}</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-lbl">Class / Unit</div>
-      <div class="meta-val" style="font-size:9pt">
-        {{ class_name or 'All Classes' }}{% if unit_name %} / {{ unit_name }}{% endif %}
-      </div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-lbl">Head of Department</div>
-      <div class="meta-val">{{ hod_name }}</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-lbl">Date Generated</div>
-      <div class="meta-val" style="font-size:9pt">{{ generated_at }}</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-lbl">Total Records</div>
-      <div class="meta-val">{{ total }}</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-lbl">Document Ref.</div>
-      <div class="meta-val" style="font-size:8.5pt;color:#6b7280">TTTI/{{ dept_name[:4]|upper }}/MR/{{ year }}</div>
-    </div>
-  </div>
-
-  <!-- Stats strip -->
-  <div class="stats-row">
-    <div class="stat-box sb-total">
-      <div class="stat-num">{{ total }}</div>
-      <div class="stat-lbl">Mark Entries</div>
-    </div>
-    <div class="stat-box sb-pass">
-      <div class="stat-num">{{ pass_count }}</div>
-      <div class="stat-lbl">Competent &amp; Above</div>
-    </div>
-    <div class="stat-box sb-rate">
-      <div class="stat-num">{{ pass_rate }}%</div>
-      <div class="stat-lbl">Pass Rate</div>
-    </div>
-    <div class="stat-box sb-avg">
-      <div class="stat-num">{{ avg_pct }}%</div>
-      <div class="stat-lbl">Average Score</div>
-    </div>
-  </div>
-
-  <!-- Marks table -->
-  {% if marks %}
-  <table class="marks-tbl">
-    <thead>
-      <tr>
-        <th style="width:28px">#</th>
-        <th style="width:90px">Adm. No.</th>
-        <th>Student Name</th>
-        <th>Class</th>
-        <th style="width:65px">Unit Code</th>
-        <th>Unit Name</th>
-        <th>Assessment</th>
-        <th style="width:64px">Type</th>
-        <th style="width:55px">Term</th>
-        <th style="width:70px">Score</th>
-        <th style="width:80px">Progress</th>
-        <th style="width:44px">Grade</th>
-        <th>Trainer</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for m in marks %}
-      {% set pct = m.percentage %}
-      {% set pct_cls = 'pf-4' if pct >= 80 else ('pf-3' if pct >= 65 else ('pf-2' if pct >= 50 else 'pf-1')) %}
-      <tr>
-        <td class="row-num">{{ loop.index }}</td>
-        <td class="adm-no">{{ m.student.get('admission_no','—') }}</td>
-        <td class="stu-name">{{ m.student.get('full_name','—') }}</td>
-        <td>{{ m.class_.get('name','—') }}</td>
-        <td><span class="unit-code">{{ m.unit.get('code','—') }}</span></td>
-        <td>{{ m.unit.get('name','—') }}</td>
-        <td style="font-weight:600">{{ m.assessment_name or '—' }}</td>
-        <td>{{ m.assessment_type or '—' }}</td>
-        <td style="text-align:center">{{ m.term or '—' }}</td>
-        <td>
-          <span class="score">{{ m.marks_obtained if m.marks_obtained is not none else '—' }}</span>
-          <span class="score-max"> / {{ m.max_marks | int }}</span>
-        </td>
-        <td>
-          <div class="pct-wrap">
-            <div class="pct-bar">
-              <div class="pct-fill {{ pct_cls }}" style="width:{{ pct }}%"></div>
-            </div>
-            <span class="pct-num">{{ pct }}%</span>
+    <!-- Letterhead -->
+    <div class="letterhead">
+      <div class="lh-left">
+        <img src="{{ LOGO_URL }}" alt="TTTI Logo">
+        <div>
+          <div class="lh-title">Thika Technical Training Institute</div>
+          <div class="lh-sub">
+            P.O. Box 93 – 01000, Thika, Kenya &nbsp;|&nbsp;
+            Tel: +254 (0)67 22147 &nbsp;|&nbsp;
+            Accredited by TVET Authority
           </div>
-        </td>
-        <td style="text-align:center">
-          <span class="grade-badge gb-{{ m.grade }}">{{ m.grade }}</span>
-        </td>
-        <td style="font-size:8.5pt;color:#6b7280">{{ m.trainer.get('full_name','—') }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <div style="text-align:center;padding:32px;color:#9ca3af;font-size:11pt;background:#f9fafb;border:1px solid #e5e7eb;border-radius:5px;margin-bottom:14px">
-    <strong>No marks records found</strong> for the selected filters.
-  </div>
-  {% endif %}
-
-  <!-- Grade legend -->
-  <div class="grade-legend">
-    <strong style="margin-right:4px;font-size:8pt;text-transform:uppercase;letter-spacing:.05em">TVET CDACC Competency Grading:</strong>
-    <div class="gl-item"><div class="gl-dot gd-M"></div> <strong>M — Mastery</strong> &nbsp;80–100%: High mastery, accuracy, independence, consistency, excellence</div>
-    <div class="gl-item"><div class="gl-dot gd-P"></div> <strong>P — Proficient</strong> &nbsp;65–79%: Strong competence, minor areas for improvement</div>
-    <div class="gl-item"><div class="gl-dot gd-C"></div> <strong>C — Competent</strong> &nbsp;50–64%: Minimum required standard achieved</div>
-    <div class="gl-item"><div class="gl-dot gd-NYC"></div> <strong>NYC — Not Yet Competent</strong> &nbsp;0–49%: Requires further training or reassessment</div>
-    <div class="gl-item"><div class="gl-dot gd-CRNM"></div> <strong>CRNM — Course Requirement Not Met</strong> &nbsp;A required course/assessment requirement is unfulfilled</div>
-  </div>
-
-  <!-- ── Signature section ── -->
-  <div class="sig-section">
-
-    <!-- HOD signature -->
-    <div class="sig-block">
-      <div class="sig-name-box">
-        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">HEAD OF DEPARTMENT</span>
-        Name: {{ hod_name }}
+        </div>
       </div>
-      <div style="height:36px"></div>
-      <div class="sig-line">Sign</div>
-      <div class="sig-date-line" style="margin-top:14px">Date</div>
-    </div>
-
-    <!-- Chief Principal -->
-    <div class="sig-block">
-      <div class="sig-name-box">
-        <span style="font-size:7.5pt;font-weight:400;color:#6b7280;display:block;margin-bottom:2px">CHIEF PRINCIPAL</span>
-        Name: ______________________
+      <div class="lh-right">
+        <strong style="color:var(--text-main)">{{ dept_name | upper }}</strong><br>
+        DEPARTMENT<br>
+        Academic Year: {{ year }}
       </div>
-      <div style="height:36px"></div>
-      <div class="sig-line">Sign</div>
-      <div class="sig-date-line" style="margin-top:14px">Date</div>
     </div>
 
-    <!-- Official stamp -->
-    <div class="sig-stamp">
-      OFFICIAL<br>STAMP
+    <!-- Report Title Band -->
+    <div class="report-band">
+      <h2>Formative Assessment — Marks Report</h2>
+      <p>
+        {% if term %}Term {{ term }} &bull; {% endif %}
+        {% if class_name %}{{ class_name }} &bull; {% endif %}
+        {% if unit_name %}{{ unit_name }} &bull; {% endif %}
+        Academic Year {{ year }}
+      </p>
     </div>
 
-  </div>
-
-  <!-- Footer -->
-  <div class="pdf-footer">
-    <div>Ref: TTTI/{{ dept_name[:4]|upper }}/MR/{{ year }}</div>
-    <div class="footer-center">
-      <strong>THIKA TECHNICAL TRAINING INSTITUTE</strong> &nbsp;|&nbsp;
-      Official Academic Record &nbsp;|&nbsp;
-      This document must be signed and stamped to be valid
+    <!-- Metadata Grid -->
+    <div class="meta-grid">
+      <div class="meta-box">
+        <div class="meta-lbl">Department</div>
+        <div class="meta-val">{{ dept_name or '—' }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-lbl">Academic Year</div>
+        <div class="meta-val">{{ year }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-lbl">Term</div>
+        <div class="meta-val">{% if term %}Term {{ term }}{% else %}All Terms{% endif %}</div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-lbl">Class / Unit</div>
+        <div class="meta-val">
+          {{ class_name or 'All Classes' }}{% if unit_name %} / {{ unit_name }}{% endif %}
+        </div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-lbl">Head of Department</div>
+        <div class="meta-val">{{ hod_name }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-lbl">Date Generated</div>
+        <div class="meta-val">{{ generated_at }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-lbl">Total Records</div>
+        <div class="meta-val">{{ total }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-lbl">Document Ref.</div>
+        <div class="meta-val" style="color:var(--text-muted)">TTTI/{{ dept_name[:4]|upper }}/MR/{{ year }}</div>
+      </div>
     </div>
-    <div>Generated: {{ generated_at }}</div>
+
+    <!-- Stats Metric Cards -->
+    <div class="stats-row">
+      <div class="stat-box sb-total">
+        <div class="info">
+          <span class="stat-num">{{ total }}</span>
+          <span class="stat-lbl">Mark Entries</span>
+        </div>
+      </div>
+      <div class="stat-box sb-pass">
+        <div class="info">
+          <span class="stat-num">{{ pass_count }}</span>
+          <span class="stat-lbl">Competent &amp; Above</span>
+        </div>
+      </div>
+      <div class="stat-box sb-rate">
+        <div class="info">
+          <span class="stat-num">{{ pass_rate }}%</span>
+          <span class="stat-lbl">Pass Rate</span>
+        </div>
+      </div>
+      <div class="stat-box sb-avg">
+        <div class="info">
+          <span class="stat-num">{{ avg_pct }}%</span>
+          <span class="stat-lbl">Average Score</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marks Table -->
+    {% if marks %}
+    <table class="marks-tbl">
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th style="width:85px">Adm. No.</th>
+          <th>Student Name</th>
+          <th>Class</th>
+          <th style="width:65px">Unit Code</th>
+          <th>Unit Name</th>
+          <th>Assessment</th>
+          <th style="width:60px">Type</th>
+          <th style="width:45px; text-align:center">Term</th>
+          <th style="width:65px">Score</th>
+          <th style="width:80px">Progress</th>
+          <th style="width:50px; text-align:center">Grade</th>
+          <th>Trainer</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in marks %}
+        {% set pct = m.percentage %}
+        {% set pct_cls = 'pf-4' if pct >= 80 else ('pf-3' if pct >= 65 else ('pf-2' if pct >= 50 else 'pf-1')) %}
+        <tr>
+          <td class="row-num">{{ loop.index }}</td>
+          <td class="adm-no">{{ m.student.get('admission_no','—') }}</td>
+          <td class="stu-name">{{ m.student.get('full_name','—') }}</td>
+          <td>{{ m.class_.get('name','—') }}</td>
+          <td><span class="unit-code">{{ m.unit.get('code','—') }}</span></td>
+          <td>{{ m.unit.get('name','—') }}</td>
+          <td style="font-weight:600">{{ m.assessment_name or '—' }}</td>
+          <td>{{ m.assessment_type or '—' }}</td>
+          <td style="text-align:center">{{ m.term or '—' }}</td>
+          <td>
+            <span class="score">{{ m.marks_obtained if m.marks_obtained is not none else '—' }}</span>
+            <span class="score-max">/{{ m.max_marks | int }}</span>
+          </td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar">
+                <div class="pct-fill {{ pct_cls }}" style="width:{{ pct }}%"></div>
+              </div>
+              <span class="pct-num">{{ pct }}%</span>
+            </div>
+          </td>
+          <td style="text-align:center">
+            <span class="grade-badge gb-{{ m.grade }}">{{ m.grade }}</span>
+          </td>
+          <td style="font-size:8pt; color:var(--text-muted)">{{ m.trainer.get('full_name','—') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding:36px; color:var(--text-muted); font-size:10pt; background:var(--surface-subtle); border:1px solid var(--border); border-radius:6px; margin-bottom:16px;">
+      <strong>No marks records found</strong> matching the specified criteria.
+    </div>
+    {% endif %}
+
+    <!-- Grade Scale Legend -->
+    <div class="grade-legend">
+      <span class="gl-title">TVET CDACC Grading Framework:</span>
+      <div class="gl-item"><div class="gl-dot gd-M"></div> <strong>M — Mastery</strong> (80–100%)</div>
+      <div class="gl-item"><div class="gl-dot gd-P"></div> <strong>P — Proficient</strong> (65–79%)</div>
+      <div class="gl-item"><div class="gl-dot gd-C"></div> <strong>C — Competent</strong> (50–64%)</div>
+      <div class="gl-item"><div class="gl-dot gd-NYC"></div> <strong>NYC — Not Yet Competent</strong> (0–49%)</div>
+      <div class="gl-item"><div class="gl-dot gd-CRNM"></div> <strong>CRNM — Requirement Not Met</strong></div>
+    </div>
+
+    <!-- Signature Section -->
+    <div class="sig-section">
+      <div class="sig-block">
+        <div class="sig-name-box">
+          <span class="sig-role">Head of Department</span>
+          Name: {{ hod_name }}
+        </div>
+        <div style="height:30px"></div>
+        <div class="sig-line">Sign</div>
+        <div class="sig-date-line" style="margin-top:12px">Date</div>
+      </div>
+
+      <div class="sig-block">
+        <div class="sig-name-box">
+          <span class="sig-role">Chief Principal</span>
+          Name: ______________________
+        </div>
+        <div style="height:30px"></div>
+        <div class="sig-line">Sign</div>
+        <div class="sig-date-line" style="margin-top:12px">Date</div>
+      </div>
+
+      <div class="sig-stamp">
+        OFFICIAL<br>INSTITUTION<br>STAMP
+      </div>
+    </div>
+
+    <!-- Document Footer -->
+    <div class="pdf-footer">
+      <div>Ref: TTTI/{{ dept_name[:4]|upper }}/MR/{{ year }}</div>
+      <div class="footer-center">
+        <strong>THIKA TECHNICAL TRAINING INSTITUTE</strong> &nbsp;|&nbsp; Official Academic Record
+      </div>
+      <div>Generated: {{ generated_at }}</div>
+    </div>
+
   </div>
 
   <script>
-    /* Auto-trigger print after page loads (can be disabled by user) */
     window.addEventListener('load', function() {
-      // Small delay to allow CSS to fully render
       setTimeout(function() { window.print(); }, 600);
     });
   </script>

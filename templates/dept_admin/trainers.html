@@ -1,79 +1,433 @@
 {% extends "dept_admin/base.html" %}
+
 {% block title %}Trainers{% endblock %}
 {% block page_title %}Manage Trainers{% endblock %}
+
 {% block extra_style %}
-.page-wrap{padding:24px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}
-.card-header{background:#1565c0;color:#fff;padding:14px 20px;font-size:14px;font-weight:600}
-.card-body{padding:20px}
-.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px}
-.form-group input{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px}
-.btn{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
-.btn-primary{background:#1565c0;color:#fff}
-.btn-danger{background:#c62828;color:#fff;padding:5px 12px;font-size:12px}
-.error-box{background:#ffebee;color:#c62828;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px}
-table{width:100%;border-collapse:collapse}
-th{background:#f5f5f5;padding:11px 14px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #eee}
-td{padding:11px 14px;border-bottom:1px solid #f0f0f0;font-size:13px}
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f9fafb;
+  --border-color: #e5e7eb;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: #fef2f2;
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --radius: 12px;
+}
+
+.page-wrap {
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text-main);
+}
+
+.card {
+  background: var(--bg-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 32px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  background: var(--bg-surface);
+  padding: 20px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.card-header i {
+  color: var(--primary);
+}
+
+.card-body {
+  padding: 24px;
+}
+
+/* Form Styles */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-group input::placeholder {
+  color: #9ca3af;
+}
+
+/* Button Component */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-danger {
+  background: var(--danger-light);
+  color: var(--danger);
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+/* Alerts */
+.error-box {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 14px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.credentials-card {
+  background: var(--success-light);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.credentials-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #065f46;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.credentials-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px 24px;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.cred-label {
+  font-weight: 600;
+  color: #047857;
+}
+
+.cred-value {
+  color: #065f46;
+  font-weight: 500;
+}
+
+.password-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.password-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  font-size: 15px;
+  color: #047857;
+  letter-spacing: 0.5px;
+}
+
+.copy-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.copy-btn:hover {
+  color: var(--primary);
+}
+
+.credentials-note {
+  font-size: 12px;
+  color: #047857;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Table Design */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th {
+  background: var(--bg-subtle);
+  padding: 14px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+tbody tr:hover {
+  background-color: var(--bg-subtle);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.trainer-name {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-muted);
+}
+
+.empty-state i {
+  font-size: 32px;
+  margin-bottom: 12px;
+  display: block;
+  opacity: 0.5;
+}
 {% endblock %}
+
 {% block content %}
 <div class="page-wrap">
+
+  <!-- Add Trainer Card -->
   <div class="card">
-    <div class="card-header"><i class="fas fa-plus"></i> Add Trainer</div>
+    <div class="card-header">
+      <i class="fas fa-user-plus"></i> Add New Trainer
+    </div>
     <div class="card-body">
-      {% if error %}<div class="error-box"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
-      
+      {% if error %}
+      <div class="error-box">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+      </div>
+      {% endif %}
+
       {% if new_creds %}
-      <div style="background:#e8f5e9; border:1px solid #c8e6c9; border-radius:10px; padding:20px; margin-bottom:20px; color:#2e7d32; box-shadow: 0 4px 12px rgba(46,125,50,0.08)">
-        <h4 style="margin:0 0 10px 0; font-size:16px; font-weight:700;"><i class="fas fa-key"></i> Credentials Generated Successfully</h4>
-        <table style="width:auto; margin:0; border:none; border-collapse:collapse;">
-          <tr style="background:transparent;"><td style="padding:4px 12px 4px 0; border:none; font-weight:600; font-size:13px; color:#1b5e20;">Full Name:</td><td style="border:none; font-size:13px; color:#1b5e20;">{{ new_creds.full_name }}</td></tr>
-          <tr style="background:transparent;"><td style="padding:4px 12px 4px 0; border:none; font-weight:600; font-size:13px; color:#1b5e20;">Email / Login:</td><td style="border:none; font-size:13px; color:#1b5e20;">{{ new_creds.email }}</td></tr>
-          <tr style="background:transparent;"><td style="padding:4px 12px 4px 0; border:none; font-weight:600; font-size:13px; color:#1b5e20;">Password:</td><td style="border:none;"><code style="background:#c8e6c9; padding:3px 8px; border-radius:4px; font-weight:700; font-size:14px; color:#1b5e20; border: 1px solid #a5d6a7;">{{ new_creds.password }}</code></td></tr>
-        </table>
-        <p style="margin:12px 0 0 0; font-size:11px; opacity:0.85; color:#1b5e20;"><i class="fas fa-exclamation-triangle"></i> For security, this password is shown only once. Please copy it now and share it with the trainer.</p>
+      <div class="credentials-card">
+        <div class="credentials-header">
+          <i class="fas fa-shield-alt"></i> Credentials Generated Successfully
+        </div>
+        <div class="credentials-grid">
+          <span class="cred-label">Full Name:</span>
+          <span class="cred-value">{{ new_creds.full_name }}</span>
+
+          <span class="cred-label">Email / Login:</span>
+          <span class="cred-value">{{ new_creds.email }}</span>
+
+          <span class="cred-label">Password:</span>
+          <div>
+            <div class="password-box">
+              <code class="password-code" id="generatedPassword">{{ new_creds.password }}</code>
+              <button type="button" class="copy-btn" onclick="copyPassword()" title="Copy Password">
+                <i class="fas fa-copy" id="copyIcon"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="credentials-note">
+          <i class="fas fa-info-circle"></i> For security reasons, this password is shown only once. Copy it now and provide it to the trainer.
+        </p>
       </div>
       {% endif %}
 
       <form method="post">
         <input type="hidden" name="action" value="create">
         <div class="form-row">
-          <div class="form-group"><label>Full Name</label><input type="text" name="full_name" placeholder="e.g. John Doe" required></div>
-          <div class="form-group"><label>Staff Number</label><input type="text" name="staff_no" placeholder="e.g. TS-1234"></div>
-          <div class="form-group"><label>Email</label><input type="email" name="email" placeholder="e.g. trainer@example.com" required></div>
+          <div class="form-group">
+            <label for="full_name">Full Name</label>
+            <input type="text" id="full_name" name="full_name" placeholder="e.g. Jane Doe" required>
+          </div>
+          <div class="form-group">
+            <label for="staff_no">Staff Number</label>
+            <input type="text" id="staff_no" name="staff_no" placeholder="e.g. TS-1234">
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" placeholder="e.g. trainer@example.com" required>
+          </div>
         </div>
-        <div style="margin-top:14px">
-          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Trainer</button>
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Trainer
+          </button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Trainer Roster Card -->
   <div class="card">
-    <div class="card-header"><i class="fas fa-list"></i> Trainers ({{ trainers|length }})</div>
-    <table>
-      <thead><tr><th>#</th><th>Name</th><th>Staff No</th><th>Email</th><th>Action</th></tr></thead>
-      <tbody>
-        {% for t in trainers %}
-        <tr>
-          <td style="color:#aaa">{{ loop.index }}</td>
-          <td><strong>{{ t.full_name }}</strong></td>
-          <td>{{ t.staff_no or '—' }}</td>
-          <td>{{ t.email }}</td>
-          <td>
-            <form method="post" style="display:inline" onsubmit="return confirm('Delete {{ t.full_name }}?')">
-              <input type="hidden" name="action" value="delete">
-              <input type="hidden" name="trainer_id" value="{{ t.id }}">
-              <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4" style="text-align:center;color:#aaa;padding:32px">No trainers yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="card-header">
+      <i class="fas fa-users"></i> Trainers Roster ({{ trainers|length }})
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 60px;">#</th>
+            <th>Name</th>
+            <th>Staff No</th>
+            <th>Email</th>
+            <th style="width: 120px; text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in trainers %}
+          <tr>
+            <td style="color: var(--text-muted); font-weight: 500;">{{ loop.index }}</td>
+            <td><span class="trainer-name">{{ t.full_name }}</span></td>
+            <td><code>{{ t.staff_no or '—' }}</code></td>
+            <td>{{ t.email }}</td>
+            <td style="text-align: right;">
+              <form method="post" style="display:inline" onsubmit="return confirm('Are you sure you want to delete {{ t.full_name }}?')">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="trainer_id" value="{{ t.id }}">
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash-alt"></i> Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <i class="fas fa-user-slash"></i>
+                <p>No trainers added yet.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
 </div>
+
+<script>
+function copyPassword() {
+  const pwdText = document.getElementById('generatedPassword').innerText;
+  const icon = document.getElementById('copyIcon');
+  
+  navigator.clipboard.writeText(pwdText).then(() => {
+    icon.className = 'fas fa-check';
+    icon.style.color = '#10b981';
+    setTimeout(() => {
+      icon.className = 'fas fa-copy';
+      icon.style.color = '';
+    }, 2000);
+  });
+}
+</script>
 {% endblock %}

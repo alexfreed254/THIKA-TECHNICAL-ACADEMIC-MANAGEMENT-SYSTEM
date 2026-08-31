@@ -4,120 +4,546 @@
 
 {% block extra_style %}
 <style>
-  .eb-wrap { padding: 24px; }
+  /* ── Core Variables & Layout Base ── */
+  :root {
+    --primary: #1e40af;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+    --success: #059669;
+    --success-light: #ecfdf5;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --completed: #2563eb;
+    --completed-light: #f0f9ff;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-  /* ── Top bar ────────────────────────────────────────── */
+  .eb-wrap {
+    padding: 28px;
+    max-width: 1600px;
+    margin: 0 auto;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: var(--gray-800);
+  }
+
+  /* ── Page Header Styling ── */
+  .page-header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    background: #ffffff;
+    padding: 20px 24px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0 0 6px 0;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .page-subtitle {
+    color: var(--gray-500);
+    font-size: 13.5px;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .btn-export-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+    transition: var(--transition);
+  }
+
+  .btn-export-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  }
+
+  /* ── Export Panel ── */
+  #export-panel {
+    background: #ffffff;
+    border: 1px solid #a7f3d0;
+    border-left: 5px solid #059669;
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-md);
+    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .export-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #047857;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .export-select {
+    padding: 9px 14px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    background: #ffffff;
+    min-width: 140px;
+    color: var(--gray-700);
+    outline: none;
+    transition: var(--transition);
+  }
+
+  .export-select:focus {
+    border-color: #059669;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+  }
+
+  .btn-download-excel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9.5px 22px;
+    background: linear-gradient(135deg, #059669, #047857);
+    color: #ffffff;
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+    transition: var(--transition);
+  }
+
+  .btn-download-excel:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
+  }
+
+  /* ── Filter & Search Bar ── */
   .top-bar {
-    display: flex; flex-wrap: wrap; gap: 12px;
-    align-items: flex-end; margin-bottom: 24px;
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
   }
-  .search-fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 220px; }
-  .search-fg label { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
-  .search-fg input {
-    padding: 9px 14px; border: 1px solid #d1d5db; border-radius: 8px;
-    font-size: 14px; background: #f9fafb; width: 100%;
-    transition: border-color .2s, box-shadow .2s;
+
+  .search-fg {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 260px;
   }
-  .search-fg input:focus { outline: none; border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,.1); background: #fff; }
+
+  .search-fg label, .filter-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .search-fg input, .filter-select {
+    padding: 9px 14px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    transition: var(--transition);
+  }
+
+  .search-fg input:focus, .filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+    background: #ffffff;
+  }
+
   .btn-search {
-    padding: 9px 20px; background: linear-gradient(135deg,#1565c0,#0d47a1);
-    color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
-    cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    padding: 9.5px 22px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 6px rgba(30, 64, 175, 0.2);
+    transition: var(--transition);
   }
-  .btn-search:hover { opacity: .9; }
+
+  .btn-search:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+  }
+
   .btn-clear {
-    padding: 9px 14px; background: #f3f4f6; color: #374151;
-    border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 600;
-    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    padding: 9.5px 16px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
   }
-  .btn-clear:hover { background: #e5e7eb; }
 
-  /* ── Status tabs ────────────────────────────────────── */
-  .tab-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .btn-clear:hover {
+    background: var(--gray-200);
+    color: var(--gray-900);
+  }
+
+  /* ── Status Tabs ── */
+  .tab-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
   .tab-link {
-    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
-    text-decoration: none; border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280;
-    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+    padding: 9px 18px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--gray-300);
+    background: #ffffff;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
   }
-  .tab-link:hover { background: #e0e7ff; border-color: #1565c0; color: #1565c0; }
-  .tab-link.active { background: #1565c0; border-color: #1565c0; color: #fff; }
+
+  .tab-link:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .tab-link.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(30, 64, 175, 0.25);
+  }
+
   .tab-count {
-    display: inline-block; padding: 1px 7px; border-radius: 9999px; font-size: 11px; font-weight: 700;
-    background: rgba(255,255,255,.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.25);
+    min-width: 20px;
   }
-  .tab-link:not(.active) .tab-count { background: #e5e7eb; color: #374151; }
 
-  /* ── Booking table ──────────────────────────────────── */
-  .bookings-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
-  .bookings-table { width: 100%; border-collapse: collapse; }
-  .bookings-table thead { background: #f0f7ff; }
+  .tab-link:not(.active) .tab-count {
+    background: var(--gray-200);
+    color: var(--gray-700);
+  }
+
+  /* ── Workflow Banner ── */
+  .workflow-banner {
+    background: var(--primary-light);
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+    color: #1e3a8a;
+    line-height: 1.55;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── Bookings Table & Cards ── */
+  .bookings-card {
+    background: #ffffff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+
+  .bookings-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .bookings-table thead {
+    background: var(--gray-50);
+  }
+
   .bookings-table th {
-    padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700;
-    color: #1565c0; text-transform: uppercase; letter-spacing: .05em;
-    border-bottom: 2px solid #dbeafe;
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--gray-200);
   }
+
   .bookings-table td {
-    padding: 13px 14px; font-size: 13px; color: #374151;
-    border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+    padding: 16px;
+    font-size: 13.5px;
+    color: var(--gray-700);
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: middle;
+    transition: var(--transition);
   }
-  .bookings-table tr:last-child td { border-bottom: none; }
-  .bookings-table tr:hover td { background: #f8fbff; }
 
-  /* left accent by status */
-  .row-pending  td:first-child { border-left: 4px solid #f59e0b; }
-  .row-approved td:first-child { border-left: 4px solid #22c55e; }
-  .row-rejected td:first-child { border-left: 4px solid #ef4444; }
-  .row-completed td:first-child { border-left: 4px solid #3b82f6; }
+  .bookings-table tr:last-child td {
+    border-bottom: none;
+  }
 
-  .student-name { font-weight: 700; color: #111827; }
-  .student-sub  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .bookings-table tr:hover td {
+    background: #f8fafc;
+  }
 
-  .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
-  .b-pending  { background: #fef3c7; color: #b45309; }
-  .b-approved { background: #dcfce7; color: #15803d; }
-  .b-rejected { background: #fee2e2; color: #b91c1c; }
-  .b-completed { background: #dbeafe; color: #1d4ed8; }
+  /* Row Status Left Borders */
+  .row-pending td:first-child { border-left: 4px solid var(--warning); }
+  .row-approved td:first-child { border-left: 4px solid var(--success); }
+  .row-rejected td:first-child { border-left: 4px solid var(--danger); }
+  .row-completed td:first-child { border-left: 4px solid var(--completed); }
 
-  .unit-name { font-weight: 600; color: #0d2167; }
-  .unit-code { display: inline-block; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 5px; margin-top: 3px; }
+  .student-name { font-weight: 700; color: var(--gray-900); font-size: 14px; }
+  .student-sub { font-size: 12px; color: var(--gray-500); margin-top: 3px; display: flex; align-items: center; gap: 5px; }
 
-  .serial { font-family: monospace; font-size: 11px; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+  /* Status Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .b-pending   { background: var(--warning-light); color: var(--warning); border: 1px solid #fde68a; }
+  .b-approved  { background: var(--success-light); color: var(--success); border: 1px solid #a7f3d0; }
+  .b-rejected  { background: var(--danger-light); color: var(--danger); border: 1px solid #fecaca; }
+  .b-completed { background: var(--completed-light); color: var(--completed); border: 1px solid #bfdbfe; }
 
-  /* ── Action forms ───────────────────────────────────── */
-  .action-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .unit-name { font-weight: 600; color: var(--gray-900); }
+  .unit-code {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+    border: 1px solid #bae6fd;
+  }
+
+  .serial {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--gray-700);
+    background: var(--gray-100);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-300);
+  }
+
+  /* ── Action Forms & Buttons ── */
+  .action-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
   .btn-approve {
-    padding: 5px 12px; background: #16a34a; color: #fff; border: none;
-    border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 4px; transition: opacity .15s;
+    padding: 6px 14px;
+    background: #059669;
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: var(--transition);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
-  .btn-approve:hover { opacity: .85; }
+
+  .btn-approve:hover {
+    background: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(5, 150, 105, 0.25);
+  }
+
   .btn-reject {
-    padding: 5px 12px; background: #dc2626; color: #fff; border: none;
-    border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 4px; transition: opacity .15s;
+    padding: 6px 14px;
+    background: #dc2626;
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: var(--transition);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
-  .btn-reject:hover { opacity: .85; }
+
+  .btn-reject:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(220, 38, 38, 0.25);
+  }
+
   .reject-input {
-    padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px;
-    font-size: 12px; width: 160px; background: #f9fafb;
+    padding: 5px 10px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    width: 150px;
+    background: var(--gray-50);
+    transition: var(--transition);
   }
-  .reject-input:focus { outline: none; border-color: #dc2626; }
 
-  /* reviewer info */
-  .reviewer-info { font-size: 12px; color: #6b7280; }
-  .reviewer-info strong { color: #374151; }
-
-  /* empty state */
-  .empty-state { padding: 56px 24px; text-align: center; color: #9ca3af; }
-  .empty-state i { font-size: 40px; margin-bottom: 14px; display: block; }
-  .empty-state p { font-size: 14px; margin: 0; }
-
-  @media (max-width: 768px) {
-    .bookings-table th:nth-child(4),
-    .bookings-table td:nth-child(4),
-    .bookings-table th:nth-child(5),
-    .bookings-table td:nth-child(5) { display: none; }
+  .reject-input:focus {
+    outline: none;
+    border-color: #dc2626;
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
   }
+
+  /* Reviewer Info Display */
+  .reviewer-info {
+    font-size: 12.5px;
+    color: var(--gray-600);
+    line-height: 1.4;
+  }
+  .reviewer-info strong { color: var(--gray-800); }
+
+  .btn-view-pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    padding: 5px 12px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: var(--transition);
+  }
+
+  .btn-view-pdf:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+  }
+
+  /* Empty State Modern Styling */
+  .empty-state {
+    padding: 64px 24px;
+    text-align: center;
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--gray-300);
+  }
+  .empty-state i {
+    font-size: 48px;
+    color: var(--gray-300);
+    margin-bottom: 16px;
+    display: block;
+  }
+  .empty-state p {
+    font-size: 15px;
+    color: var(--gray-500);
+    margin: 0;
+    font-weight: 500;
+  }
+
+  @media (max-width: 992px) {
+    .eb-wrap { padding: 16px; }
+    .page-header-container { flex-direction: column; align-items: flex-start; }
+    .bookings-table { display: block; overflow-x: auto; }
+  }
+
   .hidden { display: none !important; }
 </style>
 {% endblock %}
@@ -125,36 +551,30 @@
 {% block content %}
 <div class="eb-wrap">
 
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+  <div class="page-header-container">
     <div>
-      <h1 style="font-size:22px;font-weight:800;color:#0d2167;margin:0 0 4px">
-        <i class="fas fa-calendar-check" style="color:#1565c0;margin-right:8px"></i>Exam Booking Approvals
+      <h1 class="page-title">
+        <i class="fas fa-calendar-check" style="color:var(--primary)"></i>Exam Booking Approvals
       </h1>
-      <p style="color:#6b7280;font-size:13px;margin:0">
+      <p class="page-subtitle">
         Review trainee Form 1A bookings for your department. Approve after physical signature,
         then Examination Office confirms for the exam sitting.
       </p>
     </div>
-    <button onclick="document.getElementById('export-panel').classList.toggle('hidden')"
-            style="display:inline-flex;align-items:center;gap:7px;padding:10px 20px;
-                   background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
-                   border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;
-                   box-shadow:0 4px 12px rgba(22,163,74,.25)">
+    <button class="btn-export-toggle" onclick="document.getElementById('export-panel').classList.toggle('hidden')">
       <i class="fas fa-file-excel"></i> Download Class List
     </button>
   </div>
 
   <!-- ── Export panel ─────────────────────────────────────── -->
-  <div id="export-panel" class="hidden"
-       style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;
-              padding:18px 22px;margin-bottom:20px">
-    <div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:12px">
-      <i class="fas fa-file-excel" style="margin-right:6px"></i>Export Exam Bookings — Per Class (Excel)
+  <div id="export-panel" class="hidden">
+    <div class="export-panel-title">
+      <i class="fas fa-file-excel"></i>Export Exam Bookings — Per Class (Excel)
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+    <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end">
       <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:4px">Status</label>
-        <select id="exp-status" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;min-width:130px">
+        <label class="filter-label" style="display:block;margin-bottom:6px">Status</label>
+        <select id="exp-status" class="export-select">
           <option value="">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
@@ -162,8 +582,8 @@
         </select>
       </div>
       <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:4px">Year</label>
-        <select id="exp-year" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;min-width:100px">
+        <label class="filter-label" style="display:block;margin-bottom:6px">Year</label>
+        <select id="exp-year" class="export-select" style="min-width:110px">
           <option value="">All Years</option>
           {% for y in range(2024, 2030) %}
           <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
@@ -171,22 +591,18 @@
         </select>
       </div>
       <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:4px">Term</label>
-        <select id="exp-term" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;min-width:130px">
+        <label class="filter-label" style="display:block;margin-bottom:6px">Term</label>
+        <select id="exp-term" class="export-select">
           <option value="">All Terms</option>
           <option value="1" {% if term_filter == '1' %}selected{% endif %}>Term 1 (Jan–Apr)</option>
           <option value="2" {% if term_filter == '2' %}selected{% endif %}>Term 2 (May–Aug)</option>
           <option value="3" {% if term_filter == '3' %}selected{% endif %}>Term 3 (Sep–Dec)</option>
         </select>
       </div>
-      <a href="#" onclick="doExport();return false"
-         style="display:inline-flex;align-items:center;gap:7px;padding:10px 22px;
-                background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
-                border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;
-                box-shadow:0 4px 12px rgba(22,163,74,.2)">
+      <a href="#" onclick="doExport();return false" class="btn-download-excel">
         <i class="fas fa-download"></i> Download Excel
       </a>
-      <span style="font-size:12px;color:#64748b;align-self:center">
+      <span style="font-size:12.5px;color:var(--gray-500);align-self:center">
         One sheet per class · All units listed per trainee
       </span>
     </div>
@@ -199,18 +615,18 @@
       <label><i class="fas fa-search"></i> Search trainee</label>
       <input name="q" type="text" value="{{ q }}" placeholder="Name or admission number…" autocomplete="off">
     </div>
-    <div style="display:flex;flex-direction:column;gap:5px">
-      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Year</label>
-      <select name="year" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#f9fafb">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label class="filter-label">Year</label>
+      <select name="year" class="filter-select">
         <option value="">All Years</option>
         {% for y in range(2024, 2030) %}
         <option value="{{ y }}" {% if year_filter == y|string %}selected{% endif %}>{{ y }}</option>
         {% endfor %}
       </select>
     </div>
-    <div style="display:flex;flex-direction:column;gap:5px">
-      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Term</label>
-      <select name="term" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#f9fafb">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label class="filter-label">Term</label>
+      <select name="term" class="filter-select">
         <option value="">All Terms</option>
         <option value="1" {% if term_filter == '1' %}selected{% endif %}>Term 1 (Jan–Apr)</option>
         <option value="2" {% if term_filter == '2' %}selected{% endif %}>Term 2 (May–Aug)</option>
@@ -218,7 +634,7 @@
       </select>
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
-      <button type="submit" class="btn-search"><i class="fas fa-search"></i> Filter</button>
+      <button type="submit" class="btn-search"><i class="fas fa-filter"></i> Filter</button>
       {% if q or year_filter or term_filter %}
       <a href="/dept-admin/exam-bookings?status={{ status_filter }}" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
       {% endif %}
@@ -255,10 +671,11 @@
     </a>
   </div>
 
-  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#1e3a8a;line-height:1.55">
-    <strong><i class="fas fa-route" style="margin-right:6px"></i>Workflow:</strong>
-    Trainee submits Form 1A → prints for HOD signature → you approve here → Examination Office confirms → status <em>Completed</em>.
-    Use <strong>All</strong> to approve every pending unit on the same serial in one click.
+  <div class="workflow-banner">
+    <div>
+      <strong>Workflow:</strong> Trainee submits Form 1A → prints for HOD signature → you approve here → Examination Office confirms → status <em>Completed</em>.
+      Use <strong>All</strong> to approve every pending unit on the same serial in one click.
+    </div>
   </div>
 
   <!-- ── Bookings table ───────────────────────────────────── -->
@@ -288,12 +705,12 @@
           <!-- Trainee -->
           <td>
             <div class="student-name">{{ su.get('full_name','—') }}</div>
-            <div class="student-sub"><i class="fas fa-id-card" style="font-size:9px"></i> {{ su.get('admission_no','') }}</div>
+            <div class="student-sub"><i class="fas fa-id-card"></i> {{ su.get('admission_no','') }}</div>
             {% if b.class_name %}
-            <div class="student-sub"><i class="fas fa-door-open" style="font-size:9px"></i> {{ b.class_name }}</div>
+            <div class="student-sub"><i class="fas fa-door-open"></i> {{ b.class_name }}</div>
             {% endif %}
             {% if su.get('mobile_number') %}
-            <div class="student-sub"><i class="fas fa-phone" style="font-size:9px"></i> {{ su.mobile_number }}</div>
+            <div class="student-sub"><i class="fas fa-phone"></i> {{ su.mobile_number }}</div>
             {% endif %}
           </td>
 
@@ -307,14 +724,14 @@
           <td>
             {% set at = b.get('attempt_type','first_attempt') %}
             {% if at == 'retake' %}
-            <span class="badge" style="background:#fef2f2;color:#b91c1c"><i class="fas fa-redo"></i> Retake</span>
+            <span class="badge" style="background:var(--danger-light);color:var(--danger)"><i class="fas fa-redo"></i> Retake</span>
             {% elif at == 'missing_unit' %}
             <span class="badge" style="background:#f5f3ff;color:#6d28d9"><i class="fas fa-minus-circle"></i> Missed</span>
             {% else %}
             <span class="badge" style="background:#e0f2fe;color:#0369a1"><i class="fas fa-star"></i> First</span>
             {% endif %}
             {% if b.get('previous_grade') and at != 'first_attempt' %}
-            <div style="font-size:11px;color:#64748b;margin-top:3px">
+            <div style="font-size:11.5px;color:var(--gray-500);margin-top:4px">
               Prev: <strong>{{ b.previous_grade }}</strong>
             </div>
             {% endif %}
@@ -322,9 +739,9 @@
 
           <!-- Session -->
           <td style="white-space:nowrap">
-            <div>{{ b.exam_session or '—' }}</div>
+            <div style="font-weight:600;color:var(--gray-800)">{{ b.exam_session or '—' }}</div>
             {% if b.exam_date %}
-            <div style="font-size:11px;color:#9ca3af;margin-top:2px">
+            <div style="font-size:12px;color:var(--gray-500);margin-top:2px">
               {{ b.exam_date[:10] if b.exam_date else '' }}
             </div>
             {% endif %}
@@ -334,15 +751,15 @@
           <td><span class="serial">{{ b.get('serial_number','—') }}</span></td>
 
           <!-- Purpose -->
-          <td style="font-size:12px;color:#6b7280;max-width:160px">
+          <td style="font-size:12.5px;color:var(--gray-600);max-width:160px;line-height:1.4">
             {{ b.get('purpose','—') }}
             {% if b.get('special_requirements') and b.special_requirements != 'N/A' %}
-            <div style="color:#b45309;font-size:11px;margin-top:2px"><i class="fas fa-wheelchair"></i> {{ b.special_requirements }}</div>
+            <div style="color:var(--warning);font-size:11.5px;margin-top:4px;font-weight:600"><i class="fas fa-wheelchair"></i> {{ b.special_requirements }}</div>
             {% endif %}
           </td>
 
           <!-- Submitted -->
-          <td style="font-size:12px;color:#9ca3af;white-space:nowrap">
+          <td style="font-size:12.5px;color:var(--gray-500);white-space:nowrap">
             {{ b.get('created_at','')[:10] if b.get('created_at') else '—' }}
           </td>
 
@@ -377,24 +794,23 @@
             {% else %}
             <div class="reviewer-info">
               {% if rv.get('full_name') %}
-              <div><i class="fas fa-user-check" style="color:{% if b.status=='approved' %}#16a34a{% else %}#dc2626{% endif %}"></i>
+              <div style="display:flex;align-items:center;gap:5px">
+                <i class="fas fa-user-check" style="color:{% if b.status=='approved' %}var(--success){% else %}var(--danger){% endif %}"></i>
                 <strong>{{ rv.full_name }}</strong>
               </div>
               {% endif %}
               {% if b.get('approved_at') %}
-              <div style="margin-top:2px"><i class="far fa-clock"></i> {{ b.approved_at[:10] }}</div>
+              <div style="margin-top:3px;color:var(--gray-500)"><i class="far fa-clock"></i> {{ b.approved_at[:10] }}</div>
               {% endif %}
               {% if b.get('rejection_reason') %}
-              <div style="margin-top:4px;font-style:italic;color:#b91c1c">
+              <div style="margin-top:4px;font-style:italic;color:var(--danger)">
                 "{{ b.rejection_reason }}"
               </div>
               {% endif %}
               {% if b.status == 'approved' %}
               <a href="/dept-admin/exam-bookings/trainee/{{ b.student_id }}/approved-pdf"
                  target="_blank"
-                 style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;
-                        padding:4px 10px;background:#1565c0;color:#fff;border-radius:6px;
-                        font-size:11px;font-weight:700;text-decoration:none">
+                 class="btn-view-pdf">
                 <i class="fas fa-file-pdf"></i> View Approved
               </a>
               {% endif %}
@@ -407,7 +823,7 @@
     </table>
   </div>
 
-  <p style="font-size:12px;color:#9ca3af;margin-top:12px">
+  <p style="font-size:13px;color:var(--gray-500);margin-top:16px">
     Showing {{ bookings|length }} booking{{ 's' if bookings|length != 1 else '' }}
     {% if status_filter != 'all' %} with status <strong>{{ status_filter }}</strong>{% endif %}
     {% if q %} matching <em>"{{ q }}"</em>{% endif %}

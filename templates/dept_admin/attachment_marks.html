@@ -3,117 +3,673 @@
 {% block page_title %}Industrial Attachment Marks{% endblock %}
 
 {% block extra_style %}
-.am-wrap{padding:24px;background:#f1f5f9;min-height:calc(100vh - 64px)}
+:root {
+  --primary: #0f2c54;
+  --primary-hover: #1a3d6e;
+  --accent: #f59e0b;
+  --surface: #ffffff;
+  --background: #f8fafc;
+  --border: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
 
-/* Hero */
-.am-hero{background:linear-gradient(135deg,#0f2c54 0%,#1a3d6e 55%,#1e40af 100%);border-radius:14px;padding:24px 28px 20px;margin-bottom:22px;color:#fff;position:relative;overflow:hidden}
-.am-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 100% 0%,rgba(245,158,11,.12),transparent 60%);pointer-events:none}
-.am-hero-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}
-.am-hero h1{font-size:18px;font-weight:800;margin:0;display:flex;align-items:center;gap:9px;color:#fff}
-.am-hero h1 i{color:#f59e0b}
-.am-hero p{font-size:12.5px;color:#bfdbfe;margin:2px 0 0}
-.am-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.am-kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:11px;padding:13px 16px}
-.am-kpi-num{font-size:26px;font-weight:900;color:#fff;line-height:1}
-.am-kpi-lbl{font-size:10.5px;color:rgba(255,255,255,.6);margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.am-wrap {
+  padding: 24px;
+  background: var(--background);
+  min-height: calc(100vh - 64px);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
 
-/* Toolbar */
-.am-toolbar{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 5px rgba(0,0,0,.05);padding:13px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.am-search{flex:1;min-width:160px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a}
-.am-search:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
-.am-filter{padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#0f172a;background:#fff;cursor:pointer}
+/* Modern Glass Hero Header */
+.am-hero {
+  background: linear-gradient(135deg, #0f2c54 0%, #1a3d6e 60%, #1e40af 100%);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
 
-/* Filter chips */
-.am-chips{display:flex;gap:8px;flex-wrap:wrap}
-.am-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f0;background:#f8fafc;color:#64748b;transition:.15s}
-.am-chip.active{background:#0f2c54;color:#fff;border-color:#0f2c54}
-.am-chip:hover:not(.active){background:#e2e8f0}
+.am-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.15), transparent 50%);
+  pointer-events: none;
+}
 
-/* Table card */
-.am-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 5px rgba(0,0,0,.05);overflow:hidden}
-.am-card-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:12px 18px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
-.am-card-head i{color:#f59e0b}
-.am-card-head .row-count{margin-left:auto;font-size:11px;font-weight:600;opacity:.75;background:rgba(255,255,255,.12);border-radius:20px;padding:2px 10px}
-.am-tbl-wrap{overflow-x:auto}
-.am-tbl{width:100%;border-collapse:collapse}
-.am-tbl thead th{background:#f8fafc;padding:9px 12px;text-align:left;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.07em;border-bottom:1.5px solid #e2e8f0;white-space:nowrap}
-.am-tbl thead th.ctr{text-align:center}
-.am-tbl tbody td{padding:11px 12px;border-bottom:1px solid #f1f5f9;font-size:12.5px;color:#0f172a;vertical-align:middle}
-.am-tbl tbody tr:last-child td{border-bottom:none}
-.am-tbl tbody tr:hover td{background:#fafbfc}
-.am-tbl tbody tr[data-hidden="1"]{display:none}
-.stu-name{font-weight:700;color:#0f172a}
-.stu-adm{font-size:11px;color:#64748b;margin-top:1px}
-.co-name{font-size:12px;color:#475569}
-.status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;font-size:10.5px;font-weight:700;border:1px solid transparent}
-.sp-active{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
-.sp-pending{background:#fef9c3;color:#a16207;border-color:#fde68a}
-.sp-completed{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
-.sp-other{background:#f1f5f9;color:#64748b;border-color:#e2e8f0}
-.score-cell{text-align:center;font-size:12px;font-weight:700}
-.score-val{color:#0f172a}
-.score-dash{color:#cbd5e1}
-.grade-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:900;border:2px solid transparent}
-.gb-M{background:#dcfce7;color:#15803d;border-color:#86efac}
-.gb-P{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
-.gb-C{background:#fef3c7;color:#a16207;border-color:#fcd34d}
-.gb-NYC{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
-.gb-nil{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;font-size:10px}
-.total-pill{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11.5px;font-weight:700;background:#f1f5f9;color:#334155}
-.btn-enter{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;border:none;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
-.btn-enter:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,44,84,.28)}
-.btn-enter i{color:#fbbf24}
-.btn-edit{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s}
-.btn-edit:hover{background:#dbeafe}
-.empty-row td{text-align:center;padding:50px 24px;color:#94a3b8}
-.empty-row td i{font-size:40px;display:block;margin-bottom:10px;color:#cbd5e1}
+.am-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
 
-/* Weight legend */
-.wt-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#64748b;margin-top:10px}
-.wt-item{display:flex;align-items:center;gap:5px}
-.wt-dot{width:8px;height:8px;border-radius:50%}
+.am-hero h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
 
-/* Modal */
-.am-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,28,54,.55);z-index:3000;align-items:center;justify-content:center;padding:16px}
-.am-modal-bg.open{display:flex}
-.am-modal{background:#fff;border-radius:16px;width:100%;max-width:580px;max-height:94vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.28);animation:amSlide .22s ease}
-@keyframes amSlide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
-.am-modal-head{background:linear-gradient(135deg,#0f2c54,#1a3d6e);color:#fff;padding:16px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2}
-.am-modal-head h3{font-size:14.5px;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
-.am-modal-head h3 i{color:#f59e0b}
-.am-modal-close{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.am-modal-close:hover{background:rgba(255,255,255,.25)}
-.am-modal-body{padding:20px}
-.am-student-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:13px}
-.am-student-card strong{color:#0f172a;font-weight:700}
-.am-student-card span{color:#64748b;margin-left:6px}
+.am-hero h1 i {
+  color: var(--accent);
+}
 
-/* Score inputs */
-.score-row{display:grid;grid-template-columns:1fr 80px 60px;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
-.score-row:last-of-type{border-bottom:none}
-.score-label{font-size:13px;font-weight:600;color:#0f172a}
-.score-label small{display:block;font-size:10.5px;font-weight:400;color:#64748b;margin-top:1px}
-.score-inp{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:700;text-align:center;outline:none;color:#0f172a;transition:.15s}
-.score-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
-.score-wt{font-size:11px;font-weight:700;color:#64748b;text-align:center;background:#f1f5f9;padding:4px 6px;border-radius:6px}
+.am-hero p {
+  font-size: 13.5px;
+  color: #bfdbfe;
+  margin: 4px 0 0 0;
+}
 
-/* Result bar */
-.am-result{background:linear-gradient(135deg,#0f2c54,#1a3d6e);border-radius:10px;padding:14px 18px;margin:16px 0 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.am-result-score{font-size:28px;font-weight:900;color:#fff;line-height:1}
-.am-result-lbl{font-size:11px;color:rgba(255,255,255,.6);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.am-result-grade{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;border:3px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff}
-.am-save-btn{width:100%;padding:12px;background:linear-gradient(135deg,#0f2c54,#1e40af);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.18s;box-shadow:0 4px 12px rgba(15,44,84,.28)}
-.am-save-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(15,44,84,.35)}
-.am-save-btn i{color:#f59e0b}
-.am-toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none}
-.am-toast.show{opacity:1;transform:translateY(0)}
-@media(max-width:600px){.am-kpis{grid-template-columns:1fr 1fr}.score-row{grid-template-columns:1fr 70px 50px}}
+.am-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.am-kpi {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 14px 18px;
+  transition: transform 0.2s ease;
+}
+
+.am-kpi:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.am-kpi-num {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+
+.am-kpi-lbl {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Weight Legend Pill Section */
+.wt-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.wt-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.wt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Enhanced Toolbar */
+.am-toolbar {
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.am-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.am-search-wrap i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.am-search {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  color: var(--text-main);
+  background: #f8fafc;
+  transition: all 0.2s ease;
+}
+
+.am-search:focus {
+  background: #fff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.am-chips {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.am-chip {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.am-chip.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Card & Dynamic Table */
+.am-card {
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.am-card-head {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 16px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.am-card-head i {
+  color: var(--primary);
+}
+
+.am-card-head .row-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  border-radius: 20px;
+  padding: 3px 12px;
+}
+
+.am-tbl-wrap {
+  overflow-x: auto;
+}
+
+.am-tbl {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.am-tbl thead th {
+  background: #f8fafc;
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.am-tbl thead th.ctr {
+  text-align: center;
+}
+
+.am-tbl tbody td {
+  padding: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.am-tbl tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.am-tbl tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.am-tbl tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.am-tbl tbody tr[data-hidden="1"] {
+  display: none;
+}
+
+.stu-name {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stu-adm {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.co-name {
+  font-size: 12.5px;
+  color: #334155;
+  font-weight: 500;
+}
+
+/* Status Badges */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sp-active { background: #dcfce7; color: #15803d; }
+.sp-pending { background: #fef9c3; color: #a16207; }
+.sp-completed { background: #dbeafe; color: #1d4ed8; }
+.sp-other { background: #f1f5f9; color: var(--text-muted); }
+
+.score-cell {
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.score-val { color: var(--text-main); }
+.score-dash { color: #cbd5e1; }
+
+/* Grade Indicators */
+.grade-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gb-M { background: #dcfce7; color: #15803d; }
+.gb-P { background: #dbeafe; color: #1d4ed8; }
+.gb-C { background: #fef3c7; color: #a16207; }
+.gb-NYC { background: #fee2e2; color: #dc2626; }
+.gb-nil { background: #f1f5f9; color: #94a3b8; font-size: 11px; }
+
+.total-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+/* Modern Action Buttons */
+.btn-enter, .btn-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-enter {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 4px rgba(15, 44, 84, 0.15);
+}
+
+.btn-enter:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 44, 84, 0.25);
+}
+
+.btn-enter i { color: var(--accent); }
+
+.btn-edit {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.btn-edit:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.empty-row td {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text-muted);
+}
+
+.empty-row td i {
+  font-size: 44px;
+  display: block;
+  margin-bottom: 12px;
+  color: #cbd5e1;
+}
+
+/* Modal Styling */
+.am-modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.am-modal-bg.open {
+  display: flex;
+}
+
+.am-modal {
+  background: var(--surface);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: amSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes amSlide {
+  from { transform: translateY(16px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.am-modal-head {
+  background: var(--surface);
+  color: var(--text-main);
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.am-modal-head h3 {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.am-modal-head h3 i { color: var(--primary); }
+
+.am-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.am-modal-close:hover {
+  background: #e2e8f0;
+  color: var(--text-main);
+}
+
+.am-modal-body {
+  padding: 24px;
+}
+
+.am-student-card {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+}
+
+.am-student-card strong { color: var(--text-main); font-weight: 700; }
+.am-student-card span { color: var(--text-muted); margin-left: 6px; }
+
+/* Score Input Layout */
+.score-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.score-row:last-of-type { border-bottom: none; }
+
+.score-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.score-label small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.score-inp {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  color: var(--text-main);
+  background: #f8fafc;
+  transition: all 0.2s ease;
+}
+
+.score-inp:focus {
+  background: #fff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.score-wt {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  background: #f1f5f9;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+/* Modal Live Result Footer */
+.am-result {
+  background: linear-gradient(135deg, #0f2c54 0%, #1a3d6e 100%);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 20px 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #fff;
+}
+
+.am-result-score {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.am-result-lbl {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.am-result-grade {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.am-save-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 44, 84, 0.2);
+}
+
+.am-save-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 44, 84, 0.3);
+}
+
+.am-save-btn i { color: var(--accent); }
+
+.am-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #0f172a;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+}
+
+.am-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .am-wrap { padding: 14px; }
+  .am-kpis { grid-template-columns: 1fr 1fr; }
+  .score-row { grid-template-columns: 1fr 75px 50px; }
+}
 {% endblock %}
 
 {% block content %}
 <div class="am-wrap">
 
-  <!-- Hero -->
+  <!-- Hero Header -->
   <div class="am-hero">
     <div class="am-hero-top">
       <div>
@@ -121,6 +677,7 @@
         <p>Enter and manage grading scores for trainees on industrial attachment.</p>
       </div>
     </div>
+    
     <div class="am-kpis">
       <div class="am-kpi">
         <div class="am-kpi-num">{{ stats.total }}</div>
@@ -139,8 +696,9 @@
         <div class="am-kpi-lbl">Avg Score</div>
       </div>
     </div>
+
     <div class="wt-legend">
-      <span style="color:rgba(255,255,255,.7);font-weight:700">Max marks:</span>
+      <span style="font-weight: 700; align-self: center;">Max marks:</span>
       <span class="wt-item"><span class="wt-dot" style="background:#f59e0b"></span> GPS Attendance /{{ (config.weight_gps_attendance or 10)|int }}</span>
       <span class="wt-item"><span class="wt-dot" style="background:#60a5fa"></span> Logbook /{{ (config.weight_logbook or 20)|int }}</span>
       <span class="wt-item"><span class="wt-dot" style="background:#a78bfa"></span> Mentor Eval /{{ (config.weight_mentor_eval or 30)|int }}</span>
@@ -149,24 +707,29 @@
     </div>
   </div>
 
-  <!-- Toolbar -->
+  <!-- Search & Controls Toolbar -->
   <div class="am-toolbar">
-    <input class="am-search" type="text" id="amSearch"
-           placeholder="&#xf002;  Search student or company…"
-           oninput="amSearch(this.value)" autocomplete="off">
+    <div class="am-search-wrap">
+      <i class="fas fa-search"></i>
+      <input class="am-search" type="text" id="amSearch"
+             placeholder="Search trainee name, admission number, or company..."
+             oninput="amSearch(this.value)" autocomplete="off">
+    </div>
+
     <div class="am-chips">
-      <span class="am-chip active" onclick="amFilter('all',this)">All</span>
-      <span class="am-chip" onclick="amFilter('graded',this)">Graded</span>
-      <span class="am-chip" onclick="amFilter('pending',this)">Pending</span>
+      <button type="button" class="am-chip active" onclick="amFilter('all', this)">All</button>
+      <button type="button" class="am-chip" onclick="amFilter('graded', this)">Graded</button>
+      <button type="button" class="am-chip" onclick="amFilter('pending', this)">Pending</button>
     </div>
   </div>
 
-  <!-- Table -->
+  <!-- Main Marks Register Table Card -->
   <div class="am-card">
     <div class="am-card-head">
-      <i class="fas fa-table"></i> Attachment Grading Register
+      <i class="fas fa-list-check"></i> Attachment Grading Register
       <span class="row-count" id="rowCount">{{ attachments|length }} records</span>
     </div>
+
     <div class="am-tbl-wrap">
       <table class="am-tbl" id="amTable">
         <thead>
@@ -199,7 +762,7 @@
               <div class="stu-adm">{{ stu.get('admission_no') or '' }}</div>
             </td>
             <td><div class="co-name">{{ co.get('name') or '—' }}</div></td>
-            <td style="font-size:11.5px;color:#64748b;white-space:nowrap">
+            <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">
               {% if a.get('start_date') %}{{ a.start_date }} → {{ a.end_date or '?' }}{% else %}—{% endif %}
             </td>
             <td class="ctr">
@@ -235,14 +798,14 @@
               {% endif %}
             </td>
             <td class="ctr">
-              <button class="{{ 'btn-edit' if g else 'btn-enter' }}"
+              <button type="button" class="{{ 'btn-edit' if g else 'btn-enter' }}"
                       onclick="openMarks('{{ a.id }}','{{ stu.get('full_name','') }}','{{ co.get('name','') }}',
                         {{ (g.score_gps_attendance or 0) if g else 0 }},
                         {{ (g.score_logbook or 0) if g else 0 }},
                         {{ (g.score_mentor_eval or 0) if g else 0 }},
                         {{ (g.score_trainer_assessment or 0) if g else 0 }},
                         {{ (g.score_final_report or 0) if g else 0 }})">
-                <i class="fas {{ 'fa-pen' if g else 'fa-plus' }}"></i>
+                <i class="fas {{ 'fa-pen-to-square' if g else 'fa-plus' }}"></i>
                 {{ 'Edit' if g else 'Enter Marks' }}
               </button>
             </td>
@@ -250,7 +813,7 @@
           {% else %}
           <tr class="empty-row">
             <td colspan="12">
-              <i class="fas fa-star-half-alt"></i>
+              <i class="fas fa-folder-open"></i>
               No attachment records found for your department.
             </td>
           </tr>
@@ -262,12 +825,12 @@
 
 </div>
 
-<!-- Marks Modal -->
+<!-- Marks Input Modal -->
 <div class="am-modal-bg" id="amModalBg" onclick="bgClose(event)">
   <div class="am-modal" id="amModal">
     <div class="am-modal-head">
-      <h3><i class="fas fa-star-half-alt"></i> <span id="modalTitle">Enter Attachment Marks</span></h3>
-      <button class="am-modal-close" onclick="closeMarks()"><i class="fas fa-times"></i></button>
+      <h3><i class="fas fa-edit"></i> <span id="modalTitle">Enter Attachment Marks</span></h3>
+      <button type="button" class="am-modal-close" onclick="closeMarks()"><i class="fas fa-xmark"></i></button>
     </div>
     <div class="am-modal-body">
       <div class="am-student-card" id="modalInfo">
@@ -307,7 +870,7 @@
           <div class="score-wt">/{{ (config.weight_final_report or 10)|int }}</div>
         </div>
 
-        <!-- Live result -->
+        <!-- Live Score Summary Box -->
         <div class="am-result">
           <div>
             <div class="am-result-score"><span id="livePct">0.0</span> / 100</div>
@@ -317,7 +880,7 @@
         </div>
 
         <button type="button" class="am-save-btn" id="saveBtn" onclick="saveMarks()">
-          <i class="fas fa-save"></i> Save Marks
+          <i class="fas fa-check"></i> Save Marks
         </button>
       </form>
     </div>
@@ -329,7 +892,6 @@
 
 {% block scripts %}
 <script>
-/* ── Weights from server ── */
 var WEIGHTS = {
   gps: {{ (config.weight_gps_attendance or 10)|float }},
   log: {{ (config.weight_logbook or 20)|float }},
@@ -337,6 +899,7 @@ var WEIGHTS = {
   tra: {{ (config.weight_trainer_assessment or 30)|float }},
   rep: {{ (config.weight_final_report or 10)|float }},
 };
+
 function _cap(val, max) {
   return Math.min(Math.max(val || 0, 0), max || 0);
 }
@@ -347,12 +910,21 @@ function calcTotal() {
   var men = _cap(parseFloat(document.getElementById('s_men').value), WEIGHTS.men);
   var tra = _cap(parseFloat(document.getElementById('s_tra').value), WEIGHTS.tra);
   var rep = _cap(parseFloat(document.getElementById('s_rep').value), WEIGHTS.rep);
+  
   var pct = Math.round((gps + log + men + tra + rep) * 10) / 10;
   document.getElementById('livePct').textContent = pct.toFixed(1);
-  var g  = pct >= 80 ? 'M' : pct >= 65 ? 'P' : pct >= 50 ? 'C' : 'NYC';
+
+  var g = pct >= 80 ? 'M' : pct >= 65 ? 'P' : pct >= 50 ? 'C' : 'NYC';
   var el = document.getElementById('liveGrade');
   el.textContent = g;
-  el.style.background = {M:'rgba(22,163,74,.3)',P:'rgba(29,78,216,.3)',C:'rgba(217,119,6,.3)',NYC:'rgba(220,38,38,.3)'}[g];
+  
+  var bgColors = {
+    M: 'rgba(22, 163, 74, 0.4)',
+    P: 'rgba(29, 78, 216, 0.4)',
+    C: 'rgba(217, 119, 6, 0.4)',
+    NYC: 'rgba(220, 38, 38, 0.4)'
+  };
+  el.style.background = bgColors[g] || 'rgba(255, 255, 255, 0.1)';
 }
 
 function openMarks(id, stu, co, gps, log, men, tra, rep) {
@@ -382,13 +954,15 @@ function saveMarks() {
   var id  = document.getElementById('currentAttId').value;
   var btn = document.getElementById('saveBtn');
   var fd  = new FormData(document.getElementById('marksForm'));
+  
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
-  fetch('/dept-admin/attachment-marks/' + id + '/save', { method:'POST', body: fd })
+  
+  fetch('/dept-admin/attachment-marks/' + id + '/save', { method: 'POST', body: fd })
     .then(function(r){ return r.json(); })
     .then(function(d) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-save"></i> Save Marks';
+      btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
       if (d.ok) {
         closeMarks();
         showToast('Marks saved — Grade: ' + d.grade + ' (' + d.total.toFixed(1) + '%)');
@@ -397,44 +971,49 @@ function saveMarks() {
         showToast((d.error || 'Save failed'), true);
       }
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> Save Marks'; showToast('Network error',true); });
+    .catch(function(){ 
+      btn.disabled = false; 
+      btn.innerHTML = '<i class="fas fa-check"></i> Save Marks'; 
+      showToast('Network error', true); 
+    });
 }
 
 function showToast(msg, err) {
   var t = document.getElementById('amToast');
   t.textContent = msg;
-  t.style.background = err ? '#dc2626' : '#1e293b';
+  t.style.background = err ? '#dc2626' : '#0f172a';
   t.classList.add('show');
   setTimeout(function(){ t.classList.remove('show'); }, 3000);
 }
 
-/* ── Search ── */
-function amSearch(q) {
-  q = q.toLowerCase();
+/* ── Live Filtering ── */
+function applyFilters() {
+  var q = (document.getElementById('amSearch').value || '').toLowerCase();
   var rows = document.querySelectorAll('#amTable tbody tr[data-search]');
   var n = 0;
+  
   rows.forEach(function(r) {
-    var show = r.dataset.search.includes(q);
+    var matchesSearch = r.dataset.search.includes(q);
+    var matchesFilter = (_filterMode === 'all') || (r.dataset.grade === _filterMode);
+    var show = matchesSearch && matchesFilter;
+    
     r.setAttribute('data-hidden', show ? '0' : '1');
     if (show) n++;
   });
+  
   document.getElementById('rowCount').textContent = n + ' records';
 }
 
-/* ── Filter chips ── */
+function amSearch(q) {
+  applyFilters();
+}
+
 var _filterMode = 'all';
 function amFilter(mode, el) {
   _filterMode = mode;
   document.querySelectorAll('.am-chip').forEach(function(c){ c.classList.remove('active'); });
   el.classList.add('active');
-  var rows = document.querySelectorAll('#amTable tbody tr[data-grade]');
-  var n = 0;
-  rows.forEach(function(r) {
-    var show = (mode === 'all') || (r.dataset.grade === mode);
-    r.setAttribute('data-hidden', show ? '0' : '1');
-    if (show) n++;
-  });
-  document.getElementById('rowCount').textContent = n + ' records';
+  applyFilters();
 }
 </script>
 {% endblock %}

@@ -526,94 +526,166 @@ table.dash-table tr:hover td{background:#f8fafc}
 
   function donut(id,labels,data,colors){
     const ctx=document.getElementById(id);if(!ctx)return null;
-    const c=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:3,borderColor:'#fff',hoverBorderWidth:4}]},options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw}}},animation:{duration:800,easing:ease}}});
+    const c=new Chart(ctx,{
+      type:'doughnut',
+      data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:3,borderColor:'#fff',hoverBorderWidth:4}]},
+      options:{
+        cutout:'72%',
+        responsive:true,
+        maintainAspectRatio:false,
+        animation:{easing:ease,duration:1000},
+        plugins:{legend:{display:false},tooltip:{padding:10,cornerRadius:8}}
+      }
+    });
     CHARTS[id]=c;return c;
   }
 
-  donut('chartAssessment',['Pending','Approved','Rejected'],
-    [{{ stats.pending or 0 }},{{ stats.approved or 0 }},{{ stats.rejected or 0 }}],['#f59e0b','#10b981','#ef4444']);
-  donut('chartApplications',['Pending','Approved','Rejected'],
-    [{{ app_status.pending or 0 }},{{ app_status.approved or 0 }},{{ app_status.rejected or 0 }}],['#f59e0b','#10b981','#ef4444']);
-  donut('chartClearance',['Pending','Approved','Rejected'],
-    [{{ clearance_stats.pending or 0 }},{{ clearance_stats.approved or 0 }},{{ clearance_stats.rejected or 0 }}],['#f59e0b','#10b981','#ef4444']);
-  donut('chartAttachments',['Active','Completed','Pending','Approved','Rejected'],
+  // 1. Assessment Status Donut
+  donut('chartAssessment',
+    ['Pending','Approved','Rejected'],
+    [{{ stats.pending or 0 }},{{ stats.approved or 0 }},{{ stats.rejected or 0 }}],
+    ['#f59e0b','#10b981','#ef4444']
+  );
+
+  // 2. Applications Status Donut
+  donut('chartApplications',
+    ['Pending','Approved','Rejected'],
+    [{{ app_status.pending or 0 }},{{ app_status.approved or 0 }},{{ app_status.rejected or 0 }}],
+    ['#f59e0b','#10b981','#ef4444']
+  );
+
+  // 3. Clearance Status Donut
+  donut('chartClearance',
+    ['Pending','Approved','Rejected'],
+    [{{ clearance_stats.pending or 0 }},{{ clearance_stats.approved or 0 }},{{ clearance_stats.rejected or 0 }}],
+    ['#f59e0b','#10b981','#ef4444']
+  );
+
+  // 4. Industrial Attachments Donut
+  donut('chartAttachments',
+    ['Active','Completed','Pending','Approved','Rejected'],
     [{{ attachment_stats.active or 0 }},{{ attachment_stats.completed or 0 }},{{ attachment_stats.pending or 0 }},{{ attachment_stats.approved or 0 }},{{ attachment_stats.rejected or 0 }}],
-    ['#3b82f6','#10b981','#f59e0b','#06b6d4','#ef4444']);
+    ['#3b82f6','#10b981','#f59e0b','#06b6d4','#ef4444']
+  );
 
-  (function(){
-    const ctx=document.getElementById('chartTrend');if(!ctx)return;
-    CHARTS.chartTrend=new Chart(ctx,{type:'line',data:{labels:{{ trend_labels|safe }},datasets:[
-      {label:'Present',data:{{ trend_present|safe }},borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.10)',fill:true,tension:.4,pointBackgroundColor:'#10b981',pointRadius:4,borderWidth:2.5},
-      {label:'Absent', data:{{ trend_absent|safe }}, borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.07)', fill:true,tension:.4,pointBackgroundColor:'#ef4444',pointRadius:4,borderWidth:2.5}
-    ]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{color:gridColor},ticks:{font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,font:{size:11}},beginAtZero:true}},animation:{duration:900,easing:ease}}});
-  })();
-
-  (function(){
-    const ctx=document.getElementById('chartAttUnit');if(!ctx)return;
-    CHARTS.chartAttUnit=new Chart(ctx,{type:'bar',data:{labels:{{ att_unit_labels|safe }},datasets:[
-      {label:'Present',data:{{ att_unit_present|safe }},backgroundColor:'rgba(16,185,129,.80)',borderRadius:4,borderSkipped:false},
-      {label:'Absent', data:{{ att_unit_absent|safe }}, backgroundColor:'rgba(239,68,68,.65)',borderRadius:4,borderSkipped:false}
-    ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},usePointStyle:true}},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:false,grid:{color:gridColor},ticks:{font:{size:10}}},y:{stacked:false,grid:{display:false},ticks:{font:{size:11}}}},animation:{duration:900,easing:ease}}});
-  })();
-
-  (function(){
-    const ctx=document.getElementById('chartAtype');if(!ctx)return;
-    const palette=['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#ec4899'];
-    CHARTS.chartAtype=new Chart(ctx,{type:'polarArea',data:{labels:{{ atype_labels|safe }},datasets:[{data:{{ atype_counts|safe }},backgroundColor:palette.map(c=>c+'cc'),borderColor:palette,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12}}},animation:{duration:800,easing:ease}}});
-  })();
-
-  (function(){
-    const ctx=document.getElementById('chartClasses');if(!ctx)return;
-    const palette=['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#6366f1','#14b8a6','#f97316'];
-    const labels={{ class_labels|safe }};
-    CHARTS.chartClasses=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Students Enrolled',data:{{ class_counts|safe }},backgroundColor:palette.slice(0,labels.length).map(c=>c+'cc'),borderColor:palette.slice(0,labels.length),borderWidth:1.5,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw+' students'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,font:{size:11}},beginAtZero:true}},animation:{duration:900,easing:ease}}});
-  })();
-
-  // ── Realtime polling ──
-  function path(obj,p){return p.split('.').reduce((o,k)=>(o&&o[k]!=null)?o[k]:undefined,obj);}
-  function setChart(name,data){const c=CHARTS[name];if(!c||!data)return;c.data.datasets[0].data=data;c.update('none');}
-  function setBars(name,arrays){const c=CHARTS[name];if(!c)return;arrays.forEach((a,i)=>{if(c.data.datasets[i]&&a)c.data.datasets[i].data=a;});c.update('none');}
-
-  function applyLive(d){
-    document.querySelectorAll('[data-live]').forEach(el=>{
-      const v=path(d,el.getAttribute('data-live'));
-      if(v!==undefined) el.textContent=v;
+  // 5. 7-Day Attendance Trend (Line Chart)
+  const ctxTrend = document.getElementById('chartTrend');
+  if(ctxTrend){
+    const trendDates = {{ attendance_trend_labels | default([]) | tojson }};
+    const trendValues = {{ attendance_trend_data | default([]) | tojson }};
+    CHARTS['chartTrend'] = new Chart(ctxTrend, {
+      type:'line',
+      data:{
+        labels: trendDates.length ? trendDates : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        datasets:[{
+          label:'Present Count',
+          data: trendValues.length ? trendValues : [0,0,0,0,0,0,0],
+          borderColor:'#10b981',
+          backgroundColor:'rgba(16,185,129,0.1)',
+          fill:true,
+          tension:0.4,
+          pointBackgroundColor:'#10b981',
+          pointRadius:4,
+          pointHoverRadius:6
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        animation:{easing:ease,duration:1000},
+        plugins:{legend:{display:false},tooltip:{padding:10,cornerRadius:8}},
+        scales:{
+          x:{grid:{color:gridColor},ticks:{font:{size:11}}},
+          y:{beginAtZero:true,grid:{color:gridColor},ticks:{precision:0,font:{size:11}}}
+        }
+      }
     });
-    document.querySelectorAll('[data-live-sum]').forEach(el=>{
-      const sum=el.getAttribute('data-live-sum').split(',').reduce((t,k)=>t+(Number(path(d,k.trim()))||0),0);
-      el.textContent=sum;
+  }
+
+  // 6. Attendance by Unit (Stacked Bar)
+  const ctxAttUnit = document.getElementById('chartAttUnit');
+  if(ctxAttUnit){
+    const unitNames = {{ unit_att_labels | default([]) | tojson }};
+    const unitPresent = {{ unit_att_present | default([]) | tojson }};
+    const unitAbsent = {{ unit_att_absent | default([]) | tojson }};
+    CHARTS['chartAttUnit'] = new Chart(ctxAttUnit, {
+      type:'bar',
+      data:{
+        labels: unitNames.length ? unitNames : ['Unit 1','Unit 2','Unit 3'],
+        datasets:[
+          {label:'Present',data:unitPresent.length?unitPresent:[0,0,0],backgroundColor:'#10b981',borderRadius:4},
+          {label:'Absent',data:unitAbsent.length?unitAbsent:[0,0,0],backgroundColor:'#ef4444',borderRadius:4}
+        ]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        animation:{easing:ease,duration:1000},
+        plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}}},
+        scales:{
+          x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}},
+          y:{stacked:true,beginAtZero:true,grid:{color:gridColor},ticks:{precision:0,font:{size:11}}}
+        }
+      }
     });
-    setChart('chartAssessment',[path(d,'stats.pending'),path(d,'stats.approved'),path(d,'stats.rejected')]);
-    setChart('chartApplications',[path(d,'app_status.pending'),path(d,'app_status.approved'),path(d,'app_status.rejected')]);
-    setChart('chartClearance',[path(d,'clearance_stats.pending'),path(d,'clearance_stats.approved'),path(d,'clearance_stats.rejected')]);
-    setChart('chartAttachments',[path(d,'attachment_stats.active'),path(d,'attachment_stats.completed'),path(d,'attachment_stats.pending'),path(d,'attachment_stats.approved'),path(d,'attachment_stats.rejected')]);
-    if(CHARTS.chartTrend){CHARTS.chartTrend.data.labels=d.trend_labels;setBars('chartTrend',[d.trend_present,d.trend_absent]);}
-    if(CHARTS.chartAttUnit){CHARTS.chartAttUnit.data.labels=d.att_unit_labels;setBars('chartAttUnit',[d.att_unit_present,d.att_unit_absent]);}
-    if(CHARTS.chartAtype){CHARTS.chartAtype.data.labels=d.atype_labels;setChart('chartAtype',d.atype_counts);}
-    if(CHARTS.chartClasses){CHARTS.chartClasses.data.labels=d.class_labels;setChart('chartClasses',d.class_counts);}
   }
 
-  function markLive(ok,t){
-    const dot=document.getElementById('live-dot'),txt=document.getElementById('live-text');
-    if(!dot||!txt)return;
-    if(ok){dot.style.background='#10b981';txt.textContent='Live · '+(t||'');}
-    else{dot.style.background='#f59e0b';txt.textContent='Reconnecting…';}
+  // 7. Assessment Types (Doughnut / Polar Area)
+  const ctxAtype = document.getElementById('chartAtype');
+  if(ctxAtype){
+    const typeLabels = {{ assessment_type_labels | default([]) | tojson }};
+    const typeData = {{ assessment_type_data | default([]) | tojson }};
+    CHARTS['chartAtype'] = new Chart(ctxAtype, {
+      type:'doughnut',
+      data:{
+        labels: typeLabels.length ? typeLabels : ['CAT 1','CAT 2','Main Exam','Assignment'],
+        datasets:[{
+          data: typeData.length ? typeData : [0,0,0,0],
+          backgroundColor:['#3b82f6','#8b5cf6','#f59e0b','#10b981','#06b6d4','#ec4899'],
+          borderWidth:2,
+          borderColor:'#fff'
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        animation:{easing:ease,duration:1000},
+        plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}
+      }
+    });
   }
 
-  async function poll(){
-    try{
-      const r=await fetch('/dept-admin/dashboard/live',{headers:{'X-Requested-With':'fetch'}});
-      if(!r.ok)throw 0;
-      const d=await r.json();
-      applyLive(d);
-      markLive(true,d.server_time);
-    }catch(e){ markLive(false); }
+  // 8. Class Enrolment (Horizontal Bar)
+  const ctxClasses = document.getElementById('chartClasses');
+  if(ctxClasses){
+    const classLabels = {{ class_enrolment_labels | default([]) | tojson }};
+    const classData = {{ class_enrolment_data | default([]) | tojson }};
+    CHARTS['chartClasses'] = new Chart(ctxClasses, {
+      type:'bar',
+      data:{
+        labels: classLabels.length ? classLabels : ['Class A','Class B','Class C'],
+        datasets:[{
+          label:'Students',
+          data: classData.length ? classData : [0,0,0],
+          backgroundColor:'rgba(245,158,11,0.85)',
+          borderColor:'#f59e0b',
+          borderWidth:1,
+          borderRadius:6
+        }]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true,
+        maintainAspectRatio:false,
+        animation:{easing:ease,duration:1000},
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{beginAtZero:true,grid:{color:gridColor},ticks:{precision:0,font:{size:11}}},
+          y:{grid:{display:false},ticks:{font:{size:11}}}
+        }
+      }
+    });
   }
-  setInterval(poll,20000);
 })();
 </script>
-
-<!-- Pride in Technology Footer -->
-{% include 'partials/pride_footer.html' %}
-
 {% endblock %}
