@@ -4,509 +4,562 @@
 
 {% block extra_style %}
 :root {
-  --primary: #0f2c54;
-  --primary-hover: #1a3d6e;
-  --accent: #f59e0b;
-  --surface: #ffffff;
-  --background: #f8fafc;
-  --border: #e2e8f0;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+--primary: #0f2c54;
+--primary-hover: #1e40af;
+--accent: #f59e0b;
+--accent-light: rgba(245, 158, 11, 0.15);
+--surface: #ffffff;
+--background: #f8fafc;
+--border: #e2e8f0;
+--border-subtle: #f1f5f9;
+--text-main: #0f172a;
+--text-muted: #64748b;
+--ring-color: rgba(59, 130, 246, 0.25);
+
+--shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+--shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+--shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+--shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+--transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .am-wrap {
-  padding: 24px;
-  background: var(--background);
-  min-height: calc(100vh - 64px);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+padding: 32px 24px;
+background: var(--background);
+min-height: calc(100vh - 64px);
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+color: var(--text-main);
+box-sizing: border-box;
 }
 
 /* Modern Glass Hero Header */
 .am-hero {
-  background: linear-gradient(135deg, #0f2c54 0%, #1a3d6e 60%, #1e40af 100%);
-  border-radius: 16px;
-  padding: 28px;
-  margin-bottom: 24px;
-  color: #fff;
-  position: relative;
-  overflow: hidden;
-  box-shadow: var(--shadow-md);
+background: linear-gradient(135deg, #0b1f3a 0%, #0f2c54 45%, #1e40af 100%);
+border-radius: 20px;
+padding: 32px;
+margin-bottom: 24px;
+color: #ffffff;
+position: relative;
+overflow: hidden;
+box-shadow: 0 12px 24px -6px rgba(15, 44, 84, 0.25);
+border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .am-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.15), transparent 50%);
-  pointer-events: none;
+content: '';
+position: absolute;
+inset: 0;
+background:
+radial-gradient(circle at 90% 10%, rgba(245, 158, 11, 0.18), transparent 40%),
+radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.15), transparent 40%);
+pointer-events: none;
 }
 
 .am-hero-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 24px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+flex-wrap: wrap;
+gap: 16px;
+margin-bottom: 28px;
+position: relative;
+z-index: 1;
 }
 
 .am-hero h1 {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #fff;
-  letter-spacing: -0.02em;
+font-size: 24px;
+font-weight: 800;
+margin: 0;
+display: flex;
+align-items: center;
+gap: 12px;
+color: #ffffff;
+letter-spacing: -0.025em;
 }
 
 .am-hero h1 i {
-  color: var(--accent);
+color: var(--accent);
+filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.3));
 }
 
 .am-hero p {
-  font-size: 13.5px;
-  color: #bfdbfe;
-  margin: 4px 0 0 0;
+font-size: 14px;
+color: #93c5fd;
+margin: 6px 0 0 0;
+font-weight: 400;
+letter-spacing: -0.01em;
 }
 
+/* KPI Cards Structure */
 .am-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+gap: 16px;
+position: relative;
+z-index: 1;
 }
 
 .am-kpi {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 14px 18px;
-  transition: transform 0.2s ease;
+background: rgba(255, 255, 255, 0.07);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+border: 1px solid rgba(255, 255, 255, 0.14);
+border-radius: 14px;
+padding: 16px 20px;
+transition: var(--transition);
 }
 
 .am-kpi:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.12);
+transform: translateY(-3px);
+background: rgba(255, 255, 255, 0.12);
+border-color: rgba(255, 255, 255, 0.25);
+box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
 .am-kpi-num {
-  font-size: 28px;
-  font-weight: 900;
-  color: #fff;
-  line-height: 1;
+font-size: 30px;
+font-weight: 800;
+color: #ffffff;
+line-height: 1;
+letter-spacing: -0.03em;
 }
 
 .am-kpi-lbl {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 6px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+font-size: 11px;
+color: rgba(255, 255, 255, 0.75);
+margin-top: 8px;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.08em;
 }
 
-/* Weight Legend Pill Section */
+/* Weight Legend Section */
 .wt-legend {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.9);
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+display: flex;
+gap: 12px;
+flex-wrap: wrap;
+font-size: 12px;
+color: rgba(255, 255, 255, 0.95);
+margin-top: 24px;
+padding-top: 20px;
+border-top: 1px solid rgba(255, 255, 255, 0.12);
+position: relative;
+z-index: 1;
 }
 
 .wt-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 4px 10px;
-  border-radius: 20px;
+display: inline-flex;
+align-items: center;
+gap: 8px;
+background: rgba(0, 0, 0, 0.22);
+padding: 5px 12px;
+border-radius: 20px;
+border: 1px solid rgba(255, 255, 255, 0.08);
+backdrop-filter: blur(4px);
+font-weight: 500;
 }
 
 .wt-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+width: 8px;
+height: 8px;
+border-radius: 50%;
+box-shadow: 0 0 6px currentColor;
 }
 
 /* Enhanced Toolbar */
 .am-toolbar {
-  background: var(--surface);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-  padding: 12px 16px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+background: var(--surface);
+border-radius: 16px;
+border: 1px solid var(--border);
+box-shadow: var(--shadow-sm);
+padding: 14px 18px;
+margin-bottom: 24px;
+display: flex;
+align-items: center;
+gap: 16px;
+flex-wrap: wrap;
 }
 
 .am-search-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 220px;
+position: relative;
+flex: 1;
+min-width: 260px;
 }
 
 .am-search-wrap i {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 13px;
+position: absolute;
+left: 14px;
+top: 50%;
+transform: translateY(-50%);
+color: var(--text-muted);
+font-size: 14px;
+transition: var(--transition);
 }
 
 .am-search {
-  width: 100%;
-  padding: 9px 12px 9px 34px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 13px;
-  outline: none;
-  color: var(--text-main);
-  background: #f8fafc;
-  transition: all 0.2s ease;
+width: 100%;
+padding: 10px 14px 10px 40px;
+border: 1px solid var(--border);
+border-radius: 10px;
+font-size: 13.5px;
+outline: none;
+color: var(--text-main);
+background: var(--background);
+transition: var(--transition);
+box-sizing: border-box;
 }
 
 .am-search:focus {
-  background: #fff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+background: #ffffff;
+border-color: #3b82f6;
+box-shadow: 0 0 0 4px var(--ring-color);
+}
+
+.am-search:focus + i {
+color: #3b82f6;
 }
 
 .am-chips {
-  display: flex;
-  gap: 6px;
-  background: #f1f5f9;
-  padding: 3px;
-  border-radius: 10px;
+display: flex;
+gap: 4px;
+background: #f1f5f9;
+padding: 4px;
+border-radius: 10px;
+border: 1px solid var(--border-subtle);
 }
 
 .am-chip {
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  transition: all 0.2s ease;
+padding: 7px 16px;
+border-radius: 8px;
+font-size: 12.5px;
+font-weight: 600;
+cursor: pointer;
+border: none;
+background: transparent;
+color: var(--text-muted);
+transition: var(--transition);
+}
+
+.am-chip:hover {
+color: var(--text-main);
 }
 
 .am-chip.active {
-  background: var(--surface);
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
+background: var(--surface);
+color: var(--primary);
+box-shadow: var(--shadow-xs);
 }
 
 /* Card & Dynamic Table */
 .am-card {
-  background: var(--surface);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+background: var(--surface);
+border-radius: 16px;
+border: 1px solid var(--border);
+box-shadow: var(--shadow-sm);
+overflow: hidden;
 }
 
 .am-card-head {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  color: var(--text-main);
-  padding: 16px 20px;
-  font-size: 14px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+background: var(--surface);
+border-bottom: 1px solid var(--border);
+color: var(--text-main);
+padding: 18px 24px;
+font-size: 15px;
+font-weight: 700;
+display: flex;
+align-items: center;
+gap: 10px;
+letter-spacing: -0.01em;
 }
 
 .am-card-head i {
-  color: var(--primary);
+color: var(--primary);
 }
 
 .am-card-head .row-count {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  background: #f1f5f9;
-  border-radius: 20px;
-  padding: 3px 12px;
+margin-left: auto;
+font-size: 12px;
+font-weight: 600;
+color: var(--text-muted);
+background: #f1f5f9;
+border-radius: 20px;
+padding: 4px 12px;
+border: 1px solid var(--border-subtle);
 }
 
 .am-tbl-wrap {
-  overflow-x: auto;
+overflow-x: auto;
 }
 
 .am-tbl {
-  width: 100%;
-  border-collapse: collapse;
+width: 100%;
+border-collapse: collapse;
 }
 
 .am-tbl thead th {
-  background: #f8fafc;
-  padding: 12px 14px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
+background: #f8fafc;
+padding: 14px 16px;
+text-align: left;
+font-size: 11px;
+font-weight: 700;
+color: var(--text-muted);
+text-transform: uppercase;
+letter-spacing: 0.06em;
+border-bottom: 1px solid var(--border);
+white-space: nowrap;
 }
 
 .am-tbl thead th.ctr {
-  text-align: center;
+text-align: center;
 }
 
 .am-tbl tbody td {
-  padding: 14px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 13px;
-  color: var(--text-main);
-  vertical-align: middle;
+padding: 16px;
+border-bottom: 1px solid var(--border-subtle);
+font-size: 13.5px;
+color: var(--text-main);
+vertical-align: middle;
 }
 
 .am-tbl tbody tr:last-child td {
-  border-bottom: none;
+border-bottom: none;
 }
 
 .am-tbl tbody tr {
-  transition: background-color 0.15s ease;
+transition: background-color 0.15s ease;
 }
 
 .am-tbl tbody tr:hover td {
-  background: #f8fafc;
+background: #f8fafc;
 }
 
 .am-tbl tbody tr[data-hidden="1"] {
-  display: none;
+display: none;
 }
 
 .stu-name {
-  font-weight: 700;
-  color: var(--text-main);
+font-weight: 700;
+color: var(--text-main);
+letter-spacing: -0.01em;
 }
 
 .stu-adm {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  margin-top: 2px;
+font-size: 12px;
+color: var(--text-muted);
+margin-top: 2px;
+font-family: monospace, ui-monospace, sans-serif;
 }
 
 .co-name {
-  font-size: 12.5px;
-  color: #334155;
-  font-weight: 500;
+font-size: 13px;
+color: #334155;
+font-weight: 500;
 }
 
 /* Status Badges */
 .status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
+display: inline-flex;
+align-items: center;
+gap: 6px;
+padding: 4px 12px;
+border-radius: 20px;
+font-size: 11.5px;
+font-weight: 700;
+letter-spacing: 0.01em;
 }
 
-.sp-active { background: #dcfce7; color: #15803d; }
-.sp-pending { background: #fef9c3; color: #a16207; }
-.sp-completed { background: #dbeafe; color: #1d4ed8; }
-.sp-other { background: #f1f5f9; color: var(--text-muted); }
+.sp-active { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.sp-pending { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+.sp-completed { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.sp-other { background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); }
 
 .score-cell {
-  text-align: center;
-  font-size: 12.5px;
-  font-weight: 600;
+text-align: center;
+font-size: 13px;
+font-weight: 600;
 }
 
-.score-val { color: var(--text-main); }
-.score-dash { color: #cbd5e1; }
+.score-val { color: var(--text-main); font-variant-numeric: tabular-nums; }
+.score-dash { color: #cbd5e1; font-weight: 400; }
 
 /* Grade Indicators */
 .grade-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 800;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 36px;
+height: 36px;
+border-radius: 10px;
+font-size: 13px;
+font-weight: 800;
+box-shadow: var(--shadow-xs);
 }
 
-.gb-M { background: #dcfce7; color: #15803d; }
-.gb-P { background: #dbeafe; color: #1d4ed8; }
-.gb-C { background: #fef3c7; color: #a16207; }
-.gb-NYC { background: #fee2e2; color: #dc2626; }
-.gb-nil { background: #f1f5f9; color: #94a3b8; font-size: 11px; }
+.gb-M { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.gb-P { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+.gb-C { background: #fef3c7; color: #b45309; border: 1px solid #fde047; }
+.gb-NYC { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+.gb-nil { background: #f1f5f9; color: #94a3b8; font-size: 12px; border: 1px solid var(--border); }
 
 .total-pill {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  background: #f1f5f9;
-  color: #334155;
+display: inline-block;
+padding: 5px 12px;
+border-radius: 8px;
+font-size: 12px;
+font-weight: 700;
+background: #f1f5f9;
+color: #334155;
+border: 1px solid var(--border-subtle);
+font-variant-numeric: tabular-nums;
 }
 
 /* Modern Action Buttons */
 .btn-enter, .btn-edit {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+display: inline-flex;
+align-items: center;
+gap: 8px;
+padding: 8px 16px;
+border-radius: 10px;
+font-size: 12.5px;
+font-weight: 700;
+cursor: pointer;
+transition: var(--transition);
+white-space: nowrap;
 }
 
 .btn-enter {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  box-shadow: 0 2px 4px rgba(15, 44, 84, 0.15);
+background: var(--primary);
+color: #ffffff;
+border: none;
+box-shadow: 0 2px 4px rgba(15, 44, 84, 0.15);
 }
 
 .btn-enter:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(15, 44, 84, 0.25);
+background: var(--primary-hover);
+transform: translateY(-1px);
+box-shadow: 0 4px 10px rgba(15, 44, 84, 0.25);
 }
 
 .btn-enter i { color: var(--accent); }
 
 .btn-edit {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+background: #eff6ff;
+color: #1d4ed8;
+border: 1px solid #bfdbfe;
 }
 
 .btn-edit:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
+background: #dbeafe;
+border-color: #93c5fd;
+color: #1e40af;
+transform: translateY(-1px);
 }
 
 .empty-row td {
-  text-align: center;
-  padding: 60px 24px;
-  color: var(--text-muted);
+text-align: center;
+padding: 64px 24px;
+color: var(--text-muted);
 }
 
 .empty-row td i {
-  font-size: 44px;
-  display: block;
-  margin-bottom: 12px;
-  color: #cbd5e1;
+font-size: 48px;
+display: block;
+margin-bottom: 14px;
+color: #cbd5e1;
 }
 
 /* Modal Styling */
 .am-modal-bg {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 3000;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+display: none;
+position: fixed;
+inset: 0;
+background: rgba(15, 23, 42, 0.65);
+backdrop-filter: blur(6px);
+-webkit-backdrop-filter: blur(6px);
+z-index: 3000;
+align-items: center;
+justify-content: center;
+padding: 20px;
 }
 
 .am-modal-bg.open {
-  display: flex;
+display: flex;
 }
 
 .am-modal {
-  background: var(--surface);
-  border-radius: 18px;
-  width: 100%;
-  max-width: 540px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  animation: amSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+background: var(--surface);
+border-radius: 20px;
+width: 100%;
+max-width: 520px;
+max-height: 90vh;
+overflow-y: auto;
+box-shadow: var(--shadow-lg);
+border: 1px solid var(--border);
+animation: amSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes amSlide {
-  from { transform: translateY(16px) scale(0.98); opacity: 0; }
-  to { transform: translateY(0) scale(1); opacity: 1; }
+from { transform: translateY(20px) scale(0.97); opacity: 0; }
+to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .am-modal-head {
-  background: var(--surface);
-  color: var(--text-main);
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 2;
+background: var(--surface);
+color: var(--text-main);
+padding: 20px 24px;
+border-bottom: 1px solid var(--border);
+display: flex;
+align-items: center;
+justify-content: space-between;
+position: sticky;
+top: 0;
+z-index: 2;
 }
 
 .am-modal-head h3 {
-  font-size: 16px;
-  font-weight: 800;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+font-size: 17px;
+font-weight: 800;
+margin: 0;
+display: flex;
+align-items: center;
+gap: 10px;
+letter-spacing: -0.01em;
 }
 
 .am-modal-head h3 i { color: var(--primary); }
 
 .am-modal-close {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #f1f5f9;
-  border: none;
-  color: var(--text-muted);
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+width: 32px;
+height: 32px;
+border-radius: 50%;
+background: #f1f5f9;
+border: none;
+color: var(--text-muted);
+font-size: 14px;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: var(--transition);
 }
 
 .am-modal-close:hover {
-  background: #e2e8f0;
-  color: var(--text-main);
+background: #e2e8f0;
+color: var(--text-main);
+transform: rotate(90deg);
 }
 
 .am-modal-body {
-  padding: 24px;
+padding: 24px;
 }
 
 .am-student-card {
-  background: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 20px;
-  font-size: 13.5px;
+background: #f8fafc;
+border: 1px solid var(--border);
+border-radius: 14px;
+padding: 16px 18px;
+margin-bottom: 24px;
+font-size: 14px;
 }
 
 .am-student-card strong { color: var(--text-main); font-weight: 700; }
@@ -514,155 +567,163 @@
 
 /* Score Input Layout */
 .score-row {
-  display: grid;
-  grid-template-columns: 1fr 90px 60px;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
+display: grid;
+grid-template-columns: 1fr 90px 60px;
+align-items: center;
+gap: 12px;
+padding: 14px 0;
+border-bottom: 1px solid var(--border-subtle);
 }
 
 .score-row:last-of-type { border-bottom: none; }
 
 .score-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-main);
+font-size: 13.5px;
+font-weight: 600;
+color: var(--text-main);
 }
 
 .score-label small {
-  display: block;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-muted);
-  margin-top: 2px;
+display: block;
+font-size: 11.5px;
+font-weight: 400;
+color: var(--text-muted);
+margin-top: 2px;
 }
 
 .score-inp {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-  outline: none;
-  color: var(--text-main);
-  background: #f8fafc;
-  transition: all 0.2s ease;
+width: 100%;
+padding: 10px;
+border: 1px solid var(--border);
+border-radius: 10px;
+font-size: 15px;
+font-weight: 700;
+text-align: center;
+outline: none;
+color: var(--text-main);
+background: var(--background);
+transition: var(--transition);
+box-sizing: border-box;
 }
 
 .score-inp:focus {
-  background: #fff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+background: #ffffff;
+border-color: #3b82f6;
+box-shadow: 0 0 0 4px var(--ring-color);
 }
 
 .score-wt {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-align: center;
-  background: #f1f5f9;
-  padding: 6px 8px;
-  border-radius: 6px;
+font-size: 11.5px;
+font-weight: 700;
+color: var(--text-muted);
+text-align: center;
+background: #f1f5f9;
+padding: 8px;
+border-radius: 8px;
+border: 1px solid var(--border-subtle);
 }
 
 /* Modal Live Result Footer */
 .am-result {
-  background: linear-gradient(135deg, #0f2c54 0%, #1a3d6e 100%);
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin: 20px 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: #fff;
+background: linear-gradient(135deg, #0f2c54 0%, #1e40af 100%);
+border-radius: 14px;
+padding: 18px 22px;
+margin: 24px 0 24px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+color: #ffffff;
+box-shadow: 0 8px 16px -4px rgba(15, 44, 84, 0.25);
 }
 
 .am-result-score {
-  font-size: 26px;
-  font-weight: 900;
-  line-height: 1;
+font-size: 28px;
+font-weight: 900;
+line-height: 1;
+letter-spacing: -0.02em;
 }
 
 .am-result-lbl {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 4px;
+font-size: 11px;
+color: rgba(255, 255, 255, 0.75);
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.06em;
+margin-top: 6px;
 }
 
 .am-result-grade {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 900;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+width: 52px;
+height: 52px;
+border-radius: 14px;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 20px;
+font-weight: 900;
+border: 2px solid rgba(255, 255, 255, 0.25);
+background: rgba(255, 255, 255, 0.12);
+color: #ffffff;
+box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+transition: var(--transition);
 }
 
 .am-save-btn {
-  width: 100%;
-  padding: 12px;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(15, 44, 84, 0.2);
+width: 100%;
+padding: 14px;
+background: var(--primary);
+color: #ffffff;
+border: none;
+border-radius: 12px;
+font-size: 14.5px;
+font-weight: 700;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 10px;
+transition: var(--transition);
+box-shadow: 0 4px 12px rgba(15, 44, 84, 0.2);
 }
 
 .am-save-btn:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 44, 84, 0.3);
+background: var(--primary-hover);
+transform: translateY(-1px);
+box-shadow: 0 6px 16px rgba(15, 44, 84, 0.3);
 }
 
 .am-save-btn i { color: var(--accent); }
 
 .am-toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: #0f172a;
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  z-index: 9999;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-  box-shadow: var(--shadow-lg);
+position: fixed;
+bottom: 24px;
+right: 24px;
+background: #0f172a;
+color: #ffffff;
+padding: 14px 22px;
+border-radius: 12px;
+font-size: 13.5px;
+font-weight: 600;
+z-index: 9999;
+opacity: 0;
+transform: translateY(12px);
+transition: var(--transition);
+pointer-events: none;
+box-shadow: var(--shadow-lg);
+border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .am-toast.show {
-  opacity: 1;
-  transform: translateY(0);
+opacity: 1;
+transform: translateY(0);
 }
 
 @media (max-width: 640px) {
-  .am-wrap { padding: 14px; }
-  .am-kpis { grid-template-columns: 1fr 1fr; }
-  .score-row { grid-template-columns: 1fr 75px 50px; }
+.am-wrap { padding: 16px; }
+.am-hero { padding: 24px 20px; }
+.am-kpis { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.score-row { grid-template-columns: 1fr 80px 50px; }
 }
 {% endblock %}
 
@@ -677,7 +738,7 @@
         <p>Enter and manage grading scores for trainees on industrial attachment.</p>
       </div>
     </div>
-    
+
     <div class="am-kpis">
       <div class="am-kpi">
         <div class="am-kpi-num">{{ stats.total }}</div>
@@ -733,91 +794,91 @@
     <div class="am-tbl-wrap">
       <table class="am-tbl" id="amTable">
         <thead>
-          <tr>
-            <th>Student</th>
-            <th>Company</th>
-            <th>Period</th>
-            <th class="ctr">Status</th>
-            <th class="ctr">GPS<br><small style="font-weight:400">/{{ (config.weight_gps_attendance or 10)|int }}</small></th>
-            <th class="ctr">Logbook<br><small style="font-weight:400">/{{ (config.weight_logbook or 20)|int }}</small></th>
-            <th class="ctr">Mentor<br><small style="font-weight:400">/{{ (config.weight_mentor_eval or 30)|int }}</small></th>
-            <th class="ctr">Trainer<br><small style="font-weight:400">/{{ (config.weight_trainer_assessment or 30)|int }}</small></th>
-            <th class="ctr">Report<br><small style="font-weight:400">/{{ (config.weight_final_report or 10)|int }}</small></th>
-            <th class="ctr">Total<br><small style="font-weight:400">/100</small></th>
-            <th class="ctr">Grade</th>
-            <th class="ctr">Action</th>
-          </tr>
+        <tr>
+          <th>Student</th>
+          <th>Company</th>
+          <th>Period</th>
+          <th class="ctr">Status</th>
+          <th class="ctr">GPS<br><small style="font-weight:400">/{{ (config.weight_gps_attendance or 10)|int }}</small></th>
+          <th class="ctr">Logbook<br><small style="font-weight:400">/{{ (config.weight_logbook or 20)|int }}</small></th>
+          <th class="ctr">Mentor<br><small style="font-weight:400">/{{ (config.weight_mentor_eval or 30)|int }}</small></th>
+          <th class="ctr">Trainer<br><small style="font-weight:400">/{{ (config.weight_trainer_assessment or 30)|int }}</small></th>
+          <th class="ctr">Report<br><small style="font-weight:400">/{{ (config.weight_final_report or 10)|int }}</small></th>
+          <th class="ctr">Total<br><small style="font-weight:400">/100</small></th>
+          <th class="ctr">Grade</th>
+          <th class="ctr">Action</th>
+        </tr>
         </thead>
         <tbody>
-          {% for a in attachments %}
-          {% set g = a.get('_grade') %}
-          {% set stu = a.get('student') or {} %}
-          {% set co  = a.get('companies') or {} %}
-          {% set att_status = (a.get('status') or 'pending').lower() %}
-          <tr data-grade="{{ 'graded' if g else 'pending' }}"
-              data-search="{{ ((stu.get('full_name') or '') ~ ' ' ~ (stu.get('admission_no') or '') ~ ' ' ~ (co.get('name') or ''))|lower }}"
-              id="row-{{ a.id }}">
-            <td>
-              <div class="stu-name">{{ stu.get('full_name') or '—' }}</div>
-              <div class="stu-adm">{{ stu.get('admission_no') or '' }}</div>
-            </td>
-            <td><div class="co-name">{{ co.get('name') or '—' }}</div></td>
-            <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">
-              {% if a.get('start_date') %}{{ a.start_date }} → {{ a.end_date or '?' }}{% else %}—{% endif %}
-            </td>
-            <td class="ctr">
+        {% for a in attachments %}
+        {% set g = a.get('_grade') %}
+        {% set stu = a.get('student') or {} %}
+        {% set co  = a.get('companies') or {} %}
+        {% set att_status = (a.get('status') or 'pending').lower() %}
+        <tr data-grade="{{ 'graded' if g else 'pending' }}"
+            data-search="{{ ((stu.get('full_name') or '') ~ ' ' ~ (stu.get('admission_no') or '') ~ ' ' ~ (co.get('name') or ''))|lower }}"
+            id="row-{{ a.id }}">
+          <td>
+            <div class="stu-name">{{ stu.get('full_name') or '—' }}</div>
+            <div class="stu-adm">{{ stu.get('admission_no') or '' }}</div>
+          </td>
+          <td><div class="co-name">{{ co.get('name') or '—' }}</div></td>
+          <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">
+            {% if a.get('start_date') %}{{ a.start_date }} → {{ a.end_date or '?' }}{% else %}—{% endif %}
+          </td>
+          <td class="ctr">
               <span class="status-pill {{ 'sp-active' if att_status == 'active' else 'sp-completed' if att_status == 'completed' else 'sp-pending' }}">
                 {{ att_status|title }}
               </span>
-            </td>
-            <td class="score-cell">
-              {% if g %}<span class="score-val">{{ g.score_gps_attendance|round(1) }} / {{ (config.weight_gps_attendance or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-            </td>
-            <td class="score-cell">
-              {% if g %}<span class="score-val">{{ g.score_logbook|round(1) }} / {{ (config.weight_logbook or 20)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-            </td>
-            <td class="score-cell">
-              {% if g %}<span class="score-val">{{ g.score_mentor_eval|round(1) }} / {{ (config.weight_mentor_eval or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-            </td>
-            <td class="score-cell">
-              {% if g %}<span class="score-val">{{ g.score_trainer_assessment|round(1) }} / {{ (config.weight_trainer_assessment or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-            </td>
-            <td class="score-cell">
-              {% if g %}<span class="score-val">{{ g.score_final_report|round(1) }} / {{ (config.weight_final_report or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
-            </td>
-            <td class="ctr">
-              {% if g and g.get('weighted_total') is not none %}
-              <span class="total-pill">{{ g.weighted_total|round(1) }} / 100 ({{ g.weighted_total|round(1) }}%)</span>
-              {% else %}<span class="score-dash">—</span>{% endif %}
-            </td>
-            <td class="ctr">
-              {% if g and g.get('final_grade') %}
-              <span class="grade-badge gb-{{ g.final_grade }}">{{ g.final_grade }}</span>
-              {% else %}
-              <span class="grade-badge gb-nil">?</span>
-              {% endif %}
-            </td>
-            <td class="ctr">
-              <button type="button" class="{{ 'btn-edit' if g else 'btn-enter' }}"
-                      onclick="openMarks('{{ a.id }}','{{ stu.get('full_name','') }}','{{ co.get('name','') }}',
+          </td>
+          <td class="score-cell">
+            {% if g %}<span class="score-val">{{ g.score_gps_attendance|round(1) }} / {{ (config.weight_gps_attendance or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+          </td>
+          <td class="score-cell">
+            {% if g %}<span class="score-val">{{ g.score_logbook|round(1) }} / {{ (config.weight_logbook or 20)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+          </td>
+          <td class="score-cell">
+            {% if g %}<span class="score-val">{{ g.score_mentor_eval|round(1) }} / {{ (config.weight_mentor_eval or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+          </td>
+          <td class="score-cell">
+            {% if g %}<span class="score-val">{{ g.score_trainer_assessment|round(1) }} / {{ (config.weight_trainer_assessment or 30)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+          </td>
+          <td class="score-cell">
+            {% if g %}<span class="score-val">{{ g.score_final_report|round(1) }} / {{ (config.weight_final_report or 10)|int }}</span>{% else %}<span class="score-dash">—</span>{% endif %}
+          </td>
+          <td class="ctr">
+            {% if g and g.get('weighted_total') is not none %}
+            <span class="total-pill">{{ g.weighted_total|round(1) }} / 100 ({{ g.weighted_total|round(1) }}%)</span>
+            {% else %}<span class="score-dash">—</span>{% endif %}
+          </td>
+          <td class="ctr">
+            {% if g and g.get('final_grade') %}
+            <span class="grade-badge gb-{{ g.final_grade }}">{{ g.final_grade }}</span>
+            {% else %}
+            <span class="grade-badge gb-nil">?</span>
+            {% endif %}
+          </td>
+          <td class="ctr">
+            <button type="button" class="{{ 'btn-edit' if g else 'btn-enter' }}"
+                    onclick="openMarks('{{ a.id }}','{{ stu.get('full_name','') }}','{{ co.get('name','') }}',
                         {{ (g.score_gps_attendance or 0) if g else 0 }},
                         {{ (g.score_logbook or 0) if g else 0 }},
                         {{ (g.score_mentor_eval or 0) if g else 0 }},
                         {{ (g.score_trainer_assessment or 0) if g else 0 }},
                         {{ (g.score_final_report or 0) if g else 0 }})">
-                <i class="fas {{ 'fa-pen-to-square' if g else 'fa-plus' }}"></i>
-                {{ 'Edit' if g else 'Enter Marks' }}
-              </button>
-            </td>
-          </tr>
-          {% else %}
-          <tr class="empty-row">
-            <td colspan="12">
-              <i class="fas fa-folder-open"></i>
-              No attachment records found for your department.
-            </td>
-          </tr>
-          {% endfor %}
+              <i class="fas {{ 'fa-pen-to-square' if g else 'fa-plus' }}"></i>
+              {{ 'Edit' if g else 'Enter Marks' }}
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr class="empty-row">
+          <td colspan="12">
+            <i class="fas fa-folder-open"></i>
+            No attachment records found for your department.
+          </td>
+        </tr>
+        {% endfor %}
         </tbody>
       </table>
     </div>
@@ -892,128 +953,128 @@
 
 {% block scripts %}
 <script>
-var WEIGHTS = {
-  gps: {{ (config.weight_gps_attendance or 10)|float }},
+  var WEIGHTS = {
+    gps: {{ (config.weight_gps_attendance or 10)|float }},
   log: {{ (config.weight_logbook or 20)|float }},
   men: {{ (config.weight_mentor_eval or 30)|float }},
   tra: {{ (config.weight_trainer_assessment or 30)|float }},
   rep: {{ (config.weight_final_report or 10)|float }},
-};
-
-function _cap(val, max) {
-  return Math.min(Math.max(val || 0, 0), max || 0);
-}
-
-function calcTotal() {
-  var gps = _cap(parseFloat(document.getElementById('s_gps').value), WEIGHTS.gps);
-  var log = _cap(parseFloat(document.getElementById('s_log').value), WEIGHTS.log);
-  var men = _cap(parseFloat(document.getElementById('s_men').value), WEIGHTS.men);
-  var tra = _cap(parseFloat(document.getElementById('s_tra').value), WEIGHTS.tra);
-  var rep = _cap(parseFloat(document.getElementById('s_rep').value), WEIGHTS.rep);
-  
-  var pct = Math.round((gps + log + men + tra + rep) * 10) / 10;
-  document.getElementById('livePct').textContent = pct.toFixed(1);
-
-  var g = pct >= 80 ? 'M' : pct >= 65 ? 'P' : pct >= 50 ? 'C' : 'NYC';
-  var el = document.getElementById('liveGrade');
-  el.textContent = g;
-  
-  var bgColors = {
-    M: 'rgba(22, 163, 74, 0.4)',
-    P: 'rgba(29, 78, 216, 0.4)',
-    C: 'rgba(217, 119, 6, 0.4)',
-    NYC: 'rgba(220, 38, 38, 0.4)'
   };
-  el.style.background = bgColors[g] || 'rgba(255, 255, 255, 0.1)';
-}
 
-function openMarks(id, stu, co, gps, log, men, tra, rep) {
-  document.getElementById('currentAttId').value = id;
-  document.getElementById('modalStu').textContent = stu;
-  document.getElementById('modalCo').textContent  = co ? ' — ' + co : '';
-  document.getElementById('s_gps').value = gps;
-  document.getElementById('s_log').value = log;
-  document.getElementById('s_men').value = men;
-  document.getElementById('s_tra').value = tra;
-  document.getElementById('s_rep').value = rep;
-  calcTotal();
-  document.getElementById('amModalBg').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
+  function _cap(val, max) {
+    return Math.min(Math.max(val || 0, 0), max || 0);
+  }
 
-function closeMarks() {
-  document.getElementById('amModalBg').classList.remove('open');
-  document.body.style.overflow = '';
-}
+  function calcTotal() {
+    var gps = _cap(parseFloat(document.getElementById('s_gps').value), WEIGHTS.gps);
+    var log = _cap(parseFloat(document.getElementById('s_log').value), WEIGHTS.log);
+    var men = _cap(parseFloat(document.getElementById('s_men').value), WEIGHTS.men);
+    var tra = _cap(parseFloat(document.getElementById('s_tra').value), WEIGHTS.tra);
+    var rep = _cap(parseFloat(document.getElementById('s_rep').value), WEIGHTS.rep);
 
-function bgClose(e) {
-  if (e.target === document.getElementById('amModalBg')) closeMarks();
-}
+    var pct = Math.round((gps + log + men + tra + rep) * 10) / 10;
+    document.getElementById('livePct').textContent = pct.toFixed(1);
 
-function saveMarks() {
-  var id  = document.getElementById('currentAttId').value;
-  var btn = document.getElementById('saveBtn');
-  var fd  = new FormData(document.getElementById('marksForm'));
-  
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
-  
-  fetch('/dept-admin/attachment-marks/' + id + '/save', { method: 'POST', body: fd })
-    .then(function(r){ return r.json(); })
-    .then(function(d) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
-      if (d.ok) {
-        closeMarks();
-        showToast('Marks saved — Grade: ' + d.grade + ' (' + d.total.toFixed(1) + '%)');
-        setTimeout(function(){ location.reload(); }, 1200);
-      } else {
-        showToast((d.error || 'Save failed'), true);
-      }
-    })
-    .catch(function(){ 
-      btn.disabled = false; 
-      btn.innerHTML = '<i class="fas fa-check"></i> Save Marks'; 
-      showToast('Network error', true); 
+    var g = pct >= 80 ? 'M' : pct >= 65 ? 'P' : pct >= 50 ? 'C' : 'NYC';
+    var el = document.getElementById('liveGrade');
+    el.textContent = g;
+
+    var bgColors = {
+      M: 'rgba(22, 163, 74, 0.4)',
+      P: 'rgba(29, 78, 216, 0.4)',
+      C: 'rgba(217, 119, 6, 0.4)',
+      NYC: 'rgba(220, 38, 38, 0.4)'
+    };
+    el.style.background = bgColors[g] || 'rgba(255, 255, 255, 0.1)';
+  }
+
+  function openMarks(id, stu, co, gps, log, men, tra, rep) {
+    document.getElementById('currentAttId').value = id;
+    document.getElementById('modalStu').textContent = stu;
+    document.getElementById('modalCo').textContent  = co ? ' — ' + co : '';
+    document.getElementById('s_gps').value = gps;
+    document.getElementById('s_log').value = log;
+    document.getElementById('s_men').value = men;
+    document.getElementById('s_tra').value = tra;
+    document.getElementById('s_rep').value = rep;
+    calcTotal();
+    document.getElementById('amModalBg').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMarks() {
+    document.getElementById('amModalBg').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function bgClose(e) {
+    if (e.target === document.getElementById('amModalBg')) closeMarks();
+  }
+
+  function saveMarks() {
+    var id  = document.getElementById('currentAttId').value;
+    var btn = document.getElementById('saveBtn');
+    var fd  = new FormData(document.getElementById('marksForm'));
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+    fetch('/dept-admin/attachment-marks/' + id + '/save', { method: 'POST', body: fd })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+              btn.disabled = false;
+              btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
+              if (d.ok) {
+                closeMarks();
+                showToast('Marks saved — Grade: ' + d.grade + ' (' + d.total.toFixed(1) + '%)');
+                setTimeout(function(){ location.reload(); }, 1200);
+              } else {
+                showToast((d.error || 'Save failed'), true);
+              }
+            })
+            .catch(function(){
+              btn.disabled = false;
+              btn.innerHTML = '<i class="fas fa-check"></i> Save Marks';
+              showToast('Network error', true);
+            });
+  }
+
+  function showToast(msg, err) {
+    var t = document.getElementById('amToast');
+    t.textContent = msg;
+    t.style.background = err ? '#dc2626' : '#0f172a';
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+  }
+
+  /* ── Live Filtering ── */
+  function applyFilters() {
+    var q = (document.getElementById('amSearch').value || '').toLowerCase();
+    var rows = document.querySelectorAll('#amTable tbody tr[data-search]');
+    var n = 0;
+
+    rows.forEach(function(r) {
+      var matchesSearch = r.dataset.search.includes(q);
+      var matchesFilter = (_filterMode === 'all') || (r.dataset.grade === _filterMode);
+      var show = matchesSearch && matchesFilter;
+
+      r.setAttribute('data-hidden', show ? '0' : '1');
+      if (show) n++;
     });
-}
 
-function showToast(msg, err) {
-  var t = document.getElementById('amToast');
-  t.textContent = msg;
-  t.style.background = err ? '#dc2626' : '#0f172a';
-  t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 3000);
-}
+    document.getElementById('rowCount').textContent = n + ' records';
+  }
 
-/* ── Live Filtering ── */
-function applyFilters() {
-  var q = (document.getElementById('amSearch').value || '').toLowerCase();
-  var rows = document.querySelectorAll('#amTable tbody tr[data-search]');
-  var n = 0;
-  
-  rows.forEach(function(r) {
-    var matchesSearch = r.dataset.search.includes(q);
-    var matchesFilter = (_filterMode === 'all') || (r.dataset.grade === _filterMode);
-    var show = matchesSearch && matchesFilter;
-    
-    r.setAttribute('data-hidden', show ? '0' : '1');
-    if (show) n++;
-  });
-  
-  document.getElementById('rowCount').textContent = n + ' records';
-}
+  function amSearch(q) {
+    applyFilters();
+  }
 
-function amSearch(q) {
-  applyFilters();
-}
-
-var _filterMode = 'all';
-function amFilter(mode, el) {
-  _filterMode = mode;
-  document.querySelectorAll('.am-chip').forEach(function(c){ c.classList.remove('active'); });
-  el.classList.add('active');
-  applyFilters();
-}
+  var _filterMode = 'all';
+  function amFilter(mode, el) {
+    _filterMode = mode;
+    document.querySelectorAll('.am-chip').forEach(function(c){ c.classList.remove('active'); });
+    el.classList.add('active');
+    applyFilters();
+  }
 </script>
 {% endblock %}
