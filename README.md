@@ -322,3 +322,4 @@ flask run
 2. Render Dashboard → New Web Service → connect repo
 3. Render auto-detects `render.yaml`
 4. Set environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SECRET_KEY`
+# THIKATECHNICALELECTRICAL
